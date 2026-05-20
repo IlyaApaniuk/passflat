@@ -6,7 +6,7 @@ Passflat ("Pass the flat") is a tenant replacement + rental cost transparency pl
 
 **Core features:**
 1. **Tenant Replacement** — structured listings for tenants who need to find a replacement before their lease ends
-2. **Real Cost Transparency** — Levels.fyi-style crowdsourced data about real rental costs per building/district
+2. **Real Cost Transparency** — crowdsourced data about real rental costs per building/district
 
 **Read these files for full context:**
 - `PROJECT.md` — vision, features, monetization, marketing
@@ -68,6 +68,6 @@ Passflat ("Pass the flat") is a tenant replacement + rental cost transparency pl
 
 - **No apartment numbers** in addresses — only building level (street + number). Privacy protection.
 - **Free listings, paid promotion** — supply must be free to grow, monetize through promoted/urgent features
-- **Levels.fyi model** for cost data — share your data to unlock others' data, or pay to bypass
+- **Contribute-to-unlock model** for cost data — share your data to unlock others' data, or pay to bypass
 - **Building-level data aggregation** — costs are averaged per building, not per apartment
 - **Multi-country from day 1** — schema supports countries, cities, districts, currencies, locale-specific cost labels
