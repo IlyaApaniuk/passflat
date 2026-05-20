@@ -1,0 +1,294 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
+import { Link, useRouter, usePathname } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Home, Globe, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { signOut } from '@/app/[locale]/auth/actions';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+const languages = [
+  { code: 'pl' as const, label: 'Polski' },
+  { code: 'uk' as const, label: 'Українська' },
+  { code: 'en' as const, label: 'English' },
+  { code: 'ru' as const, label: 'Русский' },
+];
+
+const DEFAULT_CITY = 'warsaw';
+
+export function Header() {
+  const t = useTranslations();
+  const { locale } = useParams<{ locale: string }>();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  function switchLocale(newLocale: string) {
+    router.replace(pathname, { locale: newLocale as 'en' | 'pl' | 'ru' | 'uk' });
+  }
+
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
+
+  const navLinks = [
+    { href: `/${DEFAULT_CITY}/replacement` as const, label: t('listings.titleReplacement') },
+    { href: `/${DEFAULT_CITY}/roommate` as const, label: t('listings.titleRoommate') },
+    { href: `/${DEFAULT_CITY}/sublet` as const, label: t('listings.titleSublet') },
+    { href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') },
+  ];
+
+  return (
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="fixed top-0 left-0 right-0 z-50"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+              <Home className="h-4 w-4 text-primary-foreground" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <span className="text-xl font-semibold tracking-tight">
+              {t('common.appName')}
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center gap-2">
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 rounded-full">
+                  <Globe className="h-4 w-4" />
+                  <span className="uppercase text-xs">{locale}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {languages.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang.code}
+                    onClick={() => switchLocale(lang.code)}
+                  >
+                    {lang.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Auth Actions */}
+            {!loading && (
+              <>
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs">
+                            {userInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
+                        {user.email}
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard" className="gap-2">
+                          <LayoutDashboard className="h-4 w-4" />
+                          {t('common.dashboard')}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => signOut()}
+                        className="gap-2 text-destructive focus:text-destructive"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t('common.logout')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <>
+                    <Link href="/auth/login">
+                      <Button variant="ghost" size="sm" className="rounded-full">
+                        {t('common.login')}
+                      </Button>
+                    </Link>
+                    <Link href="/create-listing">
+                      <Button size="sm" className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">
+                        {t('listings.create.title')}
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button (animated hamburger) */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden relative w-8 h-8 flex items-center justify-center"
+            aria-label="Toggle menu"
+          >
+            <div className="flex flex-col gap-1.5">
+              <motion.span
+                animate={{ rotate: mobileMenuOpen ? 45 : 0, y: mobileMenuOpen ? 6 : 0 }}
+                className="w-5 h-0.5 bg-foreground block origin-center"
+              />
+              <motion.span
+                animate={{ opacity: mobileMenuOpen ? 0 : 1 }}
+                className="w-5 h-0.5 bg-foreground block"
+              />
+              <motion.span
+                animate={{ rotate: mobileMenuOpen ? -45 : 0, y: mobileMenuOpen ? -6 : 0 }}
+                className="w-5 h-0.5 bg-foreground block origin-center"
+              />
+            </div>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="md:hidden mt-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl p-4"
+            >
+              <nav className="flex flex-col gap-1">
+                {navLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-4 py-3 text-sm rounded-xl hover:bg-secondary transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Mobile Language Switcher */}
+              <div className="flex gap-2 px-4 pt-3 pb-2">
+                {languages.map((lang) => (
+                  <Button
+                    key={lang.code}
+                    variant={locale === lang.code ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      switchLocale(lang.code);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex-1 text-xs rounded-full"
+                  >
+                    {lang.code.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Mobile Auth */}
+              {!loading && (
+                <div className="border-t border-border/50 mt-2 pt-3 px-4">
+                  {user ? (
+                    <>
+                      <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                      <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                        <Button className="w-full rounded-xl">
+                          {t('common.dashboard')}
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        className="mt-2 w-full rounded-xl"
+                        onClick={() => {
+                          signOut();
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        {t('common.logout')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/create-listing" onClick={() => setMobileMenuOpen(false)}>
+                        <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
+                          {t('listings.create.title')}
+                        </Button>
+                      </Link>
+                      <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" className="mt-2 w-full rounded-xl">
+                          {t('common.login')}
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.header>
+  );
+}

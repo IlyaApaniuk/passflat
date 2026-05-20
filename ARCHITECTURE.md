@@ -224,7 +224,7 @@ profiles (
   city_id uuid FK → cities,
   contact_method text,           -- 'email','telegram','whatsapp','phone'
   contact_value text,
-  has_contributed_cost boolean default false,  -- для Levels.fyi unlock
+  has_contributed_cost boolean default false,  -- cost data unlock
   is_verified boolean default false,
   created_at timestamptz
 )
