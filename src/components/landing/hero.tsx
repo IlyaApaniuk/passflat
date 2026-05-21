@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { motion } from 'framer-motion';
+import { motion, useAnimation } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -17,6 +18,11 @@ const stats = [
 
 export function Hero() {
   const t = useTranslations('landing.hero');
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start('visible');
+  }, [controls]);
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
@@ -32,7 +38,8 @@ export function Hero() {
         <div className="mx-auto max-w-5xl text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5 }}
             className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent"
           >
@@ -42,7 +49,8 @@ export function Hero() {
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl"
           >
@@ -52,7 +60,8 @@ export function Hero() {
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl"
           >
@@ -61,7 +70,8 @@ export function Hero() {
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
@@ -90,7 +100,8 @@ export function Hero() {
           {/* Listing type pills */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5, delay: 0.35 }}
             className="mt-6 flex flex-wrap items-center justify-center gap-2"
           >
@@ -119,7 +130,8 @@ export function Hero() {
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.5, delay: 0.4 }}
             className="mx-auto mt-20 grid max-w-3xl grid-cols-2 gap-4 sm:gap-8 md:grid-cols-4"
           >
@@ -127,7 +139,8 @@ export function Hero() {
               <motion.div
                 key={stat.labelKey}
                 initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={controls}
+                variants={{ visible: { opacity: 1, scale: 1 } }}
                 transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
                 className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
               >
@@ -145,7 +158,8 @@ export function Hero() {
 
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={controls}
+        variants={{ visible: { opacity: 1 } }}
         transition={{ delay: 1, duration: 0.5 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
       >

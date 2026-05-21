@@ -10,6 +10,9 @@ import {
   getPriceFieldForType,
   type ListingType,
 } from '@/lib/listings-validation';
+import { trackServerEvent } from '@/lib/posthog-server';
+import { generateBuildingSlug } from '@/lib/slugify';
+import { normalizeAddress } from '@/lib/address';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -35,10 +38,6 @@ async function getUser() {
   );
   const { data: { user } } = await supabase.auth.getUser();
   return user;
-}
-
-function normalizeAddress(street: string, buildingNumber: string): string {
-  return `${street.trim().toLowerCase()} ${buildingNumber.trim().toLowerCase()}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -129,14 +128,35 @@ export async function POST(request: NextRequest) {
       )
     : null;
 
-  let building = await prisma.building.findUnique({
-    where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
-  });
+  let building = placeId
+    ? await prisma.building.findFirst({ where: { placeId } })
+    : null;
 
   if (!building) {
+    building = await prisma.building.findUnique({
+      where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
+    });
+
+    if (building && placeId && !building.placeId) {
+      building = await prisma.building.update({
+        where: { id: building.id },
+        data: { placeId },
+      });
+    }
+  }
+
+  if (!building) {
+    let slug = generateBuildingSlug(street, buildingNumber);
+    const existing = await prisma.building.findUnique({
+      where: { cityId_slug: { cityId: city.id, slug } },
+      select: { id: true },
+    });
+    if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+
     building = await prisma.building.create({
       data: {
         cityId: city.id,
+        slug,
         districtId: matchedDistrict?.id ?? null,
         street,
         buildingNumber,
@@ -211,6 +231,15 @@ export async function POST(request: NextRequest) {
     include: {
       building: true,
     },
+  });
+
+  trackServerEvent(user.id, 'listing_created', {
+    listing_id: listing.id,
+    type,
+    city: citySlug || 'warsaw',
+    district: matchedDistrict?.slug ?? null,
+    has_photos: (photos?.length ?? 0) > 0,
+    price: priceFields.totalMonthly ?? priceFields.pricePerPerson ?? priceFields.priceTotal,
   });
 
   return NextResponse.json({ listing }, { status: 201 });

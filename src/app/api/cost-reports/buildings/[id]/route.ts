@@ -1,23 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const buildingInclude = {
+  district: true,
+  city: true,
+  costReports: {
+    where: { isVisible: true },
+    orderBy: { createdAt: 'desc' as const },
+  },
+} as const;
+
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const citySlug = new URL(request.url).searchParams.get('city');
 
-  const building = await prisma.building.findUnique({
-    where: { id },
-    include: {
-      district: true,
-      city: true,
-      costReports: {
-        where: { isVisible: true },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
-  });
+  let building;
+  if (UUID_RE.test(id)) {
+    building = await prisma.building.findUnique({ where: { id }, include: buildingInclude });
+  } else if (citySlug) {
+    const city = await prisma.city.findUnique({ where: { slug: citySlug }, select: { id: true } });
+    if (city) {
+      building = await prisma.building.findUnique({
+        where: { cityId_slug: { cityId: city.id, slug: id } },
+        include: buildingInclude,
+      });
+    }
+  }
 
   if (!building) {
     return NextResponse.json({ error: 'Building not found' }, { status: 404 });
@@ -30,6 +43,7 @@ export async function GET(
     return NextResponse.json({
       building: {
         id: building.id,
+        slug: building.slug,
         address: building.addressFull,
         district: building.district?.nameKey ?? '',
         city: building.city.nameKey,
@@ -39,7 +53,7 @@ export async function GET(
     });
   }
 
-  type NumericField = 'rent' | 'adminFee' | 'electricityAvg' | 'electricityWinter' | 'electricitySummer' | 'gas' | 'heating' | 'water' | 'internet' | 'otherCosts' | 'totalMonthlyAvg';
+  type NumericField = 'rent' | 'adminFee' | 'electricityAvg' | 'electricityWinter' | 'electricitySummer' | 'gas' | 'heating' | 'heatingWinter' | 'heatingSummer' | 'water' | 'internet' | 'otherCosts' | 'totalMonthlyAvg';
 
   function computeStats(field: NumericField) {
     const values = reports
@@ -56,6 +70,11 @@ export async function GET(
     };
   }
 
+  type BoolField = 'electricityIncluded' | 'heatingIncluded' | 'waterIncluded';
+  function countIncluded(field: BoolField) {
+    return reports.filter((r) => r[field] === true).length;
+  }
+
   const costs = {
     rent: computeStats('rent'),
     adminFee: computeStats('adminFee'),
@@ -64,10 +83,19 @@ export async function GET(
     electricitySummer: computeStats('electricitySummer'),
     gas: computeStats('gas'),
     heating: computeStats('heating'),
+    heatingWinter: computeStats('heatingWinter'),
+    heatingSummer: computeStats('heatingSummer'),
     water: computeStats('water'),
     internet: computeStats('internet'),
     otherCosts: computeStats('otherCosts'),
     totalMonthlyAvg: computeStats('totalMonthlyAvg'),
+  };
+
+  const includedCounts = {
+    electricity: countIncluded('electricityIncluded'),
+    heating: countIncluded('heatingIncluded'),
+    water: countIncluded('waterIncluded'),
+    total: count,
   };
 
   const lastUpdated = reports[0]?.createdAt.toISOString() ?? null;
@@ -104,6 +132,7 @@ export async function GET(
   return NextResponse.json({
     building: {
       id: building.id,
+      slug: building.slug,
       address: building.addressFull,
       district: building.district?.nameKey ?? '',
       districtSlug: building.district?.slug ?? '',
@@ -112,6 +141,7 @@ export async function GET(
     reports: count,
     lastUpdated,
     costs,
+    includedCounts,
     comparison: {
       thisBuilding: costs.totalMonthlyAvg?.avg ?? null,
       districtAvg,

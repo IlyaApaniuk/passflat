@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { generateBuildingSlug } from "../src/lib/slugify";
+import { normalizeAddress, cleanStreet } from "../src/lib/address";
 
 const prisma = new PrismaClient();
 
@@ -189,8 +191,10 @@ async function main() {
   const buildings: Array<{ id: string; districtSlug: string }> = [];
 
   for (const b of buildingSeeds) {
-    const addressFull = `ul. ${b.street} ${b.num}, Warszawa`;
-    const addressNormalized = `${b.street.toLowerCase().replace(/\s+/g, "-")}-${b.num}-warszawa`;
+    const street = cleanStreet(b.street);
+    const addressFull = `${street} ${b.num}`;
+    const addressNormalized = normalizeAddress(street, b.num);
+    const slug = generateBuildingSlug(street, b.num);
 
     const building = await prisma.building.upsert({
       where: {
@@ -202,8 +206,9 @@ async function main() {
       update: {},
       create: {
         cityId: warsaw.id,
+        slug,
         districtId: districtMap.get(b.district)!,
-        street: b.street,
+        street,
         buildingNumber: b.num,
         addressFull,
         addressNormalized,
@@ -456,15 +461,19 @@ async function main() {
       const area = rooms === 1 ? randomBetween(22, 38) : rooms === 2 ? randomBetween(35, 58) : rooms === 3 ? randomBetween(55, 80) : randomBetween(70, 110);
       const rent = randomBetween(2000, 5000);
       const adminFee = randomBetween(300, 950);
-      const electricity = randomBetween(80, 250);
+      const electricityIncluded = Math.random() > 0.85;
+      const electricity = electricityIncluded ? null : randomBetween(80, 250);
       const gas = Math.random() > 0.5 ? randomBetween(50, 150) : null;
       const heatingIncluded = Math.random() > 0.6;
       const heating = heatingIncluded ? null : randomBetween(100, 400);
+      const heatingWinter = !heatingIncluded && Math.random() > 0.5 ? (heating ?? 200) + randomBetween(50, 200) : null;
+      const heatingSummer = !heatingIncluded && heatingWinter ? randomBetween(0, 50) : null;
       const waterIncluded = Math.random() > 0.5;
       const water = waterIncluded ? null : randomBetween(40, 120);
       const internet = randomBetween(50, 100);
       const otherCosts = Math.random() > 0.7 ? randomBetween(20, 80) : null;
-      const totalAvg = rent + adminFee + electricity + (gas ?? 0) + (heating ?? 0) + (water ?? 0) + internet + (otherCosts ?? 0);
+      const rentalType = randomElement(["apartment", "apartment", "apartment", "room"]);
+      const totalAvg = rent + adminFee + (electricity ?? 0) + (gas ?? 0) + (heating ?? 0) + (water ?? 0) + internet + (otherCosts ?? 0);
 
       await prisma.costReport.create({
         data: {
@@ -474,15 +483,19 @@ async function main() {
           rent,
           adminFee,
           electricityAvg: electricity,
-          electricityWinter: electricity + randomBetween(20, 80),
-          electricitySummer: electricity - randomBetween(10, 40),
+          electricityWinter: electricity ? electricity + randomBetween(20, 80) : null,
+          electricitySummer: electricity ? electricity - randomBetween(10, 40) : null,
+          electricityIncluded,
           gas,
           heating,
+          heatingWinter,
+          heatingSummer,
           heatingIncluded,
           water,
           waterIncluded,
           internet,
           internetProvider: randomElement(internetProviders),
+          rentalType,
           otherCosts,
           otherCostsNote: otherCosts ? "Wywóz śmieci / ochrona" : null,
           totalMonthlyAvg: totalAvg,
@@ -491,6 +504,7 @@ async function main() {
           floor: randomBetween(0, 10),
           leaseType: randomElement(leaseTypes),
           depositMonths: randomElement([1, 1, 1, 2, 2]),
+          depositAmount: rent * randomBetween(1, 2),
           depositReturned: Math.random() > 0.3 ? true : Math.random() > 0.5 ? false : null,
           depositReturnDays: randomBetween(7, 60),
           livedFrom: randomDate(new Date("2023-01-01"), new Date("2025-06-01")),

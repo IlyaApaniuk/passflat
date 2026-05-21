@@ -4,15 +4,16 @@ import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Lock, Eye } from "lucide-react";
+import { ArrowRight, Lock, Eye, CheckCircle2 } from "lucide-react";
 
 const DEFAULT_CITY = 'warsaw';
 
 interface CostTransparencyProps {
   citySlug?: string;
+  hasContributed?: boolean;
 }
 
-export function CostTransparency({ citySlug = DEFAULT_CITY }: CostTransparencyProps) {
+export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = false }: CostTransparencyProps) {
   const t = useTranslations();
 
   const costData = [
@@ -56,11 +57,19 @@ export function CostTransparency({ citySlug = DEFAULT_CITY }: CostTransparencyPr
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="rounded-full" asChild>
-                <Link href={`/${citySlug}/costs/submit`}>
-                  {t('landing.costTransparency.submitCosts')}
-                </Link>
-              </Button>
+              {hasContributed ? (
+                <Button size="lg" variant="outline" className="rounded-full" asChild>
+                  <Link href={`/${citySlug}/costs`}>
+                    {t('landing.costTransparency.exploreCosts')}
+                  </Link>
+                </Button>
+              ) : (
+                <Button size="lg" variant="outline" className="rounded-full" asChild>
+                  <Link href={`/${citySlug}/costs/submit`}>
+                    {t('landing.costTransparency.submitCosts')}
+                  </Link>
+                </Button>
+              )}
             </div>
           </motion.div>
 
@@ -111,18 +120,32 @@ export function CostTransparency({ citySlug = DEFAULT_CITY }: CostTransparencyPr
                 ))}
               </div>
 
-              {/* Unlock CTA */}
-              <div className="relative mt-6 rounded-xl border border-dashed border-accent/30 bg-accent/5 p-4 text-center">
-                <p className="mb-2 text-sm text-muted-foreground">
-                  {t('landing.costTransparency.contributeUnlockDesc')}
-                </p>
-                <Link
-                  href={`/${citySlug}/costs/submit`}
-                  className="text-sm font-medium text-accent hover:underline"
-                >
-                  {t('landing.costTransparency.submitCosts')}
-                </Link>
-              </div>
+              {hasContributed ? (
+                <div className="relative mt-6 rounded-xl border border-green-500/30 bg-green-500/5 p-4 text-center">
+                  <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t('landing.costTransparency.alreadyContributedDesc')}
+                  </div>
+                  <Link
+                    href={`/${citySlug}/costs`}
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    {t('landing.costTransparency.exploreCosts')}
+                  </Link>
+                </div>
+              ) : (
+                <div className="relative mt-6 rounded-xl border border-dashed border-accent/30 bg-accent/5 p-4 text-center">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    {t('landing.costTransparency.contributeUnlockDesc')}
+                  </p>
+                  <Link
+                    href={`/${citySlug}/costs/submit`}
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    {t('landing.costTransparency.submitCosts')}
+                  </Link>
+                </div>
+              )}
 
               {/* Total */}
               <div className="relative mt-6 flex items-center justify-between border-t border-border/50 pt-4">

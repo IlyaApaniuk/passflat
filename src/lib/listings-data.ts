@@ -17,6 +17,7 @@ export interface Listing {
   floor: number;
   totalFloors: number;
   images: string[];
+  photoCount: number;
   lat: number;
   lng: number;
   promoted: boolean;
@@ -24,19 +25,32 @@ export interface Listing {
   features: string[];
   description: string;
   createdAt: string;
+  furnished: boolean;
+  petsAllowed: boolean;
+  isVerified: boolean;
 
   // Roommate-specific
   pricePerPerson?: number;
   currentRoommates?: number;
   roomType?: 'private' | 'shared';
+  preferredGender?: 'any' | 'male' | 'female';
 
   // Sublet-specific
   availableTo?: string;
   priceTotal?: number;
   durationDays?: number;
+  utilitiesIncluded?: boolean;
+  internetIncluded?: boolean;
 }
 
 export interface CityBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface MapBounds {
   north: number;
   south: number;
   east: number;
@@ -52,5 +66,16 @@ export interface ListingFilters {
   areaMin?: number;
   areaMax?: number;
   availableFrom?: string;
+  availableTo?: string;
+  furnished?: boolean;
+  petsAllowed?: boolean;
+  floorMin?: number;
+  floorMax?: number;
+  roomType?: 'private' | 'shared';
+  preferredGender?: 'any' | 'male' | 'female';
+  utilitiesIncluded?: boolean;
+  internetIncluded?: boolean;
+  isVerified?: boolean;
+  hasPhotos?: boolean;
 }
 

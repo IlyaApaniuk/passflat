@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { sendNewInquiryEmail } from '@/lib/resend';
+import { trackServerEvent } from '@/lib/posthog-server';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -132,6 +133,12 @@ export async function POST(request: NextRequest) {
       dashboardUrl: `${appUrl}/pl/dashboard`,
     });
   }
+
+  trackServerEvent(user.id, 'inquiry_sent', {
+    listing_id: listingId,
+    listing_type: listing.type,
+    listing_author_id: listing.authorId,
+  });
 
   return NextResponse.json({ response }, { status: 201 });
 }

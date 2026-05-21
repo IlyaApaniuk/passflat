@@ -74,7 +74,7 @@ const statCardVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.4, delay: i * 0.08, ease: "easeOut" },
+    transition: { duration: 0.4, delay: i * 0.08, ease: "easeOut" as const },
   }),
 };
 

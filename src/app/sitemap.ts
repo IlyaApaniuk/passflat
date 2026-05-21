@@ -67,6 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: { costReports: { some: { isVisible: true } } },
       select: {
         id: true,
+        slug: true,
         city: { select: { slug: true } },
         costReports: {
           where: { isVisible: true },
@@ -78,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
     buildingPages = buildings.map((b) => ({
-      ...entry(`/${b.city.slug}/building/${b.id}`, 'weekly', 0.7),
+      ...entry(`/${b.city.slug}/building/${b.slug}`, 'weekly', 0.7),
       lastModified: b.costReports[0]?.createdAt,
     }));
   } catch {

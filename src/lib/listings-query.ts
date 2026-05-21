@@ -106,6 +106,7 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
     floor: l.floor ?? 0,
     totalFloors: 0,
     images: l.photos,
+    photoCount: l.photos.length,
     lat: Number(l.building.lat ?? 52.23),
     lng: Number(l.building.lng ?? 21.01),
     promoted: l.isPromoted,
@@ -116,17 +117,23 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
     ],
     description: l.description ?? "",
     createdAt: l.createdAt.toISOString(),
+    furnished: l.furnished ?? false,
+    petsAllowed: l.petsAllowed ?? false,
+    isVerified: l.isVerified,
   };
 
   if (type === "roommate") {
     base.pricePerPerson = l.pricePerPerson ? Number(l.pricePerPerson) : undefined;
     base.currentRoommates = l.currentRoommates ?? undefined;
     base.roomType = (l.roomType as "private" | "shared") ?? undefined;
+    base.preferredGender = (l.preferredGender as "any" | "male" | "female") ?? undefined;
   }
 
   if (type === "sublet") {
     base.availableTo = l.availableTo?.toISOString() ?? undefined;
     base.priceTotal = l.priceTotal ? Number(l.priceTotal) : undefined;
+    base.utilitiesIncluded = l.utilitiesIncluded ?? undefined;
+    base.internetIncluded = l.internetIncluded ?? undefined;
     if (l.availableFrom && l.availableTo) {
       base.durationDays = Math.ceil(
         (l.availableTo.getTime() - l.availableFrom.getTime()) / (1000 * 60 * 60 * 24),

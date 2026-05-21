@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -19,12 +22,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { SlidersHorizontal, X, RotateCcw } from "lucide-react";
+import { SlidersHorizontal, X, RotateCcw, CalendarIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import { useRouter } from "@/i18n/navigation";
 import type { ListingFilters, ListingType } from "@/lib/listings-data";
 
-const LISTING_TYPES: (ListingType | "all")[] = ["all", "replacement", "roommate", "sublet"];
+const LISTING_TYPES: ListingType[] = ["replacement", "roommate", "sublet"];
 
 const PRICE_RANGES: Record<ListingType | "default", { min: number; max: number; step: number }> = {
   replacement: { min: 0, max: 10000, step: 100 },
@@ -36,12 +41,14 @@ const PRICE_RANGES: Record<ListingType | "default", { min: number; max: number; 
 function PriceRangeSlider({
   filters,
   onFiltersChange,
+  listingType,
 }: {
   filters: ListingFilters;
   onFiltersChange: (filters: ListingFilters) => void;
+  listingType?: ListingType;
 }) {
   const t = useTranslations();
-  const range = PRICE_RANGES[filters.type ?? "default"];
+  const range = PRICE_RANGES[listingType ?? "default"];
   const currentMin = filters.priceMin ?? range.min;
   const currentMax = filters.priceMax ?? range.max;
 
@@ -84,8 +91,8 @@ function PriceRangeSlider({
     commitValues(next[0], next[1]);
   };
 
-  const label = filters.type
-    ? t(`listings.filters.priceLabel_${filters.type}`)
+  const label = listingType
+    ? t(`listings.filters.priceLabel_${listingType}`)
     : t("listings.filters.priceRange");
 
   const isFiltered =
@@ -141,14 +148,402 @@ interface ListingFiltersProps {
   filters: ListingFilters;
   onFiltersChange: (filters: ListingFilters) => void;
   districts?: string[];
+  citySlug?: string;
+  listingType?: ListingType;
+}
+
+function DatePickerFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+  const selected = filters.availableFrom ? new Date(filters.availableFrom) : undefined;
+
+  return (
+    <div className="space-y-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+            {selected ? (
+              format(selected, "PPP")
+            ) : (
+              <span className="text-muted-foreground">
+                {t("listings.filters.availableFrom")}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) =>
+              onFiltersChange({
+                ...filters,
+                availableFrom: date ? format(date, "yyyy-MM-dd") : undefined,
+              })
+            }
+          />
+        </PopoverContent>
+      </Popover>
+      {selected && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+          onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
+        >
+          <X className="mr-1 h-3 w-3" />
+          {t("listings.filters.clearAll")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function FurnishedFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+  const options = [
+    { value: undefined, label: t("listings.filters.furnishedAll") },
+    { value: true, label: t("listings.filters.furnishedYes") },
+    { value: false, label: t("listings.filters.furnishedNo") },
+  ] as const;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option, idx) => {
+        const isActive = filters.furnished === option.value;
+        return (
+          <Button
+            key={idx}
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            className={`h-8 text-xs transition-all ${
+              isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+            }`}
+            onClick={() =>
+              onFiltersChange({ ...filters, furnished: option.value })
+            }
+          >
+            {option.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PetsAllowedFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex items-center justify-between">
+      <Label htmlFor="pets-toggle" className="text-sm font-normal cursor-pointer">
+        {t("listings.filters.petsAllowed")}
+      </Label>
+      <Switch
+        id="pets-toggle"
+        checked={filters.petsAllowed ?? false}
+        onCheckedChange={(checked) =>
+          onFiltersChange({
+            ...filters,
+            petsAllowed: checked || undefined,
+          })
+        }
+      />
+    </div>
+  );
+}
+
+function RoomTypeFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+  const options = [
+    { value: undefined, label: t("listings.filters.roomTypeAll") },
+    { value: "private" as const, label: t("listings.filters.roomTypePrivate") },
+    { value: "shared" as const, label: t("listings.filters.roomTypeShared") },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option, idx) => {
+        const isActive = filters.roomType === option.value;
+        return (
+          <Button
+            key={idx}
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            className={`h-8 text-xs transition-all ${
+              isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+            }`}
+            onClick={() =>
+              onFiltersChange({ ...filters, roomType: option.value })
+            }
+          >
+            {option.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PreferredGenderFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+  const options = [
+    { value: undefined, label: t("listings.filters.genderAny") },
+    { value: "male" as const, label: t("listings.filters.genderMale") },
+    { value: "female" as const, label: t("listings.filters.genderFemale") },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option, idx) => {
+        const isActive =
+          option.value === undefined
+            ? filters.preferredGender === undefined
+            : filters.preferredGender === option.value;
+        return (
+          <Button
+            key={idx}
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            className={`h-8 text-xs transition-all ${
+              isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+            }`}
+            onClick={() =>
+              onFiltersChange({ ...filters, preferredGender: option.value })
+            }
+          >
+            {option.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AvailableToFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+  const selected = filters.availableTo ? new Date(filters.availableTo) : undefined;
+
+  return (
+    <div className="space-y-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+            {selected ? (
+              format(selected, "PPP")
+            ) : (
+              <span className="text-muted-foreground">
+                {t("listings.filters.availableTo")}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) =>
+              onFiltersChange({
+                ...filters,
+                availableTo: date ? format(date, "yyyy-MM-dd") : undefined,
+              })
+            }
+          />
+        </PopoverContent>
+      </Popover>
+      {selected && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+          onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
+        >
+          <X className="mr-1 h-3 w-3" />
+          {t("listings.filters.clearAll")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function UtilitiesIncludedFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex items-center justify-between">
+      <Label htmlFor="utilities-toggle" className="text-sm font-normal cursor-pointer">
+        {t("listings.filters.utilitiesIncluded")}
+      </Label>
+      <Switch
+        id="utilities-toggle"
+        checked={filters.utilitiesIncluded ?? false}
+        onCheckedChange={(checked) =>
+          onFiltersChange({
+            ...filters,
+            utilitiesIncluded: checked || undefined,
+          })
+        }
+      />
+    </div>
+  );
+}
+
+function FloorFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        placeholder={t("listings.filters.min")}
+        value={filters.floorMin ?? ""}
+        onChange={(e) =>
+          onFiltersChange({
+            ...filters,
+            floorMin: e.target.value ? Number(e.target.value) : undefined,
+          })
+        }
+        className="h-9 bg-background/50"
+        min={0}
+      />
+      <span className="text-muted-foreground">—</span>
+      <Input
+        type="number"
+        placeholder={t("listings.filters.max")}
+        value={filters.floorMax ?? ""}
+        onChange={(e) =>
+          onFiltersChange({
+            ...filters,
+            floorMax: e.target.value ? Number(e.target.value) : undefined,
+          })
+        }
+        className="h-9 bg-background/50"
+        min={0}
+      />
+    </div>
+  );
+}
+
+function VerifiedOnlyFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex items-center justify-between">
+      <Label htmlFor="verified-toggle" className="text-sm font-normal cursor-pointer">
+        {t("listings.filters.verifiedOnly")}
+      </Label>
+      <Switch
+        id="verified-toggle"
+        checked={filters.isVerified ?? false}
+        onCheckedChange={(checked) =>
+          onFiltersChange({
+            ...filters,
+            isVerified: checked || undefined,
+          })
+        }
+      />
+    </div>
+  );
+}
+
+function WithPhotosFilter({
+  filters,
+  onFiltersChange,
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex items-center justify-between">
+      <Label htmlFor="photos-toggle" className="text-sm font-normal cursor-pointer">
+        {t("listings.filters.withPhotos")}
+      </Label>
+      <Switch
+        id="photos-toggle"
+        checked={filters.hasPhotos ?? false}
+        onCheckedChange={(checked) =>
+          onFiltersChange({
+            ...filters,
+            hasPhotos: checked || undefined,
+          })
+        }
+      />
+    </div>
+  );
 }
 
 export function ListingFiltersDesktop({
   filters,
   onFiltersChange,
   districts,
+  citySlug,
+  listingType,
 }: ListingFiltersProps) {
   const t = useTranslations();
+  const router = useRouter();
   return (
     <div className="hidden w-72 shrink-0 overflow-y-auto border-r border-border/50 bg-card/50 backdrop-blur-sm p-5 lg:block">
       <div className="flex items-center justify-between">
@@ -168,7 +563,7 @@ export function ListingFiltersDesktop({
         <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {LISTING_TYPES.map((typeOption) => {
-            const isActive = typeOption === "all" ? !filters.type : filters.type === typeOption;
+            const isActive = listingType === typeOption;
             return (
               <Button
                 key={typeOption}
@@ -177,31 +572,34 @@ export function ListingFiltersDesktop({
                 className={`h-8 text-xs transition-all ${
                   isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
                 }`}
-                onClick={() =>
-                  onFiltersChange({
-                    ...filters,
-                    type: typeOption === "all" ? undefined : typeOption,
-                  })
-                }
+                onClick={() => {
+                  if (typeOption !== listingType && citySlug) {
+                    router.push(`/${citySlug}/${typeOption}`);
+                  }
+                }}
               >
-                {typeOption === "all"
-                  ? t('listings.filters.allTypes')
-                  : t(`listings.types.${typeOption}`)}
+                {t(`listings.types.${typeOption}`)}
               </Button>
             );
           })}
         </div>
       </div>
 
+      <div className="mt-4 space-y-3">
+        <PetsAllowedFilter filters={filters} onFiltersChange={onFiltersChange} />
+        <VerifiedOnlyFilter filters={filters} onFiltersChange={onFiltersChange} />
+        <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
+      </div>
+
       <Accordion
         type="multiple"
-        defaultValue={["price", "bedrooms", "districts"]}
+        defaultValue={["price", "bedrooms", "availability", "roommate", "sublet", "districts"]}
         className="mt-4"
       >
         <AccordionItem value="price" className="border-border/50">
           <AccordionTrigger className="text-sm font-medium">{t('listings.filters.priceRange')}</AccordionTrigger>
           <AccordionContent>
-            <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} />
+            <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
           </AccordionContent>
         </AccordionItem>
 
@@ -270,6 +668,56 @@ export function ListingFiltersDesktop({
           </AccordionContent>
         </AccordionItem>
 
+        <AccordionItem value="availability" className="border-border/50">
+          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.availableFrom')}</AccordionTrigger>
+          <AccordionContent>
+            <DatePickerFilter filters={filters} onFiltersChange={onFiltersChange} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="furnished" className="border-border/50">
+          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.furnished')}</AccordionTrigger>
+          <AccordionContent>
+            <FurnishedFilter filters={filters} onFiltersChange={onFiltersChange} />
+          </AccordionContent>
+        </AccordionItem>
+
+        {listingType === "roommate" && (
+          <AccordionItem value="roommate" className="border-border/50">
+            <AccordionTrigger className="text-sm font-medium">{t('listings.filters.roomType')}</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4">
+                <RoomTypeFilter filters={filters} onFiltersChange={onFiltersChange} />
+                <div>
+                  <span className="text-xs text-muted-foreground mb-1.5 block">
+                    {t("listings.filters.genderPreference")}
+                  </span>
+                  <PreferredGenderFilter filters={filters} onFiltersChange={onFiltersChange} />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {listingType === "sublet" && (
+          <AccordionItem value="sublet" className="border-border/50">
+            <AccordionTrigger className="text-sm font-medium">{t('listings.filters.availableTo')}</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4">
+                <AvailableToFilter filters={filters} onFiltersChange={onFiltersChange} />
+                <UtilitiesIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        <AccordionItem value="floor" className="border-border/50">
+          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.floor')}</AccordionTrigger>
+          <AccordionContent>
+            <FloorFilter filters={filters} onFiltersChange={onFiltersChange} />
+          </AccordionContent>
+        </AccordionItem>
+
         <AccordionItem value="districts" className="border-border/50">
           <AccordionTrigger className="text-sm font-medium">{t('listings.filters.districts')}</AccordionTrigger>
           <AccordionContent>
@@ -310,8 +758,11 @@ export function ListingFiltersMobile({
   filters,
   onFiltersChange,
   districts,
+  citySlug,
+  listingType,
 }: ListingFiltersProps) {
   const t = useTranslations();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const activeCount = Object.values(filters).filter(
     (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true)
@@ -340,7 +791,7 @@ export function ListingFiltersMobile({
             <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {LISTING_TYPES.map((typeOption) => {
-                const isActive = typeOption === "all" ? !filters.type : filters.type === typeOption;
+                const isActive = listingType === typeOption;
                 return (
                   <Button
                     key={typeOption}
@@ -349,26 +800,30 @@ export function ListingFiltersMobile({
                     className={`h-8 text-xs transition-all ${
                       isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
                     }`}
-                    onClick={() =>
-                      onFiltersChange({
-                        ...filters,
-                        type: typeOption === "all" ? undefined : typeOption,
-                      })
-                    }
+                    onClick={() => {
+                      if (typeOption !== listingType && citySlug) {
+                        setOpen(false);
+                        router.push(`/${citySlug}/${typeOption}`);
+                      }
+                    }}
                   >
-                    {typeOption === "all"
-                      ? t('listings.filters.allTypes')
-                      : t(`listings.types.${typeOption}`)}
+                    {t(`listings.types.${typeOption}`)}
                   </Button>
                 );
               })}
             </div>
           </div>
 
+          <div className="space-y-3">
+            <PetsAllowedFilter filters={filters} onFiltersChange={onFiltersChange} />
+            <VerifiedOnlyFilter filters={filters} onFiltersChange={onFiltersChange} />
+            <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
+          </div>
+
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.priceRange')}</Label>
             <div className="mt-2">
-              <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} />
+              <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
             </div>
           </div>
 
@@ -428,6 +883,58 @@ export function ListingFiltersMobile({
                 }
                 className="bg-background/50"
               />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">{t('listings.filters.availableFrom')}</Label>
+            <div className="mt-2">
+              <DatePickerFilter filters={filters} onFiltersChange={onFiltersChange} />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">{t('listings.filters.furnished')}</Label>
+            <div className="mt-2">
+              <FurnishedFilter filters={filters} onFiltersChange={onFiltersChange} />
+            </div>
+          </div>
+
+          {listingType === "roommate" && (
+            <>
+              <div>
+                <Label className="text-sm font-medium">{t('listings.filters.roomType')}</Label>
+                <div className="mt-2">
+                  <RoomTypeFilter filters={filters} onFiltersChange={onFiltersChange} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">{t('listings.filters.genderPreference')}</Label>
+                <div className="mt-2">
+                  <PreferredGenderFilter filters={filters} onFiltersChange={onFiltersChange} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {listingType === "sublet" && (
+            <>
+              <div>
+                <Label className="text-sm font-medium">{t('listings.filters.availableTo')}</Label>
+                <div className="mt-2">
+                  <AvailableToFilter filters={filters} onFiltersChange={onFiltersChange} />
+                </div>
+              </div>
+              <div>
+                <UtilitiesIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
+              </div>
+            </>
+          )}
+
+          <div>
+            <Label className="text-sm font-medium">{t('listings.filters.floor')}</Label>
+            <div className="mt-2">
+              <FloorFilter filters={filters} onFiltersChange={onFiltersChange} />
             </div>
           </div>
 
@@ -498,25 +1005,6 @@ export function ActiveFilters({
       className="flex flex-wrap items-center gap-2"
     >
       <AnimatePresence mode="popLayout">
-        {filters.type && (
-          <motion.div
-            key="type"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            layout
-          >
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, type: undefined })}
-            >
-              {t(`listings.types.${filters.type}`)}
-              <X className="h-3 w-3" />
-            </Button>
-          </motion.div>
-        )}
         {(filters.priceMin || filters.priceMax) && (
           <motion.div
             key="price"
@@ -565,6 +1053,30 @@ export function ActiveFilters({
             </Button>
           </motion.div>
         ))}
+        {(filters.areaMin != null || filters.areaMax != null) && (
+          <motion.div
+            key="area"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, areaMin: undefined, areaMax: undefined })}
+            >
+              {t("listings.filters.area")}:{" "}
+              {filters.areaMin != null && filters.areaMax != null
+                ? `${filters.areaMin}–${filters.areaMax}`
+                : filters.areaMin != null
+                  ? `${filters.areaMin}+`
+                  : `≤${filters.areaMax}`}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
         {filters.districts?.map((district) => (
           <motion.div
             key={`dist-${district}`}
@@ -590,6 +1102,205 @@ export function ActiveFilters({
             </Button>
           </motion.div>
         ))}
+        {filters.availableFrom && (
+          <motion.div
+            key="availableFrom"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
+            >
+              {t("listings.filters.availableFrom")}: {filters.availableFrom}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.furnished !== undefined && (
+          <motion.div
+            key="furnished"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, furnished: undefined })}
+            >
+              {filters.furnished
+                ? t("listings.filters.furnishedYes")
+                : t("listings.filters.furnishedNo")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.petsAllowed && (
+          <motion.div
+            key="pets"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, petsAllowed: undefined })}
+            >
+              {t("listings.filters.petsAllowed")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.roomType && (
+          <motion.div
+            key="roomType"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, roomType: undefined })}
+            >
+              {filters.roomType === "private"
+                ? t("listings.filters.roomTypePrivate")
+                : t("listings.filters.roomTypeShared")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.preferredGender && (
+          <motion.div
+            key="gender"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, preferredGender: undefined })}
+            >
+              {t("listings.filters.genderPreference")}: {t(`listings.filters.gender${filters.preferredGender.charAt(0).toUpperCase() + filters.preferredGender.slice(1)}` as Parameters<typeof t>[0])}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.availableTo && (
+          <motion.div
+            key="availableTo"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
+            >
+              {t("listings.filters.availableTo")}: {filters.availableTo}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.utilitiesIncluded && (
+          <motion.div
+            key="utilities"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, utilitiesIncluded: undefined })}
+            >
+              {t("listings.filters.utilitiesIncluded")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {(filters.floorMin != null || filters.floorMax != null) && (
+          <motion.div
+            key="floor"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, floorMin: undefined, floorMax: undefined })}
+            >
+              {t("listings.filters.floor")}:{" "}
+              {filters.floorMin != null && filters.floorMax != null
+                ? `${filters.floorMin}–${filters.floorMax}`
+                : filters.floorMin != null
+                  ? `${filters.floorMin}+`
+                  : `≤${filters.floorMax}`}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.isVerified && (
+          <motion.div
+            key="verified"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, isVerified: undefined })}
+            >
+              {t("listings.filters.verifiedOnly")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
+        {filters.hasPhotos && (
+          <motion.div
+            key="photos"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            layout
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onFiltersChange({ ...filters, hasPhotos: undefined })}
+            >
+              {t("listings.filters.withPhotos")}
+              <X className="h-3 w-3" />
+            </Button>
+          </motion.div>
+        )}
       </AnimatePresence>
     </motion.div>
   );
