@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { getLocale } from 'next-intl/server';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { CookieConsent } from '@/components/cookie-consent';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: '--font-space-grotesk' });
@@ -34,6 +35,7 @@ export default async function RootLayout({
         <PostHogProvider>
           {children}
           <CookieConsent />
+          <Toaster />
         </PostHogProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

@@ -38,7 +38,9 @@
     "openMenu": "Відкрити меню",
     "navigationMenu": "Меню навігації",
     "yes": "Так",
-    "no": "Ні"
+    "no": "Ні",
+    "linkCopied": "Посилання скопійовано до буферу обміну",
+    "copyFailed": "Не вдалося скопіювати посилання"
   },
   "landing": {
     "hero": {
@@ -784,7 +786,15 @@
     "about": "про",
     "listingType": "Тип",
     "goToDashboard": "Перейти до панелі",
-    "browseListings": "Переглянути оголошення"
+    "browseListings": "Переглянути оголошення",
+    "savedListings": "Збережені",
+    "noSavedListings": "Немає збережених оголошень",
+    "noSavedListingsDesc": "Переглядайте оголошення та натискайте на серце, щоб зберегти їх тут"
+  },
+  "favorites": {
+    "addToFavorites": "Додати до обраних",
+    "removeFromFavorites": "Видалити з обраних",
+    "loginToSave": "Увійдіть, щоб зберігати оголошення"
   },
   "contact": {
     "title": "Контакти",

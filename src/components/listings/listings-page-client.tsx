@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Map, List } from "lucide-react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useFavorites } from "@/hooks/use-favorites";
 import type { Listing, ListingType, CityBounds, MapBounds } from "@/lib/listings-data";
 
 type SortOption = "newest" | "price-asc" | "price-desc" | "area-desc";
@@ -32,6 +33,7 @@ interface Props {
   citySlug: string;
   cityBounds?: CityBounds;
   listingType: ListingType;
+  isLoggedIn?: boolean;
 }
 
 export function ListingsPageClient(props: Props) {
@@ -48,10 +50,12 @@ function ListingsPageInner({
   citySlug,
   cityBounds,
   listingType,
+  isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
+  const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
@@ -253,6 +257,8 @@ function ListingsPageInner({
                   citySlug={citySlug}
                   hoveredId={hoveredId}
                   onHover={setHoveredId}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
                 />
               </motion.div>
             </AnimatePresence>

@@ -38,7 +38,9 @@
     "openMenu": "Open menu",
     "navigationMenu": "Navigation Menu",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "linkCopied": "Link copied to clipboard",
+    "copyFailed": "Failed to copy link"
   },
   "landing": {
     "hero": {
@@ -784,7 +786,15 @@
     "about": "about",
     "listingType": "Type",
     "goToDashboard": "Go to Dashboard",
-    "browseListings": "Browse Listings"
+    "browseListings": "Browse Listings",
+    "savedListings": "Saved",
+    "noSavedListings": "No saved listings yet",
+    "noSavedListingsDesc": "Browse listings and tap the heart icon to save them here"
+  },
+  "favorites": {
+    "addToFavorites": "Save to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "loginToSave": "Log in to save listings"
   },
   "contact": {
     "title": "Contact Us",

@@ -38,7 +38,9 @@
     "openMenu": "Otwórz menu",
     "navigationMenu": "Menu nawigacji",
     "yes": "Tak",
-    "no": "Nie"
+    "no": "Nie",
+    "linkCopied": "Link skopiowany do schowka",
+    "copyFailed": "Nie udało się skopiować linku"
   },
   "landing": {
     "hero": {
@@ -784,7 +786,15 @@
     "about": "o",
     "listingType": "Typ",
     "goToDashboard": "Przejdź do panelu",
-    "browseListings": "Przeglądaj oferty"
+    "browseListings": "Przeglądaj oferty",
+    "savedListings": "Zapisane",
+    "noSavedListings": "Brak zapisanych ogłoszeń",
+    "noSavedListingsDesc": "Przeglądaj oferty i kliknij ikonę serca, aby je tutaj zapisać"
+  },
+  "favorites": {
+    "addToFavorites": "Dodaj do ulubionych",
+    "removeFromFavorites": "Usuń z ulubionych",
+    "loginToSave": "Zaloguj się, aby zapisywać ogłoszenia"
   },
   "contact": {
     "title": "Kontakt",

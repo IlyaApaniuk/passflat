@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { usePostHog } from "posthog-js/react";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import { Header } from "@/components/landing/header";
 import { Footer } from "@/components/landing/footer";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { InterestModal } from "@/components/listings/interest-modal";
+import { FavoriteButton } from "@/components/listings/favorite-button";
+import { useFavorites } from "@/hooks/use-favorites";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +25,6 @@ import {
   Calendar,
   CalendarRange,
   Share2,
-  Heart,
   Sparkles,
   CheckCircle,
   Info,
@@ -109,7 +111,7 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
   const [interestModalOpen, setInterestModalOpen] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const listingType = listing.type ?? "replacement";
   const backRoute = TYPE_ROUTE[listingType];
 
@@ -197,25 +199,21 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                     variant="outline"
                     size="icon"
                     className="transition-transform hover:scale-105"
-                    onClick={() => {
-                      navigator.share?.({
-                        title: listing.title,
-                        url: window.location.href,
-                      });
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        toast.success(t("common.linkCopied"));
+                      } catch {
+                        toast.error(t("common.copyFailed"));
+                      }
                     }}
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant={saved ? "default" : "outline"}
-                    size="icon"
-                    className="transition-transform hover:scale-105"
-                    onClick={() => setSaved(!saved)}
-                  >
-                    <Heart
-                      className={`h-4 w-4 transition-all ${saved ? "fill-current scale-110" : ""}`}
-                    />
-                  </Button>
+                  <FavoriteButton
+                    isFavorite={isFavorite(listing.id)}
+                    onToggle={() => toggleFavorite(listing.id)}
+                  />
                 </div>
               </motion.div>
 

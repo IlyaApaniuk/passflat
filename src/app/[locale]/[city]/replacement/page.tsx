@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { ListingsPageClient } from "@/components/listings/listings-page-client";
 import { queryListings, serializeListing, parseSearchParams } from "@/lib/listings-query";
 import type { CityBounds } from "@/lib/listings-data";
@@ -31,6 +32,9 @@ export default async function ReplacementPage({ params, searchParams }: PageProp
 
   const cityBounds = city.bounds as CityBounds | null;
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <ListingsPageClient
       listings={serialized}
@@ -38,6 +42,7 @@ export default async function ReplacementPage({ params, searchParams }: PageProp
       citySlug={citySlug}
       cityBounds={cityBounds ?? undefined}
       listingType="replacement"
+      isLoggedIn={!!user}
     />
   );
 }
