@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Loader } from "@googlemaps/js-api-loader";
 import { MapPin } from "lucide-react";
 
 export interface PlaceResult {
@@ -22,24 +21,46 @@ interface AddressAutocompleteProps {
   defaultValue?: string;
 }
 
-let googleMapsLoaded = false;
-let loadPromise: Promise<void> | null = null;
+let placesLibPromise: Promise<void> | null = null;
 
-function loadGoogleMaps(): Promise<void> {
-  if (googleMapsLoaded) return Promise.resolve();
-  if (loadPromise) return loadPromise;
+function bootstrapGoogleMaps() {
+  const w = window as any;
+  const g = (w.google = w.google || {});
+  const m = (g.maps = g.maps || {});
+  if (typeof m.importLibrary === "function") return;
 
-  const loader = new Loader({
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY!,
-    version: "weekly",
-    libraries: ["places"],
-  });
+  const pending = new Set<string>();
+  let coreReady: Promise<void> | null = null;
 
-  loadPromise = loader.load().then(() => {
-    googleMapsLoaded = true;
-  });
+  m.importLibrary = (name: string) => {
+    pending.add(name);
+    if (!coreReady) {
+      coreReady = new Promise<void>((resolve, reject) => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY!;
+        const params = new URLSearchParams({
+          key: apiKey,
+          v: "weekly",
+          libraries: [...pending].join(","),
+          loading: "async",
+          callback: "__gmcb",
+        });
+        w.__gmcb = resolve;
+        const s = document.createElement("script");
+        s.src = `https://maps.googleapis.com/maps/api/js?${params}`;
+        s.async = true;
+        s.onerror = () => reject(new Error("Failed to load Google Maps"));
+        document.head.appendChild(s);
+      });
+    }
+    return coreReady.then(() => m.importLibrary(name));
+  };
+}
 
-  return loadPromise;
+function ensureMapsLoaded(): Promise<void> {
+  if (placesLibPromise) return placesLibPromise;
+  bootstrapGoogleMaps();
+  placesLibPromise = google.maps.importLibrary("places").then(() => {});
+  return placesLibPromise;
 }
 
 export function AddressAutocomplete({
@@ -48,64 +69,109 @@ export function AddressAutocomplete({
   defaultValue = "",
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const [value, setValue] = useState(defaultValue);
+  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompleteSuggestion[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  const handlePlaceChanged = useCallback(() => {
-    const place = autocompleteRef.current?.getPlace();
-    if (!place?.address_components || !place.geometry?.location) return;
-
-    const components = place.address_components;
-    const get = (type: string) =>
-      components.find((c) => c.types.includes(type))?.long_name ?? "";
-
-    const result: PlaceResult = {
-      street: `${get("route")}`,
-      buildingNumber: get("street_number"),
-      district: get("sublocality_level_1") || get("locality") || "",
-      postalCode: get("postal_code"),
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-      placeId: place.place_id ?? "",
-      formattedAddress: place.formatted_address ?? "",
-    };
-
-    setValue(result.formattedAddress);
-    onPlaceSelect(result);
-  }, [onPlaceSelect]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    loadGoogleMaps().then(() => {
-      if (cancelled || !inputRef.current) return;
-
-      autocompleteRef.current = new google.maps.places.Autocomplete(
-        inputRef.current,
-        {
-          componentRestrictions: { country: "pl" },
-          types: ["address"],
-          fields: [
-            "address_components",
-            "geometry",
-            "formatted_address",
-            "place_id",
-          ],
-        },
-      );
-
-      autocompleteRef.current.addListener("place_changed", handlePlaceChanged);
+    ensureMapsLoaded().then(() => {
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
       setIsLoading(false);
     });
+  }, []);
 
-    return () => {
-      cancelled = true;
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+  const fetchSuggestions = useCallback(async (input: string) => {
+    if (!input || input.length < 3) {
+      setSuggestions([]);
+      setIsOpen(false);
+      return;
+    }
+
+    try {
+      const { suggestions: results } =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input,
+          includedRegionCodes: ["pl"],
+          sessionToken: sessionTokenRef.current!,
+        });
+
+      setSuggestions(results);
+      setIsOpen(results.length > 0);
+      setActiveIndex(-1);
+    } catch (err) {
+      setSuggestions([]);
+      setIsOpen(false);
+    }
+  }, []);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setValue(val);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+    },
+    [fetchSuggestions],
+  );
+
+  const handleSelect = useCallback(
+    async (suggestion: google.maps.places.AutocompleteSuggestion) => {
+      const prediction = suggestion.placePrediction;
+      if (!prediction) return;
+
+      const place = prediction.toPlace();
+      await place.fetchFields({
+        fields: ["addressComponents", "location", "formattedAddress", "id"],
+      });
+
+      const components = place.addressComponents ?? [];
+      const get = (type: string) =>
+        components.find((c) => c.types.includes(type))?.longText ?? "";
+
+      const loc = place.location;
+      const result: PlaceResult = {
+        street: get("route"),
+        buildingNumber: get("street_number"),
+        district: get("sublocality_level_1") || get("locality") || "",
+        postalCode: get("postal_code"),
+        lat: loc?.lat() ?? 0,
+        lng: loc?.lng() ?? 0,
+        placeId: place.id ?? "",
+        formattedAddress: place.formattedAddress ?? "",
+      };
+
+      setValue(result.formattedAddress);
+      setSuggestions([]);
+      setIsOpen(false);
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+      onPlaceSelect(result);
+    },
+    [onPlaceSelect],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isOpen || suggestions.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((i) => (i < suggestions.length - 1 ? i + 1 : 0));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex((i) => (i > 0 ? i - 1 : suggestions.length - 1));
+      } else if (e.key === "Enter" && activeIndex >= 0) {
+        e.preventDefault();
+        handleSelect(suggestions[activeIndex]);
+      } else if (e.key === "Escape") {
+        setIsOpen(false);
       }
-    };
-  }, [handlePlaceChanged]);
+    },
+    [isOpen, suggestions, activeIndex, handleSelect],
+  );
 
   return (
     <div className="relative">
@@ -113,11 +179,46 @@ export function AddressAutocomplete({
       <Input
         ref={inputRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        onFocus={() => suggestions.length > 0 && setIsOpen(true)}
         placeholder={placeholder}
         className="pl-9"
         disabled={isLoading}
+        autoComplete="off"
       />
+      {isOpen && suggestions.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 shadow-md">
+          {suggestions.map((suggestion, i) => {
+            const prediction = suggestion.placePrediction;
+            if (!prediction) return null;
+            return (
+              <li
+                key={prediction.placeId}
+                onMouseDown={() => handleSelect(suggestion)}
+                className={`cursor-pointer rounded-sm px-3 py-2 text-sm transition-colors ${
+                  i === activeIndex
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent/50"
+                }`}
+              >
+                <span className="font-medium">
+                  {prediction.mainText?.text ?? ""}
+                </span>
+                {prediction.secondaryText?.text && (
+                  <span className="ml-1 text-muted-foreground">
+                    {prediction.secondaryText.text}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+          <li className="px-3 py-1.5 text-[10px] text-muted-foreground">
+            Powered by Google
+          </li>
+        </ul>
+      )}
     </div>
   );
 }

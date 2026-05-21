@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "@/i18n/navigation";
@@ -21,6 +21,10 @@ import {
   Home,
   Lock,
   Loader2,
+  Shield,
+  AlertTriangle,
+  Pencil,
+  Mail,
 } from "lucide-react";
 import {
   AddressAutocomplete,
@@ -32,39 +36,99 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" },
+    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" as const },
   }),
 };
 
-interface CostSubmitClientProps {
-  citySlug: string;
+interface ExistingReport {
+  id: string;
+  street: string;
+  buildingNumber: string;
+  district: string;
+  placeId: string;
+  lat: number;
+  lng: number;
+  rentalType: "" | "apartment" | "room";
+  areaM2: string;
+  rooms: string;
+  floor: string;
+  rent: string;
+  adminFee: string;
+  deposit: string;
+  electricity: string;
+  electricityIncluded: boolean;
+  electricityWinter: string;
+  electricitySummer: string;
+  gas: string;
+  heating: string;
+  heatingIncluded: boolean;
+  heatingWinter: string;
+  heatingSummer: string;
+  water: string;
+  waterIncluded: boolean;
+  internet: string;
+  internetProvider: string;
+  other: string;
+  otherCostsNote: string;
 }
 
-export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
+interface CostSubmitClientProps {
+  citySlug: string;
+  editMode?: boolean;
+  existingReport?: ExistingReport | null;
+}
+
+export function CostSubmitClient({ citySlug, editMode = false, existingReport = null }: CostSubmitClientProps) {
   const t = useTranslations();
   const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
+  const [wasFlagged, setWasFlagged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rentalTypeError, setRentalTypeError] = useState(false);
+  const rentalTypeRef = useRef<HTMLDivElement>(null);
 
-  const [formData, setFormData] = useState({
-    street: "",
-    buildingNumber: "",
-    district: "",
-    placeId: "",
-    lat: 0,
-    lng: 0,
-    areaM2: "",
-    rooms: "",
-    rent: "",
-    adminFee: "",
-    electricity: "",
-    gas: "",
-    heating: "",
-    water: "",
-    internet: "",
-    other: "",
-  });
+  const [formData, setFormData] = useState(
+    existingReport
+      ? { ...existingReport }
+      : {
+          rentalType: "" as "" | "apartment" | "room",
+          street: "",
+          buildingNumber: "",
+          district: "",
+          placeId: "",
+          lat: 0,
+          lng: 0,
+          areaM2: "",
+          rooms: "",
+          floor: "",
+          rent: "",
+          adminFee: "",
+          deposit: "",
+          electricity: "",
+          electricityIncluded: false,
+          electricityWinter: "",
+          electricitySummer: "",
+          gas: "",
+          heating: "",
+          heatingIncluded: false,
+          heatingWinter: "",
+          heatingSummer: "",
+          water: "",
+          waterIncluded: false,
+          internet: "",
+          internetProvider: "",
+          other: "",
+          otherCostsNote: "",
+        },
+  );
+
+  const [showElectricitySeasonal, setShowElectricitySeasonal] = useState(
+    () => !!(existingReport?.electricityWinter || existingReport?.electricitySummer),
+  );
+  const [showHeatingSeasonal, setShowHeatingSeasonal] = useState(
+    () => !!(existingReport?.heatingWinter || existingReport?.heatingSummer),
+  );
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -83,40 +147,79 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.rentalType) {
+      setRentalTypeError(true);
+      rentalTypeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setRentalTypeError(false);
     setSubmitting(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/cost-reports", {
-        method: "POST",
+      const url = editMode && existingReport
+        ? `/api/cost-reports/${existingReport.id}`
+        : "/api/cost-reports";
+      const method = editMode && existingReport ? "PATCH" : "POST";
+
+      const sharedFields = {
+        rent: formData.rent || undefined,
+        adminFee: formData.adminFee || undefined,
+        deposit: formData.deposit || undefined,
+        electricity: formData.electricityIncluded ? undefined : formData.electricity || undefined,
+        electricityIncluded: formData.electricityIncluded || undefined,
+        electricityWinter: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricityWinter) || undefined,
+        electricitySummer: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricitySummer) || undefined,
+        gas: formData.gas || undefined,
+        heating: formData.heatingIncluded ? undefined : formData.heating || undefined,
+        heatingIncluded: formData.heatingIncluded || undefined,
+        heatingWinter: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingWinter) || undefined,
+        heatingSummer: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingSummer) || undefined,
+        water: formData.waterIncluded ? undefined : formData.water || undefined,
+        waterIncluded: formData.waterIncluded || undefined,
+        internet: formData.internet || undefined,
+        internetProvider: formData.internetProvider || undefined,
+        otherCosts: formData.other || undefined,
+        otherCostsNote: formData.otherCostsNote || undefined,
+        rooms: formData.rooms || undefined,
+        areaM2: formData.areaM2 || undefined,
+        floor: formData.floor || undefined,
+        rentalType: formData.rentalType || undefined,
+      };
+
+      const requestBody = editMode
+        ? sharedFields
+        : {
+            street: formData.street,
+            buildingNumber: formData.buildingNumber,
+            district: formData.district,
+            placeId: formData.placeId || undefined,
+            lat: formData.lat || undefined,
+            lng: formData.lng || undefined,
+            citySlug,
+            isCurrentTenant: true,
+            ...sharedFields,
+          };
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          street: formData.street,
-          buildingNumber: formData.buildingNumber,
-          district: formData.district,
-          placeId: formData.placeId || undefined,
-          lat: formData.lat || undefined,
-          lng: formData.lng || undefined,
-          citySlug,
-          rent: formData.rent || undefined,
-          adminFee: formData.adminFee || undefined,
-          electricity: formData.electricity || undefined,
-          gas: formData.gas || undefined,
-          heating: formData.heating || undefined,
-          water: formData.water || undefined,
-          internet: formData.internet || undefined,
-          otherCosts: formData.other || undefined,
-          rooms: formData.rooms || undefined,
-          areaM2: formData.areaM2 || undefined,
-          isCurrentTenant: true,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to submit");
+      const responseText = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(`Server error (${response.status})`);
       }
 
+      if (!response.ok) {
+        throw new Error((data.error as string) || "Failed to submit");
+      }
+
+      setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -125,11 +228,25 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
     }
   };
 
+  const effectiveElectricity = formData.electricityIncluded
+    ? 0
+    : showElectricitySeasonal && (formData.electricityWinter || formData.electricitySummer)
+      ? Math.round(((parseInt(formData.electricityWinter) || 0) + (parseInt(formData.electricitySummer) || 0)) / 2)
+      : parseInt(formData.electricity) || 0;
+
+  const effectiveHeating = formData.heatingIncluded
+    ? 0
+    : showHeatingSeasonal && (formData.heatingWinter || formData.heatingSummer)
+      ? Math.round(((parseInt(formData.heatingWinter) || 0) + (parseInt(formData.heatingSummer) || 0)) / 2)
+      : parseInt(formData.heating) || 0;
+
+  const effectiveWater = formData.waterIncluded ? 0 : parseInt(formData.water) || 0;
+
   const totalUtilities =
-    (parseInt(formData.electricity) || 0) +
+    effectiveElectricity +
     (parseInt(formData.gas) || 0) +
-    (parseInt(formData.heating) || 0) +
-    (parseInt(formData.water) || 0) +
+    effectiveHeating +
+    effectiveWater +
     (parseInt(formData.internet) || 0) +
     (parseInt(formData.other) || 0);
 
@@ -137,6 +254,54 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
     (parseInt(formData.rent) || 0) +
     (parseInt(formData.adminFee) || 0) +
     totalUtilities;
+
+  if (submitted && wasFlagged) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex flex-1 items-center justify-center p-8 pt-20">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, type: "spring", bounce: 0.3 }}
+          >
+            <Card className="w-full max-w-md text-center">
+              <CardContent className="pt-8">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
+                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10"
+                >
+                  <AlertTriangle className="h-8 w-8 text-destructive" />
+                </motion.div>
+                <h1 className="text-2xl font-bold">
+                  {t("costs.submit.flaggedTitle")}
+                </h1>
+                <p className="mt-2 text-muted-foreground">
+                  {t("costs.submit.flaggedDesc")}
+                </p>
+                <div className="mt-6 flex flex-col gap-3">
+                  <Button asChild>
+                    <Link href={`/${citySlug}/costs/submit?edit=true`}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t("costs.submit.editReport")}
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <a href="mailto:contact@passflat.eu?subject=Cost report review">
+                      <Mail className="mr-2 h-4 w-4" />
+                      {t("costs.submit.contactUs")}
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -212,10 +377,14 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
               className="mb-8 text-center"
             >
               <h1 className="text-2xl font-bold md:text-3xl">
-                {t("costs.submit.pageTitle")}
+                {editMode
+                  ? t("costs.submit.editPageTitle")
+                  : t("costs.submit.pageTitle")}
               </h1>
               <p className="mt-2 text-muted-foreground">
-                {t("costs.submit.pageSubtitle")}
+                {editMode
+                  ? t("costs.submit.editPageSubtitle")
+                  : t("costs.submit.pageSubtitle")}
               </p>
             </motion.div>
 
@@ -225,12 +394,10 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
+                  className="mb-6 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
                 >
-                  <Card className="mb-6 border-destructive bg-destructive/5">
-                    <CardContent className="p-4 text-sm text-destructive">
-                      {error}
-                    </CardContent>
-                  </Card>
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {error}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -245,16 +412,50 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>{t("listings.create.searchAddress")}</Label>
-                      <AddressAutocomplete
-                        onPlaceSelect={handlePlaceSelect}
-                        placeholder={t("listings.create.addressPlaceholder")}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t("listings.create.addressHint")}
-                      </p>
+                    <div ref={rentalTypeRef} className="space-y-2">
+                      <Label>{t("costs.submit.rentalType")} *</Label>
+                      <div className="flex gap-2">
+                        {(["apartment", "room"] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => {
+                              updateFormData({ rentalType: type });
+                              setRentalTypeError(false);
+                            }}
+                            className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                              formData.rentalType === type
+                                ? "border-primary bg-primary/10 text-primary"
+                                : rentalTypeError
+                                  ? "border-destructive/50 bg-background text-muted-foreground hover:bg-muted/50"
+                                  : "border-border bg-background text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            {type === "apartment"
+                              ? t("costs.submit.wholeApartment")
+                              : t("costs.submit.room")}
+                          </button>
+                        ))}
+                      </div>
+                      {rentalTypeError && (
+                        <p className="text-xs text-destructive">
+                          {t("costs.submit.rentalTypeRequired")}
+                        </p>
+                      )}
                     </div>
+
+                    {!editMode && (
+                      <div className="space-y-2">
+                        <Label>{t("listings.create.searchAddress")}</Label>
+                        <AddressAutocomplete
+                          onPlaceSelect={handlePlaceSelect}
+                          placeholder={t("listings.create.addressPlaceholder")}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("listings.create.addressHint")}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2 sm:col-span-2">
@@ -264,11 +465,10 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                         <Input
                           id="street"
                           required
-                          placeholder="e.g., ul. Marszalkowska"
+                          readOnly
+                          className="bg-muted"
+                          placeholder="e.g., Marszałkowska"
                           value={formData.street}
-                          onChange={(e) =>
-                            updateFormData({ street: e.target.value })
-                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -278,22 +478,55 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                         <Input
                           id="buildingNumber"
                           required
+                          readOnly={editMode}
+                          className={editMode ? "bg-muted" : ""}
                           placeholder="e.g., 45"
                           value={formData.buildingNumber}
                           onChange={(e) =>
-                            updateFormData({ buildingNumber: e.target.value })
+                            updateFormData({
+                              buildingNumber: e.target.value,
+                              placeId: "",
+                            })
                           }
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="areaM2">{t("costs.submit.size")}</Label>
+                        <Label htmlFor="areaM2">{t("costs.submit.size")} *</Label>
                         <Input
                           id="areaM2"
                           type="number"
+                          min="0"
+                          required
                           placeholder="e.g., 45"
                           value={formData.areaM2}
                           onChange={(e) =>
                             updateFormData({ areaM2: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="rooms">{t("costs.submit.rooms")}</Label>
+                        <Input
+                          id="rooms"
+                          type="number"
+                          min="1"
+                          placeholder="e.g., 2"
+                          value={formData.rooms}
+                          onChange={(e) =>
+                            updateFormData({ rooms: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="floor">{t("costs.submit.floor")}</Label>
+                        <Input
+                          id="floor"
+                          type="number"
+                          min="0"
+                          placeholder="e.g., 3"
+                          value={formData.floor}
+                          onChange={(e) =>
+                            updateFormData({ floor: e.target.value })
                           }
                         />
                       </div>
@@ -319,6 +552,7 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                         <Input
                           id="rent"
                           type="number"
+                          min="0"
                           required
                           placeholder="e.g., 3200"
                           value={formData.rent}
@@ -329,15 +563,37 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="adminFee">
-                          {t("costs.submit.adminFeeCzynsz")}
+                          {t("costs.submit.adminFeeCzynsz")} *
                         </Label>
                         <Input
                           id="adminFee"
                           type="number"
+                          min="0"
+                          required
                           placeholder="e.g., 350"
                           value={formData.adminFee}
                           onChange={(e) =>
                             updateFormData({ adminFee: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label
+                          htmlFor="deposit"
+                          className="flex items-center gap-2"
+                        >
+                          <Shield className="h-4 w-4 text-primary" />
+                          {t("costs.submit.deposit")} *
+                        </Label>
+                        <Input
+                          id="deposit"
+                          type="number"
+                          min="0"
+                          required
+                          placeholder="e.g., 5000"
+                          value={formData.deposit}
+                          onChange={(e) =>
+                            updateFormData({ deposit: e.target.value })
                           }
                         />
                       </div>
@@ -354,105 +610,237 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                       {t("costs.submit.utilitiesTitle")}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="electricity"
-                          className="flex items-center gap-2"
-                        >
+                  <CardContent className="space-y-5">
+                    {/* Electricity */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="electricity" className="flex items-center gap-2">
                           <Zap className="h-4 w-4 text-yellow-500" />
                           {t("costs.submit.electricity")}
                         </Label>
+                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={formData.electricityIncluded}
+                            onChange={(e) => {
+                              updateFormData({
+                                electricityIncluded: e.target.checked,
+                                ...( e.target.checked ? { electricity: "", electricityWinter: "", electricitySummer: "" } : {}),
+                              });
+                              if (e.target.checked) setShowElectricitySeasonal(false);
+                            }}
+                          />
+                          {t("costs.submit.includedInRent")}
+                        </label>
+                      </div>
+                      {!formData.electricityIncluded && !showElectricitySeasonal && (
                         <Input
                           id="electricity"
                           type="number"
+                          min="0"
                           placeholder="e.g., 150"
                           value={formData.electricity}
-                          onChange={(e) =>
-                            updateFormData({ electricity: e.target.value })
-                          }
+                          onChange={(e) => updateFormData({ electricity: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gas" className="flex items-center gap-2">
-                          <Flame className="h-4 w-4 text-orange-500" />
-                          {t("costs.submit.gas")}
-                        </Label>
-                        <Input
-                          id="gas"
-                          type="number"
-                          placeholder="e.g., 80"
-                          value={formData.gas}
-                          onChange={(e) =>
-                            updateFormData({ gas: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="heating"
-                          className="flex items-center gap-2"
+                      )}
+                      {!formData.electricityIncluded && showElectricitySeasonal && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder={t("costs.submit.winter")}
+                            value={formData.electricityWinter}
+                            onChange={(e) => updateFormData({ electricityWinter: e.target.value })}
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder={t("costs.submit.summer")}
+                            value={formData.electricitySummer}
+                            onChange={(e) => updateFormData({ electricitySummer: e.target.value })}
+                          />
+                        </div>
+                      )}
+                      {!formData.electricityIncluded && (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                          onClick={() => {
+                            setShowElectricitySeasonal((v) => !v);
+                            updateFormData({ electricity: "", electricityWinter: "", electricitySummer: "" });
+                          }}
                         >
+                          {showElectricitySeasonal ? t("costs.submit.electricity") : t("costs.submit.specifySeasonally")}
+                        </button>
+                      )}
+                      {formData.electricityIncluded && (
+                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                      )}
+                    </div>
+
+                    {/* Gas */}
+                    <div className="space-y-2">
+                      <Label htmlFor="gas" className="flex items-center gap-2">
+                        <Flame className="h-4 w-4 text-orange-500" />
+                        {t("costs.submit.gas")}
+                      </Label>
+                      <Input
+                        id="gas"
+                        type="number"
+                        min="0"
+                        placeholder="e.g., 80"
+                        value={formData.gas}
+                        onChange={(e) => updateFormData({ gas: e.target.value })}
+                      />
+                    </div>
+
+                    {/* Heating */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="heating" className="flex items-center gap-2">
                           <Flame className="h-4 w-4 text-red-500" />
                           {t("costs.submit.heating")}
                         </Label>
+                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={formData.heatingIncluded}
+                            onChange={(e) => {
+                              updateFormData({
+                                heatingIncluded: e.target.checked,
+                                ...(e.target.checked ? { heating: "", heatingWinter: "", heatingSummer: "" } : {}),
+                              });
+                              if (e.target.checked) setShowHeatingSeasonal(false);
+                            }}
+                          />
+                          {t("costs.submit.includedInRent")}
+                        </label>
+                      </div>
+                      {!formData.heatingIncluded && !showHeatingSeasonal && (
                         <Input
                           id="heating"
                           type="number"
+                          min="0"
                           placeholder="e.g., 200"
                           value={formData.heating}
-                          onChange={(e) =>
-                            updateFormData({ heating: e.target.value })
-                          }
+                          onChange={(e) => updateFormData({ heating: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="water"
-                          className="flex items-center gap-2"
+                      )}
+                      {!formData.heatingIncluded && showHeatingSeasonal && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder={t("costs.submit.winter")}
+                            value={formData.heatingWinter}
+                            onChange={(e) => updateFormData({ heatingWinter: e.target.value })}
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder={t("costs.submit.summer")}
+                            value={formData.heatingSummer}
+                            onChange={(e) => updateFormData({ heatingSummer: e.target.value })}
+                          />
+                        </div>
+                      )}
+                      {!formData.heatingIncluded && (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                          onClick={() => {
+                            setShowHeatingSeasonal((v) => !v);
+                            updateFormData({ heating: "", heatingWinter: "", heatingSummer: "" });
+                          }}
                         >
+                          {showHeatingSeasonal ? t("costs.submit.heating") : t("costs.submit.specifySeasonally")}
+                        </button>
+                      )}
+                      {formData.heatingIncluded && (
+                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                      )}
+                    </div>
+
+                    {/* Water */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="water" className="flex items-center gap-2">
                           <Droplets className="h-4 w-4 text-blue-500" />
                           {t("costs.submit.water")}
                         </Label>
+                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={formData.waterIncluded}
+                            onChange={(e) => {
+                              updateFormData({
+                                waterIncluded: e.target.checked,
+                                ...(e.target.checked ? { water: "" } : {}),
+                              });
+                            }}
+                          />
+                          {t("costs.submit.includedInRent")}
+                        </label>
+                      </div>
+                      {!formData.waterIncluded && (
                         <Input
                           id="water"
                           type="number"
+                          min="0"
                           placeholder="e.g., 50"
                           value={formData.water}
-                          onChange={(e) =>
-                            updateFormData({ water: e.target.value })
-                          }
+                          onChange={(e) => updateFormData({ water: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="internet"
-                          className="flex items-center gap-2"
-                        >
-                          <Wifi className="h-4 w-4 text-primary" />
-                          {t("costs.submit.internet")}
-                        </Label>
+                      )}
+                      {formData.waterIncluded && (
+                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                      )}
+                    </div>
+
+                    {/* Internet */}
+                    <div className="space-y-2">
+                      <Label htmlFor="internet" className="flex items-center gap-2">
+                        <Wifi className="h-4 w-4 text-primary" />
+                        {t("costs.submit.internet")}
+                      </Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
                         <Input
                           id="internet"
                           type="number"
+                          min="0"
                           placeholder="e.g., 79"
                           value={formData.internet}
-                          onChange={(e) =>
-                            updateFormData({ internet: e.target.value })
-                          }
+                          onChange={(e) => updateFormData({ internet: e.target.value })}
+                        />
+                        <Input
+                          type="text"
+                          placeholder={t("costs.submit.internetProviderPlaceholder")}
+                          value={formData.internetProvider}
+                          onChange={(e) => updateFormData({ internetProvider: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="other">{t("costs.submit.other")}</Label>
+                    </div>
+
+                    {/* Other */}
+                    <div className="space-y-2">
+                      <Label htmlFor="other">{t("costs.submit.other")}</Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
                         <Input
                           id="other"
                           type="number"
+                          min="0"
                           placeholder="e.g., 30"
                           value={formData.other}
-                          onChange={(e) =>
-                            updateFormData({ other: e.target.value })
-                          }
+                          onChange={(e) => updateFormData({ other: e.target.value })}
+                        />
+                        <Input
+                          type="text"
+                          placeholder={t("costs.submit.otherCostsNotePlaceholder")}
+                          value={formData.otherCostsNote}
+                          onChange={(e) => updateFormData({ otherCostsNote: e.target.value })}
                         />
                       </div>
                     </div>
@@ -536,6 +924,8 @@ export function CostSubmitClient({ citySlug }: CostSubmitClientProps) {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {t("common.loading")}
                     </>
+                  ) : editMode ? (
+                    t("costs.submit.saveChanges")
                   ) : (
                     t("costs.submit.submitButton")
                   )}

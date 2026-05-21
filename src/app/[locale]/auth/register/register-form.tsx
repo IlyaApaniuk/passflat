@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
+import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,9 +46,18 @@ export function RegisterForm() {
   const tc = useTranslations('common');
   const { locale } = useParams<{ locale: string }>();
 
+  const posthog = usePostHog();
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    posthog?.capture('auth_started', {
+      method: 'register',
+      has_next_url: false,
+      trigger: 'voluntary',
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSubmit(formData: FormData) {
     setError(null);

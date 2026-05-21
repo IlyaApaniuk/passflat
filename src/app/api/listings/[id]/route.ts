@@ -9,6 +9,7 @@ import {
   computePriceFields,
   type ListingType,
 } from '@/lib/listings-validation';
+import { trackServerEvent } from '@/lib/posthog-server';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -271,6 +272,19 @@ export async function PATCH(
       },
     },
   });
+
+  if (body.status && body.status !== existing.status) {
+    const daysActive = Math.floor(
+      (Date.now() - new Date(existing.createdAt).getTime()) / (1000 * 60 * 60 * 24),
+    );
+    trackServerEvent(user.id, 'listing_status_changed', {
+      listing_id: id,
+      type: listingType,
+      old_status: existing.status,
+      new_status: body.status,
+      days_active: daysActive,
+    });
+  }
 
   return NextResponse.json({ listing });
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/landing/header";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,7 @@ export default function CreateListingPage() {
     { id: "preview", label: t("listings.create.stepPreview"), icon: Eye },
   ];
 
+  const posthog = usePostHog();
   const [currentStep, setCurrentStep] = useState<Step>("type");
   const [formData, setFormData] = useState<ListingFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -178,6 +180,23 @@ export default function CreateListingPage() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    posthog?.capture("create_listing_started");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!isPublished && currentStep !== "type") {
+        posthog?.capture("create_listing_abandoned", {
+          last_step: currentStep,
+          step_number: steps.findIndex((s) => s.id === currentStep),
+        });
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [currentStep, isPublished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
@@ -195,6 +214,10 @@ export default function CreateListingPage() {
   };
 
   const handleNext = () => {
+    posthog?.capture("create_listing_step_completed", {
+      step: currentStep,
+      step_number: currentStepIndex,
+    });
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setCurrentStep(steps[nextIndex].id);
@@ -584,11 +607,10 @@ export default function CreateListingPage() {
                           </Label>
                           <Input
                             id="street"
-                            placeholder="e.g., ul. Marszałkowska"
+                            placeholder="e.g., Marszałkowska"
                             value={formData.street}
-                            onChange={(e) =>
-                              updateFormData({ street: e.target.value })
-                            }
+                            readOnly
+                            className="bg-muted"
                           />
                         </div>
                         <div className="space-y-2">
@@ -600,7 +622,10 @@ export default function CreateListingPage() {
                             placeholder="e.g., 45"
                             value={formData.buildingNumber}
                             onChange={(e) =>
-                              updateFormData({ buildingNumber: e.target.value })
+                              updateFormData({
+                                buildingNumber: e.target.value,
+                                placeId: "",
+                              })
                             }
                           />
                         </div>

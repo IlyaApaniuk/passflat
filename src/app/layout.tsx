@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { getLocale } from 'next-intl/server';
+import { PostHogProvider } from '@/components/providers/posthog-provider';
+import { CookieConsent } from '@/components/cookie-consent';
 import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: '--font-space-grotesk' });
@@ -29,7 +31,10 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased min-h-screen bg-background text-foreground">
-        {children}
+        <PostHogProvider>
+          {children}
+          <CookieConsent />
+        </PostHogProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

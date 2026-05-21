@@ -9,7 +9,9 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { CostTransparency } from "@/components/landing/cost-transparency";
 import { CTA } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
+import { LandingContent } from "@/components/landing/landing-content";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import type { ListingType } from "@/lib/listings-data";
 import { getAlternates } from "@/lib/seo";
 
@@ -84,6 +86,7 @@ async function getFeaturedListings(): Promise<FeaturedListingData[]> {
 
 export default async function Home() {
   let featuredListings: FeaturedListingData[] = [];
+  let hasContributed = false;
 
   try {
     featuredListings = await getFeaturedListings();
@@ -91,18 +94,34 @@ export default async function Home() {
     // DB unavailable — component will use fallback mock data
   }
 
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const report = await prisma.costReport.findFirst({
+        where: { authorId: user.id, isVisible: true },
+        select: { id: true },
+      });
+      if (report) hasContributed = true;
+    }
+  } catch {
+    // Auth unavailable — default to not contributed
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1">
-        <Hero />
-        <Marquee />
-        <BentoGrid />
-        <FeaturedListings listings={featuredListings} citySlug={DEFAULT_CITY} />
-        <HowItWorks />
-        <CostTransparency />
-        <CTA />
-      </main>
+      <LandingContent>
+        <main className="flex-1">
+          <Hero />
+          <Marquee />
+          <BentoGrid />
+          <FeaturedListings listings={featuredListings} citySlug={DEFAULT_CITY} />
+          <HowItWorks />
+          <CostTransparency hasContributed={hasContributed} />
+          <CTA />
+        </main>
+      </LandingContent>
       <Footer />
     </div>
   );

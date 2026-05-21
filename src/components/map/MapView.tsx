@@ -7,6 +7,7 @@ import {
   useRef,
   useEffect,
 } from "react";
+import { usePostHog } from "posthog-js/react";
 import MapGL, {
   Source,
   Layer,
@@ -14,11 +15,21 @@ import MapGL, {
   NavigationControl,
   type MapRef,
   type MapLayerMouseEvent,
+  type ViewStateChangeEvent,
   type LayerProps,
 } from "react-map-gl";
 import type { GeoJSONSource } from "mapbox-gl";
 import type { FeatureCollection, Point } from "geojson";
+import type { ListingType, MapBounds } from "@/lib/listings-data";
+import Link from "next/link";
+import { X } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
+
+const TYPE_ROUTE: Record<ListingType, string> = {
+  replacement: "replacement",
+  roommate: "roommate",
+  sublet: "sublet",
+};
 
 export interface MapListing {
   id: string;
@@ -36,10 +47,32 @@ export interface ListingsMapProps {
   hoveredId: string | null;
   onHover: (id: string | null) => void;
   bounds?: { north: number; south: number; east: number; west: number };
+  onBoundsChange?: (bounds: MapBounds) => void;
+  citySlug: string;
+  listingType: ListingType;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const WARSAW_CENTER = { longitude: 21.0122, latitude: 52.2297 };
+
+function zoomForBounds(
+  bounds: { north: number; south: number; east: number; west: number },
+  mapWidth = 800,
+  mapHeight = 600,
+): number {
+  const WORLD_PX = 512;
+  const lngSpan = bounds.east - bounds.west;
+
+  const latRad = (lat: number) => (lat * Math.PI) / 180;
+  const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + latRad(lat) / 2));
+
+  const lngZoom = Math.log2((mapWidth * 360) / (lngSpan * WORLD_PX));
+  const latZoom = Math.log2(
+    (mapHeight * (2 * Math.PI)) / (Math.abs(mercY(bounds.north) - mercY(bounds.south)) * WORLD_PX),
+  );
+
+  return Math.min(lngZoom, latZoom) + 0.5;
+}
 
 const clusterLayer: LayerProps = {
   id: "clusters",
@@ -90,8 +123,12 @@ export function ListingsMap({
   hoveredId,
   onHover,
   bounds,
+  onBoundsChange,
+  citySlug,
+  listingType,
 }: ListingsMapProps) {
   const mapRef = useRef<MapRef>(null);
+  const posthog = usePostHog();
   const [popupInfo, setPopupInfo] = useState<MapListing | null>(null);
   const [cursor, setCursor] = useState("auto");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -147,19 +184,6 @@ export function ListingsMap({
   );
 
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || listings.length === 0) return;
-    const lngs = listings.map((l) => l.lng);
-    const lats = listings.map((l) => l.lat);
-    mapRef.current.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ],
-      { padding: 50, maxZoom: 14 },
-    );
-  }, [listings, mapLoaded]);
-
-  useEffect(() => {
     if (popupInfo && !listings.some((l) => l.id === popupInfo.id)) {
       setPopupInfo(null);
     }
@@ -181,13 +205,46 @@ export function ListingsMap({
     onHover(null);
   }, [onHover]);
 
+  const emitBounds = useCallback(() => {
+    if (!onBoundsChange || !mapRef.current) return;
+    const b = mapRef.current.getBounds();
+    if (!b) return;
+    onBoundsChange({
+      north: b.getNorth(),
+      south: b.getSouth(),
+      east: b.getEast(),
+      west: b.getWest(),
+    });
+  }, [onBoundsChange]);
+
+  const onMoveEnd = useCallback(
+    (_e: ViewStateChangeEvent) => {
+      emitBounds();
+    },
+    [emitBounds],
+  );
+
+  useEffect(() => {
+    if (mapLoaded) emitBounds();
+  }, [mapLoaded, emitBounds]);
+
   const onClick = useCallback(
     (e: MapLayerMouseEvent) => {
       const feature = e.features?.[0];
-      if (!feature) return;
+      if (!feature) {
+        setPopupInfo(null);
+        return;
+      }
 
       if (feature.properties?.cluster) {
         const clusterId = feature.properties.cluster_id as number;
+        const pointCount = feature.properties.point_count as number;
+
+        posthog?.capture("map_marker_clicked", {
+          is_cluster: true,
+          cluster_size: pointCount,
+        });
+
         const source = mapRef.current?.getSource(
           "listings",
         ) as unknown as GeoJSONSource;
@@ -208,11 +265,15 @@ export function ListingsMap({
 
       const props = feature.properties;
       if (props?.id) {
+        posthog?.capture("map_marker_clicked", {
+          is_cluster: false,
+        });
+
         const listing = listings.find((l) => l.id === props.id);
         if (listing) setPopupInfo(listing);
       }
     },
-    [listings],
+    [listings, posthog],
   );
 
   const initialViewState = useMemo(() => {
@@ -220,7 +281,7 @@ export function ListingsMap({
       return {
         longitude: (bounds.west + bounds.east) / 2,
         latitude: (bounds.south + bounds.north) / 2,
-        zoom: 11.5,
+        zoom: zoomForBounds(bounds),
       };
     }
     return { ...WARSAW_CENTER, zoom: 11.5 };
@@ -249,7 +310,7 @@ export function ListingsMap({
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="relative h-full w-full">
       <MapGL
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -261,6 +322,7 @@ export function ListingsMap({
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
+        onMoveEnd={onMoveEnd}
         onLoad={() => setMapLoaded(true)}
         cursor={cursor}
       >
@@ -286,37 +348,40 @@ export function ListingsMap({
             anchor="bottom"
             onClose={() => setPopupInfo(null)}
             closeOnClick={false}
+            closeButton={false}
             offset={15}
           >
-            <div style={{ minWidth: 200 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={popupInfo.images[0]}
-                alt={popupInfo.title}
-                style={{
-                  width: "100%",
-                  height: 100,
-                  objectFit: "cover",
-                  borderRadius: 4,
-                  marginBottom: 8,
+            <div className="relative min-w-[200px]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setPopupInfo(null);
                 }}
-              />
-              <h4 style={{ fontWeight: 600, fontSize: 14, margin: "0 0 4px" }}>
-                {popupInfo.title}
-              </h4>
-              <p style={{ color: "#666", fontSize: 12, margin: "0 0 8px" }}>
-                {popupInfo.address}
-              </p>
-              <p
-                style={{
-                  fontWeight: 700,
-                  color: "#2b44ff",
-                  fontSize: 16,
-                  margin: 0,
-                }}
+                className="absolute -right-1 -top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-colors hover:bg-red-50 hover:text-red-500"
               >
-                {popupInfo.totalCost.toLocaleString()} PLN/mo
-              </p>
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <Link
+                href={`/${citySlug}/${TYPE_ROUTE[listingType]}/${popupInfo.id}`}
+                className="block cursor-pointer transition-opacity hover:opacity-80"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={popupInfo.images[0]}
+                  alt={popupInfo.title}
+                  className="mb-2 h-[100px] w-full rounded object-cover"
+                />
+                <h4 className="mb-1 text-sm font-semibold">
+                  {popupInfo.title}
+                </h4>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {popupInfo.address}
+                </p>
+                <p className="text-base font-bold text-primary">
+                  {popupInfo.totalCost.toLocaleString()} PLN/mo
+                </p>
+              </Link>
             </div>
           </Popup>
         )}

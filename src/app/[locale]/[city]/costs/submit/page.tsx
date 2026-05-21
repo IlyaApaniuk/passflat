@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { CostSubmitClient } from "./client";
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function SubmitCostsPage({ params }: PageProps) {
+export default async function SubmitCostsPage({ params, searchParams }: PageProps) {
   const { city: citySlug, locale } = await params;
+  const search = await searchParams;
+  const isEditMode = search.edit === "true";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,5 +20,53 @@ export default async function SubmitCostsPage({ params }: PageProps) {
     redirect(`/${locale}/auth/login?next=/${locale}/${citySlug}/costs/submit`);
   }
 
-  return <CostSubmitClient citySlug={citySlug} />;
+  let existingReport = null;
+  if (isEditMode) {
+    const report = await prisma.costReport.findFirst({
+      where: { authorId: user.id },
+      include: { building: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (report) {
+      existingReport = {
+        id: report.id,
+        street: report.building.street,
+        buildingNumber: report.building.buildingNumber,
+        district: "",
+        placeId: report.building.placeId ?? "",
+        lat: report.building.lat ? Number(report.building.lat) : 0,
+        lng: report.building.lng ? Number(report.building.lng) : 0,
+        rentalType: (report.rentalType ?? "") as "" | "apartment" | "room",
+        areaM2: report.areaM2 ? String(report.areaM2) : "",
+        rooms: report.rooms ? String(report.rooms) : "",
+        floor: report.floor ? String(report.floor) : "",
+        rent: report.rent ? String(report.rent) : "",
+        adminFee: report.adminFee ? String(report.adminFee) : "",
+        deposit: report.depositAmount ? String(report.depositAmount) : "",
+        electricity: report.electricityAvg ? String(report.electricityAvg) : "",
+        electricityIncluded: report.electricityIncluded ?? false,
+        electricityWinter: report.electricityWinter ? String(report.electricityWinter) : "",
+        electricitySummer: report.electricitySummer ? String(report.electricitySummer) : "",
+        gas: report.gas ? String(report.gas) : "",
+        heating: report.heating ? String(report.heating) : "",
+        heatingIncluded: report.heatingIncluded ?? false,
+        heatingWinter: report.heatingWinter ? String(report.heatingWinter) : "",
+        heatingSummer: report.heatingSummer ? String(report.heatingSummer) : "",
+        water: report.water ? String(report.water) : "",
+        waterIncluded: report.waterIncluded ?? false,
+        internet: report.internet ? String(report.internet) : "",
+        internetProvider: report.internetProvider ?? "",
+        other: report.otherCosts ? String(report.otherCosts) : "",
+        otherCostsNote: report.otherCostsNote ?? "",
+      };
+    }
+  }
+
+  return (
+    <CostSubmitClient
+      citySlug={citySlug}
+      editMode={isEditMode && existingReport != null}
+      existingReport={existingReport}
+    />
+  );
 }

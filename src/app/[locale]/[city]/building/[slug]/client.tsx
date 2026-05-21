@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { usePostHog } from "posthog-js/react";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import { Header } from "@/components/landing/header";
@@ -21,6 +23,8 @@ import {
   Wifi,
   Droplets,
   Home,
+  Shield,
+  Equal,
 } from "lucide-react";
 
 const fadeUp = {
@@ -28,7 +32,7 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" },
+    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" as const },
   }),
 };
 
@@ -39,9 +43,17 @@ interface CostStats {
   count: number;
 }
 
+interface IncludedCounts {
+  electricity: number;
+  heating: number;
+  water: number;
+  total: number;
+}
+
 interface BuildingCostsClientProps {
   building: {
     id: string;
+    slug: string;
     address: string;
     district: string;
     districtSlug: string;
@@ -53,12 +65,19 @@ interface BuildingCostsClientProps {
     rent: CostStats | null;
     adminFee: CostStats | null;
     electricity: CostStats | null;
+    electricityWinter: CostStats | null;
+    electricitySummer: CostStats | null;
     gas: CostStats | null;
     heating: CostStats | null;
+    heatingWinter: CostStats | null;
+    heatingSummer: CostStats | null;
     water: CostStats | null;
     internet: CostStats | null;
+    otherCosts: CostStats | null;
     totalMonthlyAvg: CostStats | null;
+    deposit: CostStats | null;
   } | null;
+  includedCounts: IncludedCounts | null;
   comparison: {
     thisBuilding: number | null;
     districtAvg: number | null;
@@ -73,11 +92,24 @@ export function BuildingCostsClient({
   reports,
   lastUpdated,
   costs,
+  includedCounts,
   comparison,
   hasContributed,
   citySlug,
 }: BuildingCostsClientProps) {
   const t = useTranslations();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture("building_detail_viewed", {
+      building_id: building.id,
+      building_slug: building.slug,
+      city: citySlug,
+    });
+  }, [building.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isOftenIncluded = (count: number) =>
+    includedCounts && includedCounts.total > 0 && count / includedCounts.total >= 0.5;
 
   const costItems = costs
     ? [
@@ -101,6 +133,9 @@ export function BuildingCostsClient({
           color: "text-yellow-500",
           bgColor: "bg-yellow-500/10",
           data: costs.electricity,
+          winter: costs.electricityWinter,
+          summer: costs.electricitySummer,
+          oftenIncluded: isOftenIncluded(includedCounts?.electricity ?? 0),
         },
         {
           label: t("costs.building.gas"),
@@ -115,6 +150,9 @@ export function BuildingCostsClient({
           color: "text-red-500",
           bgColor: "bg-red-500/10",
           data: costs.heating,
+          winter: costs.heatingWinter,
+          summer: costs.heatingSummer,
+          oftenIncluded: isOftenIncluded(includedCounts?.heating ?? 0),
         },
         {
           label: t("costs.building.water"),
@@ -122,6 +160,7 @@ export function BuildingCostsClient({
           color: "text-blue-500",
           bgColor: "bg-blue-500/10",
           data: costs.water,
+          oftenIncluded: isOftenIncluded(includedCounts?.water ?? 0),
         },
         {
           label: t("costs.building.internet"),
@@ -130,6 +169,17 @@ export function BuildingCostsClient({
           bgColor: "bg-primary/10",
           data: costs.internet,
         },
+        ...(costs.otherCosts
+          ? [
+              {
+                label: t("costs.building.otherCosts"),
+                icon: Home,
+                color: "text-muted-foreground",
+                bgColor: "bg-muted",
+                data: costs.otherCosts,
+              },
+            ]
+          : []),
       ]
     : [];
 
@@ -301,30 +351,77 @@ export function BuildingCostsClient({
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.3 + i * 0.05 }}
-                            className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                            className="border-b pb-4 last:border-0 last:pb-0"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.bgColor}`}>
-                                <item.icon
-                                  className={`h-5 w-5 ${item.color}`}
-                                />
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.bgColor}`}>
+                                  <item.icon
+                                    className={`h-5 w-5 ${item.color}`}
+                                  />
+                                </div>
+                                <div>
+                                  <span className="font-medium">{item.label}</span>
+                                  {"oftenIncluded" in item && item.oftenIncluded && (
+                                    <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">
+                                      {t("costs.building.oftenIncluded")}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                              <span className="font-medium">{item.label}</span>
+                              <div className="text-right">
+                                <p className="font-semibold">
+                                  {item.data!.avg} PLN
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.data!.min} - {item.data!.max} PLN
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold">
-                                {item.data!.avg} PLN
+                            {"winter" in item && item.winter && item.summer && (
+                              <p className="mt-1 pl-[52px] text-xs text-muted-foreground">
+                                {t("costs.building.winterSummer", {
+                                  winter: `${item.winter.avg} PLN`,
+                                  summer: `${item.summer.avg} PLN`,
+                                })}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.data!.min} - {item.data!.max} PLN
-                              </p>
-                            </div>
+                            )}
                           </motion.div>
                         ))}
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {costs?.deposit && (
+                <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                  <Card>
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Shield className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{t("costs.building.deposit")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("costs.building.depositDesc")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold">
+                          {costs.deposit.avg.toLocaleString()} PLN
+                        </p>
+                        {costs.deposit.count > 1 && (
+                          <p className="text-xs text-muted-foreground">
+                            {costs.deposit.min.toLocaleString()} - {costs.deposit.max.toLocaleString()} PLN
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {(comparison.districtAvg || comparison.cityAvg) && (
                 <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
@@ -353,25 +450,32 @@ export function BuildingCostsClient({
                               <span>
                                 {comparison.districtAvg.toLocaleString()} PLN
                               </span>
-                              {comparison.thisBuilding <
-                              comparison.districtAvg ? (
-                                <Badge className="gap-1 bg-green-500/10 text-green-600">
-                                  <TrendingDown className="h-3 w-3" />
-                                  {t("costs.building.percentLower", {
-                                    percent: Math.round(
-                                      ((comparison.districtAvg -
-                                        comparison.thisBuilding) /
-                                        comparison.districtAvg) *
-                                        100,
-                                    ),
-                                  })}
-                                </Badge>
-                              ) : (
-                                <Badge className="gap-1 bg-red-500/10 text-red-600">
-                                  <TrendingUp className="h-3 w-3" />
-                                  {t("costs.building.higher")}
-                                </Badge>
-                              )}
+                              {(() => {
+                                const pct = Math.round(
+                                  ((comparison.thisBuilding - comparison.districtAvg) /
+                                    comparison.districtAvg) *
+                                    100,
+                                );
+                                if (pct === 0) {
+                                  return (
+                                    <Badge className="gap-1 bg-muted text-muted-foreground">
+                                      <Equal className="h-3 w-3" />
+                                      0%
+                                    </Badge>
+                                  );
+                                }
+                                return pct < 0 ? (
+                                  <Badge className="gap-1 bg-green-500/10 text-green-600">
+                                    <TrendingDown className="h-3 w-3" />
+                                    {Math.abs(pct)}%
+                                  </Badge>
+                                ) : (
+                                  <Badge className="gap-1 bg-red-500/10 text-red-600">
+                                    <TrendingUp className="h-3 w-3" />
+                                    {pct}%
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                           </div>
                         )}
@@ -384,24 +488,32 @@ export function BuildingCostsClient({
                               <span>
                                 {comparison.cityAvg.toLocaleString()} PLN
                               </span>
-                              {comparison.thisBuilding < comparison.cityAvg ? (
-                                <Badge className="gap-1 bg-green-500/10 text-green-600">
-                                  <TrendingDown className="h-3 w-3" />
-                                  {t("costs.building.percentLower", {
-                                    percent: Math.round(
-                                      ((comparison.cityAvg -
-                                        comparison.thisBuilding) /
-                                        comparison.cityAvg) *
-                                        100,
-                                    ),
-                                  })}
-                                </Badge>
-                              ) : (
-                                <Badge className="gap-1 bg-red-500/10 text-red-600">
-                                  <TrendingUp className="h-3 w-3" />
-                                  {t("costs.building.higher")}
-                                </Badge>
-                              )}
+                              {(() => {
+                                const pct = Math.round(
+                                  ((comparison.thisBuilding - comparison.cityAvg) /
+                                    comparison.cityAvg) *
+                                    100,
+                                );
+                                if (pct === 0) {
+                                  return (
+                                    <Badge className="gap-1 bg-muted text-muted-foreground">
+                                      <Equal className="h-3 w-3" />
+                                      0%
+                                    </Badge>
+                                  );
+                                }
+                                return pct < 0 ? (
+                                  <Badge className="gap-1 bg-green-500/10 text-green-600">
+                                    <TrendingDown className="h-3 w-3" />
+                                    {Math.abs(pct)}%
+                                  </Badge>
+                                ) : (
+                                  <Badge className="gap-1 bg-red-500/10 text-red-600">
+                                    <TrendingUp className="h-3 w-3" />
+                                    {pct}%
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                           </div>
                         )}

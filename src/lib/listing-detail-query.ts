@@ -25,6 +25,7 @@ export function serializeListingDetail(
     district: listing.building.district?.nameKey ?? "",
     citySlug,
     buildingId: listing.building.id,
+    buildingSlug: listing.building.slug,
     price: Number(listing.rent ?? 0),
     adminFee: Number(listing.adminFee ?? 0),
     utilities: Number(listing.utilitiesAvg ?? 0),

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -37,6 +37,11 @@ export function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerControls = useAnimation();
+
+  useEffect(() => {
+    headerControls.start({ y: 0, opacity: 1 });
+  }, [headerControls]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,7 +55,6 @@ export function Header() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -72,7 +76,7 @@ export function Header() {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={headerControls}
       transition={{ duration: 0.5 }}
       className="fixed top-0 left-0 right-0 z-50"
     >
@@ -105,7 +109,7 @@ export function Header() {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-2">
             {/* Language Switcher */}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 rounded-full">
                   <Globe className="h-4 w-4" />
@@ -125,58 +129,56 @@ export function Header() {
             </DropdownMenu>
 
             {/* Auth Actions */}
-            {!loading && (
+            {loading ? (
+              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+            ) : user ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {userInitial}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
+                    {user.email}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="gap-2">
+                      <LayoutDashboard className="h-4 w-4" />
+                      {t('common.dashboard')}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="gap-2 text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t('common.logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
               <>
-                {user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
-                            {userInitial}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
-                        {user.email}
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard" className="gap-2">
-                          <LayoutDashboard className="h-4 w-4" />
-                          {t('common.dashboard')}
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => signOut()}
-                        className="gap-2 text-destructive focus:text-destructive"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {t('common.logout')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <>
-                    <Link href="/auth/login">
-                      <Button variant="ghost" size="sm" className="rounded-full">
-                        {t('common.login')}
-                      </Button>
-                    </Link>
-                    <Link href="/create-listing">
-                      <Button size="sm" className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">
-                        {t('listings.create.title')}
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm" className="rounded-full">
+                    {t('common.login')}
+                  </Button>
+                </Link>
+                <Link href="/create-listing">
+                  <Button size="sm" className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">
+                    {t('listings.create.title')}
+                  </Button>
+                </Link>
               </>
             )}
           </div>
@@ -245,46 +247,46 @@ export function Header() {
               </div>
 
               {/* Mobile Auth */}
-              {!loading && (
-                <div className="border-t border-border/50 mt-2 pt-3 px-4">
-                  {user ? (
-                    <>
-                      <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span className="truncate">{user.email}</span>
-                      </div>
-                      <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                        <Button className="w-full rounded-xl">
-                          {t('common.dashboard')}
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        className="mt-2 w-full rounded-xl"
-                        onClick={() => {
-                          signOut();
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        {t('common.logout')}
+              <div className="border-t border-border/50 mt-2 pt-3 px-4">
+                {loading ? (
+                  <div className="h-10 w-full rounded-xl bg-muted animate-pulse" />
+                ) : user ? (
+                  <>
+                    <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span className="truncate">{user.email}</span>
+                    </div>
+                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full rounded-xl">
+                        {t('common.dashboard')}
                       </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Link href="/create-listing" onClick={() => setMobileMenuOpen(false)}>
-                        <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
-                          {t('listings.create.title')}
-                        </Button>
-                      </Link>
-                      <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="outline" className="mt-2 w-full rounded-xl">
-                          {t('common.login')}
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="mt-2 w-full rounded-xl"
+                      onClick={() => {
+                        signOut();
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      {t('common.logout')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/create-listing" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
+                        {t('listings.create.title')}
+                      </Button>
+                    </Link>
+                    <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="mt-2 w-full rounded-xl">
+                        {t('common.login')}
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

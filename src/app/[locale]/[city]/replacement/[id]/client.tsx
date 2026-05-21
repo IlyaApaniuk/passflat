@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { usePostHog } from "posthog-js/react";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import { Header } from "@/components/landing/header";
@@ -36,7 +37,7 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" },
+    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" as const },
   }),
 };
 
@@ -60,6 +61,7 @@ export interface ListingDetailData {
   district: string;
   citySlug: string;
   buildingId: string;
+  buildingSlug: string;
   price: number;
   adminFee: number;
   utilities: number;
@@ -105,10 +107,24 @@ interface Props {
 
 export function ListingDetailClient({ listing, isLoggedIn }: Props) {
   const t = useTranslations();
+  const posthog = usePostHog();
   const [interestModalOpen, setInterestModalOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const listingType = listing.type ?? "replacement";
   const backRoute = TYPE_ROUTE[listingType];
+
+  useEffect(() => {
+    posthog?.capture("listing_detail_viewed", {
+      listing_id: listing.id,
+      type: listingType,
+      city: listing.citySlug,
+      source: document.referrer.includes("/replacement") ||
+              document.referrer.includes("/roommate") ||
+              document.referrer.includes("/sublet")
+        ? "search"
+        : "direct",
+    });
+  }, [listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -527,7 +543,7 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                           asChild
                         >
                           <Link
-                            href={`/${listing.citySlug}/building/${listing.buildingId}`}
+                            href={`/${listing.citySlug}/building/${listing.buildingSlug}`}
                           >
                             {t("listings.detail.viewBuildingCosts")}
                           </Link>
@@ -672,7 +688,13 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
               <Button
                 size="lg"
                 className="mt-4 w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                onClick={() => setInterestModalOpen(true)}
+                onClick={() => {
+                  setInterestModalOpen(true);
+                  posthog?.capture("interest_modal_opened", {
+                    listing_id: listing.id,
+                    type: listingType,
+                  });
+                }}
               >
                 {listingType === "roommate"
                   ? t("listings.detail.imInterestedRoom")

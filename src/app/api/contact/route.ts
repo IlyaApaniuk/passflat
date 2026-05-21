@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendContactFormEmail } from '@/lib/resend';
+import { trackServerEvent } from '@/lib/posthog-server';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
@@ -81,6 +82,10 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  trackServerEvent(email, 'contact_form_sent', {
+    subject_category: subject.trim(),
+  });
 
   return NextResponse.json({ success: true }, { status: 200 });
 }
