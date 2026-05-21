@@ -156,6 +156,7 @@ model Listing {
   building  Building          @relation(fields: [buildingId], references: [id])
   author    Profile           @relation(fields: [authorId], references: [id])
   responses ListingResponse[]
+  savedBy   SavedListing[]
 
   @@map("listings")
 }
@@ -172,6 +173,19 @@ model ListingResponse {
   responder Profile @relation(fields: [responderId], references: [id])
 
   @@map("listing_responses")
+}
+
+model SavedListing {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("saved_listings")
 }
 
 // --- Cost Reports ---
@@ -260,6 +274,7 @@ model Profile {
   payments         Payment[]
   subscriptions    Subscription[]
   reports          Report[]
+  savedListings    SavedListing[]
 
   @@map("profiles")
 }

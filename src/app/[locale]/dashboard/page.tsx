@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     redirect("/auth/login?next=/dashboard");
   }
 
-  const [listings, responses] = await Promise.all([
+  const [listings, responses, savedListings] = await Promise.all([
     prisma.listing.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: "desc" },
@@ -30,6 +30,17 @@ export default async function DashboardPage() {
         listing: { select: { id: true, title: true, type: true } },
         responder: {
           select: { displayName: true, contactValue: true },
+        },
+      },
+    }),
+    prisma.savedListing.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        listing: {
+          include: {
+            building: { include: { district: true } },
+          },
         },
       },
     }),
@@ -62,10 +73,29 @@ export default async function DashboardPage() {
     status: r.status,
   }));
 
+  const serializedSaved = savedListings
+    .filter((s) => s.listing.status === "active")
+    .map((s) => ({
+      id: s.listing.id,
+      title: s.listing.title,
+      type: s.listing.type as "replacement" | "roommate" | "sublet",
+      address: s.listing.building.addressFull,
+      district: s.listing.building.district?.nameKey ?? "",
+      price: Number(
+        s.listing.totalMonthly ??
+          s.listing.pricePerPerson ??
+          s.listing.priceTotal ??
+          0,
+      ),
+      image: s.listing.photos[0] ?? null,
+      savedAt: s.createdAt.toISOString(),
+    }));
+
   return (
     <DashboardClient
       listings={serializedListings}
       inquiries={serializedInquiries}
+      savedListings={serializedSaved}
     />
   );
 }

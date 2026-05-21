@@ -19,6 +19,7 @@ import {
 import {
   Plus,
   Home,
+  Heart,
   MessageSquare,
   Eye,
   MoreVertical,
@@ -63,9 +64,21 @@ interface DashboardInquiry {
   status: string;
 }
 
+interface DashboardSavedListing {
+  id: string;
+  title: string;
+  type: ListingType;
+  address: string;
+  district: string;
+  price: number;
+  image: string | null;
+  savedAt: string;
+}
+
 interface Props {
   listings: DashboardListing[];
   inquiries: DashboardInquiry[];
+  savedListings: DashboardSavedListing[];
 }
 
 const statCardVariants = {
@@ -78,7 +91,7 @@ const statCardVariants = {
   }),
 };
 
-export function DashboardClient({ listings, inquiries }: Props) {
+export function DashboardClient({ listings, inquiries, savedListings }: Props) {
   const t = useTranslations();
   const [typeFilter, setTypeFilter] = useState<ListingType | "all">("all");
 
@@ -237,6 +250,15 @@ export function DashboardClient({ listings, inquiries }: Props) {
                   {unreadInquiries > 0 && (
                     <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                       {unreadInquiries}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="saved" className="gap-2">
+                  <Heart className="h-4 w-4" />
+                  {t("dashboard.savedListings")}
+                  {savedListings.length > 0 && (
+                    <span className="ml-1 text-xs opacity-70">
+                      {savedListings.length}
                     </span>
                   )}
                 </TabsTrigger>
@@ -525,6 +547,93 @@ export function DashboardClient({ listings, inquiries }: Props) {
                               <Button size="sm" className="transition-transform hover:scale-105">
                                 {t("common.reply")}
                               </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="saved" className="mt-6">
+                {savedListings.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center py-16 text-center">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Heart className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold">
+                        {t("dashboard.noSavedListings")}
+                      </h3>
+                      <p className="mt-1 text-muted-foreground">
+                        {t("dashboard.noSavedListingsDesc")}
+                      </p>
+                      <Button className="mt-6 gap-2" asChild>
+                        <Link href="/warsaw/replacement">
+                          {t("dashboard.browseListings")}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {savedListings.map((saved, i) => (
+                      <motion.div
+                        key={saved.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/20">
+                          <CardContent className="p-4">
+                            <div className="flex flex-col gap-4 sm:flex-row">
+                              <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg sm:aspect-square sm:w-32">
+                                {saved.image ? (
+                                  <img
+                                    src={saved.image}
+                                    alt={saved.title}
+                                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-muted">
+                                    <Home className="h-8 w-8 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex flex-1 flex-col">
+                                <div>
+                                  <Badge
+                                    variant="outline"
+                                    className={typeConfig[saved.type].className}
+                                  >
+                                    {typeConfig[saved.type].label}
+                                  </Badge>
+                                  <h3 className="mt-2 font-semibold">
+                                    {saved.title}
+                                  </h3>
+                                  <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {saved.address}
+                                    {saved.district && `, ${saved.district}`}
+                                  </p>
+                                </div>
+
+                                <div className="mt-auto flex items-end justify-between pt-4">
+                                  <p className="text-lg font-bold text-primary">
+                                    {saved.price.toLocaleString()} PLN
+                                    <span className="text-sm font-normal text-muted-foreground">
+                                      {saved.type === "sublet" ? "" : t("common.perMonth")}
+                                    </span>
+                                  </p>
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link href={`/warsaw/${saved.type}/${saved.id}`}>
+                                      {t("dashboard.viewListing")}
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>

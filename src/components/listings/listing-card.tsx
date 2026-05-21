@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Bed, Bath, Square, Zap, Users, CalendarRange } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import { FavoriteButton } from "@/components/listings/favorite-button";
 import type { Listing, ListingType } from "@/lib/listings-data";
 
 const TYPE_BADGE_STYLES: Record<ListingType, string> = {
@@ -25,9 +26,11 @@ interface ListingCardProps {
   citySlug: string;
   isHovered?: boolean;
   onHover?: (id: string | null) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
-export function ListingCard({ listing, citySlug, isHovered, onHover }: ListingCardProps) {
+export function ListingCard({ listing, citySlug, isHovered, onHover, isFavorite, onToggleFavorite }: ListingCardProps) {
   const t = useTranslations();
   const listingType = listing.type ?? "replacement";
   const route = TYPE_ROUTE[listingType];
@@ -72,6 +75,17 @@ export function ListingCard({ listing, citySlug, isHovered, onHover }: ListingCa
                   </Badge>
                 )}
               </div>
+
+              {onToggleFavorite && (
+                <div className="absolute right-2.5 top-2.5">
+                  <FavoriteButton
+                    isFavorite={!!isFavorite}
+                    onToggle={() => onToggleFavorite(listing.id)}
+                    size="sm"
+                    className="bg-white/80 backdrop-blur-sm hover:bg-white/90 border-0 shadow-sm"
+                  />
+                </div>
+              )}
             </div>
 
             <CardContent className="flex flex-1 flex-col p-4 sm:p-5">
@@ -226,9 +240,11 @@ interface ListingGridProps {
   citySlug: string;
   hoveredId: string | null;
   onHover: (id: string | null) => void;
+  isFavorite?: (id: string) => boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
-export function ListingGrid({ listings, citySlug, hoveredId, onHover }: ListingGridProps) {
+export function ListingGrid({ listings, citySlug, hoveredId, onHover, isFavorite, onToggleFavorite }: ListingGridProps) {
   const t = useTranslations();
   if (listings.length === 0) {
     return (
@@ -262,6 +278,8 @@ export function ListingGrid({ listings, citySlug, hoveredId, onHover }: ListingG
             citySlug={citySlug}
             isHovered={hoveredId === listing.id}
             onHover={onHover}
+            isFavorite={isFavorite?.(listing.id)}
+            onToggleFavorite={onToggleFavorite}
           />
         </motion.div>
       ))}

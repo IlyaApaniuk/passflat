@@ -38,7 +38,9 @@
     "openMenu": "Открыть меню",
     "navigationMenu": "Меню навигации",
     "yes": "Да",
-    "no": "Нет"
+    "no": "Нет",
+    "linkCopied": "Ссылка скопирована в буфер обмена",
+    "copyFailed": "Не удалось скопировать ссылку"
   },
   "landing": {
     "hero": {
@@ -784,7 +786,15 @@
     "about": "о",
     "listingType": "Тип",
     "goToDashboard": "Перейти в панель",
-    "browseListings": "Смотреть объявления"
+    "browseListings": "Смотреть объявления",
+    "savedListings": "Сохранённые",
+    "noSavedListings": "Нет сохранённых объявлений",
+    "noSavedListingsDesc": "Просматривайте объявления и нажмите на сердечко, чтобы сохранить их здесь"
+  },
+  "favorites": {
+    "addToFavorites": "Добавить в избранное",
+    "removeFromFavorites": "Убрать из избранного",
+    "loginToSave": "Войдите, чтобы сохранять объявления"
   },
   "contact": {
     "title": "Контакты",
