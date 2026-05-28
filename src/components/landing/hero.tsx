@@ -9,16 +9,26 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
-const stats = [
-  { value: '2,400+', labelKey: 'statsListings' },
-  { value: '890', labelKey: 'statsCostReports' },
-  { value: '12', labelKey: 'statsDistricts' },
-  { value: '4.9', labelKey: 'statsAvgRating' },
-] as const;
+interface HeroProps {
+  stats?: {
+    listings: number;
+    costReports: number;
+    districts: number;
+  };
+}
 
-export function Hero() {
+export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const controls = useAnimation();
+
+  const formatStat = (n: number) => n > 100 ? `${n.toLocaleString()}+` : n.toString();
+
+  const stats = [
+    { value: liveStats ? formatStat(liveStats.listings) : '0', labelKey: 'statsListings' as const },
+    { value: liveStats ? formatStat(liveStats.costReports) : '0', labelKey: 'statsCostReports' as const },
+    { value: liveStats ? liveStats.districts.toString() : '0', labelKey: 'statsDistricts' as const },
+    { value: '4.9', labelKey: 'statsAvgRating' as const },
+  ];
 
   useEffect(() => {
     controls.start('visible');
@@ -97,7 +107,6 @@ export function Hero() {
             </Button>
           </motion.div>
 
-          {/* Listing type pills */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={controls}

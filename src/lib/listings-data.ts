@@ -23,11 +23,12 @@ export interface Listing {
   promoted: boolean;
   availableFrom: string;
   features: string[];
+  thingsToKnow: string[];
+  registrationPossible?: boolean;
   description: string;
   createdAt: string;
   furnished: boolean;
   petsAllowed: boolean;
-  isVerified: boolean;
 
   // Roommate-specific
   pricePerPerson?: number;
@@ -67,15 +68,14 @@ export interface ListingFilters {
   areaMax?: number;
   availableFrom?: string;
   availableTo?: string;
-  furnished?: boolean;
-  petsAllowed?: boolean;
+  amenities?: string[];
   floorMin?: number;
   floorMax?: number;
   roomType?: 'private' | 'shared';
   preferredGender?: 'any' | 'male' | 'female';
   utilitiesIncluded?: boolean;
   internetIncluded?: boolean;
-  isVerified?: boolean;
   hasPhotos?: boolean;
+  registrationPossible?: boolean;
 }
 

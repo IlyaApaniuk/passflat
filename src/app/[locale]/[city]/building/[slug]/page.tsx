@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { BuildingCostsClient } from "./client";
 import { getAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -76,9 +77,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!building) return { title: "Building not found" };
 
+  const t = await getTranslations();
+  const cityName = t(building.city.nameKey);
+
   return {
     title: `${building.addressFull} — Cost Reports | Passflat`,
-    description: `Real rental costs for ${building.addressFull}, ${building.district?.nameKey ?? building.city.nameKey}. Crowdsourced from actual tenants.`,
+    description: `Real rental costs for ${building.addressFull}, ${building.district?.nameKey ?? cityName}. Crowdsourced from actual tenants.`,
     alternates: getAlternates(`/${city}/building/${building.slug}`),
   };
 }

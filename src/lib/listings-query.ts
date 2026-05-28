@@ -10,6 +10,7 @@ interface QueryParams {
   rooms?: number;
   areaMin?: number;
   areaMax?: number;
+  amenities?: string[];
   sort?: string;
 }
 
@@ -33,6 +34,7 @@ export async function queryListings({
   rooms,
   areaMin,
   areaMax,
+  amenities,
   sort = "newest",
 }: QueryParams) {
   const pField = priceField(type);
@@ -58,6 +60,9 @@ export async function queryListings({
     where.areaM2 = {};
     if (areaMin) (where.areaM2 as Record<string, unknown>).gte = areaMin;
     if (areaMax) (where.areaM2 as Record<string, unknown>).lte = areaMax;
+  }
+  if (amenities?.length) {
+    where.amenities = { hasEvery: amenities };
   }
 
   let orderBy: Record<string, string>[] = [];
@@ -111,15 +116,13 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
     lng: Number(l.building.lng ?? 21.01),
     promoted: l.isPromoted,
     availableFrom: l.availableFrom?.toISOString() ?? "",
-    features: [
-      ...(l.petsAllowed ? ["Pet-friendly"] : []),
-      ...(l.furnished ? ["Furnished"] : []),
-    ],
+    features: l.amenities ?? [],
+    thingsToKnow: l.thingsToKnow ?? [],
+    registrationPossible: l.registrationPossible ?? undefined,
     description: l.description ?? "",
     createdAt: l.createdAt.toISOString(),
-    furnished: l.furnished ?? false,
-    petsAllowed: l.petsAllowed ?? false,
-    isVerified: l.isVerified,
+    furnished: (l.amenities ?? []).includes("furnished"),
+    petsAllowed: (l.thingsToKnow ?? []).includes("petsAllowed"),
   };
 
   if (type === "roommate") {
@@ -145,6 +148,7 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
 }
 
 export function parseSearchParams(search: Record<string, string | string[] | undefined>) {
+  const amenitiesRaw = typeof search.amenities === "string" ? search.amenities : undefined;
   return {
     district: typeof search.district === "string" ? search.district : undefined,
     priceMin: typeof search.priceMin === "string" ? parseFloat(search.priceMin) : undefined,
@@ -152,6 +156,7 @@ export function parseSearchParams(search: Record<string, string | string[] | und
     rooms: typeof search.rooms === "string" ? parseInt(search.rooms, 10) : undefined,
     areaMin: typeof search.areaMin === "string" ? parseFloat(search.areaMin) : undefined,
     areaMax: typeof search.areaMax === "string" ? parseFloat(search.areaMax) : undefined,
+    amenities: amenitiesRaw ? amenitiesRaw.split(",").filter(Boolean) : undefined,
     sort: typeof search.sort === "string" ? search.sort : "newest",
   };
 }

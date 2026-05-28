@@ -38,7 +38,7 @@ export function FavoriteButton({
         className={cn(
           iconSize,
           "transition-all",
-          isFavorite && "fill-current scale-110",
+          isFavorite ? "fill-red-500 text-red-500 scale-110" : "",
         )}
       />
     </Button>

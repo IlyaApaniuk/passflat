@@ -16,7 +16,7 @@ import {
 
 const DEFAULT_CITY = 'warsaw';
 
-export function AboutClient() {
+export function AboutClient({ hasContributed = false }: { hasContributed?: boolean }) {
   const t = useTranslations('about');
 
   return (
@@ -214,12 +214,21 @@ export function AboutClient() {
                 {t('ctaSublet')}
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="gap-2" asChild>
-              <Link href={`/${DEFAULT_CITY}/costs/submit`}>
-                <ArrowRight className="h-4 w-4" />
-                {t('ctaCosts')}
-              </Link>
-            </Button>
+            {hasContributed ? (
+              <Button size="lg" variant="outline" className="gap-2" asChild>
+                <Link href={`/${DEFAULT_CITY}/costs`}>
+                  <BarChart3 className="h-4 w-4" />
+                  {t('ctaCostsExplore')}
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" variant="outline" className="gap-2" asChild>
+                <Link href={`/${DEFAULT_CITY}/costs/submit`}>
+                  <ArrowRight className="h-4 w-4" />
+                  {t('ctaCosts')}
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>

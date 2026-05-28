@@ -40,11 +40,11 @@ export function serializeListingDetail(
     lng: Number(listing.building.lng ?? 21.01),
     promoted: listing.isPromoted,
     availableFrom: listing.availableFrom?.toISOString() ?? "",
-    features: [
-      ...(listing.petsAllowed ? ["Pet-friendly"] : []),
-      ...(listing.furnished ? ["Furnished"] : []),
-    ],
+    features: listing.amenities ?? [],
+    thingsToKnow: listing.thingsToKnow ?? [],
+    registrationPossible: listing.registrationPossible ?? undefined,
     description: listing.description ?? "",
+    locale: listing.locale ?? null,
     createdAt: listing.createdAt.toISOString(),
     author: listing.author?.displayName ?? null,
 

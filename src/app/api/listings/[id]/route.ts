@@ -10,6 +10,8 @@ import {
   type ListingType,
 } from '@/lib/listings-validation';
 import { trackServerEvent } from '@/lib/posthog-server';
+import { trackView } from '@/lib/track-view';
+import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -61,10 +63,7 @@ export async function GET(
     return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
   }
 
-  await prisma.listing.update({
-    where: { id },
-    data: { viewsCount: { increment: 1 } },
-  });
+  trackView(id).catch(() => {});
 
   return NextResponse.json({ listing });
 }
@@ -85,9 +84,11 @@ const UPDATABLE_COMMON_FIELDS = [
   'rooms',
   'areaM2',
   'floor',
-  'petsAllowed',
-  'furnished',
+  'amenities',
+  'thingsToKnow',
+  'registrationPossible',
   'photos',
+  'apartmentNumber',
 ] as const;
 
 const UPDATABLE_REPLACEMENT_FIELDS = [
@@ -259,8 +260,29 @@ export async function PATCH(
     }
   }
 
-  if (Object.keys(data).length === 0) {
+  // Update building's postalCode if provided
+  if (body.postalCode !== undefined) {
+    await prisma.building.update({
+      where: { id: existing.buildingId },
+      data: { postalCode: body.postalCode || null },
+    });
+  }
+
+  if (Object.keys(data).length === 0 && body.postalCode === undefined) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+  }
+
+  if (Array.isArray(data.photos) && (data.photos as string[]).length > 10) {
+    return NextResponse.json({ error: 'Maximum 10 photos allowed' }, { status: 400 });
+  }
+
+  if (Array.isArray(data.photos)) {
+    const removedPhotos = existing.photos.filter(
+      (url) => !(data.photos as string[]).includes(url),
+    );
+    if (removedPhotos.length > 0) {
+      await deletePhotosFromStorage(removedPhotos);
+    }
   }
 
   const listing = await prisma.listing.update({
@@ -287,4 +309,38 @@ export async function PATCH(
   }
 
   return NextResponse.json({ listing });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const existing = await prisma.listing.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+  }
+
+  if (existing.authorId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  if (existing.photos.length > 0) {
+    await deletePhotosFromStorage(existing.photos);
+  }
+
+  await prisma.listing.delete({ where: { id } });
+
+  trackServerEvent(user.id, 'listing_deleted', {
+    listing_id: id,
+    type: existing.type,
+  });
+
+  return NextResponse.json({ success: true });
 }

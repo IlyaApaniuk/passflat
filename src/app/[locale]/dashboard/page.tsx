@@ -13,24 +13,12 @@ export default async function DashboardPage() {
     redirect("/auth/login?next=/dashboard");
   }
 
-  const [listings, responses, savedListings] = await Promise.all([
+  const [listings, savedListings] = await Promise.all([
     prisma.listing.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: "desc" },
       include: {
-        building: { include: { district: true } },
-      },
-    }),
-    prisma.listingResponse.findMany({
-      where: {
-        listing: { authorId: user.id },
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        listing: { select: { id: true, title: true, type: true } },
-        responder: {
-          select: { displayName: true, contactValue: true },
-        },
+        building: { include: { district: true, city: true } },
       },
     }),
     prisma.savedListing.findMany({
@@ -52,6 +40,7 @@ export default async function DashboardPage() {
     type: l.type as "replacement" | "roommate" | "sublet",
     address: l.building.addressFull,
     district: l.building.district?.nameKey ?? "",
+    citySlug: l.building.city.slug,
     price: Number(l.totalMonthly ?? l.pricePerPerson ?? l.priceTotal ?? 0),
     status: l.status as "active" | "pending" | "expired" | "closed",
     promoted: l.isPromoted,
@@ -60,17 +49,6 @@ export default async function DashboardPage() {
     inquiries: l.responsesCount,
     image: l.photos[0] ?? null,
     createdAt: l.createdAt.toISOString(),
-  }));
-
-  const serializedInquiries = responses.map((r) => ({
-    id: r.id,
-    listingId: r.listing.id,
-    listingTitle: r.listing.title,
-    listingType: r.listing.type as "replacement" | "roommate" | "sublet",
-    from: r.responder?.displayName ?? r.responder?.contactValue ?? "Anonymous",
-    message: r.message ?? "",
-    date: r.createdAt.toISOString(),
-    status: r.status,
   }));
 
   const serializedSaved = savedListings
@@ -94,8 +72,8 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       listings={serializedListings}
-      inquiries={serializedInquiries}
       savedListings={serializedSaved}
+      userEmail={user.email ?? ""}
     />
   );
 }

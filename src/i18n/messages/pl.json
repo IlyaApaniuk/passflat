@@ -10,7 +10,7 @@
     "login": "Zaloguj się",
     "register": "Zarejestruj się",
     "logout": "Wyloguj",
-    "dashboard": "Panel",
+    "dashboard": "Moje konto",
     "loading": "Ładowanie...",
     "save": "Zapisz",
     "cancel": "Anuluj",
@@ -26,10 +26,10 @@
     "promoted": "Promowane",
     "totalMonthly": "Suma miesięczna",
     "rent": "Czynsz najmu",
-    "adminFee": "Czynsz administracyjny",
-    "utilities": "Media",
-    "utilitiesAvg": "Media (śr.)",
-    "estUtilities": "Szac. media",
+    "adminFee": "Czynsz admin.",
+    "utilities": "Dopłaty",
+    "utilitiesAvg": "Dopłaty (śr.)",
+    "estUtilities": "Dopłaty",
     "available": "Dostępne",
     "noImagesAvailable": "Brak zdjęć",
     "viewPhotos": "Zobacz zdjęcia",
@@ -40,7 +40,8 @@
     "yes": "Tak",
     "no": "Nie",
     "linkCopied": "Link skopiowany do schowka",
-    "copyFailed": "Nie udało się skopiować linku"
+    "copyFailed": "Nie udało się skopiować linku",
+    "error": "Coś poszło nie tak"
   },
   "landing": {
     "hero": {
@@ -112,12 +113,12 @@
       "saveDepositDesc": "Znajdź kogoś, kto przejmie Twój najem, zamiast tracić 1–3 miesięczne kaucje.",
       "verifiedTitle": "Zweryfikowane oferty",
       "verifiedDesc": "Każda oferta jest weryfikowana przez nasz zespół.",
-      "buildingsTitle": "890+ budynków",
+      "buildingsTitle": "{count}+ budynków",
       "buildingsDesc": "Dane o kosztach od prawdziwych najemców z całej Warszawy.",
       "matchingTitle": "Szybkie dopasowanie",
       "matchingDesc": "Dopasowanie z zainteresowanymi najemcami w 48 godzin.",
       "communityTitle": "Zaufanie społeczności",
-      "communityDesc": "Dołącz do 2400+ użytkowników, którzy znaleźli nowe mieszkanie przez Passflat.",
+      "communityDesc": "Dołącz do {count}+ użytkowników, którzy znaleźli nowe mieszkanie przez Passflat.",
       "exploreCta": "Przeglądaj dane o kosztach"
     },
     "featured": {
@@ -209,7 +210,8 @@
       "terms": "Regulamin",
       "cookies": "Cookies",
       "legal": "Prawne",
-      "systemsOperational": "Wszystkie systemy działają"
+      "systemsOperational": "Wszystkie systemy działają",
+      "betaStatus": "Otwarta beta — Warszawa"
     }
   },
   "listings": {
@@ -249,17 +251,17 @@
       "genderFemale": "Kobieta",
       "availableFrom": "Dostępne od",
       "availableTo": "Dostępne do",
-      "furnished": "Umeblowanie",
-      "furnishedAll": "Wszystkie",
-      "furnishedYes": "Umeblowane",
-      "furnishedNo": "Nieumeblowane",
-      "petsAllowed": "Zwierzęta dozwolone",
+      "dates": "Daty",
+      "apartmentParams": "Parametry mieszkania",
       "utilitiesIncluded": "Media wliczone",
       "floor": "Piętro",
       "floorMin": "Min piętro",
       "floorMax": "Maks piętro",
-      "verifiedOnly": "Tylko zweryfikowane",
-      "withPhotos": "Tylko ze zdjęciami"
+      "amenities": "Udogodnienia",
+      "withPhotos": "Tylko ze zdjęciami",
+      "registrationPossible": "Możliwość zameldowania",
+      "internetIncluded": "Internet w cenie",
+      "showResultsCount": "Pokaż {count} wyników"
     },
     "sort": {
       "sortBy": "Sortuj wg",
@@ -278,7 +280,8 @@
       "sharedRoom": "Pokój dzielony",
       "rooms": "pokoje",
       "available": "Dostępne",
-      "showInterest": "Jestem zainteresowany/a"
+      "showInterest": "Napisz wiadomość",
+      "floorShort": "p."
     },
     "detail": {
       "notFound": "Nie znaleziono oferty",
@@ -293,12 +296,13 @@
       "floorOf": "z",
       "aboutApartment": "O tym mieszkaniu",
       "featuresAmenities": "Udogodnienia",
+      "thingsToKnow": "Co warto wiedzieć",
       "buildingInfo": "Informacje o budynku",
       "buildingCostHint": "Chcesz zobaczyć realne koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
       "monthlyCosts": "Koszty miesięczne",
-      "imInterested": "Jestem zainteresowany/a",
-      "contactHint": "Skontaktuj się z obecnym najemcą, aby umówić się na oględziny lub zadać pytania",
+      "imInterested": "Napisz do najemcy",
+      "contactHint": "Wyślij wiadomość do obecnego najemcy, aby umówić się na oględziny lub zadać pytania",
       "roommateInfo": "Informacje o współlokatorach",
       "currentRoommates": "Obecni współlokatorzy",
       "totalRooms": "Łączna liczba pokoi",
@@ -308,6 +312,8 @@
       "gender_male": "Mężczyzna",
       "gender_female": "Kobieta",
       "preferredAge": "Preferowany wiek",
+      "ageUpTo": "do",
+      "ageFrom": "od",
       "subletInfo": "Szczegóły podnajmu",
       "subletPeriod": "Okres dostępności",
       "duration": "Czas trwania",
@@ -325,11 +331,17 @@
       "yourShare": "Twój udział",
       "aboutRoom": "O tym pokoju",
       "aboutSublet": "O tym podnajmie",
-      "contactHintRoommate": "Skontaktuj się z obecnymi lokatorami, aby się poznać i omówić wspólne mieszkanie",
-      "contactHintSublet": "Skontaktuj się z najemcą, aby ustalić szczegóły podnajmu i wprowadzenia",
-      "imInterestedRoom": "Chcę ten pokój",
-      "imInterestedSublet": "Chcę podnająć",
-      "roommatesLiving": "mieszka tutaj"
+      "contactHintRoommate": "Napisz do współlokatorów, aby się poznać i omówić wspólne mieszkanie",
+      "contactHintSublet": "Napisz do najemcy, aby ustalić szczegóły podnajmu i wprowadzenia",
+      "imInterestedRoom": "Napisz do lokatorów",
+      "imInterestedSublet": "Napisz do najemcy",
+      "roommatesLiving": "mieszka tutaj",
+      "editListing": "Edytuj ogłoszenie",
+      "deleteListing": "Usuń ogłoszenie",
+      "promoteListing": "Promuj ogłoszenie",
+      "translate": "Przetłumacz",
+      "translating": "Tłumaczenie...",
+      "showOriginal": "Pokaż oryginał"
     },
     "types": {
       "replacement": "Przejęcie najmu",
@@ -367,13 +379,18 @@
       "totalFloors": "Liczba pięter",
       "availableFrom": "Dostępne od",
       "featuresAmenities": "Udogodnienia",
+      "thingsToKnow": "Co warto wiedzieć",
+      "thingsToKnowHint": "Podziel się tym, co warto wiedzieć przed przeprowadzką",
       "monthlyCosts": "Koszty miesięczne",
       "rentPln": "Czynsz najmu (PLN)",
       "adminFeePln": "Czynsz admin. (PLN)",
-      "estUtilitiesPln": "Szac. media (PLN)",
+      "adminFeeHint": "Miesięczna opłata za utrzymanie budynku (czynsz administracyjny)",
+      "estUtilitiesPln": "Dopłaty (PLN)",
+      "extraBillsHint": "Prąd, gaz, woda — średnio miesięcznie, jeśli płacisz osobno",
       "totalMonthlyCost": "Całkowity koszt miesięczny",
       "photosTitle": "Zdjęcia",
       "uploadPhotos": "Kliknij, aby dodać zdjęcia",
+      "maxPhotosReached": "Osiągnięto limit zdjęć",
       "uploadHint": "PNG, JPG do 10 MB każde",
       "cover": "Okładka",
       "photoHint": "Dodaj co najmniej 3 zdjęcia. Pierwsze zdjęcie będzie okładką.",
@@ -390,9 +407,12 @@
       "uploading": "Przesyłanie...",
       "publishing": "Publikowanie...",
       "publishListing": "Opublikuj ogłoszenie",
+      "saveChanges": "Zapisz zmiany",
+      "editingBanner": "Edycja ogłoszenia",
+      "existingPhotos": "Aktualne zdjęcia",
       "publishedTitle": "Ogłoszenie opublikowane!",
       "publishedDesc": "Twoje ogłoszenie jest już widoczne dla potencjalnych najemców.",
-      "goToDashboard": "Przejdź do panelu",
+      "goToDashboard": "Przejdź do konta",
       "browseListings": "Przeglądaj oferty",
       "select": "Wybierz",
       "roommateDetails": "Szczegóły dotyczące współlokatora",
@@ -431,30 +451,65 @@
       "sharedRoom": "Pokój dzielony",
       "rulesLabel": "Zasady",
       "utilitiesInclYes": "Media wliczone",
-      "internetInclYes": "Internet wliczony"
+      "internetInclYes": "Internet wliczony",
+      "fieldRequired": "To pole jest wymagane"
+    },
+    "amenityCategories": {
+      "kitchen": "Kuchnia",
+      "bathroom": "Łazienka i pralnia",
+      "comfort": "Komfort i przestrzeń",
+      "building": "Budynek",
+      "parking": "Parking",
+      "safety": "Bezpieczeństwo"
     },
     "features": {
-      "balcony": "Balkon",
-      "terrace": "Taras",
-      "gardenAccess": "Dostęp do ogrodu",
-      "parking": "Parking",
-      "garage": "Garaż",
-      "ac": "Klimatyzacja",
+      "fridge": "Lodówka",
+      "stove": "Kuchenka / piekarnik",
+      "microwave": "Mikrofalówka",
       "dishwasher": "Zmywarka",
+      "bathtub": "Wanna",
       "washingMachine": "Pralka",
       "dryer": "Suszarka",
       "furnished": "Umeblowane",
-      "petFriendly": "Przyjazne zwierzętom",
+      "ac": "Klimatyzacja",
+      "tv": "Telewizor",
+      "balcony": "Balkon",
+      "terrace": "Taras",
+      "deskSetup": "Miejsce do pracy",
+      "wifi": "Wi-Fi",
       "elevator": "Winda",
-      "intercom": "Domofon",
-      "smartHome": "Smart Home",
-      "gym": "Siłownia",
-      "concierge": "Recepcja",
       "storage": "Komórka lokatorska",
-      "metroNearby": "Metro w pobliżu",
-      "tramStop": "Przystanek tramwajowy",
-      "quietArea": "Spokojna okolica"
+      "intercom": "Domofon",
+      "closedArea": "Osiedle zamknięte",
+      "parking": "Parking",
+      "garage": "Garaż",
+      "smokeDetector": "Czujnik dymu",
+      "firstAidKit": "Apteczka"
     },
+    "thingsToKnow": {
+      "sectionRules": "Zasady mieszkania",
+      "sectionNoise": "Hałas i komfort",
+      "sectionClimate": "Klimat",
+      "sectionCondition": "Stan",
+      "sectionInternet": "Internet",
+      "petsAllowed": "Zwierzęta dozwolone",
+      "smokingAllowed": "Palenie dozwolone",
+      "noSmoking": "Mieszkanie dla niepalących",
+      "noParties": "Zakaz imprez",
+      "quietApartment": "Cichy apartament",
+      "neighborsAudible": "Słychać sąsiadów",
+      "streetAudible": "Słychać ulicę",
+      "warmInWinter": "Ciepło zimą",
+      "coolInWinter": "Chłodno zimą",
+      "hotInSummer": "Gorąco latem",
+      "recentRenovation": "Świeży remont",
+      "highHumidity": "Wysoka wilgotność",
+      "poorVentilation": "Słaba wentylacja",
+      "oldPlumbing": "Stara hydraulika",
+      "fastInternet": "Szybki internet",
+      "slowInternet": "Wolny internet"
+    },
+    "registrationPossible": "Możliwość zameldowania",
     "empty": "Nie znaleziono ofert",
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników"
   },
@@ -512,10 +567,14 @@
       "district": "Dzielnica",
       "selectDistrict": "Wybierz dzielnicę",
       "size": "Powierzchnia (m²)",
-      "baseCosts": "Koszty bazowe (PLN/mies.)",
+      "baseCosts": "Koszty miesięczne (PLN/mies.)",
       "rent": "Czynsz najmu",
       "adminFeeCzynsz": "Czynsz administracyjny",
-      "utilitiesTitle": "Media (PLN/mies. średnio)",
+      "extraBills": "Dopłaty (PLN/mies. średnio)",
+      "extraBillsHint": "Prąd, gaz, woda — średnio miesięcznie, jeśli płacisz osobno",
+      "breakItDown": "Znasz kwoty osobno? Rozpisz szczegółowo",
+      "backToSimple": "Wróć do ogólnej kwoty",
+      "utilitiesTitle": "Szczegółowy rozkład",
       "electricity": "Prąd",
       "gas": "Gaz",
       "heating": "Ogrzewanie",
@@ -524,7 +583,7 @@
       "internet": "Internet",
       "other": "Inne",
       "baseRentAdmin": "Baza (Czynsz + Admin)",
-      "utilitiesLabel": "Media",
+      "utilitiesLabel": "Dopłaty",
       "privacyTitle": "Twoje dane są anonimowe",
       "privacyDesc": "Pokazujemy tylko dane zagregowane. Numer mieszkania i dokładne koszty nigdy nie są publicznie wyświetlane.",
       "deposit": "Kaucja",
@@ -572,7 +631,7 @@
       "internet": "Internet",
       "seasonalHeating": "Sezonowe koszty ogrzewania",
       "seasonalHeatingDesc": "Średnie koszty ogrzewania wg miesiąca. Miesiące zimowe (lis-lut) mają zwykle najwyższe koszty.",
-      "comparison": "Jak wypada ten budynek?",
+      "comparison": "Porównanie kosztów",
       "thisBuilding": "Ten budynek",
       "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
@@ -596,20 +655,15 @@
     }
   },
   "interest": {
-    "title": "Jestem zainteresowany/a",
-    "subtitle": "Wyślij wiadomość do obecnego najemcy o \"{listing}\"",
-    "name": "Imię",
-    "yourName": "Twoje imię",
-    "phone": "Telefon",
-    "email": "Email",
-    "message": "Wiadomość",
+    "title": "Wyślij wiadomość",
+    "subtitle": "Napisz do obecnego najemcy o \"{listing}\"",
     "messagePlaceholder": "Cześć! Jestem zainteresowany/a tym mieszkaniem. Kiedy można umówić się na oględziny?",
-    "sendMessage": "Wyślij wiadomość",
+    "sendMessage": "Wyślij",
     "sending": "Wysyłanie...",
     "messageSent": "Wiadomość wysłana!",
-    "messageSentDesc": "Wynajmujący skontaktuje się z Tobą w ciągu 24-48 godzin.",
+    "messageSentDesc": "Przekierowujemy do czatu...",
     "loginRequired": "Zaloguj się, aby kontynuować",
-    "loginRequiredDesc": "Musisz być zalogowany/a, aby wyrazić zainteresowanie ogłoszeniem.",
+    "loginRequiredDesc": "Musisz być zalogowany/a, aby wysłać wiadomość.",
     "alreadyResponded": "Już wysłałeś/aś wiadomość dotyczącą tego ogłoszenia.",
     "ownListing": "Nie możesz odpowiedzieć na własne ogłoszenie.",
     "errorGeneric": "Coś poszło nie tak. Spróbuj ponownie."
@@ -662,7 +716,7 @@
       "step2Title": "Pojaw się na mapie",
       "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania. Promowane oferty zyskują dodatkową widoczność.",
       "step3Title": "Otrzymuj zainteresowania",
-      "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości w swoim panelu.",
+      "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości na swoim koncie.",
       "step4Title": "Wybierz zastępcę",
       "step4Desc": "Wybierz najlepszego kandydata i skoordynuj cesję najmu z wynajmującym.",
       "step5Title": "Przekaż klucze",
@@ -741,7 +795,8 @@
     "ctaBrowse": "Przeglądaj oferty",
     "ctaRoommate": "Znajdź współlokatora",
     "ctaSublet": "Podnajem",
-    "ctaCosts": "Zgłoś swoje koszty"
+    "ctaCosts": "Zgłoś swoje koszty",
+    "ctaCostsExplore": "Przeglądaj dane o kosztach"
   },
   "blog": {
     "title": "Blog Passflat",
@@ -761,7 +816,7 @@
     "ctaButton": "Przeglądaj dane o kosztach"
   },
   "dashboard": {
-    "title": "Mój panel",
+    "title": "Moje konto",
     "subtitle": "Zarządzaj swoimi ogłoszeniami i odpowiadaj na zapytania",
     "addListing": "Dodaj ogłoszenie",
     "totalListings": "Wszystkie ogłoszenia",
@@ -785,11 +840,15 @@
     "promotionEnds": "Promocja kończy się {date}",
     "about": "o",
     "listingType": "Typ",
-    "goToDashboard": "Przejdź do panelu",
+    "goToDashboard": "Przejdź do konta",
     "browseListings": "Przeglądaj oferty",
     "savedListings": "Zapisane",
     "noSavedListings": "Brak zapisanych ogłoszeń",
-    "noSavedListingsDesc": "Przeglądaj oferty i kliknij ikonę serca, aby je tutaj zapisać"
+    "noSavedListingsDesc": "Przeglądaj oferty i kliknij ikonę serca, aby je tutaj zapisać",
+    "confirmRemoveFavorite": "Czy na pewno chcesz usunąć to ogłoszenie z ulubionych?",
+    "confirmDeleteTitle": "Usunąć ogłoszenie?",
+    "confirmDeleteDesc": "Tej akcji nie można cofnąć. Ogłoszenie zostanie trwale usunięte.",
+    "listingDeleted": "Ogłoszenie zostało usunięte"
   },
   "favorites": {
     "addToFavorites": "Dodaj do ulubionych",
@@ -829,7 +888,7 @@
       "emailValue": "contact@passflat.eu",
       "responseTime": "Czas odpowiedzi",
       "responseTimeValue": "Zwykle odpowiadamy w ciągu 24–48 godzin",
-      "urgentNote": "W pilnych sprawach dotyczących ogłoszenia skorzystaj z panelu lub napisz do nas bezpośrednio."
+      "urgentNote": "W pilnych sprawach dotyczących ogłoszenia skorzystaj z konta lub napisz do nas bezpośrednio."
     }
   },
   "helpCenter": {
@@ -857,7 +916,7 @@
       "q4": "Jak dodać ogłoszenie?",
       "a4": "Zaloguj się, kliknij \"Dodaj ogłoszenie\" i wypełnij adres, szczegóły mieszkania, zdjęcia i rozkład kosztów. Ogłoszenie pojawi się na mapie i w wynikach wyszukiwania po opublikowaniu.",
       "q5": "Jak długo ogłoszenie jest aktywne?",
-      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu panelu.",
+      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta.",
       "q6": "Czy mogę promować moje ogłoszenie?",
       "a6": "Tak. Promowane ogłoszenia wyświetlają się na górze wyników wyszukiwania przez 7, 14 lub 30 dni. Ceny zaczynają się od 39 PLN."
     },
@@ -1005,7 +1064,7 @@
       "item3": "Informacje o kosztach (czynsz najmu, czynsz administracyjny, media) muszą być dokładne i odzwierciedlać rzeczywiste miesięczne wydatki.",
       "item4": "Ogłoszenia nie mogą zawierać treści dyskryminujących, wprowadzających w błąd, obraźliwych lub nielegalnych.",
       "item5": "Passflat zastrzega sobie prawo do usunięcia każdego ogłoszenia naruszającego te zasady bez wcześniejszego powiadomienia.",
-      "item6": "Ogłoszenia wygasają automatycznie po 60 dniach. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu panelu."
+      "item6": "Ogłoszenia wygasają automatycznie po 60 dniach. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta."
     },
     "costReports": {
       "title": "5. Raporty kosztów",
@@ -1040,6 +1099,45 @@
     "changes": {
       "title": "11. Zmiany w regulaminie",
       "text": "Możemy aktualizować niniejszy Regulamin. O istotnych zmianach powiadomimy zarejestrowanych użytkowników e-mailem. Dalsze korzystanie z platformy po zmianach oznacza akceptację zaktualizowanego regulaminu."
+    }
+  },
+  "chat": {
+    "conversations": "Wiadomości",
+    "noConversations": "Brak wiadomości",
+    "noConversationsDesc": "Gdy skontaktujesz się z właścicielem ogłoszenia lub ktoś napisze do Ciebie, czaty pojawią się tutaj.",
+    "selectConversation": "Wybierz czat, aby rozpocząć rozmowę",
+    "typeMessage": "Napisz wiadomość...",
+    "send": "Wyślij",
+    "sending": "Wysyłanie...",
+    "typing": "pisze...",
+    "loadMore": "Załaduj wcześniejsze wiadomości",
+    "newMessage": "Nowa wiadomość",
+    "unreadMessages": "{count} nieprzeczytanych wiadomości",
+    "aboutListing": "O ogłoszeniu",
+    "viewListing": "Zobacz ogłoszenie",
+    "openMessages": "Otwórz czat",
+    "viewAllMessages": "Zobacz wszystkie wiadomości"
+  },
+  "city": {
+    "warsaw": "Warszawa"
+  },
+  "account": {
+    "delete": {
+      "title": "Usuń konto",
+      "warning": "To trwale usunie Twoje konto po 30 dniach. Wszystkie Twoje ogłoszenia, rozmowy i dane zostaną usunięte.",
+      "stats": "Masz {listings} aktywnych ogłoszeń i {conversations} rozmów.",
+      "promotedWarning": "Twoje promowane ogłoszenie \"{title}\" ma jeszcze {days} dni.",
+      "noRefund": "Zwrot za promowane ogłoszenia nie zostanie dokonany.",
+      "confirmLabel": "Wpisz swój email, aby potwierdzić",
+      "button": "Usuń moje konto",
+      "cancel": "Anuluj",
+      "success": "Konto zaplanowane do usunięcia"
+    },
+    "recovery": {
+      "title": "Witaj ponownie!",
+      "message": "Twoje konto jest zaplanowane do usunięcia. Możesz je teraz przywrócić i odzyskać wszystkie dane, lub wylogować się, aby kontynuować usuwanie.",
+      "restore": "Przywróć moje konto",
+      "cancel": "Wyloguj się"
     }
   }
 }

@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
     description,
     street,
     buildingNumber,
+    apartmentNumber,
+    postalCode,
     district,
     placeId,
     lat,
@@ -62,8 +64,9 @@ export async function POST(request: NextRequest) {
     rooms,
     areaM2,
     floor,
-    petsAllowed,
-    furnished,
+    amenities,
+    thingsToKnow,
+    registrationPossible,
     photos,
     // Replacement-specific
     rent,
@@ -89,6 +92,8 @@ export async function POST(request: NextRequest) {
     utilitiesIncluded,
     internetIncluded,
     subletRules,
+    // Content language
+    locale,
   } = body;
 
   if (!isValidListingType(type)) {
@@ -103,6 +108,10 @@ export async function POST(request: NextRequest) {
       { error: 'Missing required fields: title, street, buildingNumber' },
       { status: 400 },
     );
+  }
+
+  if (Array.isArray(photos) && photos.length > 10) {
+    return NextResponse.json({ error: 'Maximum 10 photos allowed' }, { status: 400 });
   }
 
   const typeValidation = validateTypeSpecificFields(type, body);
@@ -137,11 +146,16 @@ export async function POST(request: NextRequest) {
       where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
     });
 
-    if (building && placeId && !building.placeId) {
-      building = await prisma.building.update({
-        where: { id: building.id },
-        data: { placeId },
-      });
+    if (building && (placeId || postalCode)) {
+      const updateData: Record<string, string> = {};
+      if (placeId && !building.placeId) updateData.placeId = placeId;
+      if (postalCode && !building.postalCode) updateData.postalCode = postalCode;
+      if (Object.keys(updateData).length > 0) {
+        building = await prisma.building.update({
+          where: { id: building.id },
+          data: updateData,
+        });
+      }
     }
   }
 
@@ -165,6 +179,7 @@ export async function POST(request: NextRequest) {
         lat: lat ?? null,
         lng: lng ?? null,
         placeId: placeId ?? null,
+        postalCode: postalCode ?? null,
       },
     });
   }
@@ -176,14 +191,17 @@ export async function POST(request: NextRequest) {
     buildingId: building.id,
     authorId: user.id,
     type,
+    apartmentNumber: apartmentNumber || null,
     title,
     description: description || null,
+    locale: locale || null,
     currency: 'PLN',
     rooms: rooms ? parseInt(rooms, 10) : null,
     areaM2: areaM2 ? parseFloat(areaM2) : null,
     floor: floor ? parseInt(floor, 10) : null,
-    petsAllowed: petsAllowed ?? null,
-    furnished: furnished ?? null,
+    amenities: Array.isArray(amenities) ? amenities : [],
+    thingsToKnow: Array.isArray(thingsToKnow) ? thingsToKnow : [],
+    registrationPossible: registrationPossible === true ? true : registrationPossible === false ? false : null,
     photos: photos || [],
     status: 'active',
     expiresAt,

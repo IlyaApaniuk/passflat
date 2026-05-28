@@ -55,6 +55,7 @@ interface ExistingReport {
   rent: string;
   adminFee: string;
   deposit: string;
+  extraBills: string;
   electricity: string;
   electricityIncluded: boolean;
   electricityWinter: string;
@@ -70,6 +71,24 @@ interface ExistingReport {
   internetProvider: string;
   other: string;
   otherCostsNote: string;
+}
+
+function hasDetailedUtilities(report: ExistingReport): boolean {
+  return !!(
+    report.electricity ||
+    report.electricityIncluded ||
+    report.electricityWinter ||
+    report.electricitySummer ||
+    report.gas ||
+    report.heating ||
+    report.heatingIncluded ||
+    report.heatingWinter ||
+    report.heatingSummer ||
+    report.water ||
+    report.waterIncluded ||
+    report.internet ||
+    report.other
+  );
 }
 
 interface CostSubmitClientProps {
@@ -105,6 +124,7 @@ export function CostSubmitClient({ citySlug, editMode = false, existingReport = 
           rent: "",
           adminFee: "",
           deposit: "",
+          extraBills: "",
           electricity: "",
           electricityIncluded: false,
           electricityWinter: "",
@@ -123,6 +143,9 @@ export function CostSubmitClient({ citySlug, editMode = false, existingReport = 
         },
   );
 
+  const [showDetailedUtilities, setShowDetailedUtilities] = useState(
+    () => !!(existingReport && hasDetailedUtilities(existingReport)),
+  );
   const [showElectricitySeasonal, setShowElectricitySeasonal] = useState(
     () => !!(existingReport?.electricityWinter || existingReport?.electricitySummer),
   );
@@ -162,25 +185,33 @@ export function CostSubmitClient({ citySlug, editMode = false, existingReport = 
         : "/api/cost-reports";
       const method = editMode && existingReport ? "PATCH" : "POST";
 
+      const utilityFields = showDetailedUtilities
+        ? {
+            electricity: formData.electricityIncluded ? undefined : formData.electricity || undefined,
+            electricityIncluded: formData.electricityIncluded || undefined,
+            electricityWinter: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricityWinter) || undefined,
+            electricitySummer: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricitySummer) || undefined,
+            gas: formData.gas || undefined,
+            heating: formData.heatingIncluded ? undefined : formData.heating || undefined,
+            heatingIncluded: formData.heatingIncluded || undefined,
+            heatingWinter: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingWinter) || undefined,
+            heatingSummer: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingSummer) || undefined,
+            water: formData.waterIncluded ? undefined : formData.water || undefined,
+            waterIncluded: formData.waterIncluded || undefined,
+            internet: formData.internet || undefined,
+            internetProvider: formData.internetProvider || undefined,
+            otherCosts: formData.other || undefined,
+            otherCostsNote: formData.otherCostsNote || undefined,
+          }
+        : {
+            otherCosts: formData.extraBills || undefined,
+          };
+
       const sharedFields = {
         rent: formData.rent || undefined,
         adminFee: formData.adminFee || undefined,
         deposit: formData.deposit || undefined,
-        electricity: formData.electricityIncluded ? undefined : formData.electricity || undefined,
-        electricityIncluded: formData.electricityIncluded || undefined,
-        electricityWinter: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricityWinter) || undefined,
-        electricitySummer: (!formData.electricityIncluded && showElectricitySeasonal && formData.electricitySummer) || undefined,
-        gas: formData.gas || undefined,
-        heating: formData.heatingIncluded ? undefined : formData.heating || undefined,
-        heatingIncluded: formData.heatingIncluded || undefined,
-        heatingWinter: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingWinter) || undefined,
-        heatingSummer: (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingSummer) || undefined,
-        water: formData.waterIncluded ? undefined : formData.water || undefined,
-        waterIncluded: formData.waterIncluded || undefined,
-        internet: formData.internet || undefined,
-        internetProvider: formData.internetProvider || undefined,
-        otherCosts: formData.other || undefined,
-        otherCostsNote: formData.otherCostsNote || undefined,
+        ...utilityFields,
         rooms: formData.rooms || undefined,
         areaM2: formData.areaM2 || undefined,
         floor: formData.floor || undefined,
@@ -242,13 +273,17 @@ export function CostSubmitClient({ citySlug, editMode = false, existingReport = 
 
   const effectiveWater = formData.waterIncluded ? 0 : parseInt(formData.water) || 0;
 
-  const totalUtilities =
+  const detailedUtilities =
     effectiveElectricity +
     (parseInt(formData.gas) || 0) +
     effectiveHeating +
     effectiveWater +
     (parseInt(formData.internet) || 0) +
     (parseInt(formData.other) || 0);
+
+  const totalUtilities = showDetailedUtilities
+    ? detailedUtilities
+    : parseInt(formData.extraBills) || 0;
 
   const totalMonthly =
     (parseInt(formData.rent) || 0) +
@@ -598,252 +633,311 @@ export function CostSubmitClient({ citySlug, editMode = false, existingReport = 
                         />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
-              <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
-                <Card className="transition-shadow hover:shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Zap className="h-5 w-5" />
-                      {t("costs.submit.utilitiesTitle")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    {/* Electricity */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="electricity" className="flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-yellow-500" />
-                          {t("costs.submit.electricity")}
+                    {!showDetailedUtilities && (
+                      <div className="space-y-2 border-t pt-4">
+                        <Label htmlFor="extraBills">
+                          {t("costs.submit.extraBills")}
                         </Label>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5 rounded border-border accent-primary"
-                            checked={formData.electricityIncluded}
-                            onChange={(e) => {
-                              updateFormData({
-                                electricityIncluded: e.target.checked,
-                                ...( e.target.checked ? { electricity: "", electricityWinter: "", electricitySummer: "" } : {}),
-                              });
-                              if (e.target.checked) setShowElectricitySeasonal(false);
-                            }}
-                          />
-                          {t("costs.submit.includedInRent")}
-                        </label>
-                      </div>
-                      {!formData.electricityIncluded && !showElectricitySeasonal && (
                         <Input
-                          id="electricity"
+                          id="extraBills"
                           type="number"
                           min="0"
-                          placeholder="e.g., 150"
-                          value={formData.electricity}
-                          onChange={(e) => updateFormData({ electricity: e.target.value })}
+                          placeholder="e.g., 300"
+                          value={formData.extraBills}
+                          onChange={(e) =>
+                            updateFormData({ extraBills: e.target.value })
+                          }
                         />
-                      )}
-                      {!formData.electricityIncluded && showElectricitySeasonal && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder={t("costs.submit.winter")}
-                            value={formData.electricityWinter}
-                            onChange={(e) => updateFormData({ electricityWinter: e.target.value })}
-                          />
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder={t("costs.submit.summer")}
-                            value={formData.electricitySummer}
-                            onChange={(e) => updateFormData({ electricitySummer: e.target.value })}
-                          />
-                        </div>
-                      )}
-                      {!formData.electricityIncluded && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("costs.submit.extraBillsHint")}
+                        </p>
                         <button
                           type="button"
-                          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                          className="text-xs text-primary underline-offset-2 hover:underline"
                           onClick={() => {
-                            setShowElectricitySeasonal((v) => !v);
-                            updateFormData({ electricity: "", electricityWinter: "", electricitySummer: "" });
+                            setShowDetailedUtilities(true);
+                            updateFormData({ extraBills: "" });
                           }}
                         >
-                          {showElectricitySeasonal ? t("costs.submit.electricity") : t("costs.submit.specifySeasonally")}
+                          {t("costs.submit.breakItDown")}
                         </button>
-                      )}
-                      {formData.electricityIncluded && (
-                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
-                      )}
-                    </div>
-
-                    {/* Gas */}
-                    <div className="space-y-2">
-                      <Label htmlFor="gas" className="flex items-center gap-2">
-                        <Flame className="h-4 w-4 text-orange-500" />
-                        {t("costs.submit.gas")}
-                      </Label>
-                      <Input
-                        id="gas"
-                        type="number"
-                        min="0"
-                        placeholder="e.g., 80"
-                        value={formData.gas}
-                        onChange={(e) => updateFormData({ gas: e.target.value })}
-                      />
-                    </div>
-
-                    {/* Heating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="heating" className="flex items-center gap-2">
-                          <Flame className="h-4 w-4 text-red-500" />
-                          {t("costs.submit.heating")}
-                        </Label>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5 rounded border-border accent-primary"
-                            checked={formData.heatingIncluded}
-                            onChange={(e) => {
-                              updateFormData({
-                                heatingIncluded: e.target.checked,
-                                ...(e.target.checked ? { heating: "", heatingWinter: "", heatingSummer: "" } : {}),
-                              });
-                              if (e.target.checked) setShowHeatingSeasonal(false);
-                            }}
-                          />
-                          {t("costs.submit.includedInRent")}
-                        </label>
                       </div>
-                      {!formData.heatingIncluded && !showHeatingSeasonal && (
-                        <Input
-                          id="heating"
-                          type="number"
-                          min="0"
-                          placeholder="e.g., 200"
-                          value={formData.heating}
-                          onChange={(e) => updateFormData({ heating: e.target.value })}
-                        />
-                      )}
-                      {!formData.heatingIncluded && showHeatingSeasonal && (
-                        <div className="grid grid-cols-2 gap-2">
+                    )}
+
+                    {showDetailedUtilities && (
+                      <div className="space-y-5 border-t pt-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {t("costs.submit.utilitiesTitle")}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-xs text-primary underline-offset-2 hover:underline"
+                            onClick={() => {
+                              const sum = detailedUtilities;
+                              setShowDetailedUtilities(false);
+                              setShowElectricitySeasonal(false);
+                              setShowHeatingSeasonal(false);
+                              updateFormData({
+                                extraBills: sum > 0 ? String(sum) : "",
+                                electricity: "",
+                                electricityIncluded: false,
+                                electricityWinter: "",
+                                electricitySummer: "",
+                                gas: "",
+                                heating: "",
+                                heatingIncluded: false,
+                                heatingWinter: "",
+                                heatingSummer: "",
+                                water: "",
+                                waterIncluded: false,
+                                internet: "",
+                                internetProvider: "",
+                                other: "",
+                                otherCostsNote: "",
+                              });
+                            }}
+                          >
+                            {t("costs.submit.backToSimple")}
+                          </button>
+                        </div>
+
+                        {/* Electricity */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="electricity" className="flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-yellow-500" />
+                              {t("costs.submit.electricity")}
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                checked={formData.electricityIncluded}
+                                onChange={(e) => {
+                                  updateFormData({
+                                    electricityIncluded: e.target.checked,
+                                    ...(e.target.checked ? { electricity: "", electricityWinter: "", electricitySummer: "" } : {}),
+                                  });
+                                  if (e.target.checked) setShowElectricitySeasonal(false);
+                                }}
+                              />
+                              {t("costs.submit.includedInRent")}
+                            </label>
+                          </div>
+                          {!formData.electricityIncluded && !showElectricitySeasonal && (
+                            <Input
+                              id="electricity"
+                              type="number"
+                              min="0"
+                              placeholder="e.g., 150"
+                              value={formData.electricity}
+                              onChange={(e) => updateFormData({ electricity: e.target.value })}
+                            />
+                          )}
+                          {!formData.electricityIncluded && showElectricitySeasonal && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder={t("costs.submit.winter")}
+                                value={formData.electricityWinter}
+                                onChange={(e) => updateFormData({ electricityWinter: e.target.value })}
+                              />
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder={t("costs.submit.summer")}
+                                value={formData.electricitySummer}
+                                onChange={(e) => updateFormData({ electricitySummer: e.target.value })}
+                              />
+                            </div>
+                          )}
+                          {!formData.electricityIncluded && (
+                            <button
+                              type="button"
+                              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              onClick={() => {
+                                setShowElectricitySeasonal((v) => !v);
+                                updateFormData({ electricity: "", electricityWinter: "", electricitySummer: "" });
+                              }}
+                            >
+                              {showElectricitySeasonal ? t("costs.submit.electricity") : t("costs.submit.specifySeasonally")}
+                            </button>
+                          )}
+                          {formData.electricityIncluded && (
+                            <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                          )}
+                        </div>
+
+                        {/* Gas */}
+                        <div className="space-y-2">
+                          <Label htmlFor="gas" className="flex items-center gap-2">
+                            <Flame className="h-4 w-4 text-orange-500" />
+                            {t("costs.submit.gas")}
+                          </Label>
                           <Input
+                            id="gas"
                             type="number"
                             min="0"
-                            placeholder={t("costs.submit.winter")}
-                            value={formData.heatingWinter}
-                            onChange={(e) => updateFormData({ heatingWinter: e.target.value })}
-                          />
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder={t("costs.submit.summer")}
-                            value={formData.heatingSummer}
-                            onChange={(e) => updateFormData({ heatingSummer: e.target.value })}
+                            placeholder="e.g., 80"
+                            value={formData.gas}
+                            onChange={(e) => updateFormData({ gas: e.target.value })}
                           />
                         </div>
-                      )}
-                      {!formData.heatingIncluded && (
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                          onClick={() => {
-                            setShowHeatingSeasonal((v) => !v);
-                            updateFormData({ heating: "", heatingWinter: "", heatingSummer: "" });
-                          }}
-                        >
-                          {showHeatingSeasonal ? t("costs.submit.heating") : t("costs.submit.specifySeasonally")}
-                        </button>
-                      )}
-                      {formData.heatingIncluded && (
-                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
-                      )}
-                    </div>
 
-                    {/* Water */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="water" className="flex items-center gap-2">
-                          <Droplets className="h-4 w-4 text-blue-500" />
-                          {t("costs.submit.water")}
-                        </Label>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5 rounded border-border accent-primary"
-                            checked={formData.waterIncluded}
-                            onChange={(e) => {
-                              updateFormData({
-                                waterIncluded: e.target.checked,
-                                ...(e.target.checked ? { water: "" } : {}),
-                              });
-                            }}
-                          />
-                          {t("costs.submit.includedInRent")}
-                        </label>
-                      </div>
-                      {!formData.waterIncluded && (
-                        <Input
-                          id="water"
-                          type="number"
-                          min="0"
-                          placeholder="e.g., 50"
-                          value={formData.water}
-                          onChange={(e) => updateFormData({ water: e.target.value })}
-                        />
-                      )}
-                      {formData.waterIncluded && (
-                        <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
-                      )}
-                    </div>
+                        {/* Heating */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="heating" className="flex items-center gap-2">
+                              <Flame className="h-4 w-4 text-red-500" />
+                              {t("costs.submit.heating")}
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                checked={formData.heatingIncluded}
+                                onChange={(e) => {
+                                  updateFormData({
+                                    heatingIncluded: e.target.checked,
+                                    ...(e.target.checked ? { heating: "", heatingWinter: "", heatingSummer: "" } : {}),
+                                  });
+                                  if (e.target.checked) setShowHeatingSeasonal(false);
+                                }}
+                              />
+                              {t("costs.submit.includedInRent")}
+                            </label>
+                          </div>
+                          {!formData.heatingIncluded && !showHeatingSeasonal && (
+                            <Input
+                              id="heating"
+                              type="number"
+                              min="0"
+                              placeholder="e.g., 200"
+                              value={formData.heating}
+                              onChange={(e) => updateFormData({ heating: e.target.value })}
+                            />
+                          )}
+                          {!formData.heatingIncluded && showHeatingSeasonal && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder={t("costs.submit.winter")}
+                                value={formData.heatingWinter}
+                                onChange={(e) => updateFormData({ heatingWinter: e.target.value })}
+                              />
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder={t("costs.submit.summer")}
+                                value={formData.heatingSummer}
+                                onChange={(e) => updateFormData({ heatingSummer: e.target.value })}
+                              />
+                            </div>
+                          )}
+                          {!formData.heatingIncluded && (
+                            <button
+                              type="button"
+                              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              onClick={() => {
+                                setShowHeatingSeasonal((v) => !v);
+                                updateFormData({ heating: "", heatingWinter: "", heatingSummer: "" });
+                              }}
+                            >
+                              {showHeatingSeasonal ? t("costs.submit.heating") : t("costs.submit.specifySeasonally")}
+                            </button>
+                          )}
+                          {formData.heatingIncluded && (
+                            <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                          )}
+                        </div>
 
-                    {/* Internet */}
-                    <div className="space-y-2">
-                      <Label htmlFor="internet" className="flex items-center gap-2">
-                        <Wifi className="h-4 w-4 text-primary" />
-                        {t("costs.submit.internet")}
-                      </Label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Input
-                          id="internet"
-                          type="number"
-                          min="0"
-                          placeholder="e.g., 79"
-                          value={formData.internet}
-                          onChange={(e) => updateFormData({ internet: e.target.value })}
-                        />
-                        <Input
-                          type="text"
-                          placeholder={t("costs.submit.internetProviderPlaceholder")}
-                          value={formData.internetProvider}
-                          onChange={(e) => updateFormData({ internetProvider: e.target.value })}
-                        />
-                      </div>
-                    </div>
+                        {/* Water */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="water" className="flex items-center gap-2">
+                              <Droplets className="h-4 w-4 text-blue-500" />
+                              {t("costs.submit.water")}
+                            </Label>
+                            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                checked={formData.waterIncluded}
+                                onChange={(e) => {
+                                  updateFormData({
+                                    waterIncluded: e.target.checked,
+                                    ...(e.target.checked ? { water: "" } : {}),
+                                  });
+                                }}
+                              />
+                              {t("costs.submit.includedInRent")}
+                            </label>
+                          </div>
+                          {!formData.waterIncluded && (
+                            <Input
+                              id="water"
+                              type="number"
+                              min="0"
+                              placeholder="e.g., 50"
+                              value={formData.water}
+                              onChange={(e) => updateFormData({ water: e.target.value })}
+                            />
+                          )}
+                          {formData.waterIncluded && (
+                            <p className="text-xs text-muted-foreground italic">{t("costs.submit.includedInRent")}</p>
+                          )}
+                        </div>
 
-                    {/* Other */}
-                    <div className="space-y-2">
-                      <Label htmlFor="other">{t("costs.submit.other")}</Label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Input
-                          id="other"
-                          type="number"
-                          min="0"
-                          placeholder="e.g., 30"
-                          value={formData.other}
-                          onChange={(e) => updateFormData({ other: e.target.value })}
-                        />
-                        <Input
-                          type="text"
-                          placeholder={t("costs.submit.otherCostsNotePlaceholder")}
-                          value={formData.otherCostsNote}
-                          onChange={(e) => updateFormData({ otherCostsNote: e.target.value })}
-                        />
+                        {/* Internet */}
+                        <div className="space-y-2">
+                          <Label htmlFor="internet" className="flex items-center gap-2">
+                            <Wifi className="h-4 w-4 text-primary" />
+                            {t("costs.submit.internet")}
+                          </Label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Input
+                              id="internet"
+                              type="number"
+                              min="0"
+                              placeholder="e.g., 79"
+                              value={formData.internet}
+                              onChange={(e) => updateFormData({ internet: e.target.value })}
+                            />
+                            <Input
+                              type="text"
+                              placeholder={t("costs.submit.internetProviderPlaceholder")}
+                              value={formData.internetProvider}
+                              onChange={(e) => updateFormData({ internetProvider: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Other */}
+                        <div className="space-y-2">
+                          <Label htmlFor="other">{t("costs.submit.other")}</Label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Input
+                              id="other"
+                              type="number"
+                              min="0"
+                              placeholder="e.g., 30"
+                              value={formData.other}
+                              onChange={(e) => updateFormData({ other: e.target.value })}
+                            />
+                            <Input
+                              type="text"
+                              placeholder={t("costs.submit.otherCostsNotePlaceholder")}
+                              value={formData.otherCostsNote}
+                              onChange={(e) => updateFormData({ otherCostsNote: e.target.value })}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

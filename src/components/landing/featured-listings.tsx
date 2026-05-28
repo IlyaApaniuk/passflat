@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, MapPin, Bed, Square, Zap, Users, CalendarRange } from "lucide-react";
+import { ArrowUpRight, MapPin, Bed, Maximize2, Zap, Users, CalendarRange } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ListingType } from "@/lib/listings-data";
 
@@ -276,7 +276,7 @@ function FeaturedCard({
                 {listing.bedrooms}
               </span>
               <span className="flex items-center gap-1">
-                <Square className="h-3.5 w-3.5" />
+                <Maximize2 className="h-3.5 w-3.5" />
                 {listing.area}m²
               </span>
               {listingType === "roommate" && listing.currentRoommates != null && (

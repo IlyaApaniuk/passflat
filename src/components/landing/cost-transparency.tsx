@@ -11,17 +11,28 @@ const DEFAULT_CITY = 'warsaw';
 interface CostTransparencyProps {
   citySlug?: string;
   hasContributed?: boolean;
+  buildingData?: {
+    address: string;
+    district: string;
+    reportsCount: number;
+    avgRent: number;
+    avgAdminFee: number;
+    avgElectricity: number;
+    avgInternet: number;
+    avgGasHeating: number;
+    totalMonthly: number;
+  };
 }
 
-export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = false }: CostTransparencyProps) {
+export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = false, buildingData }: CostTransparencyProps) {
   const t = useTranslations();
 
   const costData = [
-    { label: t('common.rent'), value: "3,200 PLN", visible: true },
-    { label: t('common.adminFee'), value: "450 PLN", visible: true },
-    { label: t('landing.costTransparency.electricity'), value: "280 PLN", visible: false },
-    { label: t('landing.costTransparency.internet'), value: "89 PLN", visible: false },
-    { label: t('landing.costTransparency.gasHeating'), value: "180 PLN", visible: false },
+    { label: t('common.rent'), value: `${(buildingData?.avgRent ?? 3200).toLocaleString()} PLN`, visible: true },
+    { label: t('common.adminFee'), value: `${(buildingData?.avgAdminFee ?? 450).toLocaleString()} PLN`, visible: true },
+    { label: t('landing.costTransparency.electricity'), value: `${(buildingData?.avgElectricity ?? 280).toLocaleString()} PLN`, visible: hasContributed },
+    { label: t('landing.costTransparency.internet'), value: `${(buildingData?.avgInternet ?? 89).toLocaleString()} PLN`, visible: hasContributed },
+    { label: t('landing.costTransparency.gasHeating'), value: `${(buildingData?.avgGasHeating ?? 180).toLocaleString()} PLN`, visible: hasContributed },
   ];
 
   return (
@@ -86,11 +97,11 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
               {/* Header */}
               <div className="relative mb-6 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">ul. Pulawska 45</h3>
-                  <p className="text-sm text-muted-foreground">Mokotow, Warsaw</p>
+                  <h3 className="text-lg font-semibold">{buildingData?.address ?? "ul. Pulawska 45"}</h3>
+                  <p className="text-sm text-muted-foreground">{buildingData?.district ?? "Mokotow"}, Warsaw</p>
                 </div>
                 <div className="rounded-full bg-accent/20 px-3 py-1 text-sm text-accent">
-                  12 {t('landing.costTransparency.reports')}
+                  {buildingData?.reportsCount ?? 12} {t('landing.costTransparency.reports')}
                 </div>
               </div>
 
@@ -150,7 +161,7 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
               {/* Total */}
               <div className="relative mt-6 flex items-center justify-between border-t border-border/50 pt-4">
                 <span className="text-muted-foreground">{t('common.totalMonthly')}</span>
-                <span className="text-2xl font-bold text-accent">~4,199 PLN</span>
+                <span className="text-2xl font-bold text-accent">~{(buildingData?.totalMonthly ?? 4199).toLocaleString()} PLN</span>
               </div>
             </div>
 

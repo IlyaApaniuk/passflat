@@ -11,12 +11,12 @@ datasource db {
 // --- Geography ---
 
 model Country {
-  id               String   @id // 'pl', 'de', 'cz'
-  nameKey          String   @map("name_key")
+  id               String    @id // 'pl', 'de', 'cz'
+  nameKey          String    @map("name_key")
   currency         String
-  defaultLocale    String   @map("default_locale")
-  supportedLocales String[] @map("supported_locales")
-  isActive         Boolean  @default(false) @map("is_active")
+  defaultLocale    String    @map("default_locale")
+  supportedLocales String[]  @map("supported_locales")
+  isActive         Boolean   @default(false) @map("is_active")
   launchedAt       DateTime? @map("launched_at")
 
   cities         City[]
@@ -45,11 +45,11 @@ model City {
 }
 
 model District {
-  id     String @id @default(uuid()) @db.Uuid
-  cityId String @map("city_id") @db.Uuid
-  slug   String
+  id      String @id @default(uuid()) @db.Uuid
+  cityId  String @map("city_id") @db.Uuid
+  slug    String
   nameKey String @map("name_key")
-  bounds Json?
+  bounds  Json?
 
   city      City       @relation(fields: [cityId], references: [id])
   buildings Building[]
@@ -72,13 +72,14 @@ model Building {
   lat                   Decimal?
   lng                   Decimal?
   placeId               String?  @map("place_id")
+  postalCode            String?  @map("postal_code")
   totalApartmentsApprox Int?     @map("total_apartments_approx")
   buildingType          String?  @map("building_type")
   yearBuilt             Int?     @map("year_built")
   createdAt             DateTime @default(now()) @map("created_at")
 
-  city        City        @relation(fields: [cityId], references: [id])
-  district    District?   @relation(fields: [districtId], references: [id])
+  city        City         @relation(fields: [cityId], references: [id])
+  district    District?    @relation(fields: [districtId], references: [id])
   listings    Listing[]
   costReports CostReport[]
 
@@ -90,35 +91,36 @@ model Building {
 // --- Listings ---
 
 model Listing {
-  id          String  @id @default(uuid()) @db.Uuid
-  buildingId  String  @map("building_id") @db.Uuid
-  authorId    String  @map("author_id") @db.Uuid
+  id         String @id @default(uuid()) @db.Uuid
+  buildingId String @map("building_id") @db.Uuid
+  authorId   String @map("author_id") @db.Uuid
 
-  type        String  @default("replacement") // 'replacement' | 'roommate' | 'sublet'
+  type            String  @default("replacement") // 'replacement' | 'roommate' | 'sublet'
+  apartmentNumber String? @map("apartment_number")
 
   title       String
   description String?
   locale      String?
 
   // --- Common pricing ---
-  currency      String
-  rent          Decimal?
-  adminFee      Decimal? @map("admin_fee")
-  utilitiesAvg  Decimal? @map("utilities_avg")
-  totalMonthly  Decimal? @map("total_monthly")
+  currency     String
+  rent         Decimal?
+  adminFee     Decimal? @map("admin_fee")
+  utilitiesAvg Decimal? @map("utilities_avg")
+  totalMonthly Decimal? @map("total_monthly")
 
   // --- Replacement-specific ---
-  leaseType     String?  @map("lease_type")
+  leaseType     String?   @map("lease_type")
   leaseEndDate  DateTime? @map("lease_end_date") @db.Date
   availableFrom DateTime? @map("available_from") @db.Date
-  depositAmount Decimal? @map("deposit_amount")
+  depositAmount Decimal?  @map("deposit_amount")
 
   // --- Roommate-specific ---
   pricePerPerson      Decimal? @map("price_per_person")
   totalApartmentRent  Decimal? @map("total_apartment_rent")
   currentRoommates    Int?     @map("current_roommates")
   totalRooms          Int?     @map("total_rooms")
-  roomType            String?  @map("room_type")       // 'private' | 'shared'
+  roomType            String?  @map("room_type") // 'private' | 'shared'
   preferredGender     String?  @map("preferred_gender") // 'any' | 'male' | 'female'
   preferredAgeMin     Int?     @map("preferred_age_min")
   preferredAgeMax     Int?     @map("preferred_age_max")
@@ -132,19 +134,20 @@ model Listing {
   subletRules       String?   @map("sublet_rules")
 
   // --- Common apartment details ---
-  rooms       Int?
-  areaM2      Decimal? @map("area_m2")
-  floor       Int?
-  petsAllowed Boolean? @map("pets_allowed")
-  furnished   Boolean?
+  rooms                Int?
+  areaM2               Decimal?  @map("area_m2")
+  floor                Int?
+  amenities            String[]
+  thingsToKnow         String[]  @map("things_to_know")
+  registrationPossible Boolean?  @map("registration_possible")
 
-  photos      String[]
+  photos String[]
 
   // --- Moderation & promotion ---
-  status         String   @default("active")
-  isPromoted     Boolean  @default(false) @map("is_promoted")
-  promotedUntil  DateTime? @map("promoted_until")
-  isVerified     Boolean  @default(false) @map("is_verified")
+  status        String    @default("active")
+  isPromoted    Boolean   @default(false) @map("is_promoted")
+  promotedUntil DateTime? @map("promoted_until")
+  isVerified    Boolean   @default(false) @map("is_verified")
 
   viewsCount     Int @default(0) @map("views_count")
   responsesCount Int @default(0) @map("responses_count")
@@ -153,12 +156,33 @@ model Listing {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  building  Building          @relation(fields: [buildingId], references: [id])
-  author    Profile           @relation(fields: [authorId], references: [id])
-  responses ListingResponse[]
-  savedBy   SavedListing[]
+  building      Building             @relation(fields: [buildingId], references: [id])
+  author        Profile              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  responses     ListingResponse[]
+  savedBy       SavedListing[]
+  conversations Conversation[]
+  views         ListingView[]
+  translations  ListingTranslation[]
 
   @@map("listings")
+}
+
+model ListingTranslation {
+  id        String @id @default(uuid()) @db.Uuid
+  listingId String @map("listing_id") @db.Uuid
+  locale    String
+
+  title               String?
+  description         String?
+  roommateDescription String? @map("roommate_description")
+  subletRules         String? @map("sublet_rules")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, locale])
+  @@map("listing_translations")
 }
 
 model ListingResponse {
@@ -170,7 +194,7 @@ model ListingResponse {
   createdAt   DateTime @default(now()) @map("created_at")
 
   listing   Listing @relation(fields: [listingId], references: [id])
-  responder Profile @relation(fields: [responderId], references: [id])
+  responder Profile @relation(fields: [responderId], references: [id], onDelete: Cascade)
 
   @@map("listing_responses")
 }
@@ -188,16 +212,29 @@ model SavedListing {
   @@map("saved_listings")
 }
 
+model ListingView {
+  id         String   @id @default(uuid()) @db.Uuid
+  listingId  String   @map("listing_id") @db.Uuid
+  viewerHash String   @map("viewer_hash")
+  viewedAt   DateTime @default(now()) @map("viewed_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, viewerHash])
+  @@index([listingId, viewedAt])
+  @@map("listing_views")
+}
+
 // --- Cost Reports ---
 
 model CostReport {
-  id         String  @id @default(uuid()) @db.Uuid
-  buildingId String  @map("building_id") @db.Uuid
-  authorId   String  @map("author_id") @db.Uuid
+  id         String @id @default(uuid()) @db.Uuid
+  buildingId String @map("building_id") @db.Uuid
+  authorId   String @map("author_id") @db.Uuid
 
-  currency          String
-  rent              Decimal?
-  adminFee          Decimal? @map("admin_fee")
+  currency            String
+  rent                Decimal?
+  adminFee            Decimal? @map("admin_fee")
   electricityAvg      Decimal? @map("electricity_avg")
   electricityWinter   Decimal? @map("electricity_winter")
   electricitySummer   Decimal? @map("electricity_summer")
@@ -209,11 +246,11 @@ model CostReport {
   heatingIncluded     Boolean? @map("heating_included")
   water               Decimal? @map("water")
   waterIncluded       Boolean? @map("water_included")
-  internet          Decimal? @map("internet")
-  internetProvider  String?  @map("internet_provider")
-  otherCosts        Decimal? @map("other_costs")
-  otherCostsNote    String?  @map("other_costs_note")
-  totalMonthlyAvg   Decimal? @map("total_monthly_avg")
+  internet            Decimal? @map("internet")
+  internetProvider    String?  @map("internet_provider")
+  otherCosts          Decimal? @map("other_costs")
+  otherCostsNote      String?  @map("other_costs_note")
+  totalMonthlyAvg     Decimal? @map("total_monthly_avg")
 
   rooms  Int?
   areaM2 Decimal? @map("area_m2")
@@ -230,22 +267,22 @@ model CostReport {
   livedUntil      DateTime? @map("lived_until") @db.Date
   isCurrentTenant Boolean?  @map("is_current_tenant")
 
-  verificationStatus String  @default("unverified") @map("verification_status")
-  isVisible          Boolean @default(true) @map("is_visible")
+  verificationStatus String   @default("unverified") @map("verification_status")
+  isVisible          Boolean  @default(true) @map("is_visible")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   building Building @relation(fields: [buildingId], references: [id])
-  author   Profile  @relation(fields: [authorId], references: [id])
+  author   Profile  @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("cost_reports")
 }
 
 model CostTermLabel {
-  id         String @id @default(uuid()) @db.Uuid
-  countryId  String @map("country_id")
-  fieldName  String @map("field_name")
-  labelKey   String @map("label_key")
+  id         String  @id @default(uuid()) @db.Uuid
+  countryId  String  @map("country_id")
+  fieldName  String  @map("field_name")
+  labelKey   String  @map("label_key")
   tooltipKey String? @map("tooltip_key")
 
   country Country @relation(fields: [countryId], references: [id])
@@ -257,43 +294,90 @@ model CostTermLabel {
 // --- Users ---
 
 model Profile {
-  id              String   @id @db.Uuid // = auth.users.id
-  displayName     String?  @map("display_name")
-  locale          String?
-  cityId          String?  @map("city_id") @db.Uuid
-  contactMethod   String?  @map("contact_method")
-  contactValue    String?  @map("contact_value")
-  hasContributedCost Boolean @default(false) @map("has_contributed_cost")
-  isVerified      Boolean  @default(false) @map("is_verified")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                 String    @id @db.Uuid // = auth.users.id
+  displayName        String?   @map("display_name")
+  locale             String?
+  cityId             String?   @map("city_id") @db.Uuid
+  contactMethod      String?   @map("contact_method")
+  contactValue       String?   @map("contact_value")
+  hasContributedCost Boolean   @default(false) @map("has_contributed_cost")
+  isVerified         Boolean   @default(false) @map("is_verified")
+  deletedAt          DateTime? @map("deleted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
-  city             City?             @relation(fields: [cityId], references: [id])
-  listings         Listing[]
-  listingResponses ListingResponse[]
-  costReports      CostReport[]
-  payments         Payment[]
-  subscriptions    Subscription[]
-  reports          Report[]
-  savedListings    SavedListing[]
+  city                     City?                     @relation(fields: [cityId], references: [id])
+  listings                 Listing[]
+  listingResponses         ListingResponse[]
+  costReports              CostReport[]
+  payments                 Payment[]
+  subscriptions            Subscription[]
+  reports                  Report[]
+  savedListings            SavedListing[]
+  conversationParticipants ConversationParticipant[]
+  messages                 Message[]
 
   @@map("profiles")
+}
+
+// --- Chat ---
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listing      Listing                   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  lastReadAt     DateTime? @map("last_read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  senderId       String   @map("sender_id") @db.Uuid
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Profile      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }
 
 // --- Payments ---
 
 model Payment {
-  id                       String   @id @default(uuid()) @db.Uuid
-  userId                   String   @map("user_id") @db.Uuid
-  stripeCheckoutSessionId  String?  @map("stripe_checkout_session_id")
-  stripePaymentIntentId    String?  @map("stripe_payment_intent_id")
-  productType              String   @map("product_type")
-  referenceId              String?  @map("reference_id") @db.Uuid
-  amount                   Int
-  currency                 String
-  status                   String
-  createdAt                DateTime @default(now()) @map("created_at")
+  id                      String   @id @default(uuid()) @db.Uuid
+  userId                  String   @map("user_id") @db.Uuid
+  stripeCheckoutSessionId String?  @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?  @map("stripe_payment_intent_id")
+  productType             String   @map("product_type")
+  referenceId             String?  @map("reference_id") @db.Uuid
+  amount                  Int
+  currency                String
+  status                  String
+  createdAt               DateTime @default(now()) @map("created_at")
 
-  user Profile @relation(fields: [userId], references: [id])
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
@@ -308,7 +392,7 @@ model Subscription {
   currentPeriodEnd     DateTime? @map("current_period_end")
   createdAt            DateTime  @default(now()) @map("created_at")
 
-  user Profile @relation(fields: [userId], references: [id])
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -325,7 +409,7 @@ model Report {
   moderatorNotes String?  @map("moderator_notes")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  reporter Profile @relation(fields: [reporterId], references: [id])
+  reporter Profile @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@map("reports")
 }

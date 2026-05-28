@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X, Expand, Grid3X3 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -48,7 +49,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
 
   return (
     <>
-      <div className="grid gap-2 overflow-hidden rounded-xl">
+      <div className="grid gap-1.5 overflow-hidden rounded-xl">
         {images.length === 1 ? (
           <motion.button
             whileHover={{ scale: 1.005 }}
@@ -56,7 +57,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
               setCurrentIndex(0);
               setLightboxOpen(true);
             }}
-            className="group relative aspect-[16/9] overflow-hidden rounded-xl"
+            className="group relative aspect-[2/1] cursor-pointer overflow-hidden rounded-xl"
           >
             <img
               src={images[0]}
@@ -70,14 +71,14 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
             </div>
           </motion.button>
         ) : (
-          <div className="grid grid-cols-4 grid-rows-2 gap-2" style={{ minHeight: "320px" }}>
+          <div className="grid grid-cols-4 grid-rows-2 gap-1.5" style={{ height: "280px" }}>
             <motion.button
               whileHover={{ scale: 1.01 }}
               onClick={() => {
                 setCurrentIndex(0);
                 setLightboxOpen(true);
               }}
-              className="group relative col-span-2 row-span-2 overflow-hidden rounded-l-xl"
+              className="group relative col-span-2 row-span-2 cursor-pointer overflow-hidden rounded-l-xl"
             >
               <img
                 src={images[0]}
@@ -95,7 +96,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                   setCurrentIndex(index + 1);
                   setLightboxOpen(true);
                 }}
-                className={`group relative overflow-hidden ${
+                className={`group relative cursor-pointer overflow-hidden ${
                   index === 1 ? "rounded-tr-xl" : index === 3 ? "rounded-br-xl" : ""
                 }`}
               >
@@ -149,9 +150,15 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
       </Button>
 
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-6xl border-none bg-black/95 p-0 backdrop-blur-xl">
-          <div className="relative flex h-[90vh] flex-col">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <DialogContent
+          showCloseButton={false}
+          className="inset-0 h-dvh w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-none bg-black/95 p-0 sm:max-w-none"
+        >
+          <VisuallyHidden>
+            <DialogTitle>{title}</DialogTitle>
+          </VisuallyHidden>
+          <div className="relative flex h-full flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
               <span className="text-sm text-white/70">
                 {currentIndex + 1} / {images.length}
               </span>
@@ -165,7 +172,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
               </Button>
             </div>
 
-            <div className="relative flex flex-1 items-center justify-center p-4">
+            <div className="relative flex min-h-0 flex-1 items-center justify-center p-4">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={currentIndex}
@@ -201,7 +208,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
               )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto border-t border-white/10 p-4 scrollbar-thin">
+            <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-white/10 p-4 scrollbar-thin">
               {images.map((image, index) => (
                 <button
                   key={index}
