@@ -217,7 +217,7 @@ export function BuildingCostsClient({
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {building.district}, {building.city}
+                    {building.district}, {t(building.city)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
@@ -430,93 +430,87 @@ export function BuildingCostsClient({
                       <CardTitle>{t("costs.building.comparison")}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {comparison.thisBuilding && (
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{t("costs.building.thisBuilding")}</span>
-                            <span className="text-lg font-semibold text-primary">
-                              {comparison.thisBuilding.toLocaleString()} PLN
-                            </span>
-                          </div>
-                        )}
-                        {comparison.districtAvg && comparison.thisBuilding && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                              {t("costs.building.districtAvg", {
-                                district: building.district,
-                              })}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span>
+                      {comparison.thisBuilding && (
+                        <div className="mb-5 text-center">
+                          <p className="text-sm text-muted-foreground">{t("costs.building.thisBuilding")}</p>
+                          <p className="text-3xl font-bold text-primary">
+                            {comparison.thisBuilding.toLocaleString()} PLN
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {comparison.districtAvg && comparison.thisBuilding && (() => {
+                          const pct = Math.round(
+                            ((comparison.thisBuilding - comparison.districtAvg) /
+                              comparison.districtAvg) *
+                              100,
+                          );
+                          const borderColor = pct === 0 ? "border-muted-foreground" : pct < 0 ? "border-green-500" : "border-red-500";
+                          return (
+                            <div className={`rounded-lg border-l-4 ${borderColor} bg-muted/50 p-4`}>
+                              <p className="text-sm text-muted-foreground">
+                                {t("costs.building.districtAvg", { district: building.district })}
+                              </p>
+                              <p className="mt-1 text-lg font-semibold">
                                 {comparison.districtAvg.toLocaleString()} PLN
-                              </span>
-                              {(() => {
-                                const pct = Math.round(
-                                  ((comparison.thisBuilding - comparison.districtAvg) /
-                                    comparison.districtAvg) *
-                                    100,
-                                );
-                                if (pct === 0) {
-                                  return (
-                                    <Badge className="gap-1 bg-muted text-muted-foreground">
-                                      <Equal className="h-3 w-3" />
-                                      0%
-                                    </Badge>
-                                  );
-                                }
-                                return pct < 0 ? (
+                              </p>
+                              <div className="mt-2">
+                                {pct === 0 ? (
+                                  <Badge className="gap-1 bg-muted text-muted-foreground">
+                                    <Equal className="h-3 w-3" />
+                                    {t("costs.building.matchesAverage")}
+                                  </Badge>
+                                ) : pct < 0 ? (
                                   <Badge className="gap-1 bg-green-500/10 text-green-600">
                                     <TrendingDown className="h-3 w-3" />
-                                    {Math.abs(pct)}%
+                                    {t("costs.building.percentLower", { percent: Math.abs(pct) })}
                                   </Badge>
                                 ) : (
                                   <Badge className="gap-1 bg-red-500/10 text-red-600">
                                     <TrendingUp className="h-3 w-3" />
-                                    {pct}%
+                                    {t("costs.building.percentHigher", { percent: pct })}
                                   </Badge>
-                                );
-                              })()}
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {comparison.cityAvg && comparison.thisBuilding && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                              {t("costs.building.warsawAvg")}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span>
+                          );
+                        })()}
+                        {comparison.cityAvg && comparison.thisBuilding && (() => {
+                          const pct = Math.round(
+                            ((comparison.thisBuilding - comparison.cityAvg) /
+                              comparison.cityAvg) *
+                              100,
+                          );
+                          const borderColor = pct === 0 ? "border-muted-foreground" : pct < 0 ? "border-green-500" : "border-red-500";
+                          return (
+                            <div className={`rounded-lg border-l-4 ${borderColor} bg-muted/50 p-4`}>
+                              <p className="text-sm text-muted-foreground">
+                                {t("costs.building.warsawAvg")}
+                              </p>
+                              <p className="mt-1 text-lg font-semibold">
                                 {comparison.cityAvg.toLocaleString()} PLN
-                              </span>
-                              {(() => {
-                                const pct = Math.round(
-                                  ((comparison.thisBuilding - comparison.cityAvg) /
-                                    comparison.cityAvg) *
-                                    100,
-                                );
-                                if (pct === 0) {
-                                  return (
-                                    <Badge className="gap-1 bg-muted text-muted-foreground">
-                                      <Equal className="h-3 w-3" />
-                                      0%
-                                    </Badge>
-                                  );
-                                }
-                                return pct < 0 ? (
+                              </p>
+                              <div className="mt-2">
+                                {pct === 0 ? (
+                                  <Badge className="gap-1 bg-muted text-muted-foreground">
+                                    <Equal className="h-3 w-3" />
+                                    {t("costs.building.matchesAverage")}
+                                  </Badge>
+                                ) : pct < 0 ? (
                                   <Badge className="gap-1 bg-green-500/10 text-green-600">
                                     <TrendingDown className="h-3 w-3" />
-                                    {Math.abs(pct)}%
+                                    {t("costs.building.percentLower", { percent: Math.abs(pct) })}
                                   </Badge>
                                 ) : (
                                   <Badge className="gap-1 bg-red-500/10 text-red-600">
                                     <TrendingUp className="h-3 w-3" />
-                                    {pct}%
+                                    {t("costs.building.percentHigher", { percent: pct })}
                                   </Badge>
-                                );
-                              })()}
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>

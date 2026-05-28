@@ -43,11 +43,11 @@ function parseFiltersFromParams(
   const availableTo = params.get("availableTo");
   if (availableTo) filters.availableTo = availableTo;
 
-  const furnished = params.get("furnished");
-  if (furnished === "1") filters.furnished = true;
-  else if (furnished === "0") filters.furnished = false;
-
-  if (params.get("petsAllowed") === "1") filters.petsAllowed = true;
+  const amenities = params.get("amenities");
+  if (amenities) {
+    const parsed = amenities.split(",").filter(Boolean);
+    if (parsed.length) filters.amenities = parsed;
+  }
 
   const floorMin = params.get("floorMin");
   if (floorMin) filters.floorMin = Number(floorMin);
@@ -64,8 +64,8 @@ function parseFiltersFromParams(
 
   if (params.get("utilitiesIncluded") === "1") filters.utilitiesIncluded = true;
   if (params.get("internetIncluded") === "1") filters.internetIncluded = true;
-  if (params.get("isVerified") === "1") filters.isVerified = true;
   if (params.get("hasPhotos") === "1") filters.hasPhotos = true;
+  if (params.get("registration") === "1") filters.registrationPossible = true;
 
   return filters;
 }
@@ -88,10 +88,7 @@ function filtersToParams(
   if (filters.availableFrom) params.set("availableFrom", filters.availableFrom);
   if (filters.availableTo) params.set("availableTo", filters.availableTo);
 
-  if (filters.furnished === true) params.set("furnished", "1");
-  else if (filters.furnished === false) params.set("furnished", "0");
-
-  if (filters.petsAllowed) params.set("petsAllowed", "1");
+  if (filters.amenities?.length) params.set("amenities", filters.amenities.join(","));
 
   if (filters.floorMin != null) params.set("floorMin", String(filters.floorMin));
   if (filters.floorMax != null) params.set("floorMax", String(filters.floorMax));
@@ -101,8 +98,8 @@ function filtersToParams(
 
   if (filters.utilitiesIncluded) params.set("utilitiesIncluded", "1");
   if (filters.internetIncluded) params.set("internetIncluded", "1");
-  if (filters.isVerified) params.set("isVerified", "1");
   if (filters.hasPhotos) params.set("hasPhotos", "1");
+  if (filters.registrationPossible) params.set("registration", "1");
 
   if (sortBy !== "newest") params.set("sort", sortBy);
 

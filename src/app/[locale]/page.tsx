@@ -84,14 +84,89 @@ async function getFeaturedListings(): Promise<FeaturedListingData[]> {
   return results;
 }
 
+async function getStats() {
+  const [listings, costReports, districts, buildings, users] = await Promise.all([
+    prisma.listing.count({ where: { status: "active" } }),
+    prisma.costReport.count(),
+    prisma.district.count(),
+    prisma.building.count(),
+    prisma.profile.count(),
+  ]);
+  return { listings, costReports, districts, buildings, users };
+}
+
+async function getTopBuildingCostData() {
+  const building = await prisma.building.findFirst({
+    orderBy: { costReports: { _count: "desc" } },
+    where: { costReports: { some: {} } },
+    include: {
+      district: true,
+      costReports: {
+        where: { isVisible: true },
+        select: {
+          rent: true,
+          adminFee: true,
+          electricityAvg: true,
+          internet: true,
+          gas: true,
+          heating: true,
+        },
+      },
+    },
+  });
+
+  if (!building || building.costReports.length === 0) return undefined;
+
+  const reports = building.costReports;
+  const avg = (field: keyof typeof reports[0]) => {
+    const values = reports.map((r) => Number(r[field] ?? 0)).filter((v) => v > 0);
+    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
+  };
+
+  const avgRent = avg("rent");
+  const avgAdminFee = avg("adminFee");
+  const avgElectricity = avg("electricityAvg");
+  const avgInternet = avg("internet");
+  const avgGas = avg("gas");
+  const avgHeating = avg("heating");
+  const avgGasHeating = avgGas + avgHeating;
+  const totalMonthly = avgRent + avgAdminFee + avgElectricity + avgInternet + avgGasHeating;
+
+  return {
+    address: building.addressFull,
+    district: building.district?.nameKey ?? "",
+    reportsCount: reports.length,
+    avgRent,
+    avgAdminFee,
+    avgElectricity,
+    avgInternet,
+    avgGasHeating,
+    totalMonthly,
+  };
+}
+
 export default async function Home() {
   let featuredListings: FeaturedListingData[] = [];
   let hasContributed = false;
+  let heroStats: { listings: number; costReports: number; districts: number; buildings: number; users: number } | undefined;
+  let costBuildingData: Awaited<ReturnType<typeof getTopBuildingCostData>>;
 
   try {
     featuredListings = await getFeaturedListings();
   } catch {
     // DB unavailable — component will use fallback mock data
+  }
+
+  try {
+    heroStats = await getStats();
+  } catch {
+    // DB unavailable
+  }
+
+  try {
+    costBuildingData = await getTopBuildingCostData();
+  } catch {
+    // DB unavailable
   }
 
   try {
@@ -113,12 +188,12 @@ export default async function Home() {
       <Header />
       <LandingContent>
         <main className="flex-1">
-          <Hero />
+          <Hero stats={heroStats} />
           <Marquee />
-          <BentoGrid />
+          <BentoGrid buildings={heroStats?.buildings} users={heroStats?.users} />
           <FeaturedListings listings={featuredListings} citySlug={DEFAULT_CITY} />
           <HowItWorks />
-          <CostTransparency hasContributed={hasContributed} />
+          <CostTransparency hasContributed={hasContributed} buildingData={costBuildingData} />
           <CTA />
         </main>
       </LandingContent>

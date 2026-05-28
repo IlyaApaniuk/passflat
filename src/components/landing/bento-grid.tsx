@@ -16,6 +16,11 @@ import type { LucideIcon } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
+interface BentoGridProps {
+  buildings?: number;
+  users?: number;
+}
+
 interface BentoItem {
   titleKey: string;
   descKey: string;
@@ -71,8 +76,13 @@ const bentoItems: BentoItem[] = [
   },
 ];
 
-export function BentoGrid() {
+export function BentoGrid({ buildings, users }: BentoGridProps) {
   const t = useTranslations('landing.bentoGrid');
+
+  const translationValues: Record<string, Record<string, string | number>> = {
+    buildingsTitle: { count: buildings ?? 0 },
+    communityDesc: { count: users ?? 0 },
+  };
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
@@ -128,12 +138,12 @@ export function BentoGrid() {
                   <h3
                     className={`mb-2 font-semibold ${item.featured ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
                   >
-                    {t(item.titleKey)}
+                    {t(item.titleKey, translationValues[item.titleKey])}
                   </h3>
                   <p
                     className={`text-muted-foreground ${item.featured ? 'text-base sm:text-lg' : 'text-sm'}`}
                   >
-                    {t(item.descKey)}
+                    {t(item.descKey, translationValues[item.descKey])}
                   </p>
                 </div>
 

@@ -84,7 +84,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Space Grotesk', 'Space Grotesk Fallback', system-ui, sans-serif;
+  --font-sans: 'Manrope', 'Manrope Fallback', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --animate-marquee: marquee 25s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
@@ -131,9 +131,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+html {
+  overflow-y: scroll;
+}
+
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Animated gradient text (primary ↔ accent) */
@@ -291,3 +303,18 @@
 .shine:hover::after {
   transform: rotate(30deg) translateX(100%);
 }
+
+/*
+ * Force framer-motion SSR-hidden elements visible on mobile.
+ * SSR outputs "opacity:0" (no space), but browsers may normalize inline
+ * styles to "opacity: 0" (with space). Match both variants.
+ */
+@media (max-width: 767px) {
+  [style*="opacity:0"],
+  [style*="opacity: 0"] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+

@@ -303,17 +303,17 @@ export function CostsOverviewClient({
                             {isExpanded && hasStats && (
                               <div className="border-t bg-muted/30 px-6 py-3">
                                 {hasContributed ? (
-                                  <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div>
-                                      <p className="text-[10px] text-muted-foreground">{t("costs.overview.districtAvgRent")}</p>
+                                  <div className="flex min-w-0 gap-2 text-center">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgRent")}</p>
                                       <p className="text-sm font-bold">{stats.avgRent.toLocaleString()}</p>
                                     </div>
-                                    <div>
-                                      <p className="text-[10px] text-muted-foreground">{t("costs.overview.districtAvgUtilities")}</p>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgUtilities")}</p>
                                       <p className="text-sm font-bold">{stats.avgUtilities.toLocaleString()}</p>
                                     </div>
-                                    <div>
-                                      <p className="text-[10px] text-muted-foreground">{t("costs.overview.districtAvgTotal")}</p>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgTotal")}</p>
                                       <p className="text-sm font-bold text-primary">{stats.avgTotal.toLocaleString()}</p>
                                     </div>
                                   </div>

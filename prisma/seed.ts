@@ -333,8 +333,28 @@ async function main() {
           rooms,
           areaM2: area,
           floor: randomBetween(0, 12),
-          petsAllowed: Math.random() > 0.4,
-          furnished: Math.random() > 0.2,
+          amenities: [
+            ...(Math.random() > 0.2 ? ["furnished"] : []),
+            ...(Math.random() > 0.3 ? ["fridge"] : []),
+            ...(Math.random() > 0.4 ? ["stove"] : []),
+            ...(Math.random() > 0.5 ? ["washingMachine"] : []),
+            ...(Math.random() > 0.5 ? ["balcony"] : []),
+            ...(Math.random() > 0.6 ? ["elevator"] : []),
+            ...(Math.random() > 0.6 ? ["wifi"] : []),
+            ...(Math.random() > 0.7 ? ["dishwasher"] : []),
+            ...(Math.random() > 0.7 ? ["tv"] : []),
+            ...(Math.random() > 0.8 ? ["ac"] : []),
+            ...(Math.random() > 0.8 ? ["intercom"] : []),
+          ],
+          thingsToKnow: [
+            ...(Math.random() > 0.5 ? ["noSmoking"] : []),
+            ...(Math.random() > 0.6 ? ["petsAllowed"] : []),
+            ...(Math.random() > 0.6 ? ["quietApartment"] : []),
+            ...(Math.random() > 0.7 ? ["fastInternet"] : []),
+            ...(Math.random() > 0.8 ? ["warmInWinter"] : []),
+            ...(Math.random() > 0.8 ? ["recentRenovation"] : []),
+          ],
+          registrationPossible: Math.random() > 0.4 ? true : Math.random() > 0.5 ? false : null,
           photos: [],
           status: "active",
           isPromoted: Math.random() > 0.7,
@@ -381,8 +401,21 @@ async function main() {
           rooms: totalRooms,
           areaM2: area,
           floor: randomBetween(0, 10),
-          petsAllowed: Math.random() > 0.5,
-          furnished: true,
+          amenities: [
+            "furnished",
+            ...(Math.random() > 0.3 ? ["fridge"] : []),
+            ...(Math.random() > 0.5 ? ["washingMachine"] : []),
+            ...(Math.random() > 0.6 ? ["elevator"] : []),
+            ...(Math.random() > 0.6 ? ["wifi"] : []),
+            ...(Math.random() > 0.7 ? ["tv"] : []),
+          ],
+          thingsToKnow: [
+            ...(Math.random() > 0.4 ? ["petsAllowed"] : []),
+            ...(Math.random() > 0.5 ? ["noSmoking"] : []),
+            ...(Math.random() > 0.5 ? ["quietApartment"] : []),
+            ...(Math.random() > 0.6 ? ["fastInternet"] : []),
+          ],
+          registrationPossible: Math.random() > 0.5 ? true : null,
           photos: [],
           status: "active",
           isPromoted: Math.random() > 0.8,
@@ -432,8 +465,20 @@ async function main() {
           rooms,
           areaM2: area,
           floor: randomBetween(0, 10),
-          petsAllowed: Math.random() > 0.6,
-          furnished: true,
+          amenities: [
+            "furnished",
+            ...(Math.random() > 0.3 ? ["fridge"] : []),
+            ...(Math.random() > 0.5 ? ["ac"] : []),
+            ...(Math.random() > 0.5 ? ["wifi"] : []),
+            ...(Math.random() > 0.6 ? ["washingMachine"] : []),
+            ...(Math.random() > 0.7 ? ["tv"] : []),
+          ],
+          thingsToKnow: [
+            ...(Math.random() > 0.5 ? ["noParties"] : []),
+            ...(Math.random() > 0.5 ? ["fastInternet"] : []),
+            ...(Math.random() > 0.6 ? ["noSmoking"] : []),
+          ],
+          registrationPossible: Math.random() > 0.6 ? true : null,
           photos: [],
           status: "active",
           isPromoted: Math.random() > 0.8,
@@ -520,6 +565,35 @@ async function main() {
   } else {
     console.log(`  - Cost reports: skipped (${existingReports} exist)`);
   }
+
+  // --- Data migration: rename moved keys in existing listings ---
+  // petFriendly (amenities) -> petsAllowed (things_to_know)
+  const petMigrated = await prisma.$executeRaw`
+    UPDATE listings
+    SET amenities = array_remove(amenities, 'petFriendly'),
+        things_to_know = array_append(things_to_know, 'petsAllowed')
+    WHERE 'petFriendly' = ANY(amenities)
+      AND NOT ('petsAllowed' = ANY(things_to_know))
+  `;
+  if (petMigrated > 0) console.log(`  - Migrated petFriendly -> petsAllowed: ${petMigrated} listings`);
+
+  // hasDeskSetup (things_to_know) -> deskSetup (amenities)
+  const deskMigrated = await prisma.$executeRaw`
+    UPDATE listings
+    SET things_to_know = array_remove(things_to_know, 'hasDeskSetup'),
+        amenities = array_append(amenities, 'deskSetup')
+    WHERE 'hasDeskSetup' = ANY(things_to_know)
+      AND NOT ('deskSetup' = ANY(amenities))
+  `;
+  if (deskMigrated > 0) console.log(`  - Migrated hasDeskSetup -> deskSetup: ${deskMigrated} listings`);
+
+  // Rename old section key references (sectionRemoteWork is now sectionInternet — only affects i18n, not DB)
+  // Clean up any stale petFriendly left in amenities
+  await prisma.$executeRaw`
+    UPDATE listings
+    SET amenities = array_remove(amenities, 'petFriendly')
+    WHERE 'petFriendly' = ANY(amenities)
+  `;
 
   console.log("Seed completed:");
   console.log(`  - Country: ${poland.id}`);

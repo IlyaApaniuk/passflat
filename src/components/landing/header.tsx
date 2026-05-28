@@ -15,8 +15,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Home, Globe, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { Home, Globe, User, LogOut, LayoutDashboard, MessageSquare } from 'lucide-react';
 import { signOut } from '@/app/[locale]/auth/actions';
+import { useUnreadCount } from '@/hooks/use-unread-count';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const languages = [
@@ -64,6 +65,7 @@ export function Header() {
     router.replace(pathname, { locale: newLocale as 'en' | 'pl' | 'ru' | 'uk' });
   }
 
+  const { unreadCount } = useUnreadCount(user?.id ?? null);
   const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
 
   const navLinks = [
@@ -132,6 +134,17 @@ export function Header() {
             {loading ? (
               <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
             ) : user ? (
+              <>
+              <Link href="/messages" className="relative">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <MessageSquare className="h-4 w-4" />
+                </Button>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -152,6 +165,17 @@ export function Header() {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
+                    <Link href="/messages" className="gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      {t('chat.conversations')}
+                      {unreadCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="gap-2">
                       <LayoutDashboard className="h-4 w-4" />
                       {t('common.dashboard')}
@@ -167,6 +191,7 @@ export function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </>
             ) : (
               <>
                 <Link href="/auth/login">
@@ -256,8 +281,19 @@ export function Header() {
                       <User className="h-4 w-4" />
                       <span className="truncate">{user.email}</span>
                     </div>
+                    <Link href="/messages" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full rounded-xl gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        {t('chat.conversations')}
+                        {unreadCount > 0 && (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </Button>
+                    </Link>
                     <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                      <Button className="w-full rounded-xl">
+                      <Button className="mt-2 w-full rounded-xl">
                         {t('common.dashboard')}
                       </Button>
                     </Link>

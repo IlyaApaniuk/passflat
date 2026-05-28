@@ -1,26 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { usePostHog } from "posthog-js/react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Header } from "@/components/landing/header";
 import { Footer } from "@/components/landing/footer";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { InterestModal } from "@/components/listings/interest-modal";
 import { FavoriteButton } from "@/components/listings/favorite-button";
+import { TranslateButton } from "@/components/listings/translate-button";
 import { useFavorites } from "@/hooks/use-favorites";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   MapPin,
   Bed,
   Bath,
-  Square,
+  Maximize2,
   Building2,
   Calendar,
   CalendarRange,
@@ -31,8 +42,12 @@ import {
   Users,
   Wifi,
   Zap as ZapIcon,
+  MessageSquare,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import type { ListingType } from "@/lib/listings-data";
+import { AMENITY_CATEGORIES, getThingsToKnowSentiment } from "@/lib/amenities";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -79,7 +94,10 @@ export interface ListingDetailData {
   promoted: boolean;
   availableFrom: string;
   features: string[];
+  thingsToKnow: string[];
+  registrationPossible?: boolean;
   description: string;
+  locale: string | null;
   createdAt: string;
   author: string | null;
   // Roommate-specific
@@ -105,15 +123,50 @@ export interface ListingDetailData {
 interface Props {
   listing: ListingDetailData;
   isLoggedIn: boolean;
+  isOwner?: boolean;
 }
 
-export function ListingDetailClient({ listing, isLoggedIn }: Props) {
+interface TranslatedFields {
+  title: string | null;
+  description: string | null;
+  roommateDescription: string | null;
+  subletRules: string | null;
+}
+
+export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Props) {
   const t = useTranslations();
+  const currentLocale = useLocale();
   const posthog = usePostHog();
+  const router = useRouter();
   const [interestModalOpen, setInterestModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [translated, setTranslated] = useState<TranslatedFields | null>(null);
+  const [showTranslated, setShowTranslated] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const listingType = listing.type ?? "replacement";
   const backRoute = TYPE_ROUTE[listingType];
+
+  const showTranslateButton = !isOwner && listing.locale !== null && listing.locale !== currentLocale;
+
+  const displayTitle = showTranslated && translated?.title ? translated.title : listing.title;
+  const displayDescription = showTranslated && translated?.description ? translated.description : listing.description;
+  const displayRoommateDescription = showTranslated && translated?.roommateDescription ? translated.roommateDescription : listing.roommateDescription;
+  const displaySubletRules = showTranslated && translated?.subletRules ? translated.subletRules : listing.subletRules;
+
+  const handleDeleteListing = async () => {
+    try {
+      const res = await fetch(`/api/listings/${listing.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(t("dashboard.listingDeleted"));
+        router.push("/dashboard");
+      } else {
+        toast.error(t("common.error"));
+      }
+    } catch {
+      toast.error(t("common.error"));
+    }
+    setDeleteDialogOpen(false);
+  };
 
   useEffect(() => {
     posthog?.capture("listing_detail_viewed", {
@@ -185,13 +238,27 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                     )}
                   </div>
                   <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-                    {listing.title}
+                    {displayTitle}
                   </h1>
                   <div className="mt-2 flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     {listing.address}
                     {listing.district && `, ${listing.district}`}
                   </div>
+                  {showTranslateButton && (
+                    <div className="mt-3">
+                      <TranslateButton
+                        listingId={listing.id}
+                        listingLocale={listing.locale}
+                        isTranslated={showTranslated}
+                        onTranslated={(fields) => {
+                          setTranslated(fields);
+                          setShowTranslated(true);
+                        }}
+                        onShowOriginal={() => setShowTranslated(false)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -250,7 +317,7 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                 )}
                 {listing.area > 0 && (
                   <div className="flex items-center gap-2">
-                    <Square className="h-5 w-5 text-muted-foreground" />
+                    <Maximize2 className="h-5 w-5 text-muted-foreground" />
                     <span>
                       <span className="font-semibold">{listing.area}</span> m²
                     </span>
@@ -338,7 +405,7 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                 )}
               </motion.div>
 
-              {listing.description && (
+              {displayDescription && (
                 <motion.div
                   custom={2}
                   initial="hidden"
@@ -354,7 +421,7 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                         : t("listings.detail.aboutApartment")}
                   </h2>
                   <p className="mt-3 leading-relaxed text-muted-foreground">
-                    {listing.description}
+                    {displayDescription}
                   </p>
                 </motion.div>
               )}
@@ -370,19 +437,74 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                   <h2 className="text-lg font-semibold">
                     {t("listings.detail.featuresAmenities")}
                   </h2>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {listing.features.map((feature, i) => (
-                      <motion.div
-                        key={feature}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4 + i * 0.03 }}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </motion.div>
-                    ))}
+                  {listing.registrationPossible && (
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                      <CheckCircle className="h-4 w-4" />
+                      {t("listings.registrationPossible")}
+                    </div>
+                  )}
+                  <div className="mt-4 space-y-4">
+                    {AMENITY_CATEGORIES.map((category) => {
+                      const matched = category.items.filter((item) =>
+                        listing.features.includes(item),
+                      );
+                      if (matched.length === 0) return null;
+                      return (
+                        <div key={category.categoryKey}>
+                          <p className="mb-2 text-sm font-medium text-muted-foreground">
+                            {t(category.categoryKey)}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {matched.map((feature, i) => (
+                              <motion.div
+                                key={feature}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 + i * 0.03 }}
+                                className="flex items-center gap-2"
+                              >
+                                <CheckCircle className="h-4 w-4 text-primary" />
+                                <span className="text-sm">{t(`listings.features.${feature}`)}</span>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+
+              {listing.thingsToKnow?.length > 0 && (
+                <motion.div
+                  custom={3.2}
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeUp}
+                  className="mt-8"
+                >
+                  <h2 className="text-lg font-semibold">
+                    {t("listings.detail.thingsToKnow")}
+                  </h2>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {listing.thingsToKnow.map((key, i) => {
+                      const sentiment = getThingsToKnowSentiment(key);
+                      return (
+                        <motion.span
+                          key={key}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.4 + i * 0.03 }}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${
+                            sentiment === "good"
+                              ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t(`listings.thingsToKnow.${key}`)}
+                        </motion.span>
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}
@@ -435,13 +557,17 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">{t("listings.detail.preferredAge")}</span>
                           <span className="font-medium">
-                            {listing.preferredAgeMin ?? "—"} – {listing.preferredAgeMax ?? "—"}
+                            {listing.preferredAgeMin != null && listing.preferredAgeMax != null
+                              ? `${listing.preferredAgeMin} – ${listing.preferredAgeMax}`
+                              : listing.preferredAgeMax != null
+                                ? `${t("listings.detail.ageUpTo")} ${listing.preferredAgeMax}`
+                                : `${t("listings.detail.ageFrom")} ${listing.preferredAgeMin}`}
                           </span>
                         </div>
                       )}
-                      {listing.roommateDescription && (
+                      {displayRoommateDescription && displayRoommateDescription !== displayDescription && (
                         <div className="mt-2 rounded-lg bg-muted/50 p-3">
-                          <p className="text-sm text-muted-foreground">{listing.roommateDescription}</p>
+                          <p className="text-sm text-muted-foreground">{displayRoommateDescription}</p>
                         </div>
                       )}
                     </CardContent>
@@ -503,10 +629,10 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                           </span>
                         </div>
                       )}
-                      {listing.subletRules && (
+                      {displaySubletRules && (
                         <div className="mt-2 rounded-lg bg-muted/50 p-3">
                           <p className="text-xs font-medium text-muted-foreground mb-1">{t("listings.detail.houseRules")}</p>
-                          <p className="text-sm">{listing.subletRules}</p>
+                          <p className="text-sm">{displaySubletRules}</p>
                         </div>
                       )}
                     </CardContent>
@@ -683,31 +809,68 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
                 </CardContent>
               </Card>
 
-              <Button
-                size="lg"
-                className="mt-4 w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                onClick={() => {
-                  setInterestModalOpen(true);
-                  posthog?.capture("interest_modal_opened", {
-                    listing_id: listing.id,
-                    type: listingType,
-                  });
-                }}
-              >
-                {listingType === "roommate"
-                  ? t("listings.detail.imInterestedRoom")
-                  : listingType === "sublet"
-                    ? t("listings.detail.imInterestedSublet")
-                    : t("listings.detail.imInterested")}
-              </Button>
+              {isOwner ? (
+                <div className="mt-4 flex flex-col gap-2">
+                  <Button
+                    size="lg"
+                    className="w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    asChild
+                  >
+                    <Link href={`/create-listing?edit=${listing.id}`}>
+                      <Edit className="h-4 w-4" />
+                      {t("listings.detail.editListing")}
+                    </Link>
+                  </Button>
+                  {!listing.promoted && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {t("listings.detail.promoteListing")}
+                    </Button>
+                  )}
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {t("listings.detail.deleteListing")}
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    className="mt-4 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    onClick={() => {
+                      setInterestModalOpen(true);
+                      posthog?.capture("interest_modal_opened", {
+                        listing_id: listing.id,
+                        type: listingType,
+                      });
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {listingType === "roommate"
+                      ? t("listings.detail.imInterestedRoom")
+                      : listingType === "sublet"
+                        ? t("listings.detail.imInterestedSublet")
+                        : t("listings.detail.imInterested")}
+                  </Button>
 
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                {listingType === "roommate"
-                  ? t("listings.detail.contactHintRoommate")
-                  : listingType === "sublet"
-                    ? t("listings.detail.contactHintSublet")
-                    : t("listings.detail.contactHint")}
-              </p>
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    {listingType === "roommate"
+                      ? t("listings.detail.contactHintRoommate")
+                      : listingType === "sublet"
+                        ? t("listings.detail.contactHintSublet")
+                        : t("listings.detail.contactHint")}
+                  </p>
+                </>
+              )}
             </motion.div>
           </div>
         </div>
@@ -715,13 +878,37 @@ export function ListingDetailClient({ listing, isLoggedIn }: Props) {
 
       <Footer />
 
-      <InterestModal
-        open={interestModalOpen}
-        onOpenChange={setInterestModalOpen}
-        listingTitle={listing.title}
-        listingId={listing.id}
-        isLoggedIn={isLoggedIn}
-      />
+      {!isOwner && (
+        <InterestModal
+          open={interestModalOpen}
+          onOpenChange={setInterestModalOpen}
+          listingTitle={listing.title}
+          listingId={listing.id}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
+
+      {isOwner && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("dashboard.confirmDeleteTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("dashboard.confirmDeleteDesc")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleDeleteListing}
+              >
+                {t("common.delete")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

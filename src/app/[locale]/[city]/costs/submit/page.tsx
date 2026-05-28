@@ -43,6 +43,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
         rent: report.rent ? String(report.rent) : "",
         adminFee: report.adminFee ? String(report.adminFee) : "",
         deposit: report.depositAmount ? String(report.depositAmount) : "",
+        extraBills: "",
         electricity: report.electricityAvg ? String(report.electricityAvg) : "",
         electricityIncluded: report.electricityIncluded ?? false,
         electricityWinter: report.electricityWinter ? String(report.electricityWinter) : "",

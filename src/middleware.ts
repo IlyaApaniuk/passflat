@@ -16,9 +16,18 @@ function isProtectedPath(pathWithoutLocale: string): boolean {
     pathWithoutLocale.startsWith('/create-listing/')
   )
     return true;
+  if (
+    pathWithoutLocale === '/messages' ||
+    pathWithoutLocale.startsWith('/messages/')
+  )
+    return true;
   if (/\/costs\/submit(\/|$)/.test(pathWithoutLocale)) return true;
   if (/\/[^/]+\/costs\/submit(\/|$)/.test(pathWithoutLocale)) return true;
   return false;
+}
+
+function isAccountDeletedPath(pathWithoutLocale: string): boolean {
+  return pathWithoutLocale === '/account-deleted' || pathWithoutLocale.startsWith('/account-deleted/');
 }
 
 export default async function middleware(request: NextRequest) {
@@ -72,6 +81,48 @@ export default async function middleware(request: NextRequest) {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });
     return redirectResponse;
+  }
+
+  if (user && isProtectedPath(pathWithoutLocale)) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.deleted_at) {
+      const currentLocale = locale || routing.defaultLocale;
+      const deletedUrl = new URL(
+        `/${currentLocale}/account-deleted`,
+        request.url,
+      );
+      const redirectResponse = NextResponse.redirect(deletedUrl);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
+    }
+  }
+
+  if (user && isAccountDeletedPath(pathWithoutLocale)) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.deleted_at) {
+      const currentLocale = locale || routing.defaultLocale;
+      const dashboardUrl = new URL(
+        `/${currentLocale}/dashboard`,
+        request.url,
+      );
+      const redirectResponse = NextResponse.redirect(dashboardUrl);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
+    }
   }
 
   return response;

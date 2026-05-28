@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePostHog } from "posthog-js/react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +9,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { CheckCircle2, AlertCircle, LogIn, Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface InterestModalProps {
@@ -34,15 +31,11 @@ export function InterestModal({
   isLoggedIn,
 }: InterestModalProps) {
   const t = useTranslations();
+  const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,23 +43,19 @@ export function InterestModal({
     setSending(true);
 
     try {
-      const res = await fetch("/api/responses", {
+      const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId,
-          message: formData.message,
-          name: formData.name,
-          phone: formData.phone,
+          message,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 409) {
-          setError(t("interest.alreadyResponded"));
-        } else if (res.status === 400 && data.error?.includes("own listing")) {
+        if (res.status === 400 && data.error?.includes("own listing")) {
           setError(t("interest.ownListing"));
         } else {
           setError(data.error || t("interest.errorGeneric"));
@@ -78,8 +67,9 @@ export function InterestModal({
       setTimeout(() => {
         onOpenChange(false);
         setSubmitted(false);
-        setFormData({ name: "", email: "", phone: "", message: "" });
-      }, 2500);
+        setMessage("");
+        router.push(`/messages?c=${data.conversationId}` as '/');
+      }, 1500);
     } catch {
       setError(t("interest.errorGeneric"));
     } finally {
@@ -192,66 +182,15 @@ export function InterestModal({
                   )}
                 </AnimatePresence>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">{t("interest.name")} *</Label>
-                    <Input
-                      id="name"
-                      required
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder={t("interest.yourName")}
-                      disabled={sending}
-                      className="bg-background/50 transition-colors focus:bg-background"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">{t("interest.phone")}</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      placeholder="+48 123 456 789"
-                      disabled={sending}
-                      className="bg-background/50 transition-colors focus:bg-background"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t("interest.email")}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    placeholder="you@example.com"
-                    disabled={sending}
-                    className="bg-background/50 transition-colors focus:bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message">{t("interest.message")}</Label>
-                  <Textarea
-                    id="message"
-                    rows={4}
-                    value={formData.message}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message: e.target.value })
-                    }
-                    placeholder={t("interest.messagePlaceholder")}
-                    disabled={sending}
-                    className="bg-background/50 transition-colors focus:bg-background resize-none"
-                  />
-                </div>
+                <Textarea
+                  rows={4}
+                  required
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={t("interest.messagePlaceholder")}
+                  disabled={sending}
+                  className="bg-background/50 transition-colors focus:bg-background resize-none"
+                />
 
                 <div className="flex gap-3 pt-2">
                   <Button
@@ -263,7 +202,7 @@ export function InterestModal({
                   >
                     {t("common.cancel")}
                   </Button>
-                  <Button type="submit" className="flex-1 gap-2" disabled={sending}>
+                  <Button type="submit" className="flex-1 gap-2" disabled={sending || !message.trim()}>
                     {sending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (

@@ -1,16 +1,38 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { useParams, useSearchParams } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Header } from "@/components/landing/header";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -36,38 +58,27 @@ import {
   LayoutList,
   Users,
   CalendarClock,
+  CalendarIcon,
   Repeat,
+  GripVertical,
 } from "lucide-react";
 import {
   AddressAutocomplete,
   type PlaceResult,
 } from "@/components/listings/address-autocomplete";
+import { usePublishStore } from "@/stores/publish-store";
+
+import { AMENITY_CATEGORIES, THINGS_TO_KNOW_SECTIONS } from "@/lib/amenities";
 
 type ListingType = "replacement" | "roommate" | "sublet";
 type Step = "type" | "address" | "details" | "photos" | "preview";
 
-const featureKeys = [
-  "balcony",
-  "terrace",
-  "gardenAccess",
-  "parking",
-  "garage",
-  "ac",
-  "dishwasher",
-  "washingMachine",
-  "dryer",
-  "furnished",
-  "petFriendly",
-  "elevator",
-  "intercom",
-  "smartHome",
-  "gym",
-  "concierge",
-  "storage",
-  "metroNearby",
-  "tramStop",
-  "quietArea",
-] as const;
+interface PhotoItem {
+  id: string;
+  type: "remote" | "local";
+  url: string;
+  file?: File;
+}
 
 interface ListingFormData {
   listingType: ListingType;
@@ -88,7 +99,8 @@ interface ListingFormData {
   totalFloors: string;
   availableFrom: string;
   features: string[];
-  photos: string[];
+  thingsToKnow: string[];
+  registrationPossible: boolean | null;
   // Replacement-specific
   rent: string;
   adminFee: string;
@@ -131,7 +143,8 @@ const initialFormData: ListingFormData = {
   totalFloors: "",
   availableFrom: "",
   features: [],
-  photos: [],
+  thingsToKnow: [],
+  registrationPossible: null,
   rent: "",
   adminFee: "",
   utilities: "",
@@ -152,6 +165,73 @@ const initialFormData: ListingFormData = {
   subletRules: "",
 };
 
+function SortablePhoto({
+  photo,
+  index,
+  onRemove,
+  coverLabel,
+}: {
+  photo: PhotoItem;
+  index: number;
+  onRemove: (id: string) => void;
+  coverLabel: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: photo.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative aspect-video overflow-hidden rounded-lg ${
+        isDragging ? "opacity-40 ring-2 ring-primary ring-offset-2" : ""
+      }`}
+    >
+      <img
+        src={photo.url}
+        alt={`Photo ${index + 1}`}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute left-2 top-2 cursor-grab rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => onRemove(photo.id)}
+        className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <X className="h-4 w-4" />
+      </button>
+      {index === 0 && (
+        <span className="absolute bottom-2 left-2 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+          {coverLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PhotoOverlay({ photo }: { photo: PhotoItem }) {
+  return (
+    <div className="aspect-video overflow-hidden rounded-lg shadow-xl ring-2 ring-primary">
+      <img
+        src={photo.url}
+        alt="Dragging"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  );
+}
+
 const stepTransition = {
   initial: { opacity: 0, x: 20 },
   animate: { opacity: 1, x: 0 },
@@ -161,10 +241,15 @@ const stepTransition = {
 
 export default function CreateListingPage() {
   const t = useTranslations();
+  const locale = useLocale();
   const params = useParams();
+  const router = useRouter();
   const citySlug = (params.city as string) || "warsaw";
 
-  const steps: { id: Step; label: string; icon: React.ElementType }[] = [
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+
+  const allSteps: { id: Step; label: string; icon: React.ElementType }[] = [
     { id: "type", label: t("listings.create.stepType"), icon: LayoutList },
     { id: "address", label: t("listings.create.stepAddress"), icon: MapPin },
     { id: "details", label: t("listings.create.stepDetails"), icon: DollarSign },
@@ -172,22 +257,105 @@ export default function CreateListingPage() {
     { id: "preview", label: t("listings.create.stepPreview"), icon: Eye },
   ];
 
+  const steps = editId
+    ? allSteps.filter((s) => s.id === "details" || s.id === "photos" || s.id === "preview")
+    : allSteps;
+
   const posthog = usePostHog();
-  const [currentStep, setCurrentStep] = useState<Step>("type");
+  const publishStore = usePublishStore();
+  const [currentStep, setCurrentStep] = useState<Step>(editId ? "details" : "type");
   const [formData, setFormData] = useState<ListingFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   useEffect(() => {
-    posthog?.capture("create_listing_started");
+    if (!editId) return;
+    setIsLoadingEdit(true);
+    fetch(`/api/listings/${editId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load listing");
+        return res.json();
+      })
+      .then(({ listing }) => {
+        const b = listing.building;
+        setFormData({
+          listingType: listing.type as ListingType,
+          street: b?.street ?? "",
+          buildingNumber: b?.buildingNumber ?? "",
+          apartmentNumber: listing.apartmentNumber ?? "",
+          district: b?.district?.nameKey ?? "",
+          postalCode: b?.postalCode ?? "",
+          placeId: b?.placeId ?? "",
+          lat: b?.lat ? Number(b.lat) : null,
+          lng: b?.lng ? Number(b.lng) : null,
+          title: listing.title ?? "",
+          description: listing.description ?? "",
+          bedrooms: listing.rooms ? String(listing.rooms) : "",
+          bathrooms: "1",
+          area: listing.areaM2 ? String(Number(listing.areaM2)) : "",
+          floor: listing.floor ? String(listing.floor) : "",
+          totalFloors: "",
+          availableFrom: listing.availableFrom
+            ? new Date(listing.availableFrom).toISOString().slice(0, 10)
+            : "",
+          features: listing.amenities ?? [],
+          thingsToKnow: listing.thingsToKnow ?? [],
+          registrationPossible: listing.registrationPossible ?? null,
+          rent: listing.rent ? String(Number(listing.rent)) : "",
+          adminFee: listing.adminFee ? String(Number(listing.adminFee)) : "",
+          utilities: listing.utilitiesAvg ? String(Number(listing.utilitiesAvg)) : "",
+          pricePerPerson: listing.pricePerPerson ? String(Number(listing.pricePerPerson)) : "",
+          totalApartmentRent: listing.totalApartmentRent ? String(Number(listing.totalApartmentRent)) : "",
+          currentRoommates: listing.currentRoommates ? String(listing.currentRoommates) : "",
+          totalRooms: listing.totalRooms ? String(listing.totalRooms) : "",
+          roomType: listing.roomType ?? "",
+          preferredGender: listing.preferredGender ?? "any",
+          preferredAgeMin: listing.preferredAgeMin ? String(listing.preferredAgeMin) : "",
+          preferredAgeMax: listing.preferredAgeMax ? String(listing.preferredAgeMax) : "",
+          roommateDescription: listing.roommateDescription ?? "",
+          depositAmount: listing.depositAmount ? String(Number(listing.depositAmount)) : "",
+          availableTo: listing.availableTo
+            ? new Date(listing.availableTo).toISOString().slice(0, 10)
+            : "",
+          priceTotal: listing.priceTotal ? String(Number(listing.priceTotal)) : "",
+          utilitiesIncluded: listing.utilitiesIncluded ?? false,
+          internetIncluded: listing.internetIncluded ?? false,
+          subletRules: listing.subletRules ?? "",
+        });
+        setPhotos(
+          (listing.photos ?? []).map((url: string) => ({
+            id: crypto.randomUUID(),
+            type: "remote" as const,
+            url,
+          })),
+        );
+        setCurrentStep("details");
+      })
+      .catch((err) => {
+        console.error("Failed to load listing for edit:", err);
+        setError("Failed to load listing data");
+      })
+      .finally(() => setIsLoadingEdit(false));
+  }, [editId]);
+
+  useEffect(() => {
+    if (!editId) posthog?.capture("create_listing_started");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (!isPublished && currentStep !== "type") {
+      if (currentStep !== "type") {
         posthog?.capture("create_listing_abandoned", {
           last_step: currentStep,
           step_number: steps.findIndex((s) => s.id === currentStep),
@@ -196,12 +364,20 @@ export default function CreateListingPage() {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [currentStep, isPublished]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
   const updateFormData = (updates: Partial<ListingFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+    const keys = Object.keys(updates);
+    if (keys.some((k) => k in validationErrors)) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        keys.forEach((k) => delete next[k]);
+        return next;
+      });
+    }
   };
 
   const toggleFeature = (feature: string) => {
@@ -213,7 +389,56 @@ export default function CreateListingPage() {
     }));
   };
 
+  const toggleThingToKnow = (key: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      thingsToKnow: prev.thingsToKnow.includes(key)
+        ? prev.thingsToKnow.filter((k) => k !== key)
+        : [...prev.thingsToKnow, key],
+    }));
+  };
+
+  const validateStep = (step: Step): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    switch (step) {
+      case "type":
+        break;
+      case "address":
+        if (!formData.street.trim()) errors.street = t("listings.create.fieldRequired");
+        if (!formData.buildingNumber.trim()) errors.buildingNumber = t("listings.create.fieldRequired");
+        break;
+      case "details": {
+        if (!formData.title.trim()) errors.title = t("listings.create.fieldRequired");
+        if (!formData.bedrooms) errors.bedrooms = t("listings.create.fieldRequired");
+        if (!formData.area) errors.area = t("listings.create.fieldRequired");
+        if (!formData.floor) errors.floor = t("listings.create.fieldRequired");
+        if (!formData.availableFrom) errors.availableFrom = t("listings.create.fieldRequired");
+
+        if (formData.listingType === "replacement") {
+          if (!formData.rent) errors.rent = t("listings.create.fieldRequired");
+        } else if (formData.listingType === "roommate") {
+          if (!formData.pricePerPerson) errors.pricePerPerson = t("listings.create.fieldRequired");
+        } else if (formData.listingType === "sublet") {
+          if (!formData.priceTotal) errors.priceTotal = t("listings.create.fieldRequired");
+          if (!formData.availableTo) errors.availableTo = t("listings.create.fieldRequired");
+        }
+        break;
+      }
+      case "photos":
+        break;
+    }
+
+    return errors;
+  };
+
   const handleNext = () => {
+    const errors = validateStep(currentStep);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
     posthog?.capture("create_listing_step_completed", {
       step: currentStep,
       step_number: currentStepIndex,
@@ -243,120 +468,218 @@ export default function CreateListingPage() {
     });
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const MAX_PHOTOS = 10;
+
+  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadingPhotos(true);
-    const uploaded: string[] = [];
+    const slotsAvailable = MAX_PHOTOS - photos.length;
+    if (slotsAvailable <= 0) return;
 
-    for (const file of Array.from(files)) {
-      const fd = new FormData();
-      fd.append("file", file);
+    const newItems: PhotoItem[] = Array.from(files)
+      .slice(0, slotsAvailable)
+      .map((file) => ({
+        id: crypto.randomUUID(),
+        type: "local" as const,
+        url: URL.createObjectURL(file),
+        file,
+      }));
 
-      try {
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Upload failed");
-        }
-        const data = await res.json();
-        uploaded.push(data.url);
-      } catch (err) {
-        console.error("Photo upload error:", err);
-      }
-    }
-
-    if (uploaded.length > 0) {
-      updateFormData({ photos: [...formData.photos, ...uploaded] });
-    }
-    setUploadingPhotos(false);
+    setPhotos((prev) => [...prev, ...newItems]);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const removePhoto = (index: number) => {
-    updateFormData({
-      photos: formData.photos.filter((_, i) => i !== index),
+  const removePhoto = useCallback((id: string) => {
+    setPhotos((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item?.type === "local") URL.revokeObjectURL(item.url);
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActivePhotoId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActivePhotoId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setPhotos((prev) => {
+      const oldIndex = prev.findIndex((p) => p.id === active.id);
+      const newIndex = prev.findIndex((p) => p.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
     });
   };
+
+  const handleDragCancel = () => {
+    setActivePhotoId(null);
+  };
+
+  const activePhoto = activePhotoId ? photos.find((p) => p.id === activePhotoId) : null;
+
+  useEffect(() => {
+    return () => {
+      photos.forEach((p) => {
+        if (p.type === "local") URL.revokeObjectURL(p.url);
+      });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePublish = async () => {
     setIsSubmitting(true);
     setError(null);
 
-    try {
-      const commonPayload = {
-        type: formData.listingType,
+    if (editId) {
+      const patchPayload: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
-        street: formData.street,
-        buildingNumber: formData.buildingNumber,
-        district: formData.district,
-        placeId: formData.placeId,
-        lat: formData.lat,
-        lng: formData.lng,
         rooms: formData.bedrooms,
         areaM2: formData.area,
         floor: formData.floor,
         availableFrom: formData.availableFrom,
-        photos: formData.photos,
-        petsAllowed: formData.features.includes("petFriendly"),
-        furnished: formData.features.includes("furnished"),
-        citySlug,
+        amenities: formData.features,
+        thingsToKnow: formData.thingsToKnow,
+        registrationPossible: formData.registrationPossible,
       };
 
-      let typePayload = {};
-
       if (formData.listingType === "replacement") {
-        typePayload = {
-          rent: formData.rent,
-          adminFee: formData.adminFee,
-          utilitiesAvg: formData.utilities,
-        };
+        patchPayload.rent = formData.rent;
+        patchPayload.adminFee = formData.adminFee;
+        patchPayload.utilitiesAvg = formData.utilities;
       } else if (formData.listingType === "roommate") {
-        typePayload = {
-          pricePerPerson: formData.pricePerPerson,
-          totalApartmentRent: formData.totalApartmentRent || undefined,
-          currentRoommates: formData.currentRoommates || undefined,
-          totalRooms: formData.totalRooms || undefined,
-          roomType: formData.roomType || undefined,
-          preferredGender: formData.preferredGender || undefined,
-          preferredAgeMin: formData.preferredAgeMin || undefined,
-          preferredAgeMax: formData.preferredAgeMax || undefined,
-          roommateDescription: formData.roommateDescription || undefined,
-          depositAmount: formData.depositAmount || undefined,
-        };
+        patchPayload.pricePerPerson = formData.pricePerPerson;
+        patchPayload.totalApartmentRent = formData.totalApartmentRent || null;
+        patchPayload.currentRoommates = formData.currentRoommates || null;
+        patchPayload.totalRooms = formData.totalRooms || null;
+        patchPayload.roomType = formData.roomType || null;
+        patchPayload.preferredGender = formData.preferredGender || null;
+        patchPayload.preferredAgeMin = formData.preferredAgeMin || null;
+        patchPayload.preferredAgeMax = formData.preferredAgeMax || null;
+        patchPayload.roommateDescription = formData.roommateDescription || null;
+        patchPayload.depositAmount = formData.depositAmount || null;
       } else if (formData.listingType === "sublet") {
-        typePayload = {
-          availableTo: formData.availableTo,
-          priceTotal: formData.priceTotal,
-          utilitiesIncluded: formData.utilitiesIncluded,
-          internetIncluded: formData.internetIncluded,
-          subletRules: formData.subletRules || undefined,
-          depositAmount: formData.depositAmount || undefined,
-        };
+        patchPayload.availableTo = formData.availableTo;
+        patchPayload.priceTotal = formData.priceTotal;
+        patchPayload.utilitiesIncluded = formData.utilitiesIncluded;
+        patchPayload.internetIncluded = formData.internetIncluded;
+        patchPayload.subletRules = formData.subletRules || null;
+        patchPayload.depositAmount = formData.depositAmount || null;
       }
 
-      const res = await fetch("/api/listings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...commonPayload, ...typePayload }),
+      const localFiles = photos.filter((p) => p.type === "local" && p.file);
+      const uploadedUrlMap = new Map<string, string>();
+      for (const item of localFiles) {
+        const fd = new FormData();
+        fd.append("file", item.file!);
+        try {
+          const res = await fetch("/api/upload", { method: "POST", body: fd });
+          if (res.ok) {
+            const { url } = await res.json();
+            uploadedUrlMap.set(item.id, url);
+          }
+        } catch { /* keep existing photos */ }
+      }
+
+      patchPayload.photos = photos.map((p) => {
+        if (p.type === "remote") return p.url;
+        return uploadedUrlMap.get(p.id) ?? p.url;
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to publish listing");
+      try {
+        const res = await fetch(`/api/listings/${editId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patchPayload),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error || "Failed to update listing");
+          setIsSubmitting(false);
+          return;
+        }
+        posthog?.capture("listing_updated", { listing_id: editId, type: formData.listingType });
+        router.push("/dashboard");
+      } catch {
+        setError("Failed to update listing");
+        setIsSubmitting(false);
       }
-
-      setIsPublished(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    const commonPayload = {
+      type: formData.listingType,
+      title: formData.title,
+      description: formData.description,
+      street: formData.street,
+      buildingNumber: formData.buildingNumber,
+      apartmentNumber: formData.apartmentNumber || undefined,
+      postalCode: formData.postalCode || undefined,
+      district: formData.district,
+      placeId: formData.placeId,
+      lat: formData.lat,
+      lng: formData.lng,
+      rooms: formData.bedrooms,
+      areaM2: formData.area,
+      floor: formData.floor,
+      availableFrom: formData.availableFrom,
+      amenities: formData.features,
+      thingsToKnow: formData.thingsToKnow,
+      registrationPossible: formData.registrationPossible,
+      citySlug,
+      locale,
+    };
+
+    let typePayload = {};
+
+    if (formData.listingType === "replacement") {
+      typePayload = {
+        rent: formData.rent,
+        adminFee: formData.adminFee,
+        utilitiesAvg: formData.utilities,
+      };
+    } else if (formData.listingType === "roommate") {
+      typePayload = {
+        pricePerPerson: formData.pricePerPerson,
+        totalApartmentRent: formData.totalApartmentRent || undefined,
+        currentRoommates: formData.currentRoommates || undefined,
+        totalRooms: formData.totalRooms || undefined,
+        roomType: formData.roomType || undefined,
+        preferredGender: formData.preferredGender || undefined,
+        preferredAgeMin: formData.preferredAgeMin || undefined,
+        preferredAgeMax: formData.preferredAgeMax || undefined,
+        roommateDescription: formData.roommateDescription || undefined,
+        depositAmount: formData.depositAmount || undefined,
+      };
+    } else if (formData.listingType === "sublet") {
+      typePayload = {
+        availableTo: formData.availableTo,
+        priceTotal: formData.priceTotal,
+        utilitiesIncluded: formData.utilitiesIncluded,
+        internetIncluded: formData.internetIncluded,
+        subletRules: formData.subletRules || undefined,
+        depositAmount: formData.depositAmount || undefined,
+      };
+    }
+
+    const files = photos
+      .filter((p): p is PhotoItem & { file: File } => p.type === "local" && !!p.file)
+      .map((p) => ({ file: p.file, preview: p.url }));
+    const payload = { ...commonPayload, ...typePayload };
+
+    publishStore.startPublish(files, payload);
+
+    posthog?.capture("create_listing_publish_started", {
+      type: formData.listingType,
+      photo_count: files.length,
+    });
+
+    router.push("/dashboard");
   };
 
   const totalCost =
@@ -405,47 +728,20 @@ export default function CreateListingPage() {
     },
   } as const;
 
-  if (isPublished) {
+  const FieldError = ({ field }: { field: string }) => {
+    const error = validationErrors[field];
+    if (!error) return null;
+    return <p className="text-xs text-destructive mt-1">{error}</p>;
+  };
+
+  if (isLoadingEdit) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex flex-1 items-center justify-center p-8 pt-20">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, type: "spring", bounce: 0.3 }}
-          >
-            <Card className="w-full max-w-md text-center">
-              <CardContent className="pt-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
-                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"
-                >
-                  <Check className="h-8 w-8 text-primary" />
-                </motion.div>
-                <h1 className="text-2xl font-bold">
-                  {t("listings.create.publishedTitle")}
-                </h1>
-                <p className="mt-2 text-muted-foreground">
-                  {t("listings.create.publishedDesc")}
-                </p>
-                <div className="mt-6 flex flex-col gap-3">
-                  <Button asChild>
-                    <Link href="/dashboard">
-                      {t("listings.create.goToDashboard")}
-                    </Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/listings">
-                      {t("listings.create.browseListings")}
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <main className="flex-1 bg-muted/30 pt-20">
+          <div className="container mx-auto flex items-center justify-center px-4 py-32">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         </main>
       </div>
     );
@@ -506,6 +802,26 @@ export default function CreateListingPage() {
           </motion.div>
 
           <div className="mx-auto max-w-2xl">
+            {editId && (
+              <div className="mb-6 flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+                {(() => {
+                  const cfg = typeConfig[formData.listingType];
+                  const Icon = cfg.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {t(`listings.types.${formData.listingType}`)}
+                    </span>
+                  );
+                })()}
+                <span className="text-sm text-muted-foreground">
+                  {formData.street} {formData.buildingNumber}
+                  {formData.apartmentNumber && `/${formData.apartmentNumber}`}
+                  {formData.district && `, ${formData.district}`}
+                </span>
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
               {currentStep === "type" && (
                 <motion.div key="type" {...stepTransition}>
@@ -612,6 +928,7 @@ export default function CreateListingPage() {
                             readOnly
                             className="bg-muted"
                           />
+                          <FieldError field="street" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="buildingNumber">
@@ -628,6 +945,7 @@ export default function CreateListingPage() {
                               })
                             }
                           />
+                          <FieldError field="buildingNumber" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="apartmentNumber">
@@ -698,6 +1016,7 @@ export default function CreateListingPage() {
                             updateFormData({ title: e.target.value })
                           }
                         />
+                        <FieldError field="title" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">
@@ -739,6 +1058,7 @@ export default function CreateListingPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FieldError field="bedrooms" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="bathrooms">
@@ -777,6 +1097,7 @@ export default function CreateListingPage() {
                               updateFormData({ area: e.target.value })
                             }
                           />
+                          <FieldError field="area" />
                         </div>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-3">
@@ -793,6 +1114,7 @@ export default function CreateListingPage() {
                               updateFormData({ floor: e.target.value })
                             }
                           />
+                          <FieldError field="floor" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="totalFloors">
@@ -809,35 +1131,75 @@ export default function CreateListingPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="availableFrom">
+                          <Label>
                             {t("listings.create.availableFrom")} *
                           </Label>
-                          <Input
-                            id="availableFrom"
-                            type="date"
-                            value={formData.availableFrom}
-                            onChange={(e) =>
-                              updateFormData({ availableFrom: e.target.value })
-                            }
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {formData.availableFrom ? (
+                                  format(new Date(formData.availableFrom), "PP")
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">
+                                    {t("listings.create.availableFrom")}
+                                  </span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={formData.availableFrom ? new Date(formData.availableFrom) : undefined}
+                                onSelect={(date) =>
+                                  updateFormData({ availableFrom: date ? format(date, "yyyy-MM-dd") : "" })
+                                }
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FieldError field="availableFrom" />
                         </div>
                       </div>
 
                       {formData.listingType === "sublet" && (
                         <div className="grid gap-4 sm:grid-cols-3">
                           <div className="space-y-2">
-                            <Label htmlFor="availableTo">
+                            <Label>
                               {t("listings.create.availableTo")} *
                             </Label>
-                            <Input
-                              id="availableTo"
-                              type="date"
-                              value={formData.availableTo}
-                              min={formData.availableFrom || undefined}
-                              onChange={(e) =>
-                                updateFormData({ availableTo: e.target.value })
-                              }
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                                  {formData.availableTo ? (
+                                    format(new Date(formData.availableTo), "PP")
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">
+                                      {t("listings.create.availableTo")}
+                                    </span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={formData.availableTo ? new Date(formData.availableTo) : undefined}
+                                  onSelect={(date) =>
+                                    updateFormData({ availableTo: date ? format(date, "yyyy-MM-dd") : "" })
+                                  }
+                                  disabled={(date) =>
+                                    formData.availableFrom ? date < new Date(formData.availableFrom) : false
+                                  }
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FieldError field="availableTo" />
                           </div>
                           {subletDays > 0 && (
                             <div className="flex items-end pb-2">
@@ -848,25 +1210,79 @@ export default function CreateListingPage() {
                           )}
                         </div>
                       )}
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         <Label>{t("listings.create.featuresAmenities")}</Label>
-                        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {featureKeys.map((key) => (
-                            <div key={key} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`feature-${key}`}
-                                checked={formData.features.includes(key)}
-                                onCheckedChange={() => toggleFeature(key)}
-                              />
-                              <Label
-                                htmlFor={`feature-${key}`}
-                                className="text-sm font-normal"
-                              >
-                                {t(`listings.features.${key}`)}
-                              </Label>
+                        {AMENITY_CATEGORIES.map((category) => (
+                          <div key={category.categoryKey} className="space-y-2">
+                            <p className="text-sm font-medium text-muted-foreground">
+                              {t(category.categoryKey)}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {category.items.map((key) => (
+                                <div key={key} className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`feature-${key}`}
+                                    checked={formData.features.includes(key)}
+                                    onCheckedChange={() => toggleFeature(key)}
+                                  />
+                                  <Label
+                                    htmlFor={`feature-${key}`}
+                                    className="text-sm font-normal"
+                                  >
+                                    {t(`listings.features.${key}`)}
+                                  </Label>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-3 rounded-lg border p-3">
+                        <Checkbox
+                          id="registrationPossible"
+                          checked={formData.registrationPossible === true}
+                          onCheckedChange={(checked) =>
+                            updateFormData({ registrationPossible: checked === true ? true : false })
+                          }
+                        />
+                        <Label htmlFor="registrationPossible" className="text-sm font-normal">
+                          {t("listings.registrationPossible")}
+                        </Label>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Label>{t("listings.create.thingsToKnow")}</Label>
+                        <p className="text-xs text-muted-foreground -mt-3">
+                          {t("listings.create.thingsToKnowHint")}
+                        </p>
+                        {THINGS_TO_KNOW_SECTIONS.map((section) => (
+                          <div key={section.titleKey} className="space-y-2">
+                            <p className="text-sm font-medium text-muted-foreground">
+                              {t(section.titleKey)}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {section.items.map((item) => (
+                                <div
+                                  key={item.key}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Checkbox
+                                    id={`ttk-${item.key}`}
+                                    checked={formData.thingsToKnow.includes(item.key)}
+                                    onCheckedChange={() => toggleThingToKnow(item.key)}
+                                  />
+                                  <Label
+                                    htmlFor={`ttk-${item.key}`}
+                                    className="text-sm font-normal"
+                                  >
+                                    {t(`listings.thingsToKnow.${item.key}`)}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
@@ -880,7 +1296,7 @@ export default function CreateListingPage() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="grid items-end gap-4 sm:grid-cols-3">
                           <div className="space-y-2">
                             <Label htmlFor="rent">
                               {t("listings.create.rentPln")} *
@@ -894,6 +1310,7 @@ export default function CreateListingPage() {
                                 updateFormData({ rent: e.target.value })
                               }
                             />
+                            <FieldError field="rent" />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="adminFee">
@@ -924,6 +1341,11 @@ export default function CreateListingPage() {
                             />
                           </div>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("listings.create.adminFeeHint")}
+                          {" · "}
+                          {t("listings.create.extraBillsHint")}
+                        </p>
                         <AnimatePresence>
                           {totalCost > 0 && (
                             <motion.div
@@ -972,6 +1394,7 @@ export default function CreateListingPage() {
                                 })
                               }
                             />
+                            <FieldError field="pricePerPerson" />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="totalApartmentRent">
@@ -1188,6 +1611,7 @@ export default function CreateListingPage() {
                                 updateFormData({ priceTotal: e.target.value })
                               }
                             />
+                            <FieldError field="priceTotal" />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="depositAmountSublet">
@@ -1291,58 +1715,62 @@ export default function CreateListingPage() {
                           accept="image/jpeg,image/png,image/webp"
                           multiple
                           className="hidden"
-                          onChange={handlePhotoUpload}
+                          onChange={handlePhotoAdd}
                         />
+
                         <motion.div
-                          whileHover={{ scale: 1.01, borderColor: "hsl(var(--primary) / 0.5)" }}
-                          whileTap={{ scale: 0.99 }}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 transition-colors hover:bg-muted/50"
+                          whileHover={photos.length < MAX_PHOTOS ? { scale: 1.01, borderColor: "hsl(var(--primary) / 0.5)" } : {}}
+                          whileTap={photos.length < MAX_PHOTOS ? { scale: 0.99 } : {}}
+                          onClick={() => {
+                            if (photos.length < MAX_PHOTOS) {
+                              fileInputRef.current?.click();
+                            }
+                          }}
+                          className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+                            photos.length >= MAX_PHOTOS
+                              ? "border-muted cursor-not-allowed opacity-50"
+                              : "border-muted-foreground/25 cursor-pointer hover:bg-muted/50"
+                          }`}
                         >
-                          {uploadingPhotos ? (
-                            <Loader2 className="mb-3 h-10 w-10 animate-spin text-primary" />
-                          ) : (
-                            <Upload className="mb-3 h-10 w-10 text-muted-foreground" />
-                          )}
+                          <Upload className="mb-3 h-10 w-10 text-muted-foreground" />
                           <p className="font-medium">
-                            {uploadingPhotos
-                              ? t("listings.create.uploading")
+                            {photos.length >= MAX_PHOTOS
+                              ? t("listings.create.maxPhotosReached")
                               : t("listings.create.uploadPhotos")}
                           </p>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {t("listings.create.uploadHint")}
+                            {photos.length}/{MAX_PHOTOS} — {t("listings.create.uploadHint")}
                           </p>
                         </motion.div>
 
-                        {formData.photos.length > 0 && (
-                          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                            {formData.photos.map((photo, index) => (
-                              <motion.div
-                                key={index}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="group relative aspect-video overflow-hidden rounded-lg"
-                              >
-                                <img
-                                  src={photo}
-                                  alt={`Upload ${index + 1}`}
-                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                />
-                                <button
-                                  onClick={() => removePhoto(index)}
-                                  className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                                {index === 0 && (
-                                  <span className="absolute bottom-2 left-2 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                                    {t("listings.create.cover")}
-                                  </span>
-                                )}
-                              </motion.div>
-                            ))}
-                          </div>
+                        {photos.length > 0 && (
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            onDragCancel={handleDragCancel}
+                          >
+                            <SortableContext
+                              items={photos.map((p) => p.id)}
+                              strategy={rectSortingStrategy}
+                            >
+                              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                                {photos.map((photo, index) => (
+                                  <SortablePhoto
+                                    key={photo.id}
+                                    photo={photo}
+                                    index={index}
+                                    onRemove={removePhoto}
+                                    coverLabel={t("listings.create.cover")}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                            <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+                              {activePhoto ? <PhotoOverlay photo={activePhoto} /> : null}
+                            </DragOverlay>
+                          </DndContext>
                         )}
 
                         <p className="text-sm text-muted-foreground">
@@ -1364,10 +1792,10 @@ export default function CreateListingPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {formData.photos.length > 0 && (
+                      {photos.length > 0 && (
                         <div className="mb-6 aspect-video overflow-hidden rounded-lg">
                           <img
-                            src={formData.photos[0]}
+                            src={photos[0].url}
                             alt="Cover"
                             className="h-full w-full object-cover"
                           />
@@ -1430,6 +1858,24 @@ export default function CreateListingPage() {
                               {t(`listings.features.${f}`)}
                             </span>
                           ))}
+                        </div>
+                      )}
+
+                      {formData.thingsToKnow.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-semibold mb-2">
+                            {t("listings.create.thingsToKnow")}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.thingsToKnow.map((k) => (
+                              <span
+                                key={k}
+                                className="rounded-full bg-muted px-3 py-1 text-xs font-medium"
+                              >
+                                {t(`listings.thingsToKnow.${k}`)}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -1657,7 +2103,7 @@ export default function CreateListingPage() {
                     </>
                   ) : (
                     <>
-                      {t("listings.create.publishListing")}
+                      {editId ? t("listings.create.saveChanges") : t("listings.create.publishListing")}
                       <Check className="h-4 w-4" />
                     </>
                   )}

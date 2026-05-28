@@ -74,10 +74,10 @@ function ListingsPageInner({
     if (newFilters.availableFrom) activeFilters.push("availableFrom");
     if (newFilters.availableTo) activeFilters.push("availableTo");
     if (newFilters.areaMin || newFilters.areaMax) activeFilters.push("area");
-    if (newFilters.furnished !== undefined) activeFilters.push("furnished");
-    if (newFilters.petsAllowed) activeFilters.push("petsAllowed");
+    if (newFilters.amenities?.length) activeFilters.push("amenities");
     if (newFilters.roomType) activeFilters.push("roomType");
     if (newFilters.preferredGender) activeFilters.push("preferredGender");
+    if (newFilters.registrationPossible) activeFilters.push("registration");
 
     if (activeFilters.length > 0) {
       posthog?.capture("search_performed", {
@@ -112,11 +112,10 @@ function ListingsPageInner({
         const listingDate = new Date(listing.availableFrom);
         if (listingDate > filterDate) return false;
       }
-      if (filters.furnished !== undefined && listing.furnished !== filters.furnished)
+      if (filters.amenities?.length && !filters.amenities.every((a) => listing.features.includes(a)))
         return false;
-      if (filters.petsAllowed && !listing.petsAllowed) return false;
       if (filters.roomType && listing.roomType !== filters.roomType) return false;
-      if (filters.preferredGender && listing.preferredGender !== filters.preferredGender)
+      if (filters.preferredGender && filters.preferredGender !== "any" && listing.preferredGender !== filters.preferredGender && listing.preferredGender !== "any")
         return false;
       if (filters.availableTo) {
         const filterDate = new Date(filters.availableTo);
@@ -128,8 +127,8 @@ function ListingsPageInner({
       if (filters.internetIncluded && !listing.internetIncluded) return false;
       if (filters.floorMin != null && listing.floor < filters.floorMin) return false;
       if (filters.floorMax != null && listing.floor > filters.floorMax) return false;
-      if (filters.isVerified && !listing.isVerified) return false;
       if (filters.hasPhotos && listing.photoCount === 0) return false;
+      if (filters.registrationPossible && !listing.registrationPossible) return false;
       return true;
     });
   }, [listings, filters]);
@@ -191,6 +190,7 @@ function ListingsPageInner({
                 districts={districtNames}
                 citySlug={citySlug}
                 listingType={listingType}
+                resultCount={filteredListings.length}
               />
               <p className="text-sm text-muted-foreground">
                 {t("listings.listingsInCity", { count: visibleListings.length })}

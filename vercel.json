@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/expire-listings",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-accounts",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired",
+      "schedule": "0 5 * * 0"
     }
   ]
 }
