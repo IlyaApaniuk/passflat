@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import { CostsOverviewClient } from "./client";
-import type { CityBounds } from "@/lib/listings-data";
+import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import { CostsOverviewClient } from './client';
+import { median, perAreaValues } from '@/lib/cost-stats';
+import type { CityBounds } from '@/lib/listings-data';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
@@ -22,8 +23,8 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
 
   const cityBounds = city.bounds as CityBounds | null;
 
-  const districtFilter = typeof search.district === "string" ? search.district : undefined;
-  const searchQuery = typeof search.q === "string" ? search.q : undefined;
+  const districtFilter = typeof search.district === 'string' ? search.district : undefined;
+  const searchQuery = typeof search.q === 'string' ? search.q : undefined;
 
   const buildingWhere: Record<string, unknown> = { cityId: city.id };
 
@@ -32,7 +33,7 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
   }
 
   if (searchQuery) {
-    buildingWhere.addressFull = { contains: searchQuery, mode: "insensitive" };
+    buildingWhere.addressFull = { contains: searchQuery, mode: 'insensitive' };
   }
 
   const buildings = await prisma.building.findMany({
@@ -48,31 +49,22 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
           rent: true,
           adminFee: true,
           totalMonthlyAvg: true,
-          electricityAvg: true,
-          gas: true,
-          heating: true,
-          water: true,
-          internet: true,
+          areaM2: true,
           rentalType: true,
         },
       },
     },
-    orderBy: { costReports: { _count: "desc" } },
+    orderBy: { costReports: { _count: 'desc' } },
   });
 
-  const avg = (values: (number | null)[]) => {
-    const nums = values.filter((v): v is number => v !== null);
-    if (nums.length === 0) return 0;
-    return Math.round(nums.reduce((a, c) => a + c, 0) / nums.length);
-  };
+  // Median of building-level medians (used for district roll-ups).
+  const medianOf = (values: number[]) => median(values.filter((v) => v > 0)) ?? 0;
 
   const buildingsData = buildings.map((b) => {
     const reports = b.costReports;
     const count = reports.length;
 
-    const rentalTypes = reports
-      .map((r) => r.rentalType)
-      .filter((v): v is string => v !== null);
+    const rentalTypes = reports.map((r) => r.rentalType).filter((v): v is string => v !== null);
     const dominantRentalType =
       rentalTypes.length > 0
         ? Object.entries(
@@ -83,21 +75,25 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
           ).sort((a, b) => b[1] - a[1])[0][0]
         : null;
 
+    const num = (v: unknown) => (v == null ? null : Number(v));
+
     return {
       id: b.id,
       slug: b.slug,
       address: b.addressFull,
-      district: b.district?.nameKey ?? "",
-      districtSlug: b.district?.slug ?? "",
+      district: b.district?.nameKey ?? '',
+      districtSlug: b.district?.slug ?? '',
       reports: count,
-      avgTotal: avg(reports.map((r) => r.totalMonthlyAvg ? Number(r.totalMonthlyAvg) : null)),
-      avgRent: avg(reports.map((r) => r.rent ? Number(r.rent) : null)),
-      avgUtilities:
-        avg(reports.map((r) => r.electricityAvg ? Number(r.electricityAvg) : null)) +
-        avg(reports.map((r) => r.gas ? Number(r.gas) : null)) +
-        avg(reports.map((r) => r.heating ? Number(r.heating) : null)) +
-        avg(reports.map((r) => r.water ? Number(r.water) : null)) +
-        avg(reports.map((r) => r.internet ? Number(r.internet) : null)),
+      medianTotal: median(reports.map((r) => num(r.totalMonthlyAvg))) ?? 0,
+      medianRent: median(reports.map((r) => num(r.rent))) ?? 0,
+      medianAdminFee: median(reports.map((r) => num(r.adminFee))) ?? 0,
+      // Per-report ratio, then median — never average-of-averages.
+      medianRentPerM2: median(
+        perAreaValues(reports.map((r) => ({ value: num(r.rent), areaM2: num(r.areaM2) }))),
+      ),
+      medianAdminFeePerM2: median(
+        perAreaValues(reports.map((r) => ({ value: num(r.adminFee), areaM2: num(r.areaM2) }))),
+      ),
       lat: b.lat ? Number(b.lat) : null,
       lng: b.lng ? Number(b.lng) : null,
       rentalType: dominantRentalType,
@@ -120,32 +116,45 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
         name: d.nameKey,
         buildingCount: dBuildings.length,
         reportCount,
-        avgTotal: avg(dBuildings.map((b) => b.avgTotal || null)),
-        avgRent: avg(dBuildings.map((b) => b.avgRent || null)),
-        avgUtilities: avg(dBuildings.map((b) => b.avgUtilities || null)),
+        medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
+        medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
+        medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
+        medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
       };
     })
     .filter((d): d is NonNullable<typeof d> => d !== null)
     .sort((a, b) => b.reportCount - a.reportCount);
 
-  // Check if user has contributed and if their report is flagged
-  let hasContributed = false;
+  let hasContributedData = false;
   let isFlagged = false;
+  let costAccessUntil: string | null = null;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (user) {
-    const existingReport = await prisma.costReport.findFirst({
-      where: { authorId: user.id },
-      select: { id: true, verificationStatus: true, isVisible: true },
-    });
+    const [existingReport, profile] = await Promise.all([
+      prisma.costReport.findFirst({
+        where: { authorId: user.id },
+        select: { id: true, verificationStatus: true, isVisible: true },
+      }),
+      prisma.profile.findUnique({
+        where: { id: user.id },
+        select: { costAccessUntil: true },
+      }),
+    ]);
 
     if (existingReport) {
       if (existingReport.verificationStatus === 'flagged' && !existingReport.isVisible) {
         isFlagged = true;
       } else {
-        hasContributed = true;
+        hasContributedData = true;
       }
+    }
+
+    if (profile?.costAccessUntil) {
+      costAccessUntil = profile.costAccessUntil.toISOString();
     }
   }
 
@@ -154,11 +163,12 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
       buildings={buildingsData}
       districts={districts}
       districtStats={districtStats}
-      hasContributed={hasContributed}
+      hasContributedData={hasContributedData}
+      costAccessUntil={costAccessUntil}
       isFlagged={isFlagged}
       citySlug={citySlug}
       cityBounds={cityBounds ?? undefined}
-      initialSearch={searchQuery ?? ""}
+      initialSearch={searchQuery ?? ''}
       initialDistrict={districtFilter ?? null}
     />
   );

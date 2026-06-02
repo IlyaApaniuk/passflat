@@ -1,0 +1,20 @@
+# Build artifacts & deps
+.next
+node_modules
+out
+build
+coverage
+playwright-report
+test-results
+
+# Generated / vendored
+public
+prisma/migrations
+prisma/generated
+src/generated
+
+# Lockfiles & generated docs
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+docs/legal-templates/translations

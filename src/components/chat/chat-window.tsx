@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,13 +10,10 @@ import { MessageBubble } from './message-bubble';
 import { TypingIndicator } from './typing-indicator';
 import { useChat } from '@/hooks/use-chat';
 import { useTyping } from '@/hooks/use-typing';
-import {
-  Send,
-  Loader2,
-  ArrowLeft,
-  ExternalLink,
-  ChevronUp,
-} from 'lucide-react';
+import { LISTING_TYPE_TO_DOC, templatePdfHref } from '@/components/documents/template-download';
+import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import type { ListingType } from '@/lib/listings-data';
+import { Send, Loader2, ArrowLeft, ExternalLink, ChevronUp, FileText, X } from 'lucide-react';
 
 interface ChatWindowProps {
   conversationId: string;
@@ -39,16 +37,23 @@ export function ChatWindow({
   onBack,
 }: ChatWindowProps) {
   const t = useTranslations();
+  const locale = useLocale();
+  const posthog = usePostHog();
   const [input, setInput] = useState('');
+  const [hintDismissed, setHintDismissed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { messages, loading, sendMessage, sending, hasMore, loadMore } =
-    useChat(conversationId, currentUserId);
-  const { isOtherTyping, sendTyping } = useTyping(
+  const templateDocKey =
+    isDocumentTemplatesEnabled() && listingType in LISTING_TYPE_TO_DOC
+      ? LISTING_TYPE_TO_DOC[listingType as ListingType]
+      : null;
+
+  const { messages, loading, sendMessage, sending, hasMore, loadMore } = useChat(
     conversationId,
     currentUserId,
   );
+  const { isOtherTyping, sendTyping } = useTyping(conversationId, currentUserId);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -83,9 +88,7 @@ export function ChatWindow({
         <div className="flex-1 overflow-hidden">
           <div className="flex items-center gap-2">
             <p className="font-semibold truncate">{otherUserName}</p>
-            {isOnline && (
-              <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
-            )}
+            {isOnline && <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />}
           </div>
           <Link
             href={`/warsaw/${listingType}/${listingId}` as '/'}
@@ -130,6 +133,38 @@ export function ChatWindow({
         {isOtherTyping && <TypingIndicator />}
       </div>
 
+      {/* Contextual template hint */}
+      {templateDocKey && !hintDismissed && (
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+          <FileText className="h-4 w-4 shrink-0 text-primary" />
+          <span className="flex-1 text-muted-foreground">{t('documents.chat.hint')}</span>
+          <a
+            href={templatePdfHref(templateDocKey, locale)}
+            download
+            onClick={() =>
+              posthog?.capture('template_downloaded', {
+                template: templateDocKey,
+                format: 'pdf',
+                locale,
+                listingType,
+                source: 'chat',
+              })
+            }
+            className="shrink-0 font-medium text-primary hover:underline"
+          >
+            {t('documents.chat.cta')}
+          </a>
+          <button
+            type="button"
+            onClick={() => setHintDismissed(true)}
+            aria-label="Dismiss"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <div className="border-t p-3">
         <div className="flex items-end gap-2">
@@ -151,11 +186,7 @@ export function ChatWindow({
             size="icon"
             className="shrink-0"
           >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>

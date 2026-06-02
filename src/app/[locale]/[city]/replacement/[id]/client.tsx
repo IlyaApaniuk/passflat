@@ -1,21 +1,23 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import { usePostHog } from "posthog-js/react";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
-import { Link, useRouter } from "@/i18n/navigation";
-import { Header } from "@/components/landing/header";
-import { Footer } from "@/components/landing/footer";
-import { PhotoGallery } from "@/components/listings/photo-gallery";
-import { InterestModal } from "@/components/listings/interest-modal";
-import { FavoriteButton } from "@/components/listings/favorite-button";
-import { TranslateButton } from "@/components/listings/translate-button";
-import { useFavorites } from "@/hooks/use-favorites";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
+import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { Link, useRouter } from '@/i18n/navigation';
+import { Header } from '@/components/landing/header';
+import { Footer } from '@/components/landing/footer';
+import { PhotoGallery } from '@/components/listings/photo-gallery';
+import { InterestModal } from '@/components/listings/interest-modal';
+import { FavoriteButton } from '@/components/listings/favorite-button';
+import { TranslateButton } from '@/components/listings/translate-button';
+import { TemplateDownload } from '@/components/documents/template-download';
+import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import { useFavorites } from '@/hooks/use-favorites';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   ArrowLeft,
   MapPin,
@@ -45,29 +47,29 @@ import {
   MessageSquare,
   Edit,
   Trash2,
-} from "lucide-react";
-import type { ListingType } from "@/lib/listings-data";
-import { AMENITY_CATEGORIES, getThingsToKnowSentiment } from "@/lib/amenities";
+} from 'lucide-react';
+import type { ListingType } from '@/lib/listings-data';
+import { AMENITY_CATEGORIES, getThingsToKnowSentiment } from '@/lib/amenities';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, delay: i * 0.1, ease: "easeOut" as const },
+    transition: { duration: 0.4, delay: i * 0.1, ease: 'easeOut' as const },
   }),
 };
 
 const TYPE_BADGE_STYLES: Record<ListingType, string> = {
-  replacement: "bg-blue-500/90 text-white",
-  roommate: "bg-violet-500/90 text-white",
-  sublet: "bg-amber-500/90 text-white",
+  replacement: 'bg-blue-500/90 text-white',
+  roommate: 'bg-violet-500/90 text-white',
+  sublet: 'bg-amber-500/90 text-white',
 };
 
 const TYPE_ROUTE: Record<ListingType, string> = {
-  replacement: "replacement",
-  roommate: "roommate",
-  sublet: "sublet",
+  replacement: 'replacement',
+  roommate: 'roommate',
+  sublet: 'sublet',
 };
 
 export interface ListingDetailData {
@@ -105,8 +107,8 @@ export interface ListingDetailData {
   totalApartmentRent?: number;
   currentRoommates?: number;
   totalRooms?: number;
-  roomType?: "private" | "shared";
-  preferredGender?: "any" | "male" | "female";
+  roomType?: 'private' | 'shared';
+  preferredGender?: 'any' | 'male' | 'female';
   preferredAgeMin?: number;
   preferredAgeMax?: number;
   roommateDescription?: string;
@@ -143,41 +145,48 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
   const [translated, setTranslated] = useState<TranslatedFields | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
-  const listingType = listing.type ?? "replacement";
+  const listingType = listing.type ?? 'replacement';
   const backRoute = TYPE_ROUTE[listingType];
 
-  const showTranslateButton = !isOwner && listing.locale !== null && listing.locale !== currentLocale;
+  const showTranslateButton =
+    !isOwner && listing.locale !== null && listing.locale !== currentLocale;
 
   const displayTitle = showTranslated && translated?.title ? translated.title : listing.title;
-  const displayDescription = showTranslated && translated?.description ? translated.description : listing.description;
-  const displayRoommateDescription = showTranslated && translated?.roommateDescription ? translated.roommateDescription : listing.roommateDescription;
-  const displaySubletRules = showTranslated && translated?.subletRules ? translated.subletRules : listing.subletRules;
+  const displayDescription =
+    showTranslated && translated?.description ? translated.description : listing.description;
+  const displayRoommateDescription =
+    showTranslated && translated?.roommateDescription
+      ? translated.roommateDescription
+      : listing.roommateDescription;
+  const displaySubletRules =
+    showTranslated && translated?.subletRules ? translated.subletRules : listing.subletRules;
 
   const handleDeleteListing = async () => {
     try {
-      const res = await fetch(`/api/listings/${listing.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/listings/${listing.id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success(t("dashboard.listingDeleted"));
-        router.push("/dashboard");
+        toast.success(t('dashboard.listingDeleted'));
+        router.push('/dashboard');
       } else {
-        toast.error(t("common.error"));
+        toast.error(t('common.error'));
       }
     } catch {
-      toast.error(t("common.error"));
+      toast.error(t('common.error'));
     }
     setDeleteDialogOpen(false);
   };
 
   useEffect(() => {
-    posthog?.capture("listing_detail_viewed", {
+    posthog?.capture('listing_detail_viewed', {
       listing_id: listing.id,
       type: listingType,
       city: listing.citySlug,
-      source: document.referrer.includes("/replacement") ||
-              document.referrer.includes("/roommate") ||
-              document.referrer.includes("/sublet")
-        ? "search"
-        : "direct",
+      source:
+        document.referrer.includes('/replacement') ||
+        document.referrer.includes('/roommate') ||
+        document.referrer.includes('/sublet')
+          ? 'search'
+          : 'direct',
     });
   }, [listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -196,7 +205,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
             <Button variant="ghost" size="sm" className="gap-2" asChild>
               <Link href={`/${listing.citySlug}/${backRoute}`}>
                 <ArrowLeft className="h-4 w-4" />
-                {t("listings.detail.backToListings")}
+                {t('listings.detail.backToListings')}
               </Link>
             </Button>
           </motion.div>
@@ -205,7 +214,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             >
               <PhotoGallery images={listing.images} title={listing.title} />
             </motion.div>
@@ -225,21 +234,17 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     {listing.promoted && (
                       <Badge className="gap-1 bg-primary">
                         <Sparkles className="h-3 w-3" />
-                        {t("common.promoted")}
+                        {t('common.promoted')}
                       </Badge>
                     )}
-                    {listingType !== "replacement" && (
+                    {listingType !== 'replacement' && (
                       <Badge className={`border-0 ${TYPE_BADGE_STYLES[listingType]}`}>
                         {t(`listings.types.${listingType}`)}
                       </Badge>
                     )}
-                    {listing.district && (
-                      <Badge variant="secondary">{listing.district}</Badge>
-                    )}
+                    {listing.district && <Badge variant="secondary">{listing.district}</Badge>}
                   </div>
-                  <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-                    {displayTitle}
-                  </h1>
+                  <h1 className="mt-2 text-2xl font-bold md:text-3xl">{displayTitle}</h1>
                   <div className="mt-2 flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     {listing.address}
@@ -269,9 +274,9 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(window.location.href);
-                        toast.success(t("common.linkCopied"));
+                        toast.success(t('common.linkCopied'));
                       } catch {
-                        toast.error(t("common.copyFailed"));
+                        toast.error(t('common.copyFailed'));
                       }
                     }}
                   >
@@ -295,10 +300,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   <div className="flex items-center gap-2">
                     <Bed className="h-5 w-5 text-muted-foreground" />
                     <span>
-                      <span className="font-semibold">{listing.bedrooms}</span>{" "}
+                      <span className="font-semibold">{listing.bedrooms}</span>{' '}
                       {listing.bedrooms !== 1
-                        ? t("listings.detail.bedrooms")
-                        : t("listings.detail.bedroom")}
+                        ? t('listings.detail.bedrooms')
+                        : t('listings.detail.bedroom')}
                     </span>
                   </div>
                 )}
@@ -306,12 +311,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   <div className="flex items-center gap-2">
                     <Bath className="h-5 w-5 text-muted-foreground" />
                     <span>
-                      <span className="font-semibold">
-                        {listing.bathrooms}
-                      </span>{" "}
+                      <span className="font-semibold">{listing.bathrooms}</span>{' '}
                       {listing.bathrooms !== 1
-                        ? t("listings.detail.bathrooms")
-                        : t("listings.detail.bathroom")}
+                        ? t('listings.detail.bathrooms')
+                        : t('listings.detail.bathroom')}
                     </span>
                   </div>
                 )}
@@ -327,48 +330,56 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   <div className="flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-muted-foreground" />
                     <span>
-                      {t("listings.detail.floor")}{" "}
+                      {t('listings.detail.floor')}{' '}
                       <span className="font-semibold">{listing.floor}</span>
                       {listing.totalFloors > 0 && (
                         <>
-                          {" "}
-                          {t("listings.detail.floorOf")} {listing.totalFloors}
+                          {' '}
+                          {t('listings.detail.floorOf')} {listing.totalFloors}
                         </>
                       )}
                     </span>
                   </div>
                 )}
-                {listingType === "roommate" && listing.roomType && (
+                {listingType === 'roommate' && listing.roomType && (
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-muted-foreground" />
                     <span className="font-semibold">
-                      {listing.roomType === "private"
-                        ? t("listings.card.privateRoom")
-                        : t("listings.card.sharedRoom")}
+                      {listing.roomType === 'private'
+                        ? t('listings.card.privateRoom')
+                        : t('listings.card.sharedRoom')}
                     </span>
                   </div>
                 )}
-                {listingType === "roommate" && listing.currentRoommates != null && (
+                {listingType === 'roommate' && listing.currentRoommates != null && (
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-muted-foreground" />
                     <span>
-                      <span className="font-semibold">{listing.currentRoommates}</span>{" "}
-                      {t("listings.detail.roommatesLiving")}
+                      <span className="font-semibold">{listing.currentRoommates}</span>{' '}
+                      {t('listings.detail.roommatesLiving')}
                     </span>
                   </div>
                 )}
-                {listingType === "sublet" && listing.availableFrom && listing.availableTo ? (
+                {listingType === 'sublet' && listing.availableFrom && listing.availableTo ? (
                   <div className="flex items-center gap-2">
                     <CalendarRange className="h-5 w-5 text-muted-foreground" />
                     <span>
                       <span className="font-semibold">
-                        {new Date(listing.availableFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                        {" – "}
-                        {new Date(listing.availableTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {new Date(listing.availableFrom).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                        {' – '}
+                        {new Date(listing.availableTo).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </span>
                       {listing.durationDays != null && (
                         <span className="text-muted-foreground">
-                          {" "}({t("listings.detail.daysCount", { count: listing.durationDays })})
+                          {' '}
+                          ({t('listings.detail.daysCount', { count: listing.durationDays })})
                         </span>
                       )}
                     </span>
@@ -377,28 +388,33 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   <div className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
                     <span>
-                      {t("common.available")}{" "}
+                      {t('common.available')}{' '}
                       <span className="font-semibold">
-                        {new Date(listing.availableFrom).toLocaleDateString(
-                          "en-GB",
-                          { day: "numeric", month: "long", year: "numeric" },
-                        )}
+                        {new Date(listing.availableFrom).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </span>
                     </span>
                   </div>
                 ) : null}
-                {listingType === "sublet" && (
+                {listingType === 'sublet' && (
                   <>
                     {listing.utilitiesIncluded && (
                       <div className="flex items-center gap-2">
                         <ZapIcon className="h-5 w-5 text-green-500" />
-                        <span className="text-sm font-medium">{t("listings.detail.utilitiesIncluded")}</span>
+                        <span className="text-sm font-medium">
+                          {t('listings.detail.utilitiesIncluded')}
+                        </span>
                       </div>
                     )}
                     {listing.internetIncluded && (
                       <div className="flex items-center gap-2">
                         <Wifi className="h-5 w-5 text-green-500" />
-                        <span className="text-sm font-medium">{t("listings.detail.internetIncluded")}</span>
+                        <span className="text-sm font-medium">
+                          {t('listings.detail.internetIncluded')}
+                        </span>
                       </div>
                     )}
                   </>
@@ -414,15 +430,13 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   className="mt-8"
                 >
                   <h2 className="text-lg font-semibold">
-                    {listingType === "roommate"
-                      ? t("listings.detail.aboutRoom")
-                      : listingType === "sublet"
-                        ? t("listings.detail.aboutSublet")
-                        : t("listings.detail.aboutApartment")}
+                    {listingType === 'roommate'
+                      ? t('listings.detail.aboutRoom')
+                      : listingType === 'sublet'
+                        ? t('listings.detail.aboutSublet')
+                        : t('listings.detail.aboutApartment')}
                   </h2>
-                  <p className="mt-3 leading-relaxed text-muted-foreground">
-                    {displayDescription}
-                  </p>
+                  <p className="mt-3 leading-relaxed text-muted-foreground">{displayDescription}</p>
                 </motion.div>
               )}
 
@@ -435,12 +449,12 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   className="mt-8"
                 >
                   <h2 className="text-lg font-semibold">
-                    {t("listings.detail.featuresAmenities")}
+                    {t('listings.detail.featuresAmenities')}
                   </h2>
                   {listing.registrationPossible && (
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
                       <CheckCircle className="h-4 w-4" />
-                      {t("listings.registrationPossible")}
+                      {t('listings.registrationPossible')}
                     </div>
                   )}
                   <div className="mt-4 space-y-4">
@@ -483,9 +497,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   variants={fadeUp}
                   className="mt-8"
                 >
-                  <h2 className="text-lg font-semibold">
-                    {t("listings.detail.thingsToKnow")}
-                  </h2>
+                  <h2 className="text-lg font-semibold">{t('listings.detail.thingsToKnow')}</h2>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {listing.thingsToKnow.map((key, i) => {
                       const sentiment = getThingsToKnowSentiment(key);
@@ -496,9 +508,9 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: 0.4 + i * 0.03 }}
                           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${
-                            sentiment === "good"
-                              ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                              : "bg-muted text-muted-foreground"
+                            sentiment === 'good'
+                              ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                              : 'bg-muted text-muted-foreground'
                           }`}
                         >
                           {t(`listings.thingsToKnow.${key}`)}
@@ -509,7 +521,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                 </motion.div>
               )}
 
-              {listingType === "roommate" && (
+              {listingType === 'roommate' && (
                 <motion.div
                   custom={3.5}
                   initial="hidden"
@@ -521,61 +533,76 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="h-5 w-5" />
-                        {t("listings.detail.roommateInfo")}
+                        {t('listings.detail.roommateInfo')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {listing.currentRoommates != null && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.currentRoommates")}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.currentRoommates')}
+                          </span>
                           <span className="font-medium">{listing.currentRoommates}</span>
                         </div>
                       )}
                       {listing.totalRooms != null && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.totalRooms")}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.totalRooms')}
+                          </span>
                           <span className="font-medium">{listing.totalRooms}</span>
                         </div>
                       )}
                       {listing.roomType && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.roomType")}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.roomType')}
+                          </span>
                           <span className="font-medium">
-                            {listing.roomType === "private"
-                              ? t("listings.card.privateRoom")
-                              : t("listings.card.sharedRoom")}
+                            {listing.roomType === 'private'
+                              ? t('listings.card.privateRoom')
+                              : t('listings.card.sharedRoom')}
                           </span>
                         </div>
                       )}
-                      {listing.preferredGender && listing.preferredGender !== "any" && (
+                      {listing.preferredGender && listing.preferredGender !== 'any' && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.preferredGender")}</span>
-                          <span className="font-medium">{t(`listings.detail.gender_${listing.preferredGender}`)}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.preferredGender')}
+                          </span>
+                          <span className="font-medium">
+                            {t(`listings.detail.gender_${listing.preferredGender}`)}
+                          </span>
                         </div>
                       )}
                       {(listing.preferredAgeMin != null || listing.preferredAgeMax != null) && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.preferredAge")}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.preferredAge')}
+                          </span>
                           <span className="font-medium">
                             {listing.preferredAgeMin != null && listing.preferredAgeMax != null
                               ? `${listing.preferredAgeMin} – ${listing.preferredAgeMax}`
                               : listing.preferredAgeMax != null
-                                ? `${t("listings.detail.ageUpTo")} ${listing.preferredAgeMax}`
-                                : `${t("listings.detail.ageFrom")} ${listing.preferredAgeMin}`}
+                                ? `${t('listings.detail.ageUpTo')} ${listing.preferredAgeMax}`
+                                : `${t('listings.detail.ageFrom')} ${listing.preferredAgeMin}`}
                           </span>
                         </div>
                       )}
-                      {displayRoommateDescription && displayRoommateDescription !== displayDescription && (
-                        <div className="mt-2 rounded-lg bg-muted/50 p-3">
-                          <p className="text-sm text-muted-foreground">{displayRoommateDescription}</p>
-                        </div>
-                      )}
+                      {displayRoommateDescription &&
+                        displayRoommateDescription !== displayDescription && (
+                          <div className="mt-2 rounded-lg bg-muted/50 p-3">
+                            <p className="text-sm text-muted-foreground">
+                              {displayRoommateDescription}
+                            </p>
+                          </div>
+                        )}
                     </CardContent>
                   </Card>
                 </motion.div>
               )}
 
-              {listingType === "sublet" && (
+              {listingType === 'sublet' && (
                 <motion.div
                   custom={3.5}
                   initial="hidden"
@@ -587,34 +614,47 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <CalendarRange className="h-5 w-5" />
-                        {t("listings.detail.subletInfo")}
+                        {t('listings.detail.subletInfo')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {listing.availableFrom && listing.availableTo && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.subletPeriod")}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.subletPeriod')}
+                          </span>
                           <span className="font-medium">
-                            {new Date(listing.availableFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                            {" – "}
-                            {new Date(listing.availableTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                            {new Date(listing.availableFrom).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                            {' – '}
+                            {new Date(listing.availableTo).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </span>
                         </div>
                       )}
                       {listing.durationDays != null && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t("listings.detail.duration")}</span>
-                          <span className="font-medium">{t("listings.detail.daysCount", { count: listing.durationDays })}</span>
+                          <span className="text-muted-foreground">
+                            {t('listings.detail.duration')}
+                          </span>
+                          <span className="font-medium">
+                            {t('listings.detail.daysCount', { count: listing.durationDays })}
+                          </span>
                         </div>
                       )}
                       {listing.utilitiesIncluded != null && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground flex items-center gap-1.5">
                             <ZapIcon className="h-3.5 w-3.5" />
-                            {t("listings.detail.utilitiesIncluded")}
+                            {t('listings.detail.utilitiesIncluded')}
                           </span>
                           <span className="font-medium">
-                            {listing.utilitiesIncluded ? t("common.yes") : t("common.no")}
+                            {listing.utilitiesIncluded ? t('common.yes') : t('common.no')}
                           </span>
                         </div>
                       )}
@@ -622,16 +662,18 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground flex items-center gap-1.5">
                             <Wifi className="h-3.5 w-3.5" />
-                            {t("listings.detail.internetIncluded")}
+                            {t('listings.detail.internetIncluded')}
                           </span>
                           <span className="font-medium">
-                            {listing.internetIncluded ? t("common.yes") : t("common.no")}
+                            {listing.internetIncluded ? t('common.yes') : t('common.no')}
                           </span>
                         </div>
                       )}
                       {displaySubletRules && (
                         <div className="mt-2 rounded-lg bg-muted/50 p-3">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">{t("listings.detail.houseRules")}</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            {t('listings.detail.houseRules')}
+                          </p>
                           <p className="text-sm">{displaySubletRules}</p>
                         </div>
                       )}
@@ -651,7 +693,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Building2 className="h-5 w-5" />
-                      {t("listings.detail.buildingInfo")}
+                      {t('listings.detail.buildingInfo')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -659,17 +701,11 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                       <Info className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          {t("listings.detail.buildingCostHint")}
+                          {t('listings.detail.buildingCostHint')}
                         </p>
-                        <Button
-                          variant="link"
-                          className="mt-1 h-auto p-0 text-primary"
-                          asChild
-                        >
-                          <Link
-                            href={`/${listing.citySlug}/building/${listing.buildingSlug}`}
-                          >
-                            {t("listings.detail.viewBuildingCosts")}
+                        <Button variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
+                          <Link href={`/${listing.citySlug}/building/${listing.buildingSlug}`}>
+                            {t('listings.detail.viewBuildingCosts')}
                           </Link>
                         </Button>
                       </div>
@@ -677,6 +713,18 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {isDocumentTemplatesEnabled() && (
+                <motion.div
+                  custom={5}
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeUp}
+                  className="mt-8"
+                >
+                  <TemplateDownload listingType={listingType} source="listing" showDescription />
+                </motion.div>
+              )}
             </div>
 
             <motion.div
@@ -688,22 +736,22 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
               <Card className="overflow-hidden shadow-lg">
                 <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
                   <CardTitle className="text-lg">
-                    {listingType === "sublet"
-                      ? t("listings.detail.subletCosts")
-                      : listingType === "roommate"
-                        ? t("listings.detail.costPerPerson")
-                        : t("listings.detail.monthlyCosts")}
+                    {listingType === 'sublet'
+                      ? t('listings.detail.subletCosts')
+                      : listingType === 'roommate'
+                        ? t('listings.detail.costPerPerson')
+                        : t('listings.detail.monthlyCosts')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {listingType === "sublet" ? (
+                    {listingType === 'sublet' ? (
                       <>
                         <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
                           <span className="font-semibold">
                             {listing.durationDays
-                              ? t("listings.card.forDays", { days: listing.durationDays })
-                              : t("listings.detail.totalPrice")}
+                              ? t('listings.card.forDays', { days: listing.durationDays })
+                              : t('listings.detail.totalPrice')}
                           </span>
                           <span className="text-xl font-bold text-primary">
                             {(listing.priceTotal ?? listing.totalCost).toLocaleString()} PLN
@@ -712,17 +760,21 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                         {listing.durationDays && listing.priceTotal ? (
                           <div className="flex items-center justify-between px-6 py-3">
                             <span className="text-muted-foreground">
-                              {t("listings.detail.perDay")}
+                              {t('listings.detail.perDay')}
                             </span>
                             <span className="font-medium">
-                              ~{Math.round(listing.priceTotal / listing.durationDays).toLocaleString()} PLN
+                              ~
+                              {Math.round(
+                                listing.priceTotal / listing.durationDays,
+                              ).toLocaleString()}{' '}
+                              PLN
                             </span>
                           </div>
                         ) : null}
                         {listing.depositAmount ? (
                           <div className="flex items-center justify-between px-6 py-3">
                             <span className="text-muted-foreground">
-                              {t("listings.detail.deposit")}
+                              {t('listings.detail.deposit')}
                             </span>
                             <span className="font-medium">
                               {listing.depositAmount.toLocaleString()} PLN
@@ -730,11 +782,11 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                           </div>
                         ) : null}
                       </>
-                    ) : listingType === "roommate" ? (
+                    ) : listingType === 'roommate' ? (
                       <>
                         <div className="flex items-center justify-between px-6 py-3">
                           <span className="text-muted-foreground">
-                            {t("listings.detail.pricePerPerson")}
+                            {t('listings.detail.pricePerPerson')}
                           </span>
                           <span className="font-medium">
                             {(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
@@ -743,7 +795,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                         {listing.totalApartmentRent ? (
                           <div className="flex items-center justify-between px-6 py-3">
                             <span className="text-muted-foreground">
-                              {t("listings.detail.totalApartmentRent")}
+                              {t('listings.detail.totalApartmentRent')}
                             </span>
                             <span className="font-medium">
                               {listing.totalApartmentRent.toLocaleString()} PLN
@@ -753,7 +805,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                         {listing.depositAmount ? (
                           <div className="flex items-center justify-between px-6 py-3">
                             <span className="text-muted-foreground">
-                              {t("listings.detail.deposit")}
+                              {t('listings.detail.deposit')}
                             </span>
                             <span className="font-medium">
                               {listing.depositAmount.toLocaleString()} PLN
@@ -761,44 +813,33 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                           </div>
                         ) : null}
                         <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
-                          <span className="font-semibold">
-                            {t("listings.detail.yourShare")}
-                          </span>
+                          <span className="font-semibold">{t('listings.detail.yourShare')}</span>
                           <span className="text-xl font-bold text-primary">
-                            ~{(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN{t("common.perMonth")}
+                            ~{(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
+                            {t('common.perMonth')}
                           </span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">
-                            {t("common.rent")}
-                          </span>
-                          <span className="font-medium">
-                            {listing.price.toLocaleString()} PLN
-                          </span>
+                          <span className="text-muted-foreground">{t('common.rent')}</span>
+                          <span className="font-medium">{listing.price.toLocaleString()} PLN</span>
                         </div>
                         <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">
-                            {t("common.adminFee")}
-                          </span>
+                          <span className="text-muted-foreground">{t('common.adminFee')}</span>
                           <span className="font-medium">
                             {listing.adminFee.toLocaleString()} PLN
                           </span>
                         </div>
                         <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">
-                            {t("common.utilitiesAvg")}
-                          </span>
+                          <span className="text-muted-foreground">{t('common.utilitiesAvg')}</span>
                           <span className="font-medium">
                             ~{listing.utilities.toLocaleString()} PLN
                           </span>
                         </div>
                         <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
-                          <span className="font-semibold">
-                            {t("common.totalMonthly")}
-                          </span>
+                          <span className="font-semibold">{t('common.totalMonthly')}</span>
                           <span className="text-xl font-bold text-primary">
                             ~{listing.totalCost.toLocaleString()} PLN
                           </span>
@@ -818,7 +859,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   >
                     <Link href={`/create-listing?edit=${listing.id}`}>
                       <Edit className="h-4 w-4" />
-                      {t("listings.detail.editListing")}
+                      {t('listings.detail.editListing')}
                     </Link>
                   </Button>
                   {!listing.promoted && (
@@ -828,7 +869,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                       className="w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Sparkles className="h-4 w-4" />
-                      {t("listings.detail.promoteListing")}
+                      {t('listings.detail.promoteListing')}
                     </Button>
                   )}
                   <Button
@@ -838,7 +879,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     onClick={() => setDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-4 w-4" />
-                    {t("listings.detail.deleteListing")}
+                    {t('listings.detail.deleteListing')}
                   </Button>
                 </div>
               ) : (
@@ -848,26 +889,26 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     className="mt-4 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() => {
                       setInterestModalOpen(true);
-                      posthog?.capture("interest_modal_opened", {
+                      posthog?.capture('interest_modal_opened', {
                         listing_id: listing.id,
                         type: listingType,
                       });
                     }}
                   >
                     <MessageSquare className="h-4 w-4" />
-                    {listingType === "roommate"
-                      ? t("listings.detail.imInterestedRoom")
-                      : listingType === "sublet"
-                        ? t("listings.detail.imInterestedSublet")
-                        : t("listings.detail.imInterested")}
+                    {listingType === 'roommate'
+                      ? t('listings.detail.imInterestedRoom')
+                      : listingType === 'sublet'
+                        ? t('listings.detail.imInterestedSublet')
+                        : t('listings.detail.imInterested')}
                   </Button>
 
                   <p className="mt-3 text-center text-xs text-muted-foreground">
-                    {listingType === "roommate"
-                      ? t("listings.detail.contactHintRoommate")
-                      : listingType === "sublet"
-                        ? t("listings.detail.contactHintSublet")
-                        : t("listings.detail.contactHint")}
+                    {listingType === 'roommate'
+                      ? t('listings.detail.contactHintRoommate')
+                      : listingType === 'sublet'
+                        ? t('listings.detail.contactHintSublet')
+                        : t('listings.detail.contactHint')}
                   </p>
                 </>
               )}
@@ -892,18 +933,16 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t("dashboard.confirmDeleteTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("dashboard.confirmDeleteDesc")}
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t('dashboard.confirmDeleteTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('dashboard.confirmDeleteDesc')}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={handleDeleteListing}
               >
-                {t("common.delete")}
+                {t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -1,8 +1,9 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { routing } from '@/i18n/routing';
-
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://passflat.pl';
+import { getAllPosts } from '@/lib/blog';
+import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import { SITE_URL as baseUrl } from '@/lib/site-url';
 
 function buildAlternates(pathname: string) {
   return Object.fromEntries(
@@ -35,6 +36,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry('/blog', 'weekly', 0.6),
     entry('/contact', 'monthly', 0.4),
     entry('/help', 'monthly', 0.5),
+    entry('/pricing', 'monthly', 0.5),
+    ...(isDocumentTemplatesEnabled() ? [entry('/resources', 'monthly', 0.6)] : []),
     entry('/how-it-works', 'monthly', 0.6),
     entry('/privacy', 'yearly', 0.3),
     entry('/terms', 'yearly', 0.3),
@@ -86,5 +89,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable — return static pages only
   }
 
-  return [...staticPages, ...listingPages, ...buildingPages];
+  const blogSlugs = new Set(getAllPosts().map((p) => p.slug));
+  const blogPages: MetadataRoute.Sitemap = Array.from(blogSlugs).map((slug) =>
+    entry(`/blog/${slug}`, 'monthly', 0.6),
+  );
+
+  return [...staticPages, ...blogPages, ...listingPages, ...buildingPages];
 }

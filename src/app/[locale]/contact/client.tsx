@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Link } from '@/i18n/navigation';
 import { CheckCircle2, Mail, Clock, Send } from 'lucide-react';
 
 export function ContactClient() {
   const t = useTranslations('contact');
+  const searchParams = useSearchParams();
 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -25,11 +29,17 @@ export function ContactClient() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
+  const [subject, setSubject] = useState(() => searchParams.get('subject') ?? '');
+  const [message, setMessage] = useState(() => searchParams.get('message') ?? '');
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consent) {
+      setConsentError(true);
+      return;
+    }
     setError('');
     setSending(true);
 
@@ -37,7 +47,7 @@ export function ContactClient() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message }),
+        body: JSON.stringify({ name, email, subject, message, consent: true }),
       });
 
       if (!res.ok) {
@@ -58,6 +68,8 @@ export function ContactClient() {
     setEmail('');
     setSubject('');
     setMessage('');
+    setConsent(false);
+    setConsentError(false);
   }
 
   const subjects = [
@@ -74,12 +86,8 @@ export function ContactClient() {
       {/* Hero */}
       <section className="border-b bg-muted/30 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-            {t('title')}
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            {t('subtitle')}
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">{t('title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
         </div>
       </section>
 
@@ -92,18 +100,12 @@ export function ContactClient() {
               {sent ? (
                 <Card>
                   <CardContent className="flex flex-col items-center py-12 text-center">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                      <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
+                      <CheckCircle2 className="h-8 w-8 text-accent" />
                     </div>
                     <h2 className="text-2xl font-bold">{t('success.title')}</h2>
-                    <p className="mt-2 text-muted-foreground">
-                      {t('success.description')}
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="mt-6"
-                      onClick={resetForm}
-                    >
+                    <p className="mt-2 text-muted-foreground">{t('success.description')}</p>
+                    <Button variant="outline" className="mt-6" onClick={resetForm}>
                       {t('success.sendAnother')}
                     </Button>
                   </CardContent>
@@ -137,7 +139,7 @@ export function ContactClient() {
                   <div className="space-y-2">
                     <Label htmlFor="subject">{t('form.subject')}</Label>
                     <Select value={subject} onValueChange={setSubject} required>
-                      <SelectTrigger id="subject">
+                      <SelectTrigger id="subject" className="w-full">
                         <SelectValue placeholder={t('form.selectSubject')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -162,15 +164,42 @@ export function ContactClient() {
                     />
                   </div>
 
-                  {error && (
-                    <p className="text-sm text-destructive">{error}</p>
-                  )}
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="consent"
+                        checked={consent}
+                        onCheckedChange={(checked) => {
+                          setConsent(checked === true);
+                          if (checked) setConsentError(false);
+                        }}
+                        aria-invalid={consentError}
+                      />
+                      <Label htmlFor="consent" className="text-sm font-normal">
+                        {t('form.consent')}
+                      </Label>
+                    </div>
+                    {consentError && (
+                      <p className="text-xs text-destructive">{t('form.consentRequired')}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {t.rich('form.privacyNote', {
+                        privacyLink: (chunks) => (
+                          <Link href="/privacy" className="text-primary hover:underline">
+                            {chunks}
+                          </Link>
+                        ),
+                      })}
+                    </p>
+                  </div>
 
                   <Button
                     type="submit"
                     size="lg"
                     className="gap-2"
-                    disabled={sending || !subject}
+                    disabled={sending || !subject || !consent}
                   >
                     <Send className="h-4 w-4" />
                     {sending ? t('form.sending') : t('form.submit')}
@@ -182,16 +211,12 @@ export function ContactClient() {
             {/* Sidebar */}
             <div className="space-y-8 lg:col-span-2">
               <div>
-                <h3 className="mb-4 text-lg font-semibold">
-                  {t('alternatives.title')}
-                </h3>
+                <h3 className="mb-4 text-lg font-semibold">{t('alternatives.title')}</h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <Mail className="mt-0.5 h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium">
-                        {t('alternatives.email')}
-                      </p>
+                      <p className="text-sm font-medium">{t('alternatives.email')}</p>
                       <a
                         href={`mailto:${t('alternatives.emailValue')}`}
                         className="text-sm text-primary hover:underline"
@@ -203,20 +228,13 @@ export function ContactClient() {
                   <div className="flex items-start gap-3">
                     <Clock className="mt-0.5 h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium">
-                        {t('alternatives.responseTime')}
-                      </p>
+                      <p className="text-sm font-medium">{t('alternatives.responseTime')}</p>
                       <p className="text-sm text-muted-foreground">
                         {t('alternatives.responseTimeValue')}
                       </p>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="rounded-lg border bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">
-                  {t('alternatives.urgentNote')}
-                </p>
               </div>
             </div>
           </div>

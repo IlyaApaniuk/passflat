@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { trackServerEvent } from '@/lib/posthog-server';
+import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport } from '@/lib/cost-validation';
 import { generateBuildingSlug } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
@@ -29,231 +29,262 @@ async function getUser() {
       },
     },
   );
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 }
 
 export async function POST(request: NextRequest) {
   try {
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const body = await request.json();
-  const {
-    street,
-    buildingNumber,
-    district,
-    placeId,
-    lat,
-    lng,
-    citySlug,
-    rent,
-    adminFee,
-    deposit,
-    electricity,
-    electricityIncluded,
-    electricityWinter,
-    electricitySummer,
-    gas,
-    heating,
-    heatingIncluded,
-    heatingWinter,
-    heatingSummer,
-    water,
-    waterIncluded,
-    internet,
-    internetProvider,
-    otherCosts,
-    otherCostsNote,
-    rooms,
-    areaM2,
-    floor,
-    rentalType,
-    leaseType,
-    depositMonths,
-    isCurrentTenant,
-    livedFrom,
-    livedUntil,
-  } = body;
+    const body = await request.json();
+    const {
+      street,
+      buildingNumber,
+      district,
+      placeId,
+      lat,
+      lng,
+      citySlug,
+      rent,
+      adminFee,
+      deposit,
+      electricity,
+      electricityIncluded,
+      electricityWinter,
+      electricitySummer,
+      gas,
+      heating,
+      heatingIncluded,
+      heatingWinter,
+      heatingSummer,
+      water,
+      waterIncluded,
+      internet,
+      internetProvider,
+      otherCosts,
+      otherCostsNote,
+      rooms,
+      areaM2,
+      floor,
+      rentalType,
+      leaseType,
+      depositMonths,
+      isCurrentTenant,
+      livedFrom,
+      livedUntil,
+    } = body;
 
-  if (!street || !buildingNumber || rent == null || rent === '' || !rentalType || adminFee == null || adminFee === '' || deposit == null || deposit === '' || areaM2 == null || areaM2 === '') {
-    return NextResponse.json(
-      { error: 'Missing required fields: street, buildingNumber, rent, rentalType, adminFee, deposit, areaM2' },
-      { status: 400 },
-    );
-  }
+    if (
+      !street ||
+      !buildingNumber ||
+      rent == null ||
+      rent === '' ||
+      !rentalType ||
+      adminFee == null ||
+      adminFee === '' ||
+      deposit == null ||
+      deposit === '' ||
+      areaM2 == null ||
+      areaM2 === ''
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Missing required fields: street, buildingNumber, rent, rentalType, adminFee, deposit, areaM2',
+        },
+        { status: 400 },
+      );
+    }
 
-  // One report per user
-  const existingReport = await prisma.costReport.findFirst({
-    where: { authorId: user.id },
-    select: { id: true },
-  });
-  if (existingReport) {
-    return NextResponse.json(
-      { error: 'You already have a cost report. Please edit your existing one.', code: 'ALREADY_EXISTS', reportId: existingReport.id },
-      { status: 409 },
-    );
-  }
-
-  // Validate ranges (strict + soft)
-  const validation = validateCostReport({
-    rent, adminFee, deposit, areaM2, rooms,
-    electricity, gas, heating, water, internet, otherCosts,
-  });
-
-  if (!validation.valid) {
-    return NextResponse.json(
-      { error: validation.hardErrors[0].message, errors: validation.hardErrors },
-      { status: 400 },
-    );
-  }
-
-  const wasFlagged = validation.shouldFlag;
-
-  const city = await prisma.city.findUnique({
-    where: { slug: citySlug || 'warsaw' },
-    include: { districts: true },
-  });
-
-  if (!city) {
-    return NextResponse.json({ error: 'City not found' }, { status: 404 });
-  }
-
-  const cleanedStreet = cleanStreet(street);
-  const addressNormalized = normalizeAddress(cleanedStreet, buildingNumber);
-  const addressFull = `${cleanedStreet} ${buildingNumber}`;
-
-  const matchedDistrict = district
-    ? city.districts.find(
-        (d) => d.slug === district.toLowerCase() || d.nameKey === district,
-      )
-    : null;
-
-  let building = placeId
-    ? await prisma.building.findFirst({ where: { placeId } })
-    : null;
-
-  if (!building) {
-    building = await prisma.building.findUnique({
-      where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
+    // Validate ranges (strict + soft)
+    const validation = validateCostReport({
+      rent,
+      adminFee,
+      deposit,
+      areaM2,
+      rooms,
+      electricity,
+      gas,
+      heating,
+      water,
+      internet,
+      otherCosts,
     });
 
-    if (building && placeId && !building.placeId) {
-      building = await prisma.building.update({
-        where: { id: building.id },
-        data: { placeId },
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.hardErrors[0].message, errors: validation.hardErrors },
+        { status: 400 },
+      );
+    }
+
+    const wasFlagged = validation.shouldFlag;
+
+    const city = await prisma.city.findUnique({
+      where: { slug: citySlug || 'warsaw' },
+      include: { districts: true },
+    });
+
+    if (!city) {
+      return NextResponse.json({ error: 'City not found' }, { status: 404 });
+    }
+
+    const cleanedStreet = cleanStreet(street);
+    const addressNormalized = normalizeAddress(cleanedStreet, buildingNumber);
+    const addressFull = `${cleanedStreet} ${buildingNumber}`;
+
+    const matchedDistrict = district
+      ? city.districts.find((d) => d.slug === district.toLowerCase() || d.nameKey === district)
+      : null;
+
+    let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
+
+    if (!building) {
+      building = await prisma.building.findUnique({
+        where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
+      });
+
+      if (building && placeId && !building.placeId) {
+        building = await prisma.building.update({
+          where: { id: building.id },
+          data: { placeId },
+        });
+      }
+    }
+
+    if (!building) {
+      let slug = generateBuildingSlug(street, buildingNumber);
+      const existing = await prisma.building.findUnique({
+        where: { cityId_slug: { cityId: city.id, slug } },
+        select: { id: true },
+      });
+      if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+
+      building = await prisma.building.create({
+        data: {
+          cityId: city.id,
+          slug,
+          districtId: matchedDistrict?.id ?? null,
+          street: cleanedStreet,
+          buildingNumber,
+          addressFull,
+          addressNormalized,
+          lat: lat ?? null,
+          lng: lng ?? null,
+          placeId: placeId ?? null,
+        },
       });
     }
-  }
 
-  if (!building) {
-    let slug = generateBuildingSlug(street, buildingNumber);
-    const existing = await prisma.building.findUnique({
-      where: { cityId_slug: { cityId: city.id, slug } },
+    // One report per user PER BUILDING. A user may report for several buildings,
+    // but a duplicate for the same building should be edited instead of recreated.
+    const existingReport = await prisma.costReport.findFirst({
+      where: { authorId: user.id, buildingId: building.id },
       select: { id: true },
     });
-    if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+    if (existingReport) {
+      return NextResponse.json(
+        {
+          error: 'You already have a cost report for this building. Please edit your existing one.',
+          code: 'ALREADY_EXISTS',
+          reportId: existingReport.id,
+        },
+        { status: 409 },
+      );
+    }
 
-    building = await prisma.building.create({
+    const electricityAvg = electricityIncluded
+      ? null
+      : electricity
+        ? parseFloat(electricity)
+        : electricityWinter && electricitySummer
+          ? (parseFloat(electricityWinter) + parseFloat(electricitySummer)) / 2
+          : null;
+
+    const heatingAvg = heatingIncluded
+      ? null
+      : heating
+        ? parseFloat(heating)
+        : heatingWinter && heatingSummer
+          ? (parseFloat(heatingWinter) + parseFloat(heatingSummer)) / 2
+          : null;
+
+    const totalMonthlyAvg =
+      (parseFloat(rent) || 0) +
+      (parseFloat(adminFee) || 0) +
+      (electricityAvg || 0) +
+      (parseFloat(gas) || 0) +
+      (heatingAvg || 0) +
+      (waterIncluded ? 0 : parseFloat(water) || 0) +
+      (parseFloat(internet) || 0) +
+      (parseFloat(otherCosts) || 0);
+
+    const costReport = await prisma.costReport.create({
       data: {
-        cityId: city.id,
-        slug,
-        districtId: matchedDistrict?.id ?? null,
-        street: cleanedStreet,
-        buildingNumber,
-        addressFull,
-        addressNormalized,
-        lat: lat ?? null,
-        lng: lng ?? null,
-        placeId: placeId ?? null,
+        buildingId: building.id,
+        authorId: user.id,
+        currency: 'PLN',
+        rent: rent ? parseFloat(rent) : null,
+        adminFee: adminFee ? parseFloat(adminFee) : null,
+        depositAmount: deposit ? parseFloat(deposit) : null,
+        electricityAvg: electricityAvg ?? null,
+        electricityWinter: electricityWinter ? parseFloat(electricityWinter) : null,
+        electricitySummer: electricitySummer ? parseFloat(electricitySummer) : null,
+        electricityIncluded: electricityIncluded ?? null,
+        gas: gas ? parseFloat(gas) : null,
+        heating: heatingAvg ?? null,
+        heatingWinter: heatingWinter ? parseFloat(heatingWinter) : null,
+        heatingSummer: heatingSummer ? parseFloat(heatingSummer) : null,
+        heatingIncluded: heatingIncluded ?? null,
+        water: water ? parseFloat(water) : null,
+        waterIncluded: waterIncluded ?? null,
+        internet: internet ? parseFloat(internet) : null,
+        internetProvider: internetProvider || null,
+        otherCosts: otherCosts ? parseFloat(otherCosts) : null,
+        otherCostsNote: otherCostsNote || null,
+        totalMonthlyAvg: totalMonthlyAvg || null,
+        rooms: rooms ? parseInt(rooms, 10) : null,
+        areaM2: areaM2 ? parseFloat(areaM2) : null,
+        floor: floor ? parseInt(floor, 10) : null,
+        rentalType: rentalType || null,
+        leaseType: leaseType || null,
+        depositMonths: depositMonths ? parseFloat(depositMonths) : null,
+        isCurrentTenant: isCurrentTenant ?? null,
+        livedFrom: livedFrom ? new Date(livedFrom) : null,
+        livedUntil: livedUntil ? new Date(livedUntil) : null,
+        isVisible: !wasFlagged,
+        verificationStatus: wasFlagged ? 'flagged' : 'unverified',
       },
+      include: { building: true },
     });
-  }
 
-  const electricityAvg = electricityIncluded
-    ? null
-    : electricity
-      ? parseFloat(electricity)
-      : electricityWinter && electricitySummer
-        ? (parseFloat(electricityWinter) + parseFloat(electricitySummer)) / 2
-        : null;
+    // Only mark hasContributed if data was not flagged
+    if (!wasFlagged) {
+      await prisma.profile.update({
+        where: { id: user.id },
+        data: { hasContributedCost: true },
+      });
+    }
 
-  const heatingAvg = heatingIncluded
-    ? null
-    : heating
-      ? parseFloat(heating)
-      : heatingWinter && heatingSummer
-        ? (parseFloat(heatingWinter) + parseFloat(heatingSummer)) / 2
-        : null;
-
-  const totalMonthlyAvg =
-    (parseFloat(rent) || 0) +
-    (parseFloat(adminFee) || 0) +
-    (electricityAvg || 0) +
-    (parseFloat(gas) || 0) +
-    (heatingAvg || 0) +
-    (waterIncluded ? 0 : parseFloat(water) || 0) +
-    (parseFloat(internet) || 0) +
-    (parseFloat(otherCosts) || 0);
-
-  const costReport = await prisma.costReport.create({
-    data: {
-      buildingId: building.id,
-      authorId: user.id,
-      currency: 'PLN',
-      rent: rent ? parseFloat(rent) : null,
-      adminFee: adminFee ? parseFloat(adminFee) : null,
-      depositAmount: deposit ? parseFloat(deposit) : null,
-      electricityAvg: electricityAvg ?? null,
-      electricityWinter: electricityWinter ? parseFloat(electricityWinter) : null,
-      electricitySummer: electricitySummer ? parseFloat(electricitySummer) : null,
-      electricityIncluded: electricityIncluded ?? null,
-      gas: gas ? parseFloat(gas) : null,
-      heating: heatingAvg ?? null,
-      heatingWinter: heatingWinter ? parseFloat(heatingWinter) : null,
-      heatingSummer: heatingSummer ? parseFloat(heatingSummer) : null,
-      heatingIncluded: heatingIncluded ?? null,
-      water: water ? parseFloat(water) : null,
-      waterIncluded: waterIncluded ?? null,
-      internet: internet ? parseFloat(internet) : null,
-      internetProvider: internetProvider || null,
-      otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-      otherCostsNote: otherCostsNote || null,
-      totalMonthlyAvg: totalMonthlyAvg || null,
-      rooms: rooms ? parseInt(rooms, 10) : null,
-      areaM2: areaM2 ? parseFloat(areaM2) : null,
-      floor: floor ? parseInt(floor, 10) : null,
-      rentalType: rentalType || null,
-      leaseType: leaseType || null,
-      depositMonths: depositMonths ? parseFloat(depositMonths) : null,
-      isCurrentTenant: isCurrentTenant ?? null,
-      livedFrom: livedFrom ? new Date(livedFrom) : null,
-      livedUntil: livedUntil ? new Date(livedUntil) : null,
-      isVisible: !wasFlagged,
-      verificationStatus: wasFlagged ? 'flagged' : 'unverified',
-    },
-    include: { building: true },
-  });
-
-  // Only mark hasContributed if data was not flagged
-  if (!wasFlagged) {
-    await prisma.profile.update({
-      where: { id: user.id },
-      data: { hasContributedCost: true },
+    trackServerEvent(user.id, 'cost_report_submitted', {
+      building_id: building.id,
+      city: citySlug || 'warsaw',
+      was_flagged: wasFlagged,
     });
-  }
 
-  trackServerEvent(user.id, 'cost_report_submitted', {
-    building_id: building.id,
-    city: citySlug || 'warsaw',
-    was_flagged: wasFlagged,
-  });
-
-  return NextResponse.json({ costReport, wasFlagged }, { status: 201 });
+    return NextResponse.json({ costReport, wasFlagged }, { status: 201 });
   } catch (err: unknown) {
     console.error('[cost-reports POST]', err);
+    captureServerException(err, {
+      properties: { source: 'cost_reports', method: 'POST' },
+    });
+    await flushPostHog();
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -313,7 +344,7 @@ export async function GET(request: NextRequest) {
     const reports = b.costReports;
     const count = reports.length;
 
-    const avg = (field: keyof typeof reports[0]) => {
+    const avg = (field: keyof (typeof reports)[0]) => {
       const values = reports
         .map((r) => r[field])
         .filter((v): v is NonNullable<typeof v> => v !== null)
@@ -322,15 +353,12 @@ export async function GET(request: NextRequest) {
       return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
     };
 
-    const rentalTypes = reports
-      .map((r) => r.rentalType)
-      .filter((v): v is string => v !== null);
+    const rentalTypes = reports.map((r) => r.rentalType).filter((v): v is string => v !== null);
     const dominantRentalType =
       rentalTypes.length > 0
         ? rentalTypes.sort(
             (a, b) =>
-              rentalTypes.filter((v) => v === b).length -
-              rentalTypes.filter((v) => v === a).length,
+              rentalTypes.filter((v) => v === b).length - rentalTypes.filter((v) => v === a).length,
           )[0]
         : null;
 

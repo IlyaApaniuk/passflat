@@ -3,16 +3,8 @@
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Plus, Users, CalendarRange, Repeat } from "lucide-react";
-
-const DEFAULT_CITY = 'warsaw';
-
-const quickLinks = [
-  { type: 'replacement' as const, href: `/${DEFAULT_CITY}/replacement`, icon: Repeat, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-  { type: 'roommate' as const, href: `/${DEFAULT_CITY}/roommate`, icon: Users, color: 'bg-violet-500/10 text-violet-500 border-violet-500/20' },
-  { type: 'sublet' as const, href: `/${DEFAULT_CITY}/sublet`, icon: CalendarRange, color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-] as const;
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 export function CTA() {
   const t = useTranslations();
@@ -56,45 +48,20 @@ export function CTA() {
                 {t('landing.cta.subtitle')}
               </motion.p>
 
-              {/* Listing type quick-links */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.15 }}
-                className="mx-auto mb-8 flex max-w-lg flex-col gap-3 sm:flex-row sm:justify-center"
-              >
-                {quickLinks.map(({ type, href, icon: Icon, color }) => (
-                  <Link
-                    key={type}
-                    href={href}
-                    className={`group flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all hover:scale-[1.02] ${color}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {t(`listings.types.${type}`)}
-                    <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
-                  </Link>
-                ))}
-              </motion.div>
-
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.25 }}
-                className="flex flex-col items-center justify-center gap-4 sm:flex-row"
+                className="flex flex-col items-center justify-center"
               >
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 rounded-full border-border px-8 text-base hover:bg-secondary"
-                  asChild
-                >
+                <Button size="lg" className="h-12 rounded-full px-8 text-base" asChild>
                   <Link href="/create-listing">
                     <Plus className="mr-2 h-4 w-4" />
                     {t('landing.cta.listCta')}
                   </Link>
                 </Button>
+                <p className="mt-4 text-sm text-muted-foreground">{t('landing.cta.freeNote')}</p>
               </motion.div>
             </div>
           </div>

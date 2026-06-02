@@ -3,8 +3,9 @@
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Lock, Eye, CheckCircle2 } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { ArrowRight, Lock, Eye, CheckCircle2, ShieldCheck, ShoppingCart } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -24,15 +25,39 @@ interface CostTransparencyProps {
   };
 }
 
-export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = false, buildingData }: CostTransparencyProps) {
+export function CostTransparency({
+  citySlug = DEFAULT_CITY,
+  hasContributed = false,
+  buildingData,
+}: CostTransparencyProps) {
   const t = useTranslations();
 
   const costData = [
-    { label: t('common.rent'), value: `${(buildingData?.avgRent ?? 3200).toLocaleString()} PLN`, visible: true },
-    { label: t('common.adminFee'), value: `${(buildingData?.avgAdminFee ?? 450).toLocaleString()} PLN`, visible: true },
-    { label: t('landing.costTransparency.electricity'), value: `${(buildingData?.avgElectricity ?? 280).toLocaleString()} PLN`, visible: hasContributed },
-    { label: t('landing.costTransparency.internet'), value: `${(buildingData?.avgInternet ?? 89).toLocaleString()} PLN`, visible: hasContributed },
-    { label: t('landing.costTransparency.gasHeating'), value: `${(buildingData?.avgGasHeating ?? 180).toLocaleString()} PLN`, visible: hasContributed },
+    {
+      label: t('common.rent'),
+      value: `${(buildingData?.avgRent ?? 3200).toLocaleString()} PLN`,
+      visible: true,
+    },
+    {
+      label: t('common.adminFee'),
+      value: `${(buildingData?.avgAdminFee ?? 450).toLocaleString()} PLN`,
+      visible: true,
+    },
+    {
+      label: t('landing.costTransparency.electricity'),
+      value: `${(buildingData?.avgElectricity ?? 280).toLocaleString()} PLN`,
+      visible: hasContributed,
+    },
+    {
+      label: t('landing.costTransparency.internet'),
+      value: `${(buildingData?.avgInternet ?? 89).toLocaleString()} PLN`,
+      visible: hasContributed,
+    },
+    {
+      label: t('landing.costTransparency.gasHeating'),
+      value: `${(buildingData?.avgGasHeating ?? 180).toLocaleString()} PLN`,
+      visible: hasContributed,
+    },
   ];
 
   return (
@@ -95,14 +120,13 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
               <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent/20 blur-[80px]" />
 
               {/* Header */}
-              <div className="relative mb-6 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">{buildingData?.address ?? "ul. Pulawska 45"}</h3>
-                  <p className="text-sm text-muted-foreground">{buildingData?.district ?? "Mokotow"}, Warsaw</p>
-                </div>
-                <div className="rounded-full bg-accent/20 px-3 py-1 text-sm text-accent">
-                  {buildingData?.reportsCount ?? 12} {t('landing.costTransparency.reports')}
-                </div>
+              <div className="relative mb-6">
+                <h3 className="text-lg font-semibold">
+                  {buildingData?.address ?? 'ul. Pulawska 45'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {buildingData?.district ?? 'Mokotow'}, Warsaw
+                </p>
               </div>
 
               {/* Cost Breakdown */}
@@ -115,7 +139,7 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 }}
                     className={`flex items-center justify-between rounded-xl p-3 ${
-                      item.visible ? "bg-secondary/50" : "bg-secondary/30"
+                      item.visible ? 'bg-secondary/50' : 'bg-secondary/30'
                     }`}
                   >
                     <span className="text-sm">{item.label}</span>
@@ -132,8 +156,8 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
               </div>
 
               {hasContributed ? (
-                <div className="relative mt-6 rounded-xl border border-green-500/30 bg-green-500/5 p-4 text-center">
-                  <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-green-600">
+                <div className="relative mt-6 rounded-xl border border-accent/30 bg-accent/5 p-4 text-center">
+                  <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-accent">
                     <CheckCircle2 className="h-4 w-4" />
                     {t('landing.costTransparency.alreadyContributedDesc')}
                   </div>
@@ -149,37 +173,41 @@ export function CostTransparency({ citySlug = DEFAULT_CITY, hasContributed = fal
                   <p className="mb-2 text-sm text-muted-foreground">
                     {t('landing.costTransparency.contributeUnlockDesc')}
                   </p>
-                  <Link
-                    href={`/${citySlug}/costs/submit`}
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {t('landing.costTransparency.submitCosts')}
-                  </Link>
+                  <div className="flex flex-col items-center gap-2">
+                    <Link
+                      href={`/${citySlug}/costs/submit`}
+                      className="text-sm font-medium text-accent hover:underline"
+                    >
+                      {t('landing.costTransparency.submitCosts')}
+                    </Link>
+                    <span className="text-xs text-muted-foreground">
+                      {t('landing.costTransparency.orBuyAccess')}{' '}
+                      <BuyAccessDialog citySlug={citySlug}>
+                        <button className="inline font-medium text-accent hover:underline">
+                          <ShoppingCart className="mr-0.5 inline h-3 w-3" />
+                          {t('costs.overview.buyAccessBtn')}
+                        </button>
+                      </BuyAccessDialog>
+                    </span>
+                  </div>
                 </div>
               )}
 
               {/* Total */}
               <div className="relative mt-6 flex items-center justify-between border-t border-border/50 pt-4">
                 <span className="text-muted-foreground">{t('common.totalMonthly')}</span>
-                <span className="text-2xl font-bold text-accent">~{(buildingData?.totalMonthly ?? 4199).toLocaleString()} PLN</span>
+                <span className="text-2xl font-bold text-accent">
+                  ~{(buildingData?.totalMonthly ?? 4199).toLocaleString()} PLN
+                </span>
               </div>
             </div>
 
-            {/* Floating elements */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
-              className="absolute -right-4 -top-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-accent/20 bg-accent/10 backdrop-blur-sm"
-            >
-              <span className="text-2xl font-bold text-accent">89%</span>
-            </motion.div>
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 5, repeat: Infinity }}
-              className="absolute -bottom-4 -left-4 rounded-full border border-border/50 bg-card px-4 py-2 text-sm backdrop-blur-sm"
-            >
-              {t('landing.costTransparency.accuracyScore')}
-            </motion.div>
+            <div className="mt-4 flex items-center justify-center gap-2 rounded-full border border-border/50 bg-card/80 px-4 py-2 text-sm backdrop-blur-sm">
+              <ShieldCheck className="h-4 w-4 text-accent" />
+              <span className="text-muted-foreground">
+                {t('landing.costTransparency.anonymousVerified')}
+              </span>
+            </div>
           </motion.div>
         </div>
       </div>

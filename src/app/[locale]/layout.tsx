@@ -1,7 +1,26 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
+import { getAlternates, getOgImage } from '@/lib/seo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return {
+    title: {
+      default: t('homeTitle'),
+      template: '%s — Passflat',
+    },
+    description: t('homeDescription'),
+    alternates: getAlternates('/'),
+    openGraph: {
+      title: t('homeTitle'),
+      description: t('homeDescription'),
+      images: [getOgImage(t('homeTitle'), t('homeDescription'))],
+    },
+  };
+}
 
 export default async function LocaleLayout({
   children,

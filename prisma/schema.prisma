@@ -135,16 +135,18 @@ model Listing {
 
   // --- Common apartment details ---
   rooms                Int?
-  areaM2               Decimal?  @map("area_m2")
+  areaM2               Decimal? @map("area_m2")
   floor                Int?
   amenities            String[]
-  thingsToKnow         String[]  @map("things_to_know")
-  registrationPossible Boolean?  @map("registration_possible")
+  thingsToKnow         String[] @map("things_to_know")
+  registrationPossible Boolean? @map("registration_possible")
 
   photos String[]
 
   // --- Moderation & promotion ---
   status        String    @default("active")
+  isPaid        Boolean   @default(false) @map("is_paid")
+  paidAt        DateTime? @map("paid_at")
   isPromoted    Boolean   @default(false) @map("is_promoted")
   promotedUntil DateTime? @map("promoted_until")
   isVerified    Boolean   @default(false) @map("is_verified")
@@ -152,9 +154,10 @@ model Listing {
   viewsCount     Int @default(0) @map("views_count")
   responsesCount Int @default(0) @map("responses_count")
 
-  expiresAt DateTime? @map("expires_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  expiresAt          DateTime? @map("expires_at")
+  expiringNotifiedAt DateTime? @map("expiring_notified_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   building      Building             @relation(fields: [buildingId], references: [id])
   author        Profile              @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -301,6 +304,7 @@ model Profile {
   contactMethod      String?   @map("contact_method")
   contactValue       String?   @map("contact_value")
   hasContributedCost Boolean   @default(false) @map("has_contributed_cost")
+  costAccessUntil    DateTime? @map("cost_access_until")
   isVerified         Boolean   @default(false) @map("is_verified")
   deletedAt          DateTime? @map("deleted_at")
   createdAt          DateTime  @default(now()) @map("created_at")
@@ -366,16 +370,20 @@ model Message {
 // --- Payments ---
 
 model Payment {
-  id                      String   @id @default(uuid()) @db.Uuid
-  userId                  String   @map("user_id") @db.Uuid
-  stripeCheckoutSessionId String?  @map("stripe_checkout_session_id")
-  stripePaymentIntentId   String?  @map("stripe_payment_intent_id")
-  productType             String   @map("product_type")
-  referenceId             String?  @map("reference_id") @db.Uuid
+  id                      String    @id @default(uuid()) @db.Uuid
+  userId                  String    @map("user_id") @db.Uuid
+  stripeCheckoutSessionId String?   @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?   @map("stripe_payment_intent_id")
+  productType             String    @map("product_type")
+  referenceId             String?   @map("reference_id") @db.Uuid
   amount                  Int
   currency                String
   status                  String
-  createdAt               DateTime @default(now()) @map("created_at")
+  consentAccepted         Boolean   @default(false) @map("consent_accepted")
+  consentAt               DateTime? @map("consent_at")
+  consentText             String?   @map("consent_text")
+  refundedAt              DateTime? @map("refunded_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -412,4 +420,21 @@ model Report {
   reporter Profile @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@map("reports")
+}
+
+// --- City notify waitlist ---
+
+model CityNotifySubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String
+  city           String
+  cityNormalized String    @map("city_normalized")
+  locale         String?
+  consent        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  notifiedAt     DateTime? @map("notified_at")
+
+  @@unique([email, cityNormalized])
+  @@index([cityNormalized])
+  @@map("city_notify_subscriptions")
 }

@@ -57,12 +57,12 @@ model Subscription {
 
 Passflat — маркетплейс, где деньги текут между пользователями. Для этого нужен **Stripe Connect**:
 
-| Тип | Standard | Express | Custom |
-|-----|----------|---------|--------|
-| Онбординг | Stripe-hosted (минимум работы) | Stripe-hosted | Полностью кастомный |
-| Верификация | Stripe | Stripe | Ваша ответственность |
-| Dashboard | Полный Stripe Dashboard | Ограниченный | Нет |
-| Подходит для | MVP | Масштаб | Enterprise |
+| Тип          | Standard                       | Express       | Custom               |
+| ------------ | ------------------------------ | ------------- | -------------------- |
+| Онбординг    | Stripe-hosted (минимум работы) | Stripe-hosted | Полностью кастомный  |
+| Верификация  | Stripe                         | Stripe        | Ваша ответственность |
+| Dashboard    | Полный Stripe Dashboard        | Ограниченный  | Нет                  |
+| Подходит для | MVP                            | Масштаб       | Enterprise           |
 
 **Рекомендация:** **Standard Connect** для MVP. Авторы объявлений подключают свой Stripe аккаунт → получают выплаты напрямую. Passflat берёт комиссию через `application_fee_amount`.
 
@@ -192,11 +192,7 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
@@ -249,9 +245,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             where: { id: listingId },
             data: {
               isPromoted: true,
-              promotedUntil: new Date(
-                Date.now() + Number(promoteDays) * 24 * 60 * 60 * 1000
-              ),
+              promotedUntil: new Date(Date.now() + Number(promoteDays) * 24 * 60 * 60 * 1000),
             },
           }),
         ]
@@ -283,7 +277,7 @@ Webhook endpoint не должен парсить body как JSON — нуже�
 // В src/app/[locale]/dashboard/client.tsx — обновить DropdownMenuItem "Promote":
 <DropdownMenuItem onClick={() => handlePromote(listing.id)}>
   <Sparkles className="mr-2 h-4 w-4" />
-  {t("dashboard.promote")}
+  {t('dashboard.promote')}
 </DropdownMenuItem>
 ```
 
@@ -638,18 +632,20 @@ npx prisma migrate dev --name add-stripe-connect-fields
 ```
 
 Добавляет:
+
 - `stripe_account_id` и `stripe_onboarded` в `profiles`
 - Таблицу `escrow_payments`
 
 ### Шаг 5: Webhook в Stripe Dashboard
 
-1. Добавить endpoint: `https://passflat.eu/api/webhooks/stripe`
+1. Добавить endpoint: `https://passflat.com/api/webhooks/stripe`
 2. Events: `checkout.session.completed`, `checkout.session.expired`, `account.updated`, `payment_intent.succeeded`, `charge.refunded`
 3. Скопировать Webhook Secret в `.env.local`
 
 ## Этапы реализации
 
 ### Фаза 1 — Promoted Listings (3-4 дня)
+
 - [ ] Установить `stripe` и `@stripe/stripe-js`
 - [ ] Создать `src/lib/stripe.ts` и `src/lib/stripe-client.ts`
 - [ ] Создать Products/Prices в Stripe (39/59/89 PLN)
@@ -663,6 +659,7 @@ npx prisma migrate dev --name add-stripe-connect-fields
 - [ ] Тестирование с Stripe CLI (`stripe listen --forward-to localhost:3000/api/webhooks/stripe`)
 
 ### Фаза 2 — Stripe Connect для авторов (3-4 дня)
+
 - [ ] Prisma миграция: `stripeAccountId`, `stripeOnboarded` в Profile
 - [ ] API: `POST /api/stripe/connect/onboard`
 - [ ] Webhook: `account.updated`
@@ -670,6 +667,7 @@ npx prisma migrate dev --name add-stripe-connect-fields
 - [ ] Индикатор статуса подключения
 
 ### Фаза 3 — P2P платежи за субаренду (4-5 дней)
+
 - [ ] Prisma модель `EscrowPayment`
 - [ ] API: создание escrow, подтверждение, release, refund
 - [ ] Интеграция с чатом (кнопка "Request payment")
@@ -678,6 +676,7 @@ npx prisma migrate dev --name add-stripe-connect-fields
 - [ ] Email-уведомления о платежах
 
 ### Фаза 4 — Подписки (будущее)
+
 - [ ] Stripe Subscriptions для PRO-аккаунтов
 - [ ] Customer Portal для управления подпиской
 - [ ] Billing page

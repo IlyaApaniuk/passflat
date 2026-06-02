@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -165,8 +166,13 @@ html body[data-scroll-locked] {
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Glow effects */
@@ -186,13 +192,20 @@ html body[data-scroll-locked] {
 .grid-pattern {
   background-image:
     linear-gradient(color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 80px 80px;
 }
 
 /* Dot pattern */
 .dot-pattern {
-  background-image: radial-gradient(color-mix(in oklch, var(--foreground) 15%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--foreground) 15%, transparent) 1px,
+    transparent 1px
+  );
   background-size: 20px 20px;
 }
 
@@ -204,52 +217,71 @@ html body[data-scroll-locked] {
 }
 
 .border-gradient::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   padding: 1px;
-  background: linear-gradient(
-    135deg,
-    var(--accent) 0%,
-    var(--border) 50%,
-    var(--accent) 100%
-  );
+  background: linear-gradient(135deg, var(--accent) 0%, var(--border) 50%, var(--accent) 100%);
   background-size: 200% 200%;
   border-radius: inherit;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   animation: border-rotate 4s linear infinite;
 }
 
 @keyframes border-rotate {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Marquee animation */
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* Floating animation */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Pulse glow animation */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px -5px color-mix(in oklch, var(--accent) 30%, transparent); }
-  50% { box-shadow: 0 0 40px -5px color-mix(in oklch, var(--accent) 50%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px -5px color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 40px -5px color-mix(in oklch, var(--accent) 50%, transparent);
+  }
 }
 
 /* Noise texture overlay */
 .noise::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
@@ -284,7 +316,7 @@ html body[data-scroll-locked] {
 }
 
 .shine::after {
-  content: "";
+  content: '';
   position: absolute;
   top: -50%;
   left: -50%;
@@ -304,17 +336,13 @@ html body[data-scroll-locked] {
   transform: rotate(30deg) translateX(100%);
 }
 
-/*
- * Force framer-motion SSR-hidden elements visible on mobile.
- * SSR outputs "opacity:0" (no space), but browsers may normalize inline
- * styles to "opacity: 0" (with space). Match both variants.
- */
-@media (max-width: 767px) {
-  [style*="opacity:0"],
-  [style*="opacity: 0"] {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
-

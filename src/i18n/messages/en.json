@@ -1,9 +1,38 @@
 {
+  "errors": {
+    "notFound": {
+      "metaTitle": "Page not found",
+      "code": "404",
+      "heading": "We couldn't find that page",
+      "description": "The page you're looking for may have been moved, removed, or never existed. Let's get you back on track.",
+      "home": "Back to home",
+      "browse": "Browse listings"
+    },
+    "generic": {
+      "metaTitle": "Something went wrong",
+      "heading": "Something went wrong",
+      "description": "An unexpected error occurred on our end. You can try again, or head back to the homepage.",
+      "retry": "Try again",
+      "home": "Back to home"
+    }
+  },
   "cookieConsent": {
     "message": "We use cookies and analytics to improve your experience.",
     "accept": "Accept",
     "decline": "Decline",
     "learnMore": "Learn more"
+  },
+  "meta": {
+    "homeTitle": "Passflat — Find Your Next Flat in Poland",
+    "homeDescription": "European rental marketplace with transparent costs. Find lease takeovers, compare real utility expenses, and discover your perfect apartment in Warsaw.",
+    "aboutDescription": "Learn about Passflat — a European rental marketplace making renting in Poland transparent and community-driven. Lease takeovers, cost reports, and more.",
+    "howItWorksDescription": "Step-by-step guide to using Passflat for lease takeovers, roommate search, and cost transparency. Find or pass on your apartment in Warsaw easily.",
+    "contactDescription": "Get in touch with the Passflat team. Ask questions, report issues, propose partnerships, or share feedback about our rental marketplace in Warsaw.",
+    "helpDescription": "Find answers to common questions about Passflat — lease takeovers, cost reports, listings, and account management. Browse our comprehensive FAQ section.",
+    "blogDescription": "Guides and insights about renting in Warsaw — lease takeovers, hidden rental costs, tips for foreigners, and everything you need to know about the market.",
+    "termsDescription": "Terms of Service for Passflat — rules for listings, cost reports, payments, consumer rights, and platform usage. Read before using our rental marketplace.",
+    "privacyDescription": "Passflat Privacy Policy — how we collect, use, and protect your personal data under GDPR. Data processors, your rights, cookies, and contact information.",
+    "pricingDescription": "Passflat pricing — free listings, cost reports, and favorites. Optional promoted listings for more visibility starting at 39 PLN."
   },
   "common": {
     "appName": "Passflat",
@@ -48,9 +77,9 @@
       "badge": "Now live in Warsaw",
       "title": "Find your next",
       "titleHighlight": "home, honestly.",
-      "subtitle": "Lease takeovers, roommate search, and short-term sublets — all with transparent costs. See what tenants actually pay.",
+      "subtitle": "Lease takeovers, roommate search, and sublets — all with transparent costs. See what tenants actually pay.",
       "browseCta": "Browse Listings",
-      "addCta": "Add Your Listing",
+      "addCta": "Post a Listing",
       "trustLeaseTakeovers": "Lease Takeovers",
       "trustLeaseTakeoversDesc": "Find tenants to take over your lease and keep your deposit",
       "trustRealCost": "Real Cost Data",
@@ -107,44 +136,48 @@
       "titleHighlight": "Passflat",
       "titleAfter": "?",
       "subtitle": "Built for renters tired of hidden costs and broken promises.",
-      "realCostTitle": "Real Cost Data",
-      "realCostDesc": "See what tenants actually pay — rent, utilities, admin fees. No surprises.",
+      "realCostDataTitle": "Real Cost Data",
+      "realCostDataDesc": "See what tenants actually pay — rent, utilities, admin fees. Crowdsourced data from real buildings across Warsaw.",
       "saveDepositTitle": "Save Your Deposit",
       "saveDepositDesc": "Find someone to take over your lease instead of losing 1–3 months deposit.",
-      "verifiedTitle": "Verified Listings",
-      "verifiedDesc": "Every listing is verified by our team.",
-      "buildingsTitle": "{count}+ Buildings",
-      "buildingsDesc": "Crowdsourced cost data from real tenants across Warsaw.",
-      "matchingTitle": "Fast Matching",
-      "matchingDesc": "Get matched with interested tenants in 48 hours.",
-      "communityTitle": "Community Trust",
-      "communityDesc": "Join {count}+ users who found their next home through Passflat.",
+      "directContactTitle": "Direct Contact",
+      "directContactDesc": "Message listing owners directly — schedule viewings and ask questions instantly.",
+      "noAgencyFeesTitle": "No Agency Fees",
+      "noAgencyFeesDesc": "Deal directly with tenants — no middlemen, no hidden charges.",
+      "quickProcessTitle": "Quick Process",
+      "quickProcessDesc": "Post your listing and start getting responses right away.",
       "exploreCta": "Explore cost data"
     },
     "featured": {
       "title": "Featured Listings",
-      "subtitle": "Lease takeovers, rooms for rent, and short-term sublets across Warsaw",
+      "subtitle": "Lease takeovers, rooms for rent, and sublets across Warsaw",
       "viewAll": "View All",
       "rentFees": "Rent + fees",
-      "from": "From {date}"
+      "from": "From {date}",
+      "comingSoonTitle": "Listings coming soon",
+      "comingSoonDesc": "Be the first to post! Real listings will appear here.",
+      "postCta": "Post a Listing"
     },
     "costTransparency": {
       "badge": "Cost Transparency",
       "title": "Know the",
       "titleHighlight": "real cost before you sign",
-      "subtitle": "Crowdsourced cost data from real tenants. See what people actually pay for utilities, admin fees, and hidden costs in any building.",
+      "subtitle": "Crowdsourced cost data from real tenants. See what people actually pay for utilities, admin fees, and hidden costs.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
       "gasHeating": "Gas/Heating",
       "internet": "Internet",
       "avg": "avg",
       "contributeUnlockDesc": "Add your cost data to unlock full reports",
+      "orBuyAccess": "or buy time-limited access",
       "alreadyContributedDesc": "You have access to full cost reports",
       "exploreCosts": "Explore cost data",
       "unlockFullData": "Unlock Full Data",
       "electricity": "Electricity",
       "reports": "reports",
-      "accuracyScore": "Accuracy score"
+      "accuracyScore": "Accuracy score",
+      "communityVerified": "Community-verified data",
+      "anonymousVerified": "Anonymous & verified by tenants"
     },
     "districts": {
       "title": "Explore",
@@ -178,12 +211,66 @@
       "vibeAffordable": "Budget-friendly & spacious",
       "vibeUpcoming": "Up-and-coming & affordable"
     },
+    "faq": {
+      "title": "Frequently Asked",
+      "titleHighlight": "Questions",
+      "q1": "What is a lease takeover (cesja)?",
+      "a1": "A lease takeover is a legal transfer of an existing rental agreement from the current tenant to a new one. The terms of the original lease — rent, deposit, duration — typically stay the same. It's a standard instrument under Polish civil law.",
+      "q2": "Is it legal?",
+      "a2": "Yes, absolutely. Lease assignment (cesja najmu) is governed by the Polish Civil Code. It requires written consent from all three parties: the current tenant, the new tenant, and the landlord.",
+      "q3": "How much does Passflat cost?",
+      "a3": "Browsing listings and posting are free (up to 2 active listings). Cost reports are free when you contribute your own data, or you can buy time-limited access. Promoted listings start at 39 PLN for 7 days.",
+      "q4": "Do I need the landlord's approval?",
+      "a4": "Yes, the landlord must consent to the transfer. Most landlords agree because they get a vetted replacement tenant and avoid vacancy — it's a win for everyone.",
+      "q5": "How does cost transparency work?",
+      "a5": "Tenants anonymously share their real monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see what you'll actually pay before signing a lease.",
+      "q6": "Is my data safe?",
+      "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR."
+    },
+    "forWhom": {
+      "title": "Passflat is for",
+      "titleHighlight": "everyone",
+      "findHome": {
+        "title": "Find a home",
+        "description": "Browse lease takeovers and sublets with real cost data. No hidden fees, no surprises — honest listings from real tenants.",
+        "cta": "Browse Listings"
+      },
+      "findRoommate": {
+        "title": "Find a roommate",
+        "description": "Search for compatible flatmates or list your spare room. Price per person, lifestyle preferences, and who already lives there.",
+        "cta": "Find Roommates"
+      },
+      "sublet": {
+        "title": "Temporary sublet",
+        "description": "Going on vacation or a business trip? Sublet your place for a fixed period. Set exact dates, total price, and find a temporary tenant.",
+        "cta": "Browse Sublets"
+      }
+    },
+    "aboutTeam": {
+      "text": "Built by renters who've been through it. We started Passflat because finding honest rental info in Warsaw shouldn't be this hard.",
+      "link": "Learn more about us"
+    },
+    "cityNotify": {
+      "badge": "Expanding soon",
+      "title": "Live in another city?",
+      "subtitle": "We're starting in Warsaw and expanding to other cities. Tell us where you'd like to see Passflat next — we'll notify you when we launch.",
+      "currentCity": "Currently live in Warsaw, Poland",
+      "emailPlaceholder": "Your email",
+      "cityPlaceholder": "Which city?",
+      "submit": "Notify Me",
+      "success": "Thanks! We'll keep you posted.",
+      "error": "Something went wrong. Please try again.",
+      "consent": "I agree to the processing of my personal data",
+      "consentRequired": "You must agree to the processing of your personal data.",
+      "privacyNote": "<privacyLink>Privacy Policy</privacyLink>"
+    },
     "cta": {
       "title": "Ready to find your",
       "titleHighlight": "next home?",
-      "subtitle": "Lease takeovers, roommate search, or a short-term sublet — find the right option with transparent pricing.",
+      "subtitle": "Lease takeovers, roommate search, or a sublet — find the right option with transparent pricing.",
       "browseCta": "Browse Listings",
-      "listCta": "List Your Apartment"
+      "listCta": "Post a Listing",
+      "freeNote": "Posting is free — promote from 39 PLN"
     },
     "footer": {
       "tagline": "European rental marketplace with transparent pricing. Find your next home with real cost data.",
@@ -193,8 +280,9 @@
       "roommateSearch": "Roommate Search",
       "temporarySublets": "Temporary Sublets",
       "costReports": "Cost Reports",
-      "addListing": "Add Listing",
+      "addListing": "Post a Listing",
       "pricing": "Pricing",
+      "resources": "Document Templates",
       "company": "Company",
       "aboutUs": "About Us",
       "howItWorks": "How It Works",
@@ -211,8 +299,20 @@
       "cookies": "Cookies",
       "legal": "Legal",
       "systemsOperational": "All systems operational",
-      "betaStatus": "Open beta — Warsaw"
+      "betaStatus": "Open beta — Warsaw",
+      "followUs": "Follow us"
     }
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "about": "About",
+    "blog": "Blog",
+    "contact": "Contact",
+    "help": "Help Center",
+    "howItWorks": "How It Works",
+    "pricing": "Pricing",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
   },
   "listings": {
     "title": "Lease Takeovers",
@@ -391,6 +491,7 @@
       "photosTitle": "Photos",
       "uploadPhotos": "Click to upload photos",
       "maxPhotosReached": "Photo limit reached",
+      "fileTooLarge": "File is too large (max {max} MB)",
       "uploadHint": "PNG, JPG up to 10 MB each",
       "cover": "Cover",
       "photoHint": "Add at least 3 photos. The first photo will be the cover.",
@@ -401,6 +502,24 @@
       "promote7days": "7 days - 39 PLN",
       "promote14days": "14 days - 59 PLN",
       "promote30days": "30 days - 89 PLN",
+      "promotionOptional": "Optional: Promote your listing",
+      "promotionNone": "No promotion",
+      "paidListingNotice": "You've used your {limit} free listings. This one is a paid listing.",
+      "paidListingFee": "Listing fee",
+      "freeListingLabel": "Free ({used} of {limit})",
+      "promotionLabel": "Promotion",
+      "totalLabel": "Total",
+      "continueToPayment": "Continue to payment — {total} PLN",
+      "paymentProcessing": "Processing payment...",
+      "paymentAwaiting": "Awaiting payment",
+      "paymentComplete": "Complete payment",
+      "paymentAwaitingHint": "Not published yet. Removed in 24h if unpaid.",
+      "paidBadge": "Paid listing",
+      "consentLabel": "I request immediate provision and waive my 14-day right of withdrawal.",
+      "checkoutWaiverNote": "Paid services start immediately after payment. By continuing you agree to our Terms; once a service is provided you can no longer use the 14-day right of withdrawal.",
+      "photoUploading": "Uploading...",
+      "photoError": "Upload failed",
+      "photoRetry": "Retry",
       "searchAddress": "Search address",
       "addressPlaceholder": "Start typing an address...",
       "addressHint": "Type to search via Google Places, or fill in manually below",
@@ -518,8 +637,7 @@
     "subtitle": "Real rental costs reported by tenants",
     "overview": {
       "badge": "Cost Transparency",
-      "title": "Real cost reports from real tenants",
-      "subtitle": "Community-sourced rental cost data. Find out what you'll actually pay before signing a lease.",
+      "title": "Find out what you'll actually pay before signing a lease",
       "searchPlaceholder": "Search by address or district...",
       "submitCosts": "Submit Costs",
       "districts": "Districts",
@@ -529,7 +647,29 @@
       "unlockFullData": "Unlock Full Data",
       "unlockDesc": "Submit your costs to access detailed reports",
       "submitMyCosts": "Submit My Costs",
+      "buyAccessBtn": "Buy Access",
+      "gateLead": "Cost data is locked. Unlock it in one of two ways:",
+      "gateRecommended": "Recommended",
+      "gateFreeTitle": "Share your costs",
+      "gateFreeBenefit": "Free \u00b7 permanent access",
+      "gateFreeNote": "\u22482 min to fill in",
+      "gatePaidTitle": "Buy access",
+      "gatePaidBenefit": "Instant \u00b7 from {price} PLN",
+      "gatePaidNote": "7\u201390 days",
       "avgMonthlyTotal": "Avg Monthly Total",
+      "medianMonthlyTotal": "Median Monthly Total",
+      "perM2": "zł/m²",
+      "districtMedianRent": "Median Rent",
+      "districtMedianCzynsz": "Median Czynsz",
+      "districtMedianTotal": "Median Total",
+      "districtMedianPerM2": "Median rent/m²",
+      "sortLabel": "Sort:",
+      "sortDefault": "Default",
+      "sortTotal": "Median total",
+      "sortPerM2": "Rent / m²",
+      "sortReports": "Reports",
+      "nReports": "{count} reports",
+      "estimateLegend": "Medians are directional estimates from tenant reports, not quotes.",
       "submitToUnlock": "Submit to unlock",
       "noBuildingsFound": "No buildings found",
       "noBuildingsDesc": "Try a different search or be the first — submit costs for your building",
@@ -551,6 +691,25 @@
       "flaggedTitle": "Your report is under review",
       "flaggedDesc": "We noticed unusual values in your cost report. Your data is hidden until you fix it or confirm it with us."
     },
+    "buyAccess": {
+      "title": "Buy Access to Cost Data",
+      "subtitle": "Get instant access to real cost reports for all buildings.",
+      "tier7": "7 days",
+      "tier30": "30 days",
+      "tier90": "90 days",
+      "priceFmt": "{price} PLN",
+      "buyButton": "Buy Access",
+      "orContribute": "Or contribute your cost data to unlock for free.",
+      "contributeLink": "Submit your costs",
+      "successToast": "Payment successful! You now have full access to cost data.",
+      "cancelToast": "Payment was cancelled."
+    },
+    "access": {
+      "activeUntil": "Access active until {date}",
+      "renew": "Renew",
+      "expiredOn": "Your access expired on {date}",
+      "expiredCta": "Buy again or contribute your data to unlock"
+    },
     "submit": {
       "title": "Submit Your Costs",
       "description": "Help the community by sharing your real expenses",
@@ -562,8 +721,6 @@
       "yourAddress": "Your Address",
       "street": "Street",
       "buildingNo": "Building No.",
-      "aptNoOptional": "Apt No. (optional)",
-      "aptPrivateNote": "Apartment number is kept private",
       "district": "District",
       "selectDistrict": "Select district",
       "size": "Area (m²)",
@@ -585,7 +742,7 @@
       "baseRentAdmin": "Base (Rent + Communal)",
       "utilitiesLabel": "Extra bills",
       "privacyTitle": "Your data is anonymous",
-      "privacyDesc": "We only show aggregated data. Apartment number and exact costs are never publicly displayed.",
+      "privacyDesc": "We only show aggregated data. Exact costs are never publicly displayed.",
       "deposit": "Deposit (kaucja)",
       "rentalTypeRequired": "Please select what you are renting (apartment or room)",
       "submitButton": "Submit Cost Report",
@@ -620,7 +777,12 @@
       "unlockTitle": "Unlock Building Cost Data",
       "unlockDesc": "Submit your cost report to access detailed data for this and all other buildings",
       "avgMonthlyTotal": "Average Monthly Total",
+      "medianMonthlyTotal": "Typical Monthly Total",
       "basedOnReports": "Based on {count} tenant reports",
+      "typicalRange": "Typically {min}–{max} PLN",
+      "perM2": "zł/m²",
+      "rentPerM2Label": "rent per m²",
+      "estimateCaption": "Estimate based on {count} tenant reports",
       "costBreakdown": "Cost Breakdown",
       "rent": "Rent",
       "adminFee": "Communal Fees",
@@ -635,10 +797,20 @@
       "thisBuilding": "This Building",
       "districtAvg": "{district} Average",
       "warsawAvg": "Warsaw Average",
+      "districtMedian": "{district} Median",
+      "cityMedian": "Warsaw Median",
+      "baselineRange": "Typically {min}–{max} PLN",
+      "baselineSampleSize": "based on {count} reports",
+      "rentPerM2Compare": "Rent per m²",
+      "districtPerM2": "{district}: ≈ {value} {unit}",
+      "cheaperThanPct": "Cheaper than ~{percent}% of reports in {district}",
+      "pricierThanPct": "Pricier than ~{percent}% of reports in {district}",
+      "comparisonCaption": "Directional estimate. District and city figures are the median of all reports in the area.",
       "percentLower": "{percent}% lower",
       "higher": "Higher",
       "percentHigher": "{percent}% higher",
       "matchesAverage": "Matches average",
+      "matchesMedian": "Matches median",
       "otherCosts": "Other Costs",
       "deposit": "Deposit (kaucja)",
       "depositDesc": "One-time refundable security deposit",
@@ -648,6 +820,11 @@
       "lookingForApartmentDesc": "Browse available listings with verified costs",
       "viewListingsIn": "View Listings in {district}",
       "demoSimulate": "[Demo] Simulate Contribution"
+    },
+    "trust": {
+      "reliable": "Reliable data",
+      "lowData": "Preliminary estimate",
+      "outdated": "Data may be outdated"
     },
     "locked": {
       "title": "Contribute to unlock",
@@ -677,7 +854,8 @@
       "password": "Password",
       "submit": "Log in",
       "noAccount": "Don't have an account?",
-      "signUp": "Sign up"
+      "signUp": "Sign up",
+      "forgotPassword": "Forgot password?"
     },
     "register": {
       "title": "Create account",
@@ -689,16 +867,41 @@
       "logIn": "Log in",
       "emailSent": "Check your email to confirm your account",
       "passwordMismatch": "Passwords do not match"
+    },
+    "forgotPassword": {
+      "title": "Forgot your password?",
+      "description": "Enter your email and we'll send you a link to reset your password.",
+      "email": "Email",
+      "submit": "Send reset link",
+      "backToLogin": "Back to login",
+      "sentTitle": "Check your email",
+      "sentDescription": "If an account exists for that email, we've sent a link to reset your password."
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "password": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Update password",
+      "passwordMismatch": "Passwords do not match",
+      "error": "Something went wrong. Please try again.",
+      "invalidTitle": "Link invalid or expired",
+      "invalidDescription": "This password reset link is no longer valid. Please request a new one.",
+      "requestNew": "Request a new link",
+      "successTitle": "Password updated",
+      "successDescription": "Your password has been changed. Redirecting you to login…"
     }
   },
   "howItWorksPage": {
     "title": "How Passflat Works",
     "subtitle": "Looking for a new apartment or want to pass on your lease? Here's how it works, step by step.",
+    "tabSeekers": "Looking for a flat",
+    "tabListers": "Passing on a lease",
+    "tabCosts": "Comparing costs",
     "seekers": {
       "label": "For apartment seekers",
       "title": "Find a new apartment — with real costs, no surprises",
       "step1Title": "Browse verified listings",
-      "step1Desc": "Search for lease takeover apartments in Warsaw with full cost breakdown — rent, admin fees, and real utility costs.",
+      "step1Desc": "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with full cost breakdown — rent, admin fees, and real utility costs.",
       "step2Title": "Filter and explore",
       "step2Desc": "Narrow your search by district, price range, number of rooms, and move-in date. Browse listings on an interactive map.",
       "step3Title": "Contact the current tenant",
@@ -706,31 +909,53 @@
       "step4Title": "Agree on terms",
       "step4Desc": "When you find the right place, agree on the handover and sign a lease assignment (cesja) with the landlord.",
       "step5Title": "Move in",
-      "step5Desc": "Complete the handover — no deposit lost, no agency fees. Start your new chapter."
+      "step5Desc": "Complete the handover — no deposit lost, no agency fees. Start your new chapter.",
+      "cta": "Browse Listings"
     },
     "listers": {
       "label": "For current tenants",
       "title": "Pass on your lease — keep your deposit",
       "step1Title": "Create a listing",
-      "step1Desc": "Add your apartment with address (Google Places autocomplete), photos, and full cost breakdown.",
+      "step1Desc": "Add your apartment with address, photos, and full cost breakdown. Your first 2 listings are free — additional listings require a small one-time payment.",
       "step2Title": "Appear on the map",
-      "step2Desc": "Your listing appears on the map and in search results. Promoted listings get extra visibility.",
+      "step2Desc": "Your listing appears on the map and in search results. Optional promotion boosts visibility for 7, 14, or 30 days.",
       "step3Title": "Receive interest",
       "step3Desc": "Get email notifications when someone is interested. Review messages in your dashboard.",
       "step4Title": "Choose a replacement",
       "step4Desc": "Select the best candidate and coordinate the lease assignment with your landlord.",
       "step5Title": "Hand over the keys",
-      "step5Desc": "Complete the handover and get your deposit back. Done."
+      "step5Desc": "Complete the handover and get your deposit back. Done.",
+      "cta": "Post a Listing"
     },
     "costs": {
       "label": "Cost Transparency",
       "title": "Know real costs before you sign",
       "step1Title": "Submit an anonymous cost report",
-      "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet. Apartment number is never shown.",
+      "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet.",
       "step2Title": "Unlock the full database",
-      "step2Desc": "After submitting your report, you get full access to cost data for all buildings in the database.",
+      "step2Desc": "After submitting your report, you get full access to cost data for all buildings. Alternatively, you can buy time-limited access (7, 30, or 90 days) if you don't have data to share yet.",
       "step3Title": "Compare before signing",
-      "step3Desc": "See average, min, and max costs per building. Check district-level stats — before you sign a lease."
+      "step3Desc": "See typical (median), min, and max costs per building. <compareLink>Compare costs</compareLink> across districts — before you sign a lease.",
+      "cta": "Submit Your Costs",
+      "ctaBuy": "Buy Access",
+      "ctaExplore": "Explore Cost Data"
+    },
+    "trust": {
+      "euData": "Data stored in EU",
+      "gdpr": "GDPR compliant",
+      "noSpam": "No spam"
+    },
+    "testimonials": {
+      "title": "What our users say",
+      "t1Name": "Anna K.",
+      "t1Role": "Tenant, Mokotów",
+      "t1Text": "I found a replacement tenant in just 5 days and kept my full deposit. The whole cesja process was much simpler than I expected.",
+      "t2Name": "Marco R.",
+      "t2Role": "Expat, Wola",
+      "t2Text": "As a foreigner, I was dreading agency fees. Through Passflat I found an apartment directly from the previous tenant — zero commission.",
+      "t3Name": "Olena T.",
+      "t3Role": "Tenant, Ursynów",
+      "t3Text": "Before signing my lease, I checked the cost reports for my building. No surprises on the first bill — everything matched."
     },
     "faq": {
       "title": "Frequently Asked Questions",
@@ -741,13 +966,14 @@
       "q3": "Do I need the landlord's consent?",
       "a3": "Yes. The landlord must agree to the lease transfer. Most landlords agree because they gain a reliable tenant and avoid vacancy. It's in everyone's interest.",
       "q4": "How much does Passflat cost?",
-      "a4": "Listing is free. Optional promoted listings (for better visibility) are available for a small fee starting at 39 PLN. Browsing and cost reports are completely free.",
+      "a4": "You get 2 free active listings. Additional listings require a one-time payment. Optional promoted listings (for better visibility) start at 39 PLN. Cost reports are free if you contribute your own data, or you can buy time-limited access.",
       "q5": "Is Passflat available outside Warsaw?",
       "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap."
     },
     "ctaTitle": "Ready to get started?",
     "ctaBrowse": "Browse Listings",
-    "ctaPost": "Post a Listing"
+    "ctaPost": "Post a Listing",
+    "ctaCosts": "View Costs"
   },
   "about": {
     "title": "About Passflat",
@@ -755,7 +981,7 @@
     "problem": {
       "label": "The Problem",
       "title": "Renting in Poland is broken",
-      "p1": "Tenants lose deposits when they need to move before the lease ends. There's no easy way to find a replacement — so you either pay a penalty or lose months of rent.",
+      "p1": "Tenants lose deposits when they need to move before the lease ends. There's <howItWorksLink>no easy way to find a replacement</howItWorksLink> — so you either pay a penalty or lose months of rent.",
       "p2": "Utility costs are hidden until you sign the lease. You find out about real monthly expenses after moving in — and by then it's too late.",
       "p3": "Agency fees are steep, and foreigners face an even bigger information gap when searching for apartments."
     },
@@ -774,22 +1000,29 @@
     "team": {
       "label": "Who We Are",
       "title": "Built by renters, for renters",
-      "description": "We're a small team based in Warsaw. We rent here ourselves and know the pain firsthand — lost deposits, surprise utility bills, and a frustratingly opaque rental market. We built Passflat because we needed it ourselves."
+      "description": "We're a small team of engineers and designers based in Warsaw. We rent here ourselves and know the pain firsthand — lost deposits, surprise utility bills, and a frustratingly opaque rental market. We built Passflat in 2024 because we needed it ourselves.",
+      "description2": "Between us we've moved apartments 10+ times across Warsaw, dealt with agencies on both sides, and navigated the cesja process as both tenants and landlords. That experience shapes every feature we build."
     },
     "values": {
-      "label": "Our Values",
-      "title": "What we stand for",
-      "transparency": "Transparency",
-      "transparencyDesc": "Real costs, no hidden fees. Every listing shows a full cost breakdown so you know what you'll actually pay.",
-      "community": "Community",
-      "communityDesc": "Data created by tenants, for tenants. The more people share, the better the data for everyone.",
-      "accessibility": "Accessibility",
-      "accessibilityDesc": "Multilingual (PL, EN, RU, UA) for Warsaw's diverse tenant population. Everyone deserves equal access to housing information."
+      "label": "Our Principles",
+      "title": "Platform rules",
+      "principle1": "No hidden information",
+      "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
+      "principle2": "Your data belongs to you",
+      "principle2Desc": "Every cost report stays anonymous and free for all. We never paywall community data or sell it to third parties.",
+      "principle3": "Open by default",
+      "principle3Desc": "All community data is accessible without registration. No premium tiers, no hidden content, no limits. If the information exists — it's available to everyone.",
+      "principle4": "Tenants first",
+      "principle4Desc": "We don't work with agencies and we don't sell your data. Every product decision is made from the tenant's perspective."
     },
     "vision": {
       "label": "Where We're Headed",
       "title": "Starting in Warsaw. Expanding across Europe.",
       "description": "Warsaw is our first market, but the architecture supports multiple cities and countries from day one. Kraków, Wrocław, and other European cities are on our roadmap."
+    },
+    "stats": {
+      "listings": "Active listings",
+      "costReports": "Cost reports shared"
     },
     "ctaTitle": "Join the community",
     "ctaBrowse": "Browse Listings",
@@ -813,7 +1046,9 @@
     "topic4": "What is czynsz administracyjny and what does it cover?",
     "topic4Desc": "Admin fee is one of the most confusing elements of renting in Poland. We explain what you're actually paying for.",
     "ctaText": "While you wait, explore real rental costs by building",
-    "ctaButton": "Explore Cost Data"
+    "ctaButton": "Explore Cost Data",
+    "backToBlog": "Back to Blog",
+    "readMore": "Read more"
   },
   "dashboard": {
     "title": "My Dashboard",
@@ -833,6 +1068,13 @@
     "statusPending": "Pending",
     "statusExpired": "Expired",
     "statusClosed": "Closed",
+    "statusPendingPayment": "Awaiting payment",
+    "statusProcessing": "Processing payment...",
+    "freeListingsUsed": "Free listings: {used}/{limit} used",
+    "extraListingsPaid": "Extra listings are paid",
+    "paidBadge": "Paid",
+    "completePayment": "Complete payment",
+    "completePaymentHint": "Not published yet. Removed in 24h if unpaid.",
     "viewListing": "View Listing",
     "promote": "Promote",
     "views": "{count} views",
@@ -848,7 +1090,24 @@
     "confirmRemoveFavorite": "Are you sure you want to remove this listing from your favorites?",
     "confirmDeleteTitle": "Delete listing?",
     "confirmDeleteDesc": "This action cannot be undone. The listing will be permanently removed.",
-    "listingDeleted": "Listing deleted successfully"
+    "listingDeleted": "Listing deleted successfully",
+    "billing": {
+      "title": "Billing",
+      "empty": "No payments yet",
+      "emptyDesc": "Your payments for extra listings, promotions, and cost-data access will appear here.",
+      "viewReceipt": "View receipt",
+      "receiptError": "Receipt is not available yet. Please try again shortly.",
+      "support": "Get help",
+      "supportSubject": "Payment support — ref {ref}",
+      "itemListing": "Listing",
+      "itemCostAccess": "Cost-data access",
+      "status": {
+        "completed": "Paid",
+        "pending": "Pending",
+        "refunded": "Refunded",
+        "expired": "Expired"
+      }
+    }
   },
   "favorites": {
     "addToFavorites": "Save to favorites",
@@ -874,7 +1133,11 @@
       "message": "Message",
       "messagePlaceholder": "How can we help?",
       "submit": "Send Message",
-      "sending": "Sending..."
+      "sending": "Sending...",
+      "consent": "I agree to the processing of my personal data",
+      "privacyNote": "<privacyLink>Privacy Policy</privacyLink>",
+      "consentRequired": "You must agree to the processing of your personal data to submit this form.",
+      "privacyLinkText": "Privacy Policy"
     },
     "success": {
       "title": "Message sent!",
@@ -885,10 +1148,9 @@
     "alternatives": {
       "title": "Other ways to reach us",
       "email": "Email",
-      "emailValue": "contact@passflat.eu",
+      "emailValue": "contact@passflat.com",
       "responseTime": "Response time",
-      "responseTimeValue": "We usually reply within 24–48 hours",
-      "urgentNote": "For urgent listing issues, use the dashboard or email us directly."
+      "responseTimeValue": "We usually reply within 24–48 hours"
     }
   },
   "helpCenter": {
@@ -903,7 +1165,7 @@
       "q3": "What cities does Passflat operate in?",
       "a3": "Currently we operate in Warsaw. Expansion to Kraków, Wrocław, and other European cities is on our roadmap.",
       "q4": "What languages does Passflat support?",
-      "a4": "Passflat is available in Polish, English, Russian, and Ukrainian — reflecting Warsaw's diverse tenant community."
+      "a4": "Passflat is available in Polish, Ukrainian, English, and Russian — reflecting Warsaw's diverse tenant community."
     },
     "leaseTakeovers": {
       "title": "Lease Takeovers",
@@ -924,10 +1186,10 @@
       "title": "Cost Transparency",
       "q1": "How does the cost database work?",
       "a1": "Tenants submit anonymous cost reports for their buildings — including rent, admin fee, electricity, gas, heating, water, and internet. Data is aggregated and displayed per building so future tenants can see what they'll actually pay.",
-      "q2": "Why do I need to submit my costs to unlock data?",
-      "a2": "The database is community-powered. By submitting your data, you help others and unlock full access to reports for all buildings. It's a fair exchange that keeps the database growing.",
+      "q2": "How do I unlock cost data?",
+      "a2": "You can unlock full access by contributing your own cost report (free, permanent) or by purchasing time-limited access (7, 30, or 90 days). The database is community-powered — contributing helps everyone and keeps it growing.",
       "q3": "Is my data anonymous?",
-      "a3": "Yes. Your apartment number is never displayed publicly. Cost data is shown in aggregated form (averages, min/max per building), so individual submissions cannot be identified.",
+      "a3": "Yes. Cost data is shown in aggregated form (averages, min/max per building), so individual submissions cannot be identified.",
       "q4": "What costs should I report?",
       "a4": "Report your monthly rent, admin fee, and utility costs: electricity, gas, heating, water, and internet. The more complete the report, the more useful it is for the community."
     },
@@ -936,10 +1198,34 @@
       "q1": "How do I create an account?",
       "a1": "Click \"Sign up\" and register with email or a Google account. You'll receive a confirmation email to verify your address.",
       "q2": "How do I delete my account?",
-      "a2": "Contact us at contact@passflat.eu and we'll process your account deletion request. Your listings will be removed and personal data erased in accordance with GDPR.",
+      "a2": "Go to your dashboard settings and use the \"Delete Account\" option. Your account will be scheduled for deletion with a 30-day grace period during which you can restore it. After that, all listings are removed and personal data is permanently erased in accordance with GDPR.",
       "q3": "How is my personal data used?",
       "a3": "We use your data solely to provide the service — managing listings, sending notifications, and displaying anonymized cost reports. We never sell personal data. See our Privacy Policy for details."
     },
+    "gdprRights": {
+      "title": "Your Data & GDPR",
+      "q1": "How do I request a copy of my data?",
+      "a1": "Send an email to contact@passflat.com with the subject \"Data Access Request.\" We will provide a copy of all personal data we hold about you within 30 days, in a structured, machine-readable format.",
+      "q2": "What are my GDPR rights?",
+      "a2": "Under GDPR, you have the right to access, rectify, erase, restrict processing, port your data, object to processing, and withdraw consent. For full details, see our Privacy Policy. To exercise any right, contact contact@passflat.com."
+    },
+    "payments": {
+      "title": "Payments & Refunds",
+      "q1": "What can I pay for on Passflat?",
+      "a1": "Posting a listing is free (up to 2 active listings). Paid services are: extra listings beyond the free limit, promotion to boost a listing's visibility in search results, and time-limited access to the cost-report database. Listings themselves stay free.",
+      "q2": "When does my paid service start, and can I still cancel?",
+      "a2": "Paid services are delivered immediately and in full right after payment. Because of this, when you pay you give your express consent to immediate provision — and once the service has been provided you can no longer use the standard 14-day right of withdrawal. You confirm this at checkout when you accept the Terms.",
+      "q3": "Do you guarantee I'll find a tenant, roommate, or replacement?",
+      "a3": "No. You pay for the service itself — publication, visibility, or data access — not for a particular result. Passflat doesn't guarantee that you'll find a replacement tenant, a roommate, or a new lease, and not getting a result is not grounds for a refund.",
+      "q4": "How do I request a refund?",
+      "a4": "Refunds are handled case by case for genuine issues — for example a duplicate charge, a technical failure that stopped the service from being delivered, or a defective service. Email contact@passflat.com with your account email and the payment reference (you'll find it in your dashboard billing history). Your mandatory consumer rights are always preserved.",
+      "q5": "Which payment methods can I use?",
+      "a5": "Payments are processed securely by Stripe. You can pay by card, BLIK, or Przelewy24 (P24). Available methods may vary slightly by device and browser.",
+      "q6": "Will I get a receipt or invoice?",
+      "a6": "Yes. Stripe automatically emails a payment receipt to the email address used at checkout. You can also open the receipt anytime from the billing section of your dashboard."
+    },
+    "searchPlaceholder": "Search questions...",
+    "noResults": "No matching questions found. Try a different search term.",
     "stillHaveQuestions": "Still have questions?",
     "stillHaveQuestionsDesc": "Can't find what you're looking for? Our team is happy to help.",
     "contactUs": "Contact Us"
@@ -947,10 +1233,10 @@
   "privacy": {
     "title": "Privacy Policy",
     "subtitle": "How Passflat collects, uses, and protects your personal data.",
-    "lastUpdated": "Last updated: May 18, 2026",
+    "lastUpdated": "Last updated: June 1, 2026",
     "intro": {
       "title": "Introduction",
-      "p1": "Passflat (\"we\", \"us\", \"our\") is a rental marketplace platform operated from Warsaw, Poland. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our website and services at passflat.eu.",
+      "p1": "Passflat (\"we\", \"us\", \"our\") is a rental marketplace platform operated from Warsaw, Poland. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our website and services at passflat.com.",
       "p2": "We are committed to protecting your privacy in compliance with the General Data Protection Regulation (GDPR) and applicable Polish data protection laws. By using Passflat, you acknowledge that you have read and understood this policy."
     },
     "dataCollected": {
@@ -974,7 +1260,7 @@
       },
       "usage": {
         "title": "Usage & Technical Data",
-        "item1": "Pages visited, interactions, and feature usage (collected via PostHog analytics)",
+        "item1": "Pages visited, interactions, and feature usage (collected via PostHog and Google Analytics)",
         "item2": "IP address, browser type, device information, and operating system (standard server logs)"
       }
     },
@@ -984,12 +1270,18 @@
       "item2": "Sending notifications: email alerts when someone expresses interest in your listing (via Resend)",
       "item3": "Improving the platform: understanding usage patterns, fixing bugs, developing new features",
       "item4": "Ensuring security: preventing fraud, abuse, and unauthorized access",
-      "noSell": "We do NOT sell your personal data to third parties. Ever."
+      "noSell": "We do NOT sell your personal data to third parties. Ever.",
+      "legalBases": {
+        "title": "Legal Bases for Processing (GDPR Art. 6)",
+        "contract": "Contract performance (Art. 6(1)(b)) — processing necessary to provide the service, including displaying listings, tenant matching, and cost reports.",
+        "legitimateInterest": "Legitimate interest (Art. 6(1)(f)) — processing for analytics, platform security, fraud prevention, and platform improvement.",
+        "consent": "Consent (Art. 6(1)(a)) — processing for analytics cookies (PostHog) and marketing communications, which you can withdraw at any time."
+      }
     },
     "dataSharing": {
       "title": "Data Sharing",
       "intro": "We share data only in the following, limited circumstances:",
-      "item1": "Cost reports are displayed in aggregated, anonymized form — apartment numbers are never shown publicly",
+      "item1": "Cost reports are displayed in aggregated, anonymized form",
       "item2": "Listing contact details are shared only with users who express interest through the platform",
       "processors": {
         "title": "Data Processors",
@@ -999,14 +1291,16 @@
         "stripe": "Stripe — payment processing for promoted listings",
         "google": "Google Places API — address autocomplete (address data only)",
         "mapbox": "Mapbox — map rendering (no personal data shared)",
-        "posthog": "PostHog — product analytics (opt-out available)"
+        "posthog": "PostHog — product analytics (opt-out available)",
+        "googleAnalytics": "Google Analytics 4 — web traffic/audience analytics (consent-based, opt-in via cookie banner)",
+        "deepl": "DeepL — automated translation of listing content (EU-based, Germany)"
       }
     },
     "retention": {
       "title": "Data Retention",
       "account": "Account data: retained until you delete your account",
       "listings": "Listings: active for 60 days, then archived for 30 days before deletion",
-      "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form to maintain the community database"
+      "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form. Once anonymized, this data is no longer personal data under GDPR (Recital 26) and is maintained to support the community database"
     },
     "rights": {
       "title": "Your Rights (GDPR)",
@@ -1017,17 +1311,69 @@
       "portability": "Right to data portability — receive your data in a structured, machine-readable format",
       "objection": "Right to object — object to processing based on legitimate interest",
       "withdrawConsent": "Right to withdraw consent — withdraw consent at any time where processing is based on consent",
-      "howToExercise": "To exercise any of these rights, contact us at privacy@passflat.eu. We will respond within 30 days as required by GDPR."
+      "restriction": "Right to restriction — request restriction of processing of your personal data in certain circumstances (e.g., while we verify the accuracy of your data)",
+      "howToExercise": "To exercise any of these rights, contact us at contact@passflat.com. We will respond within 30 days as required by GDPR.",
+      "complaint": "Right to lodge a complaint — if you believe your data protection rights have been violated, you have the right to lodge a complaint with the President of the Personal Data Protection Office (Prezes Urzędu Ochrony Danych Osobowych, UODO), ul. Stawki 2, 00-193 Warszawa, Poland. Website: uodo.gov.pl"
+    },
+    "transfers": {
+      "title": "Cross-Border Data Transfers",
+      "description": "Some of our data processors are located outside the European Union / European Economic Area (EU/EEA). When your data is transferred outside the EU/EEA, we ensure appropriate safeguards are in place, including Standard Contractual Clauses (SCCs) approved by the European Commission, or adequacy decisions.",
+      "processors": "The following processors may process data outside the EU/EEA: Vercel (US), Resend (US), Stripe (EU and US), Google (US, covering both Places API and Google Analytics), and Mapbox (US) — all operating under Standard Contractual Clauses. Supabase and PostHog data locations depend on instance configuration. DeepL is EU-based (Germany)."
     },
     "cookies": {
       "title": "Cookies",
       "intro": "We use a minimal set of cookies:",
       "essential": "Essential cookies: authentication session tokens (required for the service to work)",
-      "analytics": "Analytics cookies: PostHog (optional — you can opt out via browser settings or our cookie banner)"
+      "analytics": "Analytics cookies: PostHog and Google Analytics (optional — you can opt out via browser settings or our cookie banner)",
+      "tableTitle": "Cookie Details",
+      "tableName": "Cookie",
+      "tableCategory": "Category",
+      "tablePurpose": "Purpose",
+      "tableDuration": "Duration",
+      "sbName": "sb-*",
+      "sbCategory": "Essential",
+      "sbPurpose": "Supabase authentication session tokens",
+      "sbDuration": "Session",
+      "phName": "ph_*",
+      "phCategory": "Analytics",
+      "phPurpose": "PostHog product analytics and feature flags",
+      "phDuration": "1 year",
+      "gaName": "_ga, _ga_*",
+      "gaCategory": "Analytics",
+      "gaPurpose": "Google Analytics — traffic and audience measurement",
+      "gaDuration": "2 years",
+      "consentName": "passflat-cookie-consent",
+      "consentCategory": "Essential",
+      "consentPurpose": "Stores your cookie consent preference (localStorage)",
+      "consentDuration": "Persistent",
+      "localeName": "NEXT_LOCALE",
+      "localeCategory": "Essential",
+      "localePurpose": "Stores your preferred language",
+      "localeDuration": "1 year"
+    },
+    "automated": {
+      "title": "Automated Decision-Making",
+      "description": "Passflat does not engage in automated individual decision-making or profiling as defined by GDPR Art. 22. Listing rankings are based solely on recency, with promoted listings displayed at the top as a paid feature."
+    },
+    "children": {
+      "title": "Children's Data",
+      "description": "Passflat is not intended for persons under 18 years of age. We do not knowingly collect personal data from minors. If we become aware that we have collected data from a person under 18, we will take steps to delete that data promptly."
+    },
+    "breach": {
+      "title": "Data Breach Notification",
+      "description": "In the event of a personal data breach that poses a risk to your rights and freedoms, we will notify the President of the Personal Data Protection Office (UODO) within 72 hours as required by GDPR Art. 33.",
+      "notification": "If a breach poses a high risk to your rights and freedoms, we will also notify you directly without undue delay, providing information about the nature of the breach and recommended protective measures."
+    },
+    "dpo": {
+      "title": "Data Protection Officer",
+      "description": "We have assessed the need for a Data Protection Officer (DPO) under GDPR Art. 37 and determined that appointment is not currently required given the nature and scale of our data processing activities. For any data protection inquiries, contact us at contact@passflat.com."
     },
     "contact": {
-      "title": "Data Contact",
-      "text": "For privacy questions or to exercise your GDPR rights, contact our data protection team:"
+      "title": "Data Controller & Contact",
+      "text": "For privacy questions or to exercise your GDPR rights, contact our data protection team:",
+      "controller": "Data Controller: Ilya Apaniuk",
+      "location": "Location: Warsaw, Poland",
+      "email": "Email: contact@passflat.com"
     },
     "changes": {
       "title": "Changes to This Policy",
@@ -1040,7 +1386,7 @@
     "lastUpdated": "Last updated: May 18, 2026",
     "acceptance": {
       "title": "1. Acceptance of Terms",
-      "p1": "By using Passflat (passflat.eu), you agree to these Terms of Service. If you do not agree, please do not use the platform.",
+      "p1": "By using Passflat (passflat.com), you agree to these Terms of Service. If you do not agree, please do not use the platform.",
       "p2": "These terms apply to all users of the platform, including tenants listing apartments, tenants searching for apartments, and users submitting cost reports."
     },
     "service": {
@@ -1070,12 +1416,14 @@
       "title": "5. Cost Reports",
       "item1": "Cost reports must reflect real costs from your personal experience as a tenant in the reported building.",
       "item2": "Submitting false or deliberately misleading cost data may result in account removal and deletion of all reports.",
-      "item3": "Cost reports are displayed in anonymized, aggregated form. Apartment numbers are never published."
+      "item3": "Cost reports are displayed in anonymized, aggregated form."
     },
     "payments": {
       "title": "6. Payments",
-      "p1": "Promoted listings are a paid feature that boosts listing visibility in search results. Payments are securely processed via Stripe. Prices are in PLN and include taxes.",
-      "p2": "Refunds for promoted listings are handled on a case-by-case basis. Contact us at legal@passflat.eu for refund requests."
+      "p1": "Passflat offers the following paid services: extra listings (beyond the 2 free active listings), promoted listings (boosted visibility in search results), and time-limited access to the cost report database. All payments are securely processed via Stripe. Prices are shown in PLN.",
+      "immediate": "Paid services are digital services provided immediately and in full right after payment. By purchasing or activating a paid service, you give your express consent to its immediate provision and acknowledge that, once the service has been provided, you lose your statutory 14-day right of withdrawal (see Section 9). You confirm this consent at checkout when you accept these Terms.",
+      "serviceOutcome": "The paid product is the service itself — the publication of a listing, increased visibility/promotion, or access to the cost-data database — delivered immediately and in full. Passflat does not guarantee any particular outcome, such as finding a replacement tenant, a roommate, or a new lease. The absence of such a result is not a defect in the service and is not grounds for a refund.",
+      "refunds": "Refunds are granted at Passflat's discretion in cases of genuine issues, such as a duplicate charge, a technical failure that prevented the service from being delivered, or a defective service. Your mandatory consumer rights remain unaffected. For refund requests, contact contact@passflat.com."
     },
     "liability": {
       "title": "7. Limitation of Liability",
@@ -1088,17 +1436,52 @@
       "p1": "The Passflat platform, including its design, code, branding, and content (excluding user-generated content), is the intellectual property of Passflat.",
       "p2": "By posting content on Passflat (listings, photos, cost reports), you grant us a non-exclusive, worldwide license to display and distribute that content on the platform for the purpose of providing the service."
     },
+    "withdrawal": {
+      "title": "9. Right of Withdrawal",
+      "p1": "As a consumer, you generally have the right to withdraw from a distance contract for digital services (such as extra listings, promoted listings, or cost report access) within 14 days, without giving any reason. The withdrawal period expires 14 days after the day the contract is concluded. To meet the deadline, it is enough to send your statement before the period expires.",
+      "p2": "However, the right of withdrawal does not apply where the service has been fully performed with your prior express consent and your acknowledgment that you would lose the right of withdrawal once the contract was fully performed (Art. 38(1)(13) of the Polish Consumer Rights Act / Art. 16(m) of Directive 2011/83/EU). Because Passflat's paid services are provided immediately and in full upon payment, by purchasing you give this consent and lose the right of withdrawal once the service has been provided.",
+      "p3": "To exercise the right of withdrawal where it applies, send an unequivocal statement (for example, a letter by post or an email) to contact@passflat.com, stating your account email and order details. You may use the model form below, but it is not obligatory. We will process any refund due without undue delay and within 14 days of receiving your statement.",
+      "formTitle": "Model withdrawal form",
+      "formIntro": "(complete and return this form only if you wish to withdraw from the contract)",
+      "form": "To: Passflat — Ilya Apaniuk, Warsaw, Poland, contact@passflat.com\n\nI hereby give notice that I withdraw from my contract for the provision of the following service:\n— Service: ____________________\n— Ordered on / received on: ____________________\n— Name of consumer: ____________________\n— Address of consumer: ____________________\n— Account email: ____________________\n— Date: ____________________\n— Signature (only if this form is sent on paper): ____________________"
+    },
+    "dsa": {
+      "title": "10. Digital Services Act",
+      "intro": "In accordance with the EU Digital Services Act (Regulation 2022/2065), we provide the following transparency information:",
+      "removalTitle": "Content Moderation",
+      "removalIntro": "Listings may be removed or restricted if they:",
+      "removal1": "Contain false, misleading, or fraudulent information about an apartment",
+      "removal2": "Include discriminatory, offensive, or illegal content",
+      "removal3": "Violate third-party rights (e.g., posting without the tenant's authorization)",
+      "removal4": "Contain spam, duplicate listings, or commercial advertising unrelated to rental offers",
+      "complaintTitle": "Complaint Procedure",
+      "complaint1": "If your content has been removed or restricted, you may submit a complaint to contact@passflat.com within 6 months of the decision.",
+      "complaint2": "We will review your complaint and respond within a reasonable time. If you disagree with our decision, you may seek redress through an out-of-court dispute settlement body or the courts.",
+      "complaint3": "Users may also report illegal content via contact@passflat.com. We will process reports promptly and inform the reporter of the outcome.",
+      "rankingTitle": "Algorithmic Transparency",
+      "ranking": "Listings are ranked by recency (newest first). Promoted listings — a paid feature — appear at the top of search results for the duration of the promotion. No other algorithmic personalization or profiling is used to order search results.",
+      "contactTitle": "DSA Contact Point",
+      "contact": "For DSA-related inquiries, complaints, or content reports, contact: contact@passflat.com",
+      "odrTitle": "Online Dispute Resolution",
+      "odrText": "In accordance with EU Regulation 524/2013, consumers may use the European Online Dispute Resolution (ODR) platform to resolve disputes related to online purchases.",
+      "odrLink": "ODR Platform: https://ec.europa.eu/consumers/odr"
+    },
     "law": {
-      "title": "9. Governing Law",
+      "title": "11. Governing Law",
       "text": "These Terms of Service are governed by and construed in accordance with the laws of the Republic of Poland. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts of Warsaw."
     },
     "contact": {
-      "title": "10. Contact",
-      "text": "For questions about these Terms of Service, contact us:"
+      "title": "12. Contact",
+      "text": "For questions about these Terms of Service, contact us:",
+      "operator": "Passflat is operated by Ilya Apaniuk, Warsaw, Poland."
+    },
+    "forceMajeure": {
+      "title": "13. Force Majeure",
+      "text": "Passflat shall not be liable for any failure or delay in performing its obligations due to circumstances beyond its reasonable control, including but not limited to natural disasters, war, terrorism, pandemics, power outages, internet disruptions, government actions, or third-party service failures."
     },
     "changes": {
-      "title": "11. Changes to Terms",
-      "text": "We may update these Terms of Service. We will notify registered users of significant changes via email. Continued use of the platform after changes constitutes acceptance of the updated terms."
+      "title": "14. Changes to Terms",
+      "text": "We may update these Terms of Service. We will notify registered users of significant changes via email at least 14 days before they take effect. For material changes affecting your rights or data processing, we will request your explicit re-acceptance upon next login. If you do not accept the updated terms, you may delete your account. Continued use of the platform after the notification period constitutes acceptance of the updated terms."
     }
   },
   "chat": {
@@ -1121,6 +1504,51 @@
   "city": {
     "warsaw": "Warsaw"
   },
+  "pricing": {
+    "title": "Pricing",
+    "subtitle": "Passflat is free to use. Pay only for extra listings or premium features.",
+    "free": {
+      "badge": "Free forever",
+      "title": "Basic",
+      "description": "Up to 2 free active listings and full access to the platform.",
+      "browsing": "Browse and search all listings",
+      "posting": "Up to 2 free active listings",
+      "costReports": "Access cost reports (contribute to unlock)",
+      "favorites": "Save listings to favorites",
+      "cta": "Create Listing"
+    },
+    "promoted": {
+      "badge": "Promoted Listing",
+      "title": "Boost Visibility",
+      "from": "from",
+      "description": "Get your listing in front of more people.",
+      "topResults": "Appear at the top of search results",
+      "highlightedBadge": "Highlighted with a promoted badge",
+      "moreViews": "Get significantly more views",
+      "days": "{count} days",
+      "cta": "Post a Listing",
+      "stripeNote": "Secure payment via Stripe. Prices in PLN, VAT included."
+    },
+    "extraListings": {
+      "badge": "Extra Listings",
+      "title": "Beyond the Free Limit",
+      "description": "Need more than 2 active listings? Each additional listing is a one-time payment.",
+      "oneTime": "One-time payment per listing",
+      "lifetime": "Active for up to 90 days",
+      "antiAbuse": "Address and type locked for fairness",
+      "cta": "Create Listing"
+    },
+    "costAccess": {
+      "badge": "Cost Report Access",
+      "title": "Skip the Contribution",
+      "description": "No cost data to share yet? Buy time-limited access to the full cost database.",
+      "tier7": "7-day access",
+      "tier30": "30-day access",
+      "tier90": "90-day access",
+      "alternative": "Or contribute your own cost report to unlock for free",
+      "cta": "Buy Access"
+    }
+  },
   "account": {
     "delete": {
       "title": "Delete Account",
@@ -1138,6 +1566,144 @@
       "message": "Your account is scheduled for deletion. You can restore it now and recover all your data, or sign out to let the deletion proceed.",
       "restore": "Restore my account",
       "cancel": "Sign out"
+    }
+  },
+  "documents": {
+    "badge": "Base template — requires legal review",
+    "downloadPdf": "Download PDF",
+    "downloadDocx": "Download DOCX",
+    "formatNote": "PDF is read-only; DOCX is editable. Both in Polish — the binding language.",
+    "localeNote": "PDF is an informational translation (the Polish version is binding). The editable DOCX is in Polish.",
+    "docs": {
+      "cesja": {
+        "title": "Lease assignment (cesja umowy najmu)",
+        "description": "Tripartite agreement to transfer a lease to a new tenant, with the landlord's consent."
+      },
+      "podnajem": {
+        "title": "Sublease agreement (umowa podnajmu)",
+        "description": "Sublet a flat or room with the landlord's consent, dependent on the main lease."
+      },
+      "wspollokatorska": {
+        "title": "Roommate agreement (umowa współlokatorska)",
+        "description": "Internal cost-sharing and house-rules agreement between flatmates."
+      }
+    },
+    "resources": {
+      "title": "Document templates",
+      "subtitle": "Free, fill-in-the-blank rental document templates for Poland.",
+      "intro": "Download base templates for the three Passflat deal types. Polish is the binding version; Ukrainian, English and Russian PDFs are provided for understanding only.",
+      "disclaimer": "These are illustrative templates, not legal advice. Have the document reviewed by a lawyer before signing.",
+      "metaTitle": "Rental document templates — Passflat",
+      "metaDescription": "Free base templates for lease takeovers, sublets and roommate agreements in Poland — DOCX and PDF, with informational translations."
+    },
+    "howItWorks": {
+      "title": "Need the paperwork?",
+      "subtitle": "Grab a free base template for the signing step."
+    },
+    "blog": {
+      "title": "Free lease-assignment template",
+      "subtitle": "Download a ready-to-fill cesja agreement (DOCX + PDF)."
+    },
+    "chat": {
+      "hint": "Closing a deal? Download a free base template for this listing.",
+      "cta": "Get the template"
+    }
+  },
+  "emails": {
+    "common": {
+      "brand": "Passflat"
+    },
+    "contact": {
+      "subject": "[Contact] {subject}",
+      "intro": "New message from the contact form",
+      "fromLabel": "From:",
+      "emailLabel": "Email:",
+      "messageLabel": "Message:",
+      "footer": "Reply directly to this email to respond to {name}."
+    },
+    "newMessage": {
+      "subject": "New message about \"{listingTitle}\"",
+      "heading": "New message about \"{listingTitle}\"",
+      "from": "From {senderName}",
+      "cta": "Reply on Passflat",
+      "footer": "You received this email because you have a conversation on Passflat."
+    },
+    "newInquiry": {
+      "subject": "New inquiry for \"{listingTitle}\"",
+      "heading": "New inquiry for your listing",
+      "intro": "Someone is interested in {listingTitle}",
+      "fromLabel": "From:",
+      "emailLabel": "Email:",
+      "phoneLabel": "Phone:",
+      "messageLabel": "Message:",
+      "viewListing": "View Listing",
+      "dashboard": "Go to Dashboard",
+      "footer": "You received this email because you have an active listing on Passflat."
+    },
+    "payment": {
+      "subject": "Payment confirmation — Passflat",
+      "heading": "Thank you for your payment",
+      "intro": "We confirm we have received your payment. The order details are below.",
+      "itemsLabel": "Services purchased",
+      "amountLabel": "Amount",
+      "dateLabel": "Date",
+      "waiverNotice": "You requested immediate provision of the service. The service was provided right after payment, so — per Art. 38(13) of the Consumer Rights Act — you lose the 14-day right of withdrawal for the service that has been provided.",
+      "termsCta": "View Terms",
+      "footer": "This confirmation is the durable medium required by law. Please keep it for your records.",
+      "items": {
+        "listingFee": "Extra listing fee",
+        "promotion": "Listing promotion ({days} days)",
+        "costAccess": "Cost-data access ({days} days)"
+      }
+    },
+    "refund": {
+      "subject": "Refund confirmation — Passflat",
+      "heading": "Your refund has been processed",
+      "intro": "We have issued a refund for your payment. The details are below.",
+      "itemsLabel": "Refunded service",
+      "amountLabel": "Refunded amount",
+      "dateLabel": "Date",
+      "processingNotice": "The refund has been sent to your original payment method. Depending on your bank, it may take a few business days to appear on your statement.",
+      "dashboardCta": "Go to Dashboard",
+      "footer": "You received this email because a refund was issued for a Passflat payment. Please keep it for your records.",
+      "products": {
+        "listing": "Listing services",
+        "costAccess": "Cost-data access",
+        "generic": "Passflat service"
+      }
+    },
+    "passwordReset": {
+      "subject": "Reset your password — Passflat",
+      "heading": "Reset your password",
+      "intro": "We received a request to reset the password for your Passflat account. Click the button below to choose a new password.",
+      "cta": "Reset password",
+      "expiryNotice": "This link is valid for {hours, plural, one {# hour} other {# hours}}. After that you'll need to request a new one.",
+      "fallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "ignoreNotice": "If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.",
+      "footer": "You received this email because a password reset was requested for your Passflat account."
+    },
+    "cityNotifyConfirmation": {
+      "subject": "You're on the list — Passflat in {city}",
+      "heading": "You're on the list!",
+      "intro": "Thanks for your interest in Passflat in {city}.",
+      "body": "We'll email you as soon as we launch Passflat in {city}. There's nothing you need to do in the meantime.",
+      "footer": "You received this email because you signed up to be notified when Passflat launches in your city."
+    },
+    "cityLaunch": {
+      "subject": "We've launched in {city} — Passflat",
+      "heading": "Passflat is now in {city}!",
+      "intro": "Great news — Passflat is now live in {city}.",
+      "body": "You can now browse listings and post your own. Click below to get started.",
+      "cta": "Browse listings",
+      "footer": "You received this email because you signed up to be notified when Passflat launches in your city."
+    },
+    "listingExpiring": {
+      "subject": "Your listing \"{title}\" is expiring soon",
+      "heading": "Your listing is expiring soon",
+      "intro": "Your listing \"{title}\" expires in {days, plural, one {# day} other {# days}}.",
+      "body": "Once it expires, it will no longer be visible to people searching on Passflat. Open your listing to renew or repost it and keep it active.",
+      "cta": "View listing",
+      "footer": "You received this email because you have an active listing on Passflat."
     }
   }
 }

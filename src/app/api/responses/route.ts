@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { sendNewInquiryEmail } from '@/lib/resend';
 import { trackServerEvent } from '@/lib/posthog-server';
+import { localeUrl } from '@/lib/email/url';
+import { resolveEmailLocale } from '@/lib/email/types';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -49,32 +51,25 @@ export async function POST(request: NextRequest) {
   const { listingId, message, name, phone } = body;
 
   if (!listingId) {
-    return NextResponse.json(
-      { error: 'listingId is required' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'listingId is required' }, { status: 400 });
   }
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
     include: {
-      author: { select: { id: true, contactValue: true, displayName: true } },
+      author: {
+        select: { id: true, contactValue: true, displayName: true, locale: true },
+      },
       building: { include: { district: true, city: true } },
     },
   });
 
   if (!listing) {
-    return NextResponse.json(
-      { error: 'Listing not found' },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
   }
 
   if (listing.authorId === user.id) {
-    return NextResponse.json(
-      { error: 'Cannot respond to your own listing' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Cannot respond to your own listing' }, { status: 400 });
   }
 
   const existing = await prisma.listingResponse.findFirst({
@@ -119,18 +114,19 @@ export async function POST(request: NextRequest) {
   const recipientEmail = authorEmail || user.email;
 
   if (recipientEmail && process.env.RESEND_API_KEY) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const citySlug = listing.building.city?.slug || 'warsaw';
+    const locale = resolveEmailLocale(listing.author?.locale);
 
     await sendNewInquiryEmail({
       to: recipientEmail,
+      locale,
       listingTitle: listing.title,
       responderName: name || user.email || 'Someone',
       responderEmail: user.email || '',
       responderPhone: phone || undefined,
       message: message || 'No message provided.',
-      listingUrl: `${appUrl}/pl/${citySlug}/replacement/${listing.id}`,
-      dashboardUrl: `${appUrl}/pl/dashboard`,
+      listingUrl: localeUrl(locale, `/${citySlug}/replacement/${listing.id}`),
+      dashboardUrl: localeUrl(locale, '/dashboard'),
     });
   }
 
