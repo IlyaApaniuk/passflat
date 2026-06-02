@@ -1,37 +1,36 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { usePostHog } from "posthog-js/react";
-import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-
-const CONSENT_KEY = "passflat-cookie-consent";
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import { usePostHog } from 'posthog-js/react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CONSENT_KEY, setConsent } from '@/lib/consent';
 
 const translations = {
   pl: {
-    message: "Używamy plików cookie i analityki, aby poprawić Twoje doświadczenia.",
-    accept: "Akceptuję",
-    decline: "Odrzucam",
-    learnMore: "Dowiedz się więcej",
+    message: 'Używamy plików cookie i analityki, aby poprawić Twoje doświadczenia.',
+    accept: 'Akceptuję',
+    decline: 'Odrzucam',
+    learnMore: 'Dowiedz się więcej',
   },
   en: {
-    message: "We use cookies and analytics to improve your experience.",
-    accept: "Accept",
-    decline: "Decline",
-    learnMore: "Learn more",
+    message: 'We use cookies and analytics to improve your experience.',
+    accept: 'Accept',
+    decline: 'Decline',
+    learnMore: 'Learn more',
   },
   ru: {
-    message: "Мы используем файлы cookie и аналитику для улучшения вашего опыта.",
-    accept: "Принять",
-    decline: "Отклонить",
-    learnMore: "Подробнее",
+    message: 'Мы используем файлы cookie и аналитику для улучшения вашего опыта.',
+    accept: 'Принять',
+    decline: 'Отклонить',
+    learnMore: 'Подробнее',
   },
   uk: {
-    message: "Ми використовуємо файли cookie та аналітику для покращення вашого досвіду.",
-    accept: "Прийняти",
-    decline: "Відхилити",
-    learnMore: "Дізнатися більше",
+    message: 'Ми використовуємо файли cookie та аналітику для покращення вашого досвіду.',
+    accept: 'Прийняти',
+    decline: 'Відхилити',
+    learnMore: 'Дізнатися більше',
   },
 } as const;
 
@@ -40,17 +39,17 @@ type Locale = keyof typeof translations;
 const SUPPORTED_LOCALES = new Set<string>(Object.keys(translations));
 
 function detectLocale(pathname: string): Locale {
-  const segment = pathname.split("/")[1];
+  const segment = pathname.split('/')[1];
   if (segment && SUPPORTED_LOCALES.has(segment)) {
     return segment as Locale;
   }
-  return "pl";
+  return 'pl';
 }
 
 export function CookieConsent() {
   const pathname = usePathname();
   const posthog = usePostHog();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState<boolean | null>(null);
 
   const locale = detectLocale(pathname);
   const t = translations[locale];
@@ -59,22 +58,27 @@ export function CookieConsent() {
     const consent = localStorage.getItem(CONSENT_KEY);
     if (!consent) {
       setVisible(true);
-    } else if (consent === "declined") {
-      posthog?.opt_out_capturing();
+    } else {
+      setVisible(false);
+      if (consent === 'declined') {
+        posthog?.opt_out_capturing();
+      }
     }
   }, [posthog]);
 
   const handleAccept = () => {
-    localStorage.setItem(CONSENT_KEY, "accepted");
+    setConsent('accepted');
     posthog?.opt_in_capturing();
     setVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem(CONSENT_KEY, "declined");
+    setConsent('declined');
     posthog?.opt_out_capturing();
     setVisible(false);
   };
+
+  if (visible === null) return null;
 
   return (
     <AnimatePresence>
@@ -83,16 +87,13 @@ export function CookieConsent() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm p-4 shadow-lg"
         >
           <div className="container mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground max-w-xl">
-              {t.message}{" "}
-              <a
-                href="/privacy"
-                className="underline underline-offset-4 hover:text-foreground"
-              >
+              {t.message}{' '}
+              <a href="/privacy" className="underline underline-offset-4 hover:text-foreground">
                 {t.learnMore}
               </a>
             </p>

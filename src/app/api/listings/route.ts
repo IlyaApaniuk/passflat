@@ -13,6 +13,7 @@ import {
 import { trackServerEvent } from '@/lib/posthog-server';
 import { generateBuildingSlug } from '@/lib/slugify';
 import { normalizeAddress } from '@/lib/address';
+import { FREE_LISTING_LIMIT } from '@/lib/stripe';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -36,7 +37,9 @@ async function getUser() {
       },
     },
   );
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 }
 
@@ -94,6 +97,8 @@ export async function POST(request: NextRequest) {
     subletRules,
     // Content language
     locale,
+    // Payment-related
+    promoteDays = 0,
   } = body;
 
   if (!isValidListingType(type)) {
@@ -132,14 +137,10 @@ export async function POST(request: NextRequest) {
   const addressFull = `${street} ${buildingNumber}`;
 
   const matchedDistrict = district
-    ? city.districts.find(
-        (d) => d.slug === district.toLowerCase() || d.nameKey === district,
-      )
+    ? city.districts.find((d) => d.slug === district.toLowerCase() || d.nameKey === district)
     : null;
 
-  let building = placeId
-    ? await prisma.building.findFirst({ where: { placeId } })
-    : null;
+  let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
 
   if (!building) {
     building = await prisma.building.findUnique({
@@ -184,8 +185,15 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const activeFreeCount = await prisma.listing.count({
+    where: { authorId: user.id, status: 'active', isPaid: false },
+  });
+  const overLimit = activeFreeCount >= FREE_LISTING_LIMIT;
+
   const priceFields = computePriceFields(type, body);
   const expiresAt = computeExpiresAt(type, body);
+
+  const listingStatus = overLimit ? 'pending_payment' : 'active';
 
   const data: Record<string, unknown> = {
     buildingId: building.id,
@@ -201,9 +209,10 @@ export async function POST(request: NextRequest) {
     floor: floor ? parseInt(floor, 10) : null,
     amenities: Array.isArray(amenities) ? amenities : [],
     thingsToKnow: Array.isArray(thingsToKnow) ? thingsToKnow : [],
-    registrationPossible: registrationPossible === true ? true : registrationPossible === false ? false : null,
+    registrationPossible:
+      registrationPossible === true ? true : registrationPossible === false ? false : null,
     photos: photos || [],
-    status: 'active',
+    status: listingStatus,
     expiresAt,
     totalMonthly: priceFields.totalMonthly,
     pricePerPerson: priceFields.pricePerPerson,
@@ -251,6 +260,9 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const parsedPromoteDays = parseInt(promoteDays, 10) || 0;
+  const needCheckout = overLimit || parsedPromoteDays > 0;
+
   trackServerEvent(user.id, 'listing_created', {
     listing_id: listing.id,
     type,
@@ -258,9 +270,14 @@ export async function POST(request: NextRequest) {
     district: matchedDistrict?.slug ?? null,
     has_photos: (photos?.length ?? 0) > 0,
     price: priceFields.totalMonthly ?? priceFields.pricePerPerson ?? priceFields.priceTotal,
+    is_paid: overLimit,
+    promote_days: parsedPromoteDays,
   });
 
-  return NextResponse.json({ listing }, { status: 201 });
+  return NextResponse.json(
+    { listing, needCheckout, overLimit, promoteDays: parsedPromoteDays },
+    { status: 201 },
+  );
 }
 
 export async function GET(request: NextRequest) {

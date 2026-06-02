@@ -3,7 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { sendNewMessageEmail } from '@/lib/resend';
 import { trackServerEvent } from '@/lib/posthog-server';
-import { broadcastNewMessage, broadcastUnread, broadcastNewConversation } from '@/lib/supabase/broadcast';
+import {
+  broadcastNewMessage,
+  broadcastUnread,
+  broadcastNewConversation,
+} from '@/lib/supabase/broadcast';
+import { localeUrl } from '@/lib/email/url';
+import { resolveEmailLocale } from '@/lib/email/types';
 
 async function getUser() {
   const supabase = await createClient();
@@ -23,16 +29,15 @@ export async function POST(request: NextRequest) {
   const { listingId, message } = body;
 
   if (!listingId || !message?.trim()) {
-    return NextResponse.json(
-      { error: 'listingId and message are required' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'listingId and message are required' }, { status: 400 });
   }
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
     include: {
-      author: { select: { id: true, contactValue: true, displayName: true } },
+      author: {
+        select: { id: true, contactValue: true, displayName: true, locale: true },
+      },
       building: { include: { city: true } },
     },
   });
@@ -116,14 +121,14 @@ export async function POST(request: NextRequest) {
   const recipientEmail = authorEmail || user.email;
 
   if (recipientEmail && process.env.RESEND_API_KEY) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
+    const locale = resolveEmailLocale(listing.author?.locale);
     await sendNewMessageEmail({
       to: recipientEmail,
+      locale,
       listingTitle: listing.title,
       senderName: senderDisplayName,
       messageText: message.trim(),
-      conversationUrl: `${appUrl}/pl/messages?c=${conversationId}`,
+      conversationUrl: localeUrl(locale, `/messages?c=${conversationId}`),
     });
   }
 
@@ -188,12 +193,8 @@ export async function GET() {
   });
 
   const result = conversations.map((conv) => {
-    const currentParticipant = conv.participants.find(
-      (p) => p.userId === user.id,
-    );
-    const otherParticipant = conv.participants.find(
-      (p) => p.userId !== user.id,
-    );
+    const currentParticipant = conv.participants.find((p) => p.userId === user.id);
+    const otherParticipant = conv.participants.find((p) => p.userId !== user.id);
     const lastMessage = conv.messages[0] ?? null;
 
     let unreadCount = 0;
@@ -212,10 +213,7 @@ export async function GET() {
       listingPhoto: conv.listing.photos[0] ?? null,
       otherUser: {
         id: otherParticipant?.user.id ?? '',
-        name:
-          otherParticipant?.user.displayName ||
-          otherParticipant?.user.contactValue ||
-          'User',
+        name: otherParticipant?.user.displayName || otherParticipant?.user.contactValue || 'User',
       },
       lastMessage: lastMessage
         ? {
@@ -246,8 +244,7 @@ export async function GET() {
     for (const conv of result) {
       if (conv.lastReadAt === null) {
         conv.lastReadAt = null;
-        (conv as Record<string, unknown>).unreadCount =
-          countMap.get(conv.id) ?? 0;
+        (conv as Record<string, unknown>).unreadCount = countMap.get(conv.id) ?? 0;
       }
     }
   }

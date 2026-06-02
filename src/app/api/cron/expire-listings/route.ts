@@ -50,9 +50,18 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const promoResult = await prisma.listing.updateMany({
+    where: {
+      isPromoted: true,
+      promotedUntil: { lte: now },
+    },
+    data: { isPromoted: false },
+  });
+
   return NextResponse.json({
     success: true,
     expiredCount: result.count,
+    promotionsCleared: promoResult.count,
     timestamp: now.toISOString(),
   });
 }

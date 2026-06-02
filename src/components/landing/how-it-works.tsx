@@ -52,15 +52,15 @@ const TAB_ACCENT: Record<ListingType, string> = {
 };
 
 const TAB_ACTIVE_RING: Record<ListingType, string> = {
-  replacement: 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  roommate: 'border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  sublet: 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  replacement: 'border-blue-500/50 bg-blue-500/15 text-blue-600 dark:text-blue-400',
+  roommate: 'border-violet-500/50 bg-violet-500/15 text-violet-600 dark:text-violet-400',
+  sublet: 'border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400',
 };
 
 const STEP_ICON_COLOR: Record<ListingType, string> = {
-  replacement: 'text-blue-500 border-blue-500',
-  roommate: 'text-violet-500 border-violet-500',
-  sublet: 'text-amber-500 border-amber-500',
+  replacement: 'text-blue-500 border-blue-500/50 bg-blue-500/20',
+  roommate: 'text-violet-500 border-violet-500/50 bg-violet-500/20',
+  sublet: 'text-amber-500 border-amber-500/50 bg-amber-500/20',
 };
 
 const STEP_NUMBER_BG: Record<ListingType, string> = {
@@ -89,9 +89,7 @@ export function HowItWorks() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             {t('landing.howItWorks.title')}
           </h2>
-          <p className="mt-4 text-muted-foreground">
-            {t('landing.howItWorks.subtitle')}
-          </p>
+          <p className="mt-4 text-muted-foreground">{t('landing.howItWorks.subtitle')}</p>
         </div>
 
         {/* Tabs */}
@@ -113,9 +111,7 @@ export function HowItWorks() {
 
         {/* Steps */}
         <div className="relative mx-auto max-w-5xl">
-          <div
-            className={`absolute left-0 right-0 top-12 hidden h-0.5 bg-border lg:block`}
-          />
+          <div className={`absolute left-0 right-0 top-12 hidden h-0.5 bg-border lg:block`} />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -132,9 +128,11 @@ export function HowItWorks() {
                   className="relative flex flex-col items-center text-center"
                 >
                   <div
-                    className={`relative z-10 mb-4 flex h-24 w-24 items-center justify-center rounded-full border-2 bg-background ${STEP_ICON_COLOR[activeTab]}`}
+                    className={`relative z-10 mb-4 flex h-24 w-24 items-center justify-center rounded-full border ${STEP_ICON_COLOR[activeTab]}`}
                   >
-                    <step.icon className={`h-10 w-10 ${STEP_ICON_COLOR[activeTab].split(' ')[0]}`} />
+                    <step.icon
+                      className={`h-10 w-10 ${STEP_ICON_COLOR[activeTab].split(' ')[0]}`}
+                    />
                     <span
                       className={`absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white ${STEP_NUMBER_BG[activeTab]}`}
                     >

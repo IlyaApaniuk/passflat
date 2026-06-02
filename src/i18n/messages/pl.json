@@ -1,9 +1,38 @@
 {
+  "errors": {
+    "notFound": {
+      "metaTitle": "Nie znaleziono strony",
+      "code": "404",
+      "heading": "Nie możemy znaleźć tej strony",
+      "description": "Strona, której szukasz, mogła zostać przeniesiona, usunięta lub nigdy nie istniała. Wróćmy na właściwą drogę.",
+      "home": "Powrót na stronę główną",
+      "browse": "Przeglądaj oferty"
+    },
+    "generic": {
+      "metaTitle": "Coś poszło nie tak",
+      "heading": "Coś poszło nie tak",
+      "description": "Po naszej stronie wystąpił nieoczekiwany błąd. Możesz spróbować ponownie lub wrócić na stronę główną.",
+      "retry": "Spróbuj ponownie",
+      "home": "Powrót na stronę główną"
+    }
+  },
   "cookieConsent": {
     "message": "Używamy plików cookie i analityki, aby poprawić Twoje doświadczenia.",
     "accept": "Akceptuję",
     "decline": "Odrzucam",
     "learnMore": "Dowiedz się więcej"
+  },
+  "meta": {
+    "homeTitle": "Passflat — Znajdź swoje następne mieszkanie w Polsce",
+    "homeDescription": "Europejski marketplace wynajmu z transparentnymi kosztami. Cesje najmu, porównanie rzeczywistych rachunków za media i idealne mieszkanie w Warszawie.",
+    "aboutDescription": "Poznaj Passflat — europejski marketplace wynajmu, który czyni wynajem w Polsce transparentnym i społecznościowym. Cesje najmu, raporty kosztów i więcej.",
+    "howItWorksDescription": "Jak korzystać z Passflat krok po kroku — cesje najmu, szukanie współlokatorów i transparentność kosztów. Znajdź lub przekaż mieszkanie w Warszawie.",
+    "contactDescription": "Skontaktuj się z zespołem Passflat. Zadaj pytanie, zgłoś problem, zaproponuj współpracę lub podziel się opinią o naszym marketplace wynajmu w Warszawie.",
+    "helpDescription": "Odpowiedzi na najczęściej zadawane pytania o Passflat — cesje najmu, raporty kosztów, ogłoszenia i zarządzanie kontem. Przeglądaj nasz FAQ.",
+    "blogDescription": "Poradniki i porady dotyczące wynajmu w Warszawie — cesje najmu, ukryte koszty, wskazówki dla obcokrajowców i wszystko co musisz wiedzieć o rynku.",
+    "termsDescription": "Regulamin Passflat — zasady ogłoszeń, raportów kosztów, płatności, praw konsumenta i korzystania z platformy. Przeczytaj przed skorzystaniem z serwisu.",
+    "privacyDescription": "Polityka prywatności Passflat — jak zbieramy, wykorzystujemy i chronimy Twoje dane osobowe zgodnie z RODO. Procesory danych, prawa, cookies i kontakt.",
+    "pricingDescription": "Cennik Passflat — darmowe ogłoszenia, raporty kosztów i ulubione. Opcjonalne promowane ogłoszenia dla większej widoczności od 39 PLN."
   },
   "common": {
     "appName": "Passflat",
@@ -107,33 +136,35 @@
       "titleHighlight": "Passflat",
       "titleAfter": "?",
       "subtitle": "Stworzone dla najemców, którzy mają dość ukrytych kosztów i złamanych obietnic.",
-      "realCostTitle": "Realne koszty",
-      "realCostDesc": "Zobacz, ile naprawdę płacą najemcy — czynsz, media, opłaty administracyjne. Bez niespodzianek.",
+      "realCostDataTitle": "Realne dane o kosztach",
+      "realCostDataDesc": "Zobacz, ile naprawdę płacą najemcy — czynsz, media, opłaty administracyjne. Dane od prawdziwych najemców z całej Warszawy.",
       "saveDepositTitle": "Zachowaj kaucję",
       "saveDepositDesc": "Znajdź kogoś, kto przejmie Twój najem, zamiast tracić 1–3 miesięczne kaucje.",
-      "verifiedTitle": "Zweryfikowane oferty",
-      "verifiedDesc": "Każda oferta jest weryfikowana przez nasz zespół.",
-      "buildingsTitle": "{count}+ budynków",
-      "buildingsDesc": "Dane o kosztach od prawdziwych najemców z całej Warszawy.",
-      "matchingTitle": "Szybkie dopasowanie",
-      "matchingDesc": "Dopasowanie z zainteresowanymi najemcami w 48 godzin.",
-      "communityTitle": "Zaufanie społeczności",
-      "communityDesc": "Dołącz do {count}+ użytkowników, którzy znaleźli nowe mieszkanie przez Passflat.",
-      "exploreCta": "Przeglądaj dane o kosztach"
+      "directContactTitle": "Bezpośredni kontakt",
+      "directContactDesc": "Pisz bezpośrednio do autorów ogłoszeń — umów oględziny i zadawaj pytania od razu.",
+      "noAgencyFeesTitle": "Bez prowizji",
+      "noAgencyFeesDesc": "Kontaktuj się bezpośrednio z najemcami — bez pośredników i ukrytych opłat.",
+      "quickProcessTitle": "Szybki proces",
+      "quickProcessDesc": "Dodaj ogłoszenie i zacznij otrzymywać odpowiedzi od razu.",
+      "exploreCta": "Sprawdź koszty"
     },
     "featured": {
       "title": "Wyróżnione oferty",
-      "subtitle": "Cesje najmu, pokoje do wynajęcia i krótkoterminowy podnajem w Warszawie",
+      "subtitle": "Cesje najmu, pokoje do wynajęcia i tymczasowy podnajem w Warszawie",
       "viewAll": "Zobacz wszystkie",
       "rentFees": "Czynsz + opłaty",
-      "from": "Od {date}"
+      "from": "Od {date}",
+      "comingSoonTitle": "Oferty już wkrótce",
+      "comingSoonDesc": "Bądź pierwszy! Prawdziwe ogłoszenia pojawią się tutaj.",
+      "postCta": "Dodaj ogłoszenie"
     },
     "costTransparency": {
       "badge": "Przejrzystość kosztów",
       "title": "Poznaj",
       "titleHighlight": "realne koszty przed podpisaniem",
-      "subtitle": "Dane o kosztach od prawdziwych najemców. Zobacz, ile naprawdę płacą za media i ukryte opłaty w dowolnym budynku.",
+      "subtitle": "Dane o kosztach od prawdziwych najemców. Zobacz, ile naprawdę płacą za media i ukryte opłaty.",
       "contributeUnlockDesc": "Dodaj dane o kosztach, aby odblokować pełne raporty",
+      "orBuyAccess": "lub kup czasowy dostęp",
       "alreadyContributedDesc": "Masz dostęp do pełnych raportów o kosztach",
       "exploreCosts": "Przeglądaj dane o kosztach",
       "viewReports": "Przeglądaj dane o kosztach",
@@ -144,7 +175,9 @@
       "unlockFullData": "Odblokuj pełne dane",
       "electricity": "Prąd",
       "reports": "raportów",
-      "accuracyScore": "Wynik dokładności"
+      "accuracyScore": "Wynik dokładności",
+      "communityVerified": "Dane zweryfikowane przez społeczność",
+      "anonymousVerified": "Anonimowe i zweryfikowane przez najemców"
     },
     "districts": {
       "title": "Odkryj",
@@ -178,12 +211,66 @@
       "vibeAffordable": "Przystępne ceny i przestronne mieszkania",
       "vibeUpcoming": "Rozwijająca się i przystępna cenowo"
     },
+    "faq": {
+      "title": "Najczęściej zadawane",
+      "titleHighlight": "pytania",
+      "q1": "Czym jest cesja najmu?",
+      "a1": "Cesja najmu to przeniesienie praw i obowiązków z istniejącej umowy najmu na nowego najemcę. Warunki pierwotnej umowy — czynsz, kaucja, okres — zazwyczaj pozostają bez zmian. To standardowy instrument prawny w polskim Kodeksie cywilnym.",
+      "q2": "Czy to legalne?",
+      "a2": "Tak, jak najbardziej. Cesja najmu jest regulowana przez Kodeks cywilny. Wymaga pisemnej zgody trzech stron: obecnego najemcy, nowego najemcy i wynajmującego.",
+      "q3": "Ile kosztuje Passflat?",
+      "a3": "Przeglądanie ofert i dodawanie ogłoszeń jest bezpłatne (do 2 aktywnych). Raporty kosztów są darmowe po dodaniu własnych danych — lub możesz kupić czasowy dostęp. Promowane ogłoszenia od 39 PLN za 7 dni.",
+      "q4": "Czy potrzebuję zgody wynajmującego?",
+      "a4": "Tak, wynajmujący musi wyrazić zgodę na cesję. Większość właścicieli się zgadza, bo zyskują sprawdzonego najemcę i unikają pustostanu — to korzystne dla wszystkich.",
+      "q5": "Jak działa przejrzystość kosztów?",
+      "a5": "Najemcy anonimowo udostępniają swoje realne miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc wiesz, ile zapłacisz, zanim podpiszesz umowę.",
+      "q6": "Czy moje dane są bezpieczne?",
+      "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO."
+    },
+    "forWhom": {
+      "title": "Passflat jest dla",
+      "titleHighlight": "każdego",
+      "findHome": {
+        "title": "Znajdź mieszkanie",
+        "description": "Przeglądaj cesje najmu i podnajmy z realnymi kosztami. Bez ukrytych opłat — uczciwe oferty od prawdziwych najemców.",
+        "cta": "Przeglądaj oferty"
+      },
+      "findRoommate": {
+        "title": "Znajdź współlokatora",
+        "description": "Szukaj kompatybilnych współlokatorów lub dodaj wolny pokój. Cena za osobę, preferencje i kto już mieszka.",
+        "cta": "Szukaj współlokatorów"
+      },
+      "sublet": {
+        "title": "Tymczasowy podnajem",
+        "description": "Jedziesz na wakacje lub w delegację? Podnajmij swoje mieszkanie na określony czas. Podaj dokładne daty, łączną cenę i znajdź tymczasowego najemcę.",
+        "cta": "Przeglądaj podnajmy"
+      }
+    },
+    "aboutTeam": {
+      "text": "Stworzony przez najemców, którzy sami to przeszli. Założyliśmy Passflat, bo znalezienie uczciwych informacji o wynajmie w Warszawie nie powinno być takie trudne.",
+      "link": "Dowiedz się więcej o nas"
+    },
+    "cityNotify": {
+      "badge": "Wkrótce w innych miastach",
+      "title": "Mieszkasz w innym mieście?",
+      "subtitle": "Zaczynamy od Warszawy i rozszerzamy się. Powiedz, w jakim mieście chcesz zobaczyć Passflat — powiadomimy Cię o uruchomieniu.",
+      "currentCity": "Aktualnie działamy w Warszawie, Polska",
+      "emailPlaceholder": "Twój email",
+      "cityPlaceholder": "Jakie miasto?",
+      "submit": "Powiadom mnie",
+      "success": "Dzięki! Damy znać.",
+      "error": "Coś poszło nie tak. Spróbuj ponownie.",
+      "consent": "Wyrażam zgodę na przetwarzanie moich danych osobowych",
+      "consentRequired": "Musisz wyrazić zgodę na przetwarzanie danych osobowych.",
+      "privacyNote": "<privacyLink>Polityka prywatności</privacyLink>"
+    },
     "cta": {
       "title": "Gotowy znaleźć swoje",
       "titleHighlight": "nowe mieszkanie?",
       "subtitle": "Cesja najmu, współlokator lub podnajem — znajdź odpowiednią opcję z przejrzystymi cenami.",
       "browseCta": "Przeglądaj oferty",
-      "listCta": "Dodaj mieszkanie"
+      "listCta": "Dodaj ogłoszenie",
+      "freeNote": "Dodawanie jest darmowe — promowanie od 39 PLN"
     },
     "footer": {
       "tagline": "Europejski marketplace wynajmu z przejrzystymi cenami. Znajdź nowe mieszkanie z realnymi danymi o kosztach.",
@@ -195,6 +282,7 @@
       "costReports": "Raporty kosztów",
       "addListing": "Dodaj ogłoszenie",
       "pricing": "Cennik",
+      "resources": "Wzory dokumentów",
       "company": "Firma",
       "aboutUs": "O nas",
       "howItWorks": "Jak to działa",
@@ -211,8 +299,20 @@
       "cookies": "Cookies",
       "legal": "Prawne",
       "systemsOperational": "Wszystkie systemy działają",
-      "betaStatus": "Otwarta beta — Warszawa"
+      "betaStatus": "Otwarta beta — Warszawa",
+      "followUs": "Obserwuj nas"
     }
+  },
+  "breadcrumbs": {
+    "home": "Strona główna",
+    "about": "O nas",
+    "blog": "Blog",
+    "contact": "Kontakt",
+    "help": "Centrum pomocy",
+    "howItWorks": "Jak to działa",
+    "pricing": "Cennik",
+    "privacy": "Polityka prywatności",
+    "terms": "Regulamin"
   },
   "listings": {
     "title": "Cesje najmu",
@@ -391,6 +491,7 @@
       "photosTitle": "Zdjęcia",
       "uploadPhotos": "Kliknij, aby dodać zdjęcia",
       "maxPhotosReached": "Osiągnięto limit zdjęć",
+      "fileTooLarge": "Plik jest za duży (maks. {max} MB)",
       "uploadHint": "PNG, JPG do 10 MB każde",
       "cover": "Okładka",
       "photoHint": "Dodaj co najmniej 3 zdjęcia. Pierwsze zdjęcie będzie okładką.",
@@ -401,6 +502,24 @@
       "promote7days": "7 dni - 39 PLN",
       "promote14days": "14 dni - 59 PLN",
       "promote30days": "30 dni - 89 PLN",
+      "promotionOptional": "Opcjonalnie: promuj ogłoszenie",
+      "promotionNone": "Bez promocji",
+      "paidListingNotice": "Wykorzystałeś {limit} darmowych ogłoszeń. To ogłoszenie jest płatne.",
+      "paidListingFee": "Opłata za ogłoszenie",
+      "freeListingLabel": "Bezpłatne ({used} z {limit})",
+      "promotionLabel": "Promocja",
+      "totalLabel": "Razem",
+      "continueToPayment": "Przejdź do płatności — {total} PLN",
+      "paymentProcessing": "Przetwarzanie płatności...",
+      "paymentAwaiting": "Oczekuje na płatność",
+      "paymentComplete": "Dokończ płatność",
+      "paymentAwaitingHint": "Jeszcze nieopublikowane. Usunięte po 24h bez opłaty.",
+      "paidBadge": "Płatne ogłoszenie",
+      "consentLabel": "Żądam natychmiastowego wykonania usługi i rezygnuję z 14-dniowego prawa odstąpienia.",
+      "checkoutWaiverNote": "Usługi płatne są świadczone natychmiast po dokonaniu płatności. Kontynuując, akceptujesz nasz Regulamin; po wykonaniu usługi nie możesz już skorzystać z 14-dniowego prawa odstąpienia.",
+      "photoUploading": "Przesyłanie...",
+      "photoError": "Przesyłanie nie powiodło się",
+      "photoRetry": "Ponów",
       "searchAddress": "Wyszukaj adres",
       "addressPlaceholder": "Zacznij wpisywać adres...",
       "addressHint": "Wpisz, aby wyszukać przez Google Places, lub wypełnij ręcznie poniżej",
@@ -518,8 +637,7 @@
     "subtitle": "Realne koszty najmu zgłoszone przez najemców",
     "overview": {
       "badge": "Przejrzystość kosztów",
-      "title": "Realne raporty kosztów od prawdziwych najemców",
-      "subtitle": "Dane o kosztach najmu od społeczności. Dowiedz się, ile naprawdę zapłacisz przed podpisaniem umowy.",
+      "title": "Sprawdź, ile naprawdę zapłacisz przed podpisaniem umowy",
       "searchPlaceholder": "Szukaj po adresie lub dzielnicy...",
       "submitCosts": "Zgłoś koszty",
       "districts": "Dzielnice",
@@ -529,7 +647,29 @@
       "unlockFullData": "Odblokuj pełne dane",
       "unlockDesc": "Zgłoś swoje koszty, aby uzyskać dostęp do szczegółowych raportów",
       "submitMyCosts": "Zgłoś moje koszty",
+      "buyAccessBtn": "Kup dostęp",
+      "gateLead": "Dane są ukryte. Odblokuj je jednym ze sposobów:",
+      "gateRecommended": "Polecane",
+      "gateFreeTitle": "Podziel się kosztami",
+      "gateFreeBenefit": "Bezpłatnie \u00b7 stały dostęp",
+      "gateFreeNote": "\u22482 min",
+      "gatePaidTitle": "Kup dostęp",
+      "gatePaidBenefit": "Od razu \u00b7 od {price} PLN",
+      "gatePaidNote": "7\u201390 dni",
       "avgMonthlyTotal": "Śr. miesięczna suma",
+      "medianMonthlyTotal": "Mediana sumy miesięcznej",
+      "perM2": "zł/m²",
+      "districtMedianRent": "Mediana czynszu",
+      "districtMedianCzynsz": "Mediana opłat adm.",
+      "districtMedianTotal": "Mediana sumy",
+      "districtMedianPerM2": "Mediana czynszu/m²",
+      "sortLabel": "Sortuj:",
+      "sortDefault": "Domyślnie",
+      "sortTotal": "Mediana całości",
+      "sortPerM2": "Czynsz / m²",
+      "sortReports": "Zgłoszenia",
+      "nReports": "{count} zgłoszeń",
+      "estimateLegend": "Mediany to wartości orientacyjne ze zgłoszeń najemców, nie oferty.",
       "submitToUnlock": "Zgłoś, aby odblokować",
       "noBuildingsFound": "Nie znaleziono budynków",
       "noBuildingsDesc": "Spróbuj innego wyszukiwania lub bądź pierwszy — zgłoś koszty swojego budynku",
@@ -551,6 +691,25 @@
       "flaggedTitle": "Twój raport jest weryfikowany",
       "flaggedDesc": "Zauważyliśmy nietypowe wartości w Twoim raporcie kosztów. Dane są ukryte, dopóki ich nie poprawisz lub nie potwierdzisz z nami."
     },
+    "buyAccess": {
+      "title": "Kup dostęp do danych o kosztach",
+      "subtitle": "Uzyskaj natychmiastowy dostęp do raportów kosztów dla wszystkich budynków.",
+      "tier7": "7 dni",
+      "tier30": "30 dni",
+      "tier90": "90 dni",
+      "priceFmt": "{price} PLN",
+      "buyButton": "Kup dostęp",
+      "orContribute": "Lub dodaj swoje koszty, aby odblokować za darmo.",
+      "contributeLink": "Zgłoś swoje koszty",
+      "successToast": "Płatność zakończona sukcesem! Masz pełny dostęp do danych o kosztach.",
+      "cancelToast": "Płatność została anulowana."
+    },
+    "access": {
+      "activeUntil": "Dostęp aktywny do {date}",
+      "renew": "Odnów",
+      "expiredOn": "Twój dostęp wygasł {date}",
+      "expiredCta": "Kup ponownie lub dodaj swoje dane, aby odblokować"
+    },
     "submit": {
       "title": "Zgłoś swoje koszty",
       "description": "Pomóż społeczności dzieląc się swoimi realnymi wydatkami",
@@ -562,8 +721,6 @@
       "yourAddress": "Twój adres",
       "street": "Ulica",
       "buildingNo": "Nr budynku",
-      "aptNoOptional": "Nr mieszkania (opcjonalnie)",
-      "aptPrivateNote": "Numer mieszkania jest poufny",
       "district": "Dzielnica",
       "selectDistrict": "Wybierz dzielnicę",
       "size": "Powierzchnia (m²)",
@@ -585,7 +742,7 @@
       "baseRentAdmin": "Baza (Czynsz + Admin)",
       "utilitiesLabel": "Dopłaty",
       "privacyTitle": "Twoje dane są anonimowe",
-      "privacyDesc": "Pokazujemy tylko dane zagregowane. Numer mieszkania i dokładne koszty nigdy nie są publicznie wyświetlane.",
+      "privacyDesc": "Pokazujemy tylko dane zagregowane. Dokładne koszty nigdy nie są publicznie wyświetlane.",
       "deposit": "Kaucja",
       "rentalTypeRequired": "Wybierz co wynajmujesz (mieszkanie lub pokój)",
       "submitButton": "Wyślij raport kosztów",
@@ -620,7 +777,12 @@
       "unlockTitle": "Odblokuj dane o kosztach budynku",
       "unlockDesc": "Wyślij swój raport kosztów, aby uzyskać dostęp do szczegółowych danych tego i wszystkich innych budynków",
       "avgMonthlyTotal": "Średnia miesięczna suma",
+      "medianMonthlyTotal": "Typowa miesięczna suma",
       "basedOnReports": "Na podstawie {count} raportów najemców",
+      "typicalRange": "Zwykle {min}–{max} PLN",
+      "perM2": "zł/m²",
+      "rentPerM2Label": "czynsz za m²",
+      "estimateCaption": "Szacunek na podstawie {count} raportów najemców",
       "costBreakdown": "Podział kosztów",
       "rent": "Czynsz najmu",
       "adminFee": "Czynsz administracyjny",
@@ -635,10 +797,20 @@
       "thisBuilding": "Ten budynek",
       "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
+      "districtMedian": "Mediana — {district}",
+      "cityMedian": "Mediana — Warszawa",
+      "baselineRange": "Zwykle {min}–{max} PLN",
+      "baselineSampleSize": "na podstawie {count} zgłoszeń",
+      "rentPerM2Compare": "Czynsz za m²",
+      "districtPerM2": "{district}: ≈ {value} {unit}",
+      "cheaperThanPct": "Tańsze niż ~{percent}% zgłoszeń w dzielnicy {district}",
+      "pricierThanPct": "Droższe niż ~{percent}% zgłoszeń w dzielnicy {district}",
+      "comparisonCaption": "Szacunek orientacyjny. Wartości dla dzielnicy i miasta to mediana wszystkich zgłoszeń w okolicy.",
       "percentLower": "{percent}% niżej",
       "higher": "Wyżej",
       "percentHigher": "{percent}% wyżej",
       "matchesAverage": "Zgodne ze średnią",
+      "matchesMedian": "Zgodne z medianą",
       "otherCosts": "Inne koszty",
       "deposit": "Kaucja",
       "depositDesc": "Jednorazowa kaucja zwrotna",
@@ -648,6 +820,11 @@
       "lookingForApartmentDesc": "Zobacz dostępne oferty ze zweryfikowanymi kosztami",
       "viewListingsIn": "Zobacz oferty w {district}",
       "demoSimulate": "[Demo] Symuluj wkład"
+    },
+    "trust": {
+      "reliable": "Wiarygodne dane",
+      "lowData": "Wstępne szacunki",
+      "outdated": "Dane mogą być nieaktualne"
     },
     "locked": {
       "title": "Dodaj dane, aby odblokować",
@@ -677,7 +854,8 @@
       "password": "Hasło",
       "submit": "Zaloguj się",
       "noAccount": "Nie masz konta?",
-      "signUp": "Zarejestruj się"
+      "signUp": "Zarejestruj się",
+      "forgotPassword": "Nie pamiętasz hasła?"
     },
     "register": {
       "title": "Utwórz konto",
@@ -689,16 +867,41 @@
       "logIn": "Zaloguj się",
       "emailSent": "Sprawdź swoją skrzynkę email, aby potwierdzić konto",
       "passwordMismatch": "Hasła nie są takie same"
+    },
+    "forgotPassword": {
+      "title": "Nie pamiętasz hasła?",
+      "description": "Podaj swój adres email, a wyślemy Ci link do zresetowania hasła.",
+      "email": "Email",
+      "submit": "Wyślij link",
+      "backToLogin": "Powrót do logowania",
+      "sentTitle": "Sprawdź swoją skrzynkę",
+      "sentDescription": "Jeśli konto dla tego adresu istnieje, wysłaliśmy link do zresetowania hasła."
+    },
+    "resetPassword": {
+      "title": "Ustaw nowe hasło",
+      "password": "Nowe hasło",
+      "confirmPassword": "Potwierdź nowe hasło",
+      "submit": "Zmień hasło",
+      "passwordMismatch": "Hasła nie są takie same",
+      "error": "Coś poszło nie tak. Spróbuj ponownie.",
+      "invalidTitle": "Link nieprawidłowy lub wygasł",
+      "invalidDescription": "Ten link do resetowania hasła jest już nieaktywny. Poproś o nowy.",
+      "requestNew": "Poproś o nowy link",
+      "successTitle": "Hasło zmienione",
+      "successDescription": "Twoje hasło zostało zmienione. Przekierowujemy do logowania…"
     }
   },
   "howItWorksPage": {
     "title": "Jak działa Passflat",
     "subtitle": "Szukasz nowego mieszkania lub chcesz przekazać swój najem? Oto jak to działa, krok po kroku.",
+    "tabSeekers": "Szukam mieszkania",
+    "tabListers": "Przekazuję najem",
+    "tabCosts": "Porównuję koszty",
     "seekers": {
       "label": "Dla szukających mieszkania",
       "title": "Znajdź nowe mieszkanie — z realnymi kosztami, bez niespodzianek",
       "step1Title": "Przeglądaj zweryfikowane oferty",
-      "step1Desc": "Szukaj mieszkań do cesji najmu w Warszawie z pełnym rozbiciem kosztów — czynsz, opłaty administracyjne i realne koszty mediów.",
+      "step1Desc": "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z pełnym rozbiciem kosztów — czynsz, opłaty administracyjne i realne koszty mediów.",
       "step2Title": "Filtruj i eksploruj",
       "step2Desc": "Zawęź wyszukiwanie wg dzielnicy, zakresu cen, liczby pokoi i daty wprowadzenia. Przeglądaj oferty na interaktywnej mapie.",
       "step3Title": "Skontaktuj się z obecnym najemcą",
@@ -706,31 +909,53 @@
       "step4Title": "Uzgodnij warunki",
       "step4Desc": "Gdy znajdziesz odpowiednie miejsce, uzgodnij przekazanie i podpisz aneks do umowy najmu (cesję) z wynajmującym.",
       "step5Title": "Przeprowadź się",
-      "step5Desc": "Dokończ przekazanie — bez utraty kaucji, bez prowizji. Zacznij nowy rozdział."
+      "step5Desc": "Dokończ przekazanie — bez utraty kaucji, bez prowizji. Zacznij nowy rozdział.",
+      "cta": "Przeglądaj ogłoszenia"
     },
     "listers": {
       "label": "Dla obecnych najemców",
       "title": "Przekaż najem — zachowaj kaucję",
       "step1Title": "Utwórz ogłoszenie",
-      "step1Desc": "Dodaj mieszkanie z adresem (autouzupełnianie Google Places), zdjęciami i pełnym rozbiciem kosztów.",
+      "step1Desc": "Dodaj mieszkanie z adresem, zdjęciami i pełnym rozbiciem kosztów. Pierwsze 2 ogłoszenia są darmowe — kolejne wymagają jednorazowej opłaty.",
       "step2Title": "Pojaw się na mapie",
-      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania. Promowane oferty zyskują dodatkową widoczność.",
+      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania. Opcjonalna promocja zwiększa widoczność na 7, 14 lub 30 dni.",
       "step3Title": "Otrzymuj zainteresowania",
       "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości na swoim koncie.",
       "step4Title": "Wybierz zastępcę",
       "step4Desc": "Wybierz najlepszego kandydata i skoordynuj cesję najmu z wynajmującym.",
       "step5Title": "Przekaż klucze",
-      "step5Desc": "Dokończ przekazanie i odzyskaj kaucję. Gotowe."
+      "step5Desc": "Dokończ przekazanie i odzyskaj kaucję. Gotowe.",
+      "cta": "Dodaj ogłoszenie"
     },
     "costs": {
       "label": "Przejrzystość kosztów",
       "title": "Poznaj realne koszty przed podpisaniem",
       "step1Title": "Zgłoś anonimowy raport kosztów",
-      "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet. Numer mieszkania nigdy nie jest pokazywany.",
+      "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet.",
       "step2Title": "Odblokuj pełną bazę danych",
-      "step2Desc": "Po dodaniu raportu uzyskasz pełny dostęp do danych o kosztach wszystkich budynków w bazie.",
+      "step2Desc": "Po dodaniu raportu uzyskasz pełny dostęp do danych o kosztach wszystkich budynków. Alternatywnie możesz kupić czasowy dostęp (7, 30 lub 90 dni), jeśli nie masz jeszcze danych do udostępnienia.",
       "step3Title": "Porównaj przed podpisaniem",
-      "step3Desc": "Zobacz średnie, minimalne i maksymalne koszty na budynek. Sprawdź statystyki dzielnic — zanim podpiszesz umowę."
+      "step3Desc": "Zobacz typowe (mediana), minimalne i maksymalne koszty na budynek. <compareLink>Porównaj koszty</compareLink> dzielnic — zanim podpiszesz umowę.",
+      "cta": "Dodaj swoje koszty",
+      "ctaBuy": "Kup dostęp",
+      "ctaExplore": "Przeglądaj dane o kosztach"
+    },
+    "trust": {
+      "euData": "Dane przechowywane w UE",
+      "gdpr": "Zgodność z RODO",
+      "noSpam": "Bez spamu"
+    },
+    "testimonials": {
+      "title": "Co mówią nasi użytkownicy",
+      "t1Name": "Anna K.",
+      "t1Role": "Najemczyni, Mokotów",
+      "t1Text": "Znalazłam osobę na zamianę w zaledwie 5 dni i odzyskałam całą kaucję. Cały proces cesji okazał się znacznie prostszy, niż się spodziewałam.",
+      "t2Name": "Marco R.",
+      "t2Role": "Obcokrajowiec, Wola",
+      "t2Text": "Jako obcokrajowiec bałem się prowizji agencji. Przez Passflat znalazłem mieszkanie bezpośrednio od poprzedniego najemcy — zero prowizji.",
+      "t3Name": "Olena T.",
+      "t3Role": "Najemczyni, Ursynów",
+      "t3Text": "Przed podpisaniem umowy sprawdziłam raporty kosztów dla mojego budynku. Żadnych niespodzianek na pierwszym rachunku — wszystko się zgadzało."
     },
     "faq": {
       "title": "Najczęściej zadawane pytania",
@@ -741,13 +966,14 @@
       "q3": "Czy potrzebuję zgody wynajmującego?",
       "a3": "Tak. Wynajmujący musi wyrazić zgodę na przeniesienie najmu. Większość wynajmujących się zgadza, ponieważ zyskują solidnego najemcę i unikają pustostanu. To w interesie wszystkich.",
       "q4": "Ile kosztuje Passflat?",
-      "a4": "Dodanie ogłoszenia jest bezpłatne. Opcjonalne promowane ogłoszenia (dla lepszej widoczności) są dostępne za niewielką opłatą od 39 PLN. Przeglądanie i raporty kosztów są całkowicie bezpłatne.",
+      "a4": "Masz 2 darmowe aktywne ogłoszenia. Kolejne wymagają jednorazowej opłaty. Opcjonalne promowane ogłoszenia (dla lepszej widoczności) zaczynają się od 39 PLN. Raporty kosztów są bezpłatne po dodaniu własnych danych — możesz też kupić czasowy dostęp.",
       "q5": "Czy Passflat jest dostępny poza Warszawą?",
       "a5": "Zaczynamy od Warszawy, ale platforma jest zaprojektowana z myślą o ekspansji na wiele miast. Kraków, Wrocław i inne europejskie miasta są w naszym planie."
     },
     "ctaTitle": "Gotowy, aby zacząć?",
     "ctaBrowse": "Przeglądaj oferty",
-    "ctaPost": "Dodaj ogłoszenie"
+    "ctaPost": "Dodaj ogłoszenie",
+    "ctaCosts": "Zobacz koszty"
   },
   "about": {
     "title": "O Passflat",
@@ -755,7 +981,7 @@
     "problem": {
       "label": "Problem",
       "title": "Wynajem w Polsce jest zepsuty",
-      "p1": "Najemcy tracą kaucje, gdy muszą się wyprowadzić przed końcem umowy. Nie ma łatwego sposobu na znalezienie zastępcy — więc albo płacisz karę, albo tracisz miesięczne czynsze.",
+      "p1": "Najemcy tracą kaucje, gdy muszą się wyprowadzić przed końcem umowy. <howItWorksLink>Nie ma łatwego sposobu na znalezienie zastępcy</howItWorksLink> — więc albo płacisz karę, albo tracisz miesięczne czynsze.",
       "p2": "Koszty mediów są ukryte do momentu podpisania umowy. Dowiadujesz się o realnych miesięcznych wydatkach dopiero po przeprowadzce — a wtedy jest już za późno.",
       "p3": "Prowizje pośredników są wysokie, a obcokrajowcy mają jeszcze większą lukę informacyjną przy szukaniu mieszkania."
     },
@@ -766,7 +992,7 @@
       "pillar1Desc": "Znajdź zastępcę i zachowaj kaucję. Przejmij czyjś najem i omiń prowizję pośrednika. Cesja najmu to standardowy instrument prawny w Polsce — my ułatwiamy ten proces.",
       "pillar2Title": "Szukanie współlokatora",
       "pillar2Desc": "Znajdź odpowiedniego współlokatora lub zapełnij wolny pokój. Określ preferencje, typ pokoju i koszt na osobę — aby obie strony wiedziały, czego się spodziewać.",
-      "pillar3Title": "Krótkoterminowy podnajem",
+      "pillar3Title": "Tymczasowy podnajem",
       "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
       "pillar4Title": "Przejrzystość kosztów",
       "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę, zanim podpiszesz umowę."
@@ -774,22 +1000,29 @@
     "team": {
       "label": "Kim jesteśmy",
       "title": "Stworzone przez najemców, dla najemców",
-      "description": "Jesteśmy małym zespołem z Warszawy. Sami tu wynajmujemy i znamy ten ból z pierwszej ręki — utracone kaucje, niespodziewane rachunki za media i frustracja związana z nieprzejrzystym rynkiem wynajmu. Stworzyliśmy Passflat, bo sami tego potrzebowaliśmy."
+      "description": "Jesteśmy małym zespołem inżynierów i projektantów z Warszawy. Sami tu wynajmujemy i znamy ten ból z pierwszej ręki — utracone kaucje, niespodziewane rachunki za media i frustracja związana z nieprzejrzystym rynkiem wynajmu. Stworzyliśmy Passflat w 2024 roku, bo sami tego potrzebowaliśmy.",
+      "description2": "Między nami mamy 10+ przeprowadzek po Warszawie, doświadczenie z agencjami po obu stronach i przejście procesu cesji zarówno jako najemcy, jak i wynajmujący. To doświadczenie kształtuje każdą funkcję, którą tworzymy."
     },
     "values": {
-      "label": "Nasze wartości",
-      "title": "Za czym stoimy",
-      "transparency": "Przejrzystość",
-      "transparencyDesc": "Realne koszty, bez ukrytych opłat. Każde ogłoszenie pokazuje pełne rozbicie kosztów, abyś wiedział, ile naprawdę zapłacisz.",
-      "community": "Społeczność",
-      "communityDesc": "Dane tworzone przez najemców, dla najemców. Im więcej osób się dzieli, tym lepsze dane dla wszystkich.",
-      "accessibility": "Dostępność",
-      "accessibilityDesc": "Wielojęzyczność (PL, EN, RU, UA) dla zróżnicowanej populacji najemców Warszawy. Każdy zasługuje na równy dostęp do informacji o mieszkaniach."
+      "label": "Nasze zasady",
+      "title": "Zasady platformy",
+      "principle1": "Żadnych ukrytych informacji",
+      "principle1Desc": "Pokazujemy realne liczby — nawet gdy są niewygodne dla rynku. Każde ogłoszenie zawiera pełny podział kosztów, zanim się z kimkolwiek skontaktujesz.",
+      "principle2": "Twoje dane należą do Ciebie",
+      "principle2Desc": "Każdy raport kosztów pozostaje anonimowy i bezpłatny dla wszystkich. Nigdy nie ukrywamy danych społeczności za paywallem ani nie sprzedajemy ich.",
+      "principle3": "Otwarte domyślnie",
+      "principle3Desc": "Wszystkie dane społeczności są dostępne bez rejestracji. Bez planów premium, bez ukrytych treści, bez limitów. Jeśli informacja istnieje — jest dostępna dla każdego.",
+      "principle4": "Najemca na pierwszym miejscu",
+      "principle4Desc": "Nie współpracujemy z agencjami i nie sprzedajemy Twoich danych. Każda decyzja produktowa podejmowana jest z perspektywy najemcy."
     },
     "vision": {
       "label": "Dokąd zmierzamy",
       "title": "Zaczynamy w Warszawie. Rozszerzamy się na Europę.",
       "description": "Warszawa to nasz pierwszy rynek, ale architektura od początku wspiera wiele miast i krajów. Kraków, Wrocław i inne europejskie miasta są w naszym planie."
+    },
+    "stats": {
+      "listings": "Aktywnych ogłoszeń",
+      "costReports": "Raportów kosztów"
     },
     "ctaTitle": "Dołącz do społeczności",
     "ctaBrowse": "Przeglądaj oferty",
@@ -813,7 +1046,9 @@
     "topic4": "Czym jest czynsz administracyjny i co obejmuje?",
     "topic4Desc": "Czynsz administracyjny to jeden z najbardziej mylących elementów wynajmu w Polsce. Wyjaśniamy, za co tak naprawdę płacisz.",
     "ctaText": "W międzyczasie sprawdź realne koszty najmu wg budynków",
-    "ctaButton": "Przeglądaj dane o kosztach"
+    "ctaButton": "Przeglądaj dane o kosztach",
+    "backToBlog": "Powrót do bloga",
+    "readMore": "Czytaj dalej"
   },
   "dashboard": {
     "title": "Moje konto",
@@ -833,6 +1068,13 @@
     "statusPending": "Oczekujące",
     "statusExpired": "Wygasłe",
     "statusClosed": "Zamknięte",
+    "statusPendingPayment": "Oczekuje na płatność",
+    "statusProcessing": "Przetwarzanie płatności...",
+    "freeListingsUsed": "Darmowe ogłoszenia: {used}/{limit} wykorzystane",
+    "extraListingsPaid": "Dodatkowe ogłoszenia są płatne",
+    "paidBadge": "Płatne",
+    "completePayment": "Dokończ płatność",
+    "completePaymentHint": "Jeszcze nieopublikowane. Usunięte po 24h bez opłaty.",
     "viewListing": "Zobacz ogłoszenie",
     "promote": "Promuj",
     "views": "{count} wyświetleń",
@@ -848,7 +1090,24 @@
     "confirmRemoveFavorite": "Czy na pewno chcesz usunąć to ogłoszenie z ulubionych?",
     "confirmDeleteTitle": "Usunąć ogłoszenie?",
     "confirmDeleteDesc": "Tej akcji nie można cofnąć. Ogłoszenie zostanie trwale usunięte.",
-    "listingDeleted": "Ogłoszenie zostało usunięte"
+    "listingDeleted": "Ogłoszenie zostało usunięte",
+    "billing": {
+      "title": "Płatności",
+      "empty": "Brak płatności",
+      "emptyDesc": "Twoje płatności za dodatkowe ogłoszenia, promocje i dostęp do danych o kosztach pojawią się tutaj.",
+      "viewReceipt": "Zobacz potwierdzenie",
+      "receiptError": "Potwierdzenie nie jest jeszcze dostępne. Spróbuj ponownie za chwilę.",
+      "support": "Pomoc",
+      "supportSubject": "Pomoc dotycząca płatności — nr {ref}",
+      "itemListing": "Ogłoszenie",
+      "itemCostAccess": "Dostęp do danych o kosztach",
+      "status": {
+        "completed": "Opłacone",
+        "pending": "Oczekuje",
+        "refunded": "Zwrócone",
+        "expired": "Wygasłe"
+      }
+    }
   },
   "favorites": {
     "addToFavorites": "Dodaj do ulubionych",
@@ -874,7 +1133,11 @@
       "message": "Wiadomość",
       "messagePlaceholder": "W czym możemy pomóc?",
       "submit": "Wyślij wiadomość",
-      "sending": "Wysyłanie..."
+      "sending": "Wysyłanie...",
+      "consent": "Wyrażam zgodę na przetwarzanie danych osobowych",
+      "privacyNote": "<privacyLink>Polityka Prywatności</privacyLink>",
+      "consentRequired": "Musisz wyrazić zgodę na przetwarzanie danych osobowych, aby wysłać ten formularz.",
+      "privacyLinkText": "Polityce Prywatności"
     },
     "success": {
       "title": "Wiadomość wysłana!",
@@ -885,10 +1148,9 @@
     "alternatives": {
       "title": "Inne sposoby kontaktu",
       "email": "Email",
-      "emailValue": "contact@passflat.eu",
+      "emailValue": "contact@passflat.com",
       "responseTime": "Czas odpowiedzi",
-      "responseTimeValue": "Zwykle odpowiadamy w ciągu 24–48 godzin",
-      "urgentNote": "W pilnych sprawach dotyczących ogłoszenia skorzystaj z konta lub napisz do nas bezpośrednio."
+      "responseTimeValue": "Zwykle odpowiadamy w ciągu 24–48 godzin"
     }
   },
   "helpCenter": {
@@ -903,7 +1165,7 @@
       "q3": "W jakich miastach działa Passflat?",
       "a3": "Obecnie działamy w Warszawie. Ekspansja do Krakowa, Wrocławia i innych europejskich miast jest w naszych planach.",
       "q4": "Jakie języki obsługuje Passflat?",
-      "a4": "Passflat jest dostępny po polsku, angielsku, rosyjsku i ukraińsku — odzwierciedlając różnorodną społeczność najemców w Warszawie."
+      "a4": "Passflat jest dostępny po polsku, ukraińsku, angielsku i rosyjsku — odzwierciedlając różnorodną społeczność najemców w Warszawie."
     },
     "leaseTakeovers": {
       "title": "Cesja Najmu",
@@ -924,10 +1186,10 @@
       "title": "Przejrzystość Kosztów",
       "q1": "Jak działa baza kosztów?",
       "a1": "Najemcy przesyłają anonimowe raporty kosztów dla swoich budynków — w tym czynsz, opłatę administracyjną, prąd, gaz, ogrzewanie, wodę i internet. Dane są agregowane i wyświetlane per budynek, aby przyszli najemcy mogli zobaczyć, ile faktycznie zapłacą.",
-      "q2": "Dlaczego muszę przesłać moje koszty, żeby odblokować dane?",
-      "a2": "Baza jest napędzana przez społeczność. Przesyłając swoje dane, pomagasz innym i odblokowujesz pełen dostęp do raportów dla wszystkich budynków. To uczciwa wymiana, dzięki której baza stale rośnie.",
+      "q2": "Jak odblokować dane o kosztach?",
+      "a2": "Możesz odblokować pełny dostęp, dodając własny raport kosztów (bezpłatnie, na stałe) lub kupując czasowy dostęp (7, 30 lub 90 dni). Baza jest napędzana przez społeczność — dodanie danych pomaga wszystkim i wspiera jej rozwój.",
       "q3": "Czy moje dane są anonimowe?",
-      "a3": "Tak. Numer Twojego mieszkania nigdy nie jest wyświetlany publicznie. Dane kosztowe są pokazywane w formie zagregowanej (średnie, min/max na budynek), więc poszczególne zgłoszenia nie mogą być zidentyfikowane.",
+      "a3": "Tak. Dane kosztowe są pokazywane w formie zagregowanej (średnie, min/max na budynek), więc poszczególne zgłoszenia nie mogą być zidentyfikowane.",
       "q4": "Jakie koszty powinienem zgłosić?",
       "a4": "Zgłoś miesięczny czynsz, opłatę administracyjną i koszty mediów: prąd, gaz, ogrzewanie, wodę i internet. Im pełniejszy raport, tym bardziej przydatny jest dla społeczności."
     },
@@ -936,10 +1198,34 @@
       "q1": "Jak założyć konto?",
       "a1": "Kliknij \"Zarejestruj się\" i zarejestruj się podając email lub konto Google. Otrzymasz email z potwierdzeniem do weryfikacji adresu.",
       "q2": "Jak usunąć konto?",
-      "a2": "Skontaktuj się z nami pod adresem contact@passflat.eu, a my przetworzymy Twoje żądanie usunięcia konta. Twoje ogłoszenia zostaną usunięte, a dane osobowe skasowane zgodnie z RODO.",
+      "a2": "Przejdź do ustawień konta i skorzystaj z opcji «Usuń konto». Twoje konto zostanie zaplanowane do usunięcia z 30-dniowym okresem przywracania, w którym możesz je odzyskać. Po jego upływie wszystkie ogłoszenia zostaną usunięte, a dane osobowe trwale skasowane zgodnie z RODO.",
       "q3": "Jak wykorzystywane są moje dane osobowe?",
       "a3": "Używamy Twoich danych wyłącznie do świadczenia usługi — zarządzania ogłoszeniami, wysyłania powiadomień i wyświetlania zanonimizowanych raportów kosztów. Nigdy nie sprzedajemy danych osobowych. Szczegóły znajdziesz w naszej Polityce Prywatności."
     },
+    "gdprRights": {
+      "title": "Twoje dane i RODO",
+      "q1": "Jak mogę uzyskać kopię moich danych?",
+      "a1": "Wyślij e-mail na adres contact@passflat.com z tematem «Żądanie dostępu do danych». Dostarczymy kopię wszystkich danych osobowych, które przechowujemy na Twój temat, w ciągu 30 dni, w ustrukturyzowanym, nadającym się do odczytu maszynowego formacie.",
+      "q2": "Jakie mam prawa RODO?",
+      "a2": "Na mocy RODO masz prawo do dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych, sprzeciwu wobec przetwarzania i wycofania zgody. Szczegóły znajdziesz w naszej Polityce Prywatności. Aby skorzystać z dowolnego prawa, skontaktuj się na contact@passflat.com."
+    },
+    "payments": {
+      "title": "Płatności i zwroty",
+      "q1": "Za co mogę zapłacić na Passflat?",
+      "a1": "Publikacja ogłoszenia jest bezpłatna (do 2 aktywnych ogłoszeń). Usługi płatne to: dodatkowe ogłoszenia ponad darmowy limit, promocja zwiększająca widoczność ogłoszenia w wynikach wyszukiwania oraz czasowy dostęp do bazy danych o kosztach. Same ogłoszenia pozostają darmowe.",
+      "q2": "Kiedy zaczyna się płatna usługa i czy mogę ją jeszcze anulować?",
+      "a2": "Usługi płatne są świadczone natychmiast i w całości zaraz po dokonaniu płatności. Z tego powodu, płacąc, wyrażasz wyraźną zgodę na natychmiastowe wykonanie usługi — a po jej wykonaniu nie możesz już skorzystać ze standardowego 14-dniowego prawa do odstąpienia. Potwierdzasz to przy płatności, akceptując Regulamin.",
+      "q3": "Czy gwarantujecie, że znajdę najemcę, współlokatora lub następcę?",
+      "a3": "Nie. Płacisz za samą usługę — publikację, widoczność lub dostęp do danych — a nie za konkretny rezultat. Passflat nie gwarantuje, że znajdziesz następcę najmu, współlokatora czy nową umowę, a brak rezultatu nie jest podstawą do zwrotu.",
+      "q4": "Jak mogę poprosić o zwrot?",
+      "a4": "Zwroty rozpatrujemy indywidualnie w przypadku rzeczywistych problemów — np. podwójnego obciążenia, awarii technicznej, która uniemożliwiła wykonanie usługi, lub wadliwej usługi. Napisz na contact@passflat.com, podając adres e-mail konta i numer referencyjny płatności (znajdziesz go w historii płatności w panelu). Twoje bezwzględnie obowiązujące prawa konsumenta są zawsze zachowane.",
+      "q5": "Jakimi metodami mogę zapłacić?",
+      "a5": "Płatności są bezpiecznie obsługiwane przez Stripe. Możesz zapłacić kartą, BLIK-iem lub Przelewy24 (P24). Dostępne metody mogą się nieznacznie różnić w zależności od urządzenia i przeglądarki.",
+      "q6": "Czy otrzymam potwierdzenie lub fakturę?",
+      "a6": "Tak. Stripe automatycznie wysyła potwierdzenie płatności na adres e-mail podany przy płatności. Potwierdzenie możesz też w każdej chwili otworzyć w sekcji płatności w swoim panelu."
+    },
+    "searchPlaceholder": "Szukaj pytań...",
+    "noResults": "Nie znaleziono pasujących pytań. Spróbuj innych słów.",
     "stillHaveQuestions": "Masz jeszcze pytania?",
     "stillHaveQuestionsDesc": "Nie możesz znaleźć tego, czego szukasz? Nasz zespół chętnie pomoże.",
     "contactUs": "Skontaktuj się"
@@ -947,10 +1233,10 @@
   "privacy": {
     "title": "Polityka Prywatności",
     "subtitle": "Jak Passflat zbiera, wykorzystuje i chroni Twoje dane osobowe.",
-    "lastUpdated": "Ostatnia aktualizacja: 18 maja 2026",
+    "lastUpdated": "Ostatnia aktualizacja: 1 czerwca 2026",
     "intro": {
       "title": "Wprowadzenie",
-      "p1": "Passflat (\"my\", \"nas\", \"nasz\") to platforma marketplace wynajmu prowadzona z Warszawy, Polska. Niniejsza Polityka Prywatności wyjaśnia, w jaki sposób zbieramy, wykorzystujemy, przechowujemy i chronimy Twoje dane osobowe podczas korzystania z naszej strony internetowej i usług na passflat.eu.",
+      "p1": "Passflat (\"my\", \"nas\", \"nasz\") to platforma marketplace wynajmu prowadzona z Warszawy, Polska. Niniejsza Polityka Prywatności wyjaśnia, w jaki sposób zbieramy, wykorzystujemy, przechowujemy i chronimy Twoje dane osobowe podczas korzystania z naszej strony internetowej i usług na passflat.com.",
       "p2": "Jesteśmy zobowiązani do ochrony Twojej prywatności zgodnie z Ogólnym Rozporządzeniem o Ochronie Danych (RODO) oraz obowiązującym polskim prawem o ochronie danych. Korzystając z Passflat, potwierdzasz, że zapoznałeś się z niniejszą polityką i ją rozumiesz."
     },
     "dataCollected": {
@@ -974,7 +1260,7 @@
       },
       "usage": {
         "title": "Dane użytkowania i dane techniczne",
-        "item1": "Odwiedzane strony, interakcje i korzystanie z funkcji (zbierane przez PostHog analytics)",
+        "item1": "Odwiedzane strony, interakcje i korzystanie z funkcji (zbierane przez PostHog i Google Analytics)",
         "item2": "Adres IP, typ przeglądarki, informacje o urządzeniu i system operacyjny (standardowe logi serwera)"
       }
     },
@@ -984,12 +1270,18 @@
       "item2": "Wysyłanie powiadomień: alerty e-mail, gdy ktoś wyraża zainteresowanie Twoim ogłoszeniem (przez Resend)",
       "item3": "Ulepszanie platformy: rozumienie wzorców użytkowania, naprawa błędów, rozwijanie nowych funkcji",
       "item4": "Zapewnienie bezpieczeństwa: zapobieganie oszustwom, nadużyciom i nieautoryzowanemu dostępowi",
-      "noSell": "NIE sprzedajemy Twoich danych osobowych stronom trzecim. Nigdy."
+      "noSell": "NIE sprzedajemy Twoich danych osobowych stronom trzecim. Nigdy.",
+      "legalBases": {
+        "title": "Podstawy prawne przetwarzania (RODO art. 6)",
+        "contract": "Wykonanie umowy (art. 6 ust. 1 lit. b) — przetwarzanie niezbędne do świadczenia usługi, w tym wyświetlanie ogłoszeń, dopasowywanie najemców i raporty kosztów.",
+        "legitimateInterest": "Uzasadniony interes (art. 6 ust. 1 lit. f) — przetwarzanie w celach analitycznych, bezpieczeństwa platformy, zapobiegania nadużyciom i ulepszania platformy.",
+        "consent": "Zgoda (art. 6 ust. 1 lit. a) — przetwarzanie w celach analitycznych plików cookies (PostHog) oraz komunikacji marketingowej, którą możesz wycofać w dowolnym momencie."
+      }
     },
     "dataSharing": {
       "title": "Udostępnianie danych",
       "intro": "Udostępniamy dane tylko w następujących, ograniczonych okolicznościach:",
-      "item1": "Raporty kosztów są wyświetlane w formie zagregowanej i zanonimizowanej — numer mieszkania nigdy nie jest pokazywany publicznie",
+      "item1": "Raporty kosztów są wyświetlane w formie zagregowanej i zanonimizowanej",
       "item2": "Dane kontaktowe z ogłoszenia są udostępniane tylko użytkownikom, którzy wyrażą zainteresowanie przez platformę",
       "processors": {
         "title": "Podmioty przetwarzające dane",
@@ -999,14 +1291,16 @@
         "stripe": "Stripe — przetwarzanie płatności za promowane ogłoszenia",
         "google": "Google Places API — autouzupełnianie adresów (tylko dane adresowe)",
         "mapbox": "Mapbox — renderowanie map (żadne dane osobowe nie są udostępniane)",
-        "posthog": "PostHog — analityka produktowa (można zrezygnować)"
+        "posthog": "PostHog — analityka produktowa (można zrezygnować)",
+        "googleAnalytics": "Google Analytics 4 — analityka ruchu i odbiorców w sieci (na podstawie zgody, opt-in przez baner cookies)",
+        "deepl": "DeepL — automatyczne tłumaczenie treści ogłoszeń (siedziba w UE, Niemcy)"
       }
     },
     "retention": {
       "title": "Przechowywanie danych",
       "account": "Dane konta: przechowywane do momentu usunięcia konta",
       "listings": "Ogłoszenia: aktywne przez 60 dni, następnie archiwizowane na 30 dni przed usunięciem",
-      "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie w celu utrzymania bazy danych społeczności"
+      "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie. Po anonimizacji dane te nie stanowią już danych osobowych w rozumieniu RODO (motyw 26) i są utrzymywane w celu wsparcia bazy danych społeczności"
     },
     "rights": {
       "title": "Twoje prawa (RODO)",
@@ -1017,17 +1311,69 @@
       "portability": "Prawo do przenoszenia danych — otrzymanie danych w ustrukturyzowanym, nadającym się do odczytu maszynowego formacie",
       "objection": "Prawo do sprzeciwu — sprzeciw wobec przetwarzania opartego na uzasadnionym interesie",
       "withdrawConsent": "Prawo do wycofania zgody — wycofanie zgody w dowolnym momencie, gdy przetwarzanie opiera się na zgodzie",
-      "howToExercise": "Aby skorzystać z któregokolwiek z tych praw, skontaktuj się z nami pod adresem privacy@passflat.eu. Odpowiemy w ciągu 30 dni, zgodnie z wymogami RODO."
+      "restriction": "Prawo do ograniczenia przetwarzania — żądanie ograniczenia przetwarzania danych osobowych w określonych okolicznościach (np. podczas weryfikacji dokładności danych)",
+      "howToExercise": "Aby skorzystać z któregokolwiek z tych praw, skontaktuj się z nami pod adresem contact@passflat.com. Odpowiemy w ciągu 30 dni, zgodnie z wymogami RODO.",
+      "complaint": "Prawo do złożenia skargi — jeśli uważasz, że Twoje prawa do ochrony danych zostały naruszone, masz prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych (UODO), ul. Stawki 2, 00-193 Warszawa, Polska. Strona internetowa: uodo.gov.pl"
+    },
+    "transfers": {
+      "title": "Transgraniczne przekazywanie danych",
+      "description": "Niektórzy nasi podmioty przetwarzające dane mają siedzibę poza Unią Europejską / Europejskim Obszarem Gospodarczym (UE/EOG). Gdy Twoje dane są przekazywane poza UE/EOG, zapewniamy odpowiednie zabezpieczenia, w tym Standardowe Klauzule Umowne (SKU) zatwierdzone przez Komisję Europejską lub decyzje o adekwatności.",
+      "processors": "Następujące podmioty mogą przetwarzać dane poza UE/EOG: Vercel (USA), Resend (USA), Stripe (UE i USA), Google (USA, obejmuje zarówno Places API, jak i Google Analytics) i Mapbox (USA) — wszystkie działają na podstawie Standardowych Klauzul Umownych. Lokalizacja danych Supabase i PostHog zależy od konfiguracji instancji. DeepL ma siedzibę w UE (Niemcy)."
     },
     "cookies": {
       "title": "Pliki cookies",
       "intro": "Używamy minimalnego zestawu plików cookies:",
       "essential": "Niezbędne pliki cookies: tokeny sesji uwierzytelniania (wymagane do działania usługi)",
-      "analytics": "Analityczne pliki cookies: PostHog (opcjonalne — możesz zrezygnować w ustawieniach przeglądarki lub przez nasz baner cookies)"
+      "analytics": "Analityczne pliki cookies: PostHog i Google Analytics (opcjonalne — możesz zrezygnować w ustawieniach przeglądarki lub przez nasz baner cookies)",
+      "tableTitle": "Szczegóły plików cookies",
+      "tableName": "Cookie",
+      "tableCategory": "Kategoria",
+      "tablePurpose": "Cel",
+      "tableDuration": "Czas trwania",
+      "sbName": "sb-*",
+      "sbCategory": "Niezbędne",
+      "sbPurpose": "Tokeny sesji uwierzytelniania Supabase",
+      "sbDuration": "Sesja",
+      "phName": "ph_*",
+      "phCategory": "Analityczne",
+      "phPurpose": "Analityka produktowa PostHog i feature flags",
+      "phDuration": "1 rok",
+      "gaName": "_ga, _ga_*",
+      "gaCategory": "Analityczne",
+      "gaPurpose": "Google Analytics — pomiar ruchu i odbiorców",
+      "gaDuration": "2 lata",
+      "consentName": "passflat-cookie-consent",
+      "consentCategory": "Niezbędne",
+      "consentPurpose": "Przechowuje preferencje zgody na cookies (localStorage)",
+      "consentDuration": "Stałe",
+      "localeName": "NEXT_LOCALE",
+      "localeCategory": "Niezbędne",
+      "localePurpose": "Przechowuje preferowany język",
+      "localeDuration": "1 rok"
+    },
+    "automated": {
+      "title": "Zautomatyzowane podejmowanie decyzji",
+      "description": "Passflat nie stosuje zautomatyzowanego podejmowania decyzji indywidualnych ani profilowania w rozumieniu art. 22 RODO. Ranking ogłoszeń opiera się wyłącznie na dacie dodania, a promowane ogłoszenia wyświetlane są na górze jako funkcja płatna."
+    },
+    "children": {
+      "title": "Dane dzieci",
+      "description": "Passflat nie jest przeznaczony dla osób poniżej 18 roku życia. Nie zbieramy świadomie danych osobowych od osób niepełnoletnich. Jeśli dowiemy się, że zebraliśmy dane od osoby poniżej 18 lat, podejmiemy kroki w celu niezwłocznego usunięcia tych danych."
+    },
+    "breach": {
+      "title": "Powiadomienie o naruszeniu danych",
+      "description": "W przypadku naruszenia ochrony danych osobowych stanowiącego zagrożenie dla praw i wolności osób, powiadomimy Prezesa Urzędu Ochrony Danych Osobowych (UODO) w ciągu 72 godzin, zgodnie z wymogami art. 33 RODO.",
+      "notification": "Jeśli naruszenie stwarza wysokie ryzyko dla Twoich praw i wolności, poinformujemy Cię bezpośrednio bez zbędnej zwłoki, przekazując informacje o charakterze naruszenia i zalecanych środkach ochronnych."
+    },
+    "dpo": {
+      "title": "Inspektor Ochrony Danych",
+      "description": "Dokonaliśmy oceny potrzeby wyznaczenia Inspektora Ochrony Danych (IOD) zgodnie z art. 37 RODO i ustaliliśmy, że wyznaczenie nie jest obecnie wymagane ze względu na charakter i skalę naszej działalności przetwarzania danych. W przypadku pytań dotyczących ochrony danych prosimy o kontakt na contact@passflat.com."
     },
     "contact": {
-      "title": "Kontakt w sprawie danych",
-      "text": "W przypadku pytań dotyczących prywatności lub w celu skorzystania z praw RODO, skontaktuj się z naszym zespołem ochrony danych:"
+      "title": "Administrator danych i kontakt",
+      "text": "W przypadku pytań dotyczących prywatności lub w celu skorzystania z praw RODO, skontaktuj się z naszym zespołem ochrony danych:",
+      "controller": "Administrator danych: Ilya Apaniuk",
+      "location": "Lokalizacja: Warszawa, Polska",
+      "email": "Email: contact@passflat.com"
     },
     "changes": {
       "title": "Zmiany w niniejszej polityce",
@@ -1040,7 +1386,7 @@
     "lastUpdated": "Ostatnia aktualizacja: 18 maja 2026",
     "acceptance": {
       "title": "1. Akceptacja regulaminu",
-      "p1": "Korzystając z Passflat (passflat.eu), akceptujesz niniejszy Regulamin. Jeśli się nie zgadzasz, prosimy o niekorzystanie z platformy.",
+      "p1": "Korzystając z Passflat (passflat.com), akceptujesz niniejszy Regulamin. Jeśli się nie zgadzasz, prosimy o niekorzystanie z platformy.",
       "p2": "Niniejszy regulamin dotyczy wszystkich użytkowników platformy, w tym najemców dodających ogłoszenia, najemców szukających mieszkań oraz użytkowników przesyłających raporty kosztów."
     },
     "service": {
@@ -1070,12 +1416,14 @@
       "title": "5. Raporty kosztów",
       "item1": "Raporty kosztów muszą odzwierciedlać realne koszty z Twojego osobistego doświadczenia jako najemcy w zgłaszanym budynku.",
       "item2": "Przesyłanie fałszywych lub celowo mylących danych o kosztach może skutkować usunięciem konta i wszystkich raportów.",
-      "item3": "Raporty kosztów są wyświetlane w formie zanonimizowanej i zagregowanej. Numer mieszkania nigdy nie jest publikowany."
+      "item3": "Raporty kosztów są wyświetlane w formie zanonimizowanej i zagregowanej."
     },
     "payments": {
       "title": "6. Płatności",
-      "p1": "Promowane ogłoszenia to płatna funkcja zwiększająca widoczność ogłoszenia w wynikach wyszukiwania. Płatności są bezpiecznie przetwarzane przez Stripe. Ceny podane są w PLN i zawierają podatki.",
-      "p2": "Zwroty za promowane ogłoszenia rozpatrywane są indywidualnie. W sprawie zwrotów skontaktuj się z nami pod adresem legal@passflat.eu."
+      "p1": "Passflat oferuje następujące usługi płatne: dodatkowe ogłoszenia (ponad 2 darmowe aktywne ogłoszenia), promowane ogłoszenia (zwiększona widoczność w wynikach wyszukiwania) oraz czasowy dostęp do bazy danych o kosztach. Wszystkie płatności są bezpiecznie przetwarzane przez Stripe. Ceny podane są w PLN.",
+      "immediate": "Usługi płatne są usługami cyfrowymi świadczonymi natychmiast i w całości zaraz po dokonaniu płatności. Kupując lub aktywując usługę płatną, wyrażasz wyraźną zgodę na jej natychmiastowe wykonanie i przyjmujesz do wiadomości, że po wykonaniu usługi tracisz ustawowe 14-dniowe prawo do odstąpienia od umowy (patrz punkt 9). Zgodę tę potwierdzasz przy płatności, akceptując niniejszy Regulamin.",
+      "serviceOutcome": "Produktem płatnym jest sama usługa — publikacja ogłoszenia, zwiększona widoczność/promocja lub dostęp do bazy danych o kosztach — udostępniana natychmiast i w całości. Passflat nie gwarantuje żadnego konkretnego rezultatu, takiego jak znalezienie następcy najmu, współlokatora czy nowej umowy najmu. Brak takiego rezultatu nie stanowi wady usługi i nie jest podstawą do zwrotu.",
+      "refunds": "Zwroty są przyznawane według uznania Passflat w przypadku rzeczywistych problemów, takich jak podwójne obciążenie, awaria techniczna uniemożliwiająca wykonanie usługi lub wadliwa usługa. Twoje bezwzględnie obowiązujące prawa konsumenta pozostają nienaruszone. W sprawie zwrotów skontaktuj się na contact@passflat.com."
     },
     "liability": {
       "title": "7. Ograniczenie odpowiedzialności",
@@ -1088,17 +1436,52 @@
       "p1": "Platforma Passflat, w tym jej projekt, kod, branding i treści (z wyłączeniem treści tworzonych przez użytkowników), jest własnością intelektualną Passflat.",
       "p2": "Zamieszczając treści na Passflat (ogłoszenia, zdjęcia, raporty kosztów), udzielasz nam niewyłącznej, ogólnoświatowej licencji na wyświetlanie i dystrybucję tych treści na platformie w celu świadczenia usługi."
     },
+    "withdrawal": {
+      "title": "9. Prawo do odstąpienia od umowy",
+      "p1": "Jako konsument co do zasady masz prawo odstąpić od umowy zawartej na odległość o świadczenie usług cyfrowych (takich jak dodatkowe ogłoszenia, promowane ogłoszenia lub dostęp do raportów kosztów) w ciągu 14 dni, bez podawania przyczyny. Termin do odstąpienia upływa po 14 dniach od dnia zawarcia umowy. Do zachowania terminu wystarczy wysłanie oświadczenia przed jego upływem.",
+      "p2": "Prawo do odstąpienia nie przysługuje jednak, gdy usługa została w pełni wykonana za Twoją uprzednią wyraźną zgodą i po przyjęciu przez Ciebie do wiadomości, że utracisz prawo do odstąpienia po pełnym wykonaniu umowy (art. 38 ust. 1 pkt 13 ustawy o prawach konsumenta / art. 16 lit. m dyrektywy 2011/83/UE). Ponieważ usługi płatne Passflat są świadczone natychmiast i w całości po dokonaniu płatności, dokonując zakupu wyrażasz tę zgodę i tracisz prawo do odstąpienia po wykonaniu usługi.",
+      "p3": "Aby skorzystać z prawa do odstąpienia tam, gdzie ono przysługuje, wyślij jednoznaczne oświadczenie (np. pismo pocztą lub e-mail) na adres contact@passflat.com, podając adres e-mail konta i szczegóły zamówienia. Możesz skorzystać ze wzoru formularza poniżej, ale nie jest to obowiązkowe. Należny zwrot przetworzymy bez zbędnej zwłoki, w ciągu 14 dni od otrzymania oświadczenia.",
+      "formTitle": "Wzór formularza odstąpienia od umowy",
+      "formIntro": "(formularz ten należy wypełnić i odesłać tylko w przypadku chęci odstąpienia od umowy)",
+      "form": "Adresat: Passflat — Ilya Apaniuk, Warszawa, Polska, contact@passflat.com\n\nNiniejszym informuję o moim odstąpieniu od umowy o świadczenie następującej usługi:\n— Usługa: ____________________\n— Data zamówienia / otrzymania: ____________________\n— Imię i nazwisko konsumenta: ____________________\n— Adres konsumenta: ____________________\n— Adres e-mail konta: ____________________\n— Data: ____________________\n— Podpis (tylko jeżeli formularz jest przesyłany w wersji papierowej): ____________________"
+    },
+    "dsa": {
+      "title": "10. Akt o usługach cyfrowych",
+      "intro": "Zgodnie z unijnym Aktem o usługach cyfrowych (Rozporządzenie 2022/2065), udostępniamy następujące informacje o przejrzystości:",
+      "removalTitle": "Moderacja treści",
+      "removalIntro": "Ogłoszenia mogą zostać usunięte lub ograniczone, jeśli:",
+      "removal1": "Zawierają fałszywe, mylące lub oszukańcze informacje o mieszkaniu",
+      "removal2": "Zawierają treści dyskryminujące, obraźliwe lub nielegalne",
+      "removal3": "Naruszają prawa osób trzecich (np. publikacja bez upoważnienia najemcy)",
+      "removal4": "Zawierają spam, duplikaty ogłoszeń lub reklamy niezwiązane z ofertami wynajmu",
+      "complaintTitle": "Procedura skargi",
+      "complaint1": "Jeśli Twoja treść została usunięta lub ograniczona, możesz złożyć skargę na adres contact@passflat.com w ciągu 6 miesięcy od decyzji.",
+      "complaint2": "Rozpatrzymy Twoją skargę i odpowiemy w rozsądnym terminie. Jeśli nie zgadzasz się z naszą decyzją, możesz dochodzić swoich praw przez pozasądowy organ rozstrzygania sporów lub sąd.",
+      "complaint3": "Użytkownicy mogą również zgłaszać nielegalne treści pod adresem contact@passflat.com. Zgłoszenia rozpatrujemy niezwłocznie i informujemy zgłaszającego o wyniku.",
+      "rankingTitle": "Przejrzystość algorytmiczna",
+      "ranking": "Ogłoszenia są sortowane według daty (najnowsze pierwsze). Promowane ogłoszenia — funkcja płatna — pojawiają się na górze wyników wyszukiwania przez czas trwania promocji. Żadna inna personalizacja algorytmiczna ani profilowanie nie jest stosowana do porządkowania wyników.",
+      "contactTitle": "Punkt kontaktowy DSA",
+      "contact": "W sprawie zapytań, skarg lub zgłoszeń dotyczących DSA skontaktuj się: contact@passflat.com",
+      "odrTitle": "Platforma rozstrzygania sporów online",
+      "odrText": "Zgodnie z Rozporządzeniem UE 524/2013, konsumenci mogą korzystać z europejskiej platformy internetowego rozstrzygania sporów (ODR) w celu rozwiązania sporów związanych z zakupami online.",
+      "odrLink": "Platforma ODR: https://ec.europa.eu/consumers/odr"
+    },
     "law": {
-      "title": "9. Prawo właściwe",
+      "title": "11. Prawo właściwe",
       "text": "Niniejszy Regulamin podlega prawu Rzeczypospolitej Polskiej i jest interpretowany zgodnie z nim. Wszelkie spory wynikające z niniejszego regulaminu podlegają wyłącznej jurysdykcji sądów w Warszawie."
     },
     "contact": {
-      "title": "10. Kontakt",
-      "text": "W razie pytań dotyczących niniejszego Regulaminu, skontaktuj się z nami:"
+      "title": "12. Kontakt",
+      "text": "W razie pytań dotyczących niniejszego Regulaminu, skontaktuj się z nami:",
+      "operator": "Passflat jest prowadzony przez Ilya Apaniuk, Warszawa, Polska."
+    },
+    "forceMajeure": {
+      "title": "13. Siła wyższa",
+      "text": "Passflat nie ponosi odpowiedzialności za niewykonanie lub opóźnienie w wykonaniu swoich zobowiązań z powodu okoliczności pozostających poza jego rozsądną kontrolą, w tym m.in. klęsk żywiołowych, wojny, terroryzmu, pandemii, przerw w dostawie prądu, awarii internetu, działań rządowych lub awarii usług podmiotów trzecich."
     },
     "changes": {
-      "title": "11. Zmiany w regulaminie",
-      "text": "Możemy aktualizować niniejszy Regulamin. O istotnych zmianach powiadomimy zarejestrowanych użytkowników e-mailem. Dalsze korzystanie z platformy po zmianach oznacza akceptację zaktualizowanego regulaminu."
+      "title": "14. Zmiany w regulaminie",
+      "text": "Możemy aktualizować niniejszy Regulamin. O istotnych zmianach powiadomimy zarejestrowanych użytkowników e-mailem co najmniej 14 dni przed ich wejściem w życie. W przypadku istotnych zmian wpływających na Twoje prawa lub przetwarzanie danych, poprosimy o ponowną wyraźną akceptację przy następnym logowaniu. Jeśli nie zaakceptujesz zaktualizowanych warunków, możesz usunąć konto. Dalsze korzystanie z platformy po upływie okresu powiadomienia oznacza akceptację zaktualizowanego regulaminu."
     }
   },
   "chat": {
@@ -1121,6 +1504,51 @@
   "city": {
     "warsaw": "Warszawa"
   },
+  "pricing": {
+    "title": "Cennik",
+    "subtitle": "Passflat jest darmowy. Płacisz tylko za dodatkowe ogłoszenia lub funkcje premium.",
+    "free": {
+      "badge": "Zawsze za darmo",
+      "title": "Podstawowy",
+      "description": "Do 2 darmowych aktywnych ogłoszeń i pełny dostęp do platformy.",
+      "browsing": "Przeglądanie i wyszukiwanie wszystkich ofert",
+      "posting": "Do 2 darmowych aktywnych ogłoszeń",
+      "costReports": "Dostęp do raportów o kosztach (dodaj dane, aby odblokować)",
+      "favorites": "Zapisywanie ogłoszeń w ulubionych",
+      "cta": "Dodaj ogłoszenie"
+    },
+    "promoted": {
+      "badge": "Promowane ogłoszenie",
+      "title": "Zwiększ widoczność",
+      "from": "od",
+      "description": "Twoje ogłoszenie zobaczy więcej osób.",
+      "topResults": "Wyświetlanie na górze wyników wyszukiwania",
+      "highlightedBadge": "Wyróżnienie znacznikiem promowania",
+      "moreViews": "Znacznie więcej wyświetleń",
+      "days": "{count} dni",
+      "cta": "Dodaj ogłoszenie",
+      "stripeNote": "Bezpieczna płatność przez Stripe. Ceny w PLN, VAT wliczony."
+    },
+    "extraListings": {
+      "badge": "Dodatkowe ogłoszenia",
+      "title": "Ponad darmowy limit",
+      "description": "Potrzebujesz więcej niż 2 aktywne ogłoszenia? Każde kolejne to jednorazowa opłata.",
+      "oneTime": "Jednorazowa opłata za ogłoszenie",
+      "lifetime": "Aktywne do 90 dni",
+      "antiAbuse": "Adres i typ ogłoszenia zablokowane",
+      "cta": "Dodaj ogłoszenie"
+    },
+    "costAccess": {
+      "badge": "Dostęp do raportów kosztów",
+      "title": "Pomiń wkład własny",
+      "description": "Nie masz jeszcze danych o kosztach? Kup czasowy dostęp do pełnej bazy danych kosztów.",
+      "tier7": "Dostęp na 7 dni",
+      "tier30": "Dostęp na 30 dni",
+      "tier90": "Dostęp na 90 dni",
+      "alternative": "Lub dodaj własny raport kosztów, aby odblokować za darmo",
+      "cta": "Kup dostęp"
+    }
+  },
   "account": {
     "delete": {
       "title": "Usuń konto",
@@ -1138,6 +1566,144 @@
       "message": "Twoje konto jest zaplanowane do usunięcia. Możesz je teraz przywrócić i odzyskać wszystkie dane, lub wylogować się, aby kontynuować usuwanie.",
       "restore": "Przywróć moje konto",
       "cancel": "Wyloguj się"
+    }
+  },
+  "documents": {
+    "badge": "Wzór bazowy — wymaga weryfikacji prawnej",
+    "downloadPdf": "Pobierz PDF",
+    "downloadDocx": "Pobierz DOCX",
+    "formatNote": "PDF jest tylko do odczytu; DOCX jest edytowalny. Oba po polsku — w wersji wiążącej.",
+    "localeNote": "PDF to tłumaczenie informacyjne (wiążąca jest wersja polska). Edytowalny plik DOCX jest po polsku.",
+    "docs": {
+      "cesja": {
+        "title": "Cesja umowy najmu",
+        "description": "Trójstronna umowa przeniesienia najmu na nowego najemcę, za zgodą wynajmującego."
+      },
+      "podnajem": {
+        "title": "Umowa podnajmu",
+        "description": "Podnajem mieszkania lub pokoju za zgodą wynajmującego, zależny od umowy głównej."
+      },
+      "wspollokatorska": {
+        "title": "Umowa współlokatorska",
+        "description": "Wewnętrzna umowa o podziale kosztów i zasadach mieszkania między współlokatorami."
+      }
+    },
+    "resources": {
+      "title": "Wzory dokumentów",
+      "subtitle": "Darmowe wzory dokumentów najmu do samodzielnego uzupełnienia.",
+      "intro": "Pobierz wzory bazowe dla trzech typów transakcji Passflat. Wersją wiążącą jest polska; PDF-y po ukraińsku, angielsku i rosyjsku służą wyłącznie do zrozumienia treści.",
+      "disclaimer": "To wzory poglądowe, nie porada prawna. Przed podpisaniem skonsultuj dokument z prawnikiem.",
+      "metaTitle": "Wzory dokumentów najmu — Passflat",
+      "metaDescription": "Darmowe wzory bazowe dla cesji najmu, podnajmu i umowy współlokatorskiej w Polsce — DOCX i PDF, z tłumaczeniami informacyjnymi."
+    },
+    "howItWorks": {
+      "title": "Potrzebujesz dokumentów?",
+      "subtitle": "Pobierz darmowy wzór bazowy na etap podpisania umowy."
+    },
+    "blog": {
+      "title": "Darmowy wzór cesji umowy najmu",
+      "subtitle": "Pobierz gotowy do uzupełnienia wzór cesji (DOCX + PDF)."
+    },
+    "chat": {
+      "hint": "Finalizujesz transakcję? Pobierz darmowy wzór dokumentu do tego ogłoszenia.",
+      "cta": "Pobierz wzór"
+    }
+  },
+  "emails": {
+    "common": {
+      "brand": "Passflat"
+    },
+    "contact": {
+      "subject": "[Kontakt] {subject}",
+      "intro": "Nowa wiadomość z formularza kontaktowego",
+      "fromLabel": "Od:",
+      "emailLabel": "E-mail:",
+      "messageLabel": "Wiadomość:",
+      "footer": "Odpowiedz bezpośrednio na tę wiadomość, aby odpisać do {name}."
+    },
+    "newMessage": {
+      "subject": "Nowa wiadomość dotycząca „{listingTitle}”",
+      "heading": "Nowa wiadomość dotycząca „{listingTitle}”",
+      "from": "Od {senderName}",
+      "cta": "Odpowiedz na Passflat",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ masz konwersację na Passflat."
+    },
+    "newInquiry": {
+      "subject": "Nowe zapytanie o „{listingTitle}”",
+      "heading": "Nowe zapytanie o Twoje ogłoszenie",
+      "intro": "Ktoś jest zainteresowany ogłoszeniem {listingTitle}",
+      "fromLabel": "Od:",
+      "emailLabel": "E-mail:",
+      "phoneLabel": "Telefon:",
+      "messageLabel": "Wiadomość:",
+      "viewListing": "Zobacz ogłoszenie",
+      "dashboard": "Przejdź do panelu",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ masz aktywne ogłoszenie na Passflat."
+    },
+    "payment": {
+      "subject": "Potwierdzenie płatności — Passflat",
+      "heading": "Dziękujemy za płatność",
+      "intro": "Potwierdzamy otrzymanie Twojej płatności. Poniżej znajdują się szczegóły zamówienia.",
+      "itemsLabel": "Zakupione usługi",
+      "amountLabel": "Kwota",
+      "dateLabel": "Data",
+      "waiverNotice": "Zażądałeś(-aś) natychmiastowego wykonania usługi. Usługa została udostępniona od razu po płatności, dlatego — zgodnie z art. 38 pkt 13 ustawy o prawach konsumenta — tracisz 14-dniowe prawo do odstąpienia od umowy w zakresie wykonanej usługi.",
+      "termsCta": "Zobacz Regulamin",
+      "footer": "To potwierdzenie stanowi trwały nośnik wymagany przepisami. Zachowaj je dla swoich akt.",
+      "items": {
+        "listingFee": "Opłata za dodatkowe ogłoszenie",
+        "promotion": "Promocja ogłoszenia ({days} dni)",
+        "costAccess": "Dostęp do danych o kosztach ({days} dni)"
+      }
+    },
+    "refund": {
+      "subject": "Potwierdzenie zwrotu — Passflat",
+      "heading": "Twój zwrot został zrealizowany",
+      "intro": "Dokonaliśmy zwrotu Twojej płatności. Poniżej znajdują się szczegóły.",
+      "itemsLabel": "Zwrócona usługa",
+      "amountLabel": "Kwota zwrotu",
+      "dateLabel": "Data",
+      "processingNotice": "Zwrot został przekazany na pierwotną metodę płatności. W zależności od banku jego zaksięgowanie może potrwać kilka dni roboczych.",
+      "dashboardCta": "Przejdź do panelu",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ dokonano zwrotu za płatność w Passflat. Zachowaj ją dla swoich akt.",
+      "products": {
+        "listing": "Usługi ogłoszeniowe",
+        "costAccess": "Dostęp do danych o kosztach",
+        "generic": "Usługa Passflat"
+      }
+    },
+    "passwordReset": {
+      "subject": "Zresetuj hasło — Passflat",
+      "heading": "Zresetuj hasło",
+      "intro": "Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta Passflat. Kliknij przycisk poniżej, aby ustawić nowe hasło.",
+      "cta": "Zresetuj hasło",
+      "expiryNotice": "Ten link jest ważny przez {hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}}. Po tym czasie trzeba poprosić o nowy.",
+      "fallback": "Jeśli przycisk nie działa, skopiuj i wklej ten link do przeglądarki:",
+      "ignoreNotice": "Jeśli nie prosiłeś o zresetowanie hasła, zignoruj tę wiadomość — Twoje hasło pozostanie bez zmian.",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ poproszono o zresetowanie hasła do Twojego konta Passflat."
+    },
+    "cityNotifyConfirmation": {
+      "subject": "Jesteś na liście — Passflat w {city}",
+      "heading": "Jesteś na liście!",
+      "intro": "Dzięki za zainteresowanie Passflat w mieście {city}.",
+      "body": "Damy Ci znać e-mailem, gdy tylko uruchomimy Passflat w {city}. Tymczasem nic nie musisz robić.",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ zapisałeś się na powiadomienie o starcie Passflat w Twoim mieście."
+    },
+    "cityLaunch": {
+      "subject": "Wystartowaliśmy w {city} — Passflat",
+      "heading": "Passflat jest już w {city}!",
+      "intro": "Mamy świetne wieści — Passflat działa teraz w mieście {city}.",
+      "body": "Możesz już przeglądać ogłoszenia i dodać własne. Kliknij poniżej, aby zacząć.",
+      "cta": "Zobacz ogłoszenia",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ zapisałeś się na powiadomienie o starcie Passflat w Twoim mieście."
+    },
+    "listingExpiring": {
+      "subject": "Twoje ogłoszenie „{title}” wkrótce wygaśnie",
+      "heading": "Twoje ogłoszenie wkrótce wygaśnie",
+      "intro": "Twoje ogłoszenie „{title}” wygaśnie za {days, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}.",
+      "body": "Po wygaśnięciu nie będzie już widoczne dla osób szukających na Passflat. Otwórz ogłoszenie, aby je odnowić lub opublikować ponownie i utrzymać aktywność.",
+      "cta": "Zobacz ogłoszenie",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ masz aktywne ogłoszenie na Passflat."
     }
   }
 }

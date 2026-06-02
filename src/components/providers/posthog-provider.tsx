@@ -1,9 +1,30 @@
-"use client";
+'use client';
 
-import posthog from "posthog-js";
-import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
-import { useEffect, Suspense } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import posthog from 'posthog-js';
+import { PostHogProvider as PHProvider, usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
+import { useEffect, Suspense } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import { useAnalyticsConsent } from '@/lib/consent';
+
+function SessionRecordingGate() {
+  const ph = usePostHog();
+  const consent = useAnalyticsConsent();
+  const sampled = useFeatureFlagEnabled(FEATURE_FLAGS.SESSION_RECORDING_SAMPLE);
+
+  useEffect(() => {
+    if (!ph) {
+      return;
+    }
+    if (consent && sampled) {
+      ph.startSessionRecording();
+    } else {
+      ph.stopSessionRecording();
+    }
+  }, [ph, consent, sampled]);
+
+  return null;
+}
 
 function PostHogPageView() {
   const pathname = usePathname();
@@ -14,9 +35,9 @@ function PostHogPageView() {
     if (pathname && ph) {
       let url = window.origin + pathname;
       if (searchParams.toString()) {
-        url = url + "?" + searchParams.toString();
+        url = url + '?' + searchParams.toString();
       }
-      ph.capture("$pageview", { $current_url: url });
+      ph.capture('$pageview', { $current_url: url });
     }
   }, [pathname, searchParams, ph]);
 
@@ -25,32 +46,30 @@ function PostHogPageView() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    if (
-      !process.env.NEXT_PUBLIC_POSTHOG_KEY ||
-      typeof window === "undefined"
-    ) {
+    if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || typeof window === 'undefined') {
       return;
     }
 
-    const consent = localStorage.getItem("passflat-cookie-consent");
+    const consent = localStorage.getItem('passflat-cookie-consent');
 
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-      api_host:
-        process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com",
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
       capture_pageview: false,
       capture_pageleave: true,
       autocapture: true,
+      capture_exceptions: true,
+      disable_session_recording: true,
       session_recording: {
         maskAllInputs: true,
         maskTextSelector: '[data-ph-mask]',
       },
-      persistence: "localStorage+cookie",
-      opt_out_capturing_by_default: consent !== "accepted",
+      persistence: 'localStorage+cookie',
+      opt_out_capturing_by_default: consent !== 'accepted',
       loaded: (ph) => {
-        if (process.env.NODE_ENV === "development") {
+        if (process.env.NODE_ENV === 'development') {
           ph.debug();
         }
-        if (consent === "declined") {
+        if (consent === 'declined') {
           ph.opt_out_capturing();
         }
       },
@@ -66,6 +85,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <PostHogPageView />
       </Suspense>
+      <SessionRecordingGate />
       {children}
     </PHProvider>
   );

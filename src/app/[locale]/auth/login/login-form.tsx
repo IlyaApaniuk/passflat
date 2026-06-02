@@ -8,12 +8,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Home, Loader2 } from 'lucide-react';
 import { login, signInWithGoogle } from '../actions';
@@ -41,13 +36,7 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-export function LoginForm({
-  next,
-  error: initialError,
-}: {
-  next?: string;
-  error?: string;
-}) {
+export function LoginForm({ next, error: initialError }: { next?: string; error?: string }) {
   const t = useTranslations('auth');
   const tc = useTranslations('common');
   const { locale } = useParams<{ locale: string }>();
@@ -96,9 +85,7 @@ export function LoginForm({
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Home className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold tracking-tight">
-            {tc('appName')}
-          </span>
+          <span className="text-xl font-semibold tracking-tight">{tc('appName')}</span>
         </Link>
 
         <Card>
@@ -132,16 +119,18 @@ export function LoginForm({
             <form action={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">{t('login.email')}</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                />
+                <Input id="email" name="email" type="email" autoComplete="email" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">{t('login.password')}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t('login.password')}</Label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t('login.forgotPassword')}
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   name="password"
@@ -151,20 +140,13 @@ export function LoginForm({
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  t('login.submit')
-                )}
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('login.submit')}
               </Button>
             </form>
 
             <p className="text-center text-sm text-muted-foreground">
               {t('login.noAccount')}{' '}
-              <Link
-                href="/auth/register"
-                className="text-primary hover:underline"
-              >
+              <Link href="/auth/register" className="text-primary hover:underline">
                 {t('login.signUp')}
               </Link>
             </p>

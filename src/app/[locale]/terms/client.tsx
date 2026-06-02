@@ -10,15 +10,9 @@ export function TermsClient() {
       {/* Hero */}
       <section className="border-b bg-muted/30 py-12 md:py-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-            {t('title')}
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            {t('subtitle')}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('lastUpdated')}
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">{t('title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('lastUpdated')}</p>
         </div>
       </section>
 
@@ -71,7 +65,9 @@ export function TermsClient() {
             {/* 6. Payments */}
             <h2>{t('payments.title')}</h2>
             <p>{t('payments.p1')}</p>
-            <p>{t('payments.p2')}</p>
+            <p>{t('payments.immediate')}</p>
+            <p>{t('payments.serviceOutcome')}</p>
+            <p>{t('payments.refunds')}</p>
 
             {/* 7. Liability */}
             <h2>{t('liability.title')}</h2>
@@ -86,18 +82,72 @@ export function TermsClient() {
             <p>{t('ip.p1')}</p>
             <p>{t('ip.p2')}</p>
 
-            {/* 9. Governing Law */}
+            {/* 9. Right of Withdrawal */}
+            <h2>{t('withdrawal.title')}</h2>
+            <p>{t('withdrawal.p1')}</p>
+            <p>{t('withdrawal.p2')}</p>
+            <p>{t('withdrawal.p3')}</p>
+            <h3>{t('withdrawal.formTitle')}</h3>
+            <p>{t('withdrawal.formIntro')}</p>
+            <p className="whitespace-pre-line rounded-lg border bg-muted/30 p-4 text-sm">
+              {t('withdrawal.form')}
+            </p>
+
+            {/* 10. Digital Services Act */}
+            <h2>{t('dsa.title')}</h2>
+            <p>{t('dsa.intro')}</p>
+
+            <h3>{t('dsa.removalTitle')}</h3>
+            <p>{t('dsa.removalIntro')}</p>
+            <ul>
+              <li>{t('dsa.removal1')}</li>
+              <li>{t('dsa.removal2')}</li>
+              <li>{t('dsa.removal3')}</li>
+              <li>{t('dsa.removal4')}</li>
+            </ul>
+
+            <h3>{t('dsa.complaintTitle')}</h3>
+            <ul>
+              <li>{t('dsa.complaint1')}</li>
+              <li>{t('dsa.complaint2')}</li>
+              <li>{t('dsa.complaint3')}</li>
+            </ul>
+
+            <h3>{t('dsa.rankingTitle')}</h3>
+            <p>{t('dsa.ranking')}</p>
+
+            <h3>{t('dsa.contactTitle')}</h3>
+            <p>{t('dsa.contact')}</p>
+
+            <h3>{t('dsa.odrTitle')}</h3>
+            <p>{t('dsa.odrText')}</p>
+            <p>
+              <a
+                href="https://ec.europa.eu/consumers/odr"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('dsa.odrLink')}
+              </a>
+            </p>
+
+            {/* 11. Governing Law */}
             <h2>{t('law.title')}</h2>
             <p>{t('law.text')}</p>
 
-            {/* 10. Contact */}
+            {/* 12. Contact */}
             <h2>{t('contact.title')}</h2>
             <p>{t('contact.text')}</p>
+            <p>{t('contact.operator')}</p>
             <p>
-              <a href="mailto:legal@passflat.eu">legal@passflat.eu</a>
+              <a href="mailto:contact@passflat.com">contact@passflat.com</a>
             </p>
 
-            {/* 11. Changes */}
+            {/* 13. Force Majeure */}
+            <h2>{t('forceMajeure.title')}</h2>
+            <p>{t('forceMajeure.text')}</p>
+
+            {/* 14. Changes */}
             <h2>{t('changes.title')}</h2>
             <p>{t('changes.text')}</p>
           </article>

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { translateTexts } from '@/lib/deepl';
+import { captureServerException, flushPostHog } from '@/lib/posthog-server';
 
 const SUPPORTED_LOCALES = ['en', 'pl', 'ru', 'uk'];
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
   const { targetLocale } = body;
@@ -90,11 +88,7 @@ export async function POST(
   }
 
   try {
-    const results = await translateTexts(
-      textsToTranslate,
-      targetLocale,
-      listing.locale,
-    );
+    const results = await translateTexts(textsToTranslate, targetLocale, listing.locale);
 
     const translated: Record<string, string | null> = {
       title: null,
@@ -121,9 +115,10 @@ export async function POST(
     return NextResponse.json({ ...translated, fromCache: false });
   } catch (error) {
     console.error('Translation error:', error);
-    return NextResponse.json(
-      { error: 'Translation service unavailable' },
-      { status: 503 },
-    );
+    captureServerException(error, {
+      properties: { source: 'listing_translate', listingId: id, targetLocale },
+    });
+    await flushPostHog();
+    return NextResponse.json({ error: 'Translation service unavailable' }, { status: 503 });
   }
 }

@@ -41,10 +41,7 @@ async function getUser() {
   return user;
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const listing = await prisma.listing.findUnique({
@@ -68,7 +65,7 @@ export async function GET(
   return NextResponse.json({ listing });
 }
 
-const VALID_STATUSES = ['active', 'found', 'expired', 'cancelled'] as const;
+const VALID_STATUSES = ['active', 'found', 'expired', 'cancelled', 'pending_payment'] as const;
 type ListingStatus = (typeof VALID_STATUSES)[number];
 
 const ALLOWED_TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
@@ -76,6 +73,7 @@ const ALLOWED_TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
   found: ['active'],
   expired: ['active'],
   cancelled: ['active'],
+  pending_payment: [],
 };
 
 const UPDATABLE_COMMON_FIELDS = [
@@ -164,10 +162,7 @@ function coerceFieldValue(field: string, value: unknown): unknown {
   return value;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -207,6 +202,13 @@ export async function PATCH(
       );
     }
 
+    if (existing.isPaid && status === 'active' && currentStatus !== 'active') {
+      return NextResponse.json(
+        { error: 'Paid listings cannot be reactivated. Create a new listing instead.' },
+        { status: 422 },
+      );
+    }
+
     data.status = status;
 
     if (status === 'active') {
@@ -217,7 +219,10 @@ export async function PATCH(
     }
   }
 
-  // Handle field updates (only on active listings unless it's just a status change)
+  if (existing.isPaid && body.type && body.type !== existing.type) {
+    return NextResponse.json({ error: 'Cannot change type of a paid listing' }, { status: 422 });
+  }
+
   const fieldKeys = Object.keys(body).filter((k) => k !== 'status');
   if (fieldKeys.length > 0) {
     if (existing.status !== 'active' && !body.status) {
@@ -243,10 +248,9 @@ export async function PATCH(
     }
 
     // Recompute derived price fields when relevant prices change
-    const priceFieldsChanged =
-      fieldKeys.some((k) =>
-        ['rent', 'adminFee', 'utilitiesAvg', 'pricePerPerson', 'priceTotal'].includes(k),
-      );
+    const priceFieldsChanged = fieldKeys.some((k) =>
+      ['rent', 'adminFee', 'utilitiesAvg', 'pricePerPerson', 'priceTotal'].includes(k),
+    );
     if (priceFieldsChanged) {
       const prices = computePriceFields(listingType, merged);
       if (prices.totalMonthly !== null) data.totalMonthly = prices.totalMonthly;
@@ -257,6 +261,14 @@ export async function PATCH(
     // Recompute expiry for sublet if dates changed
     if (listingType === 'sublet' && fieldKeys.includes('availableTo') && data.availableTo) {
       data.expiresAt = new Date(data.availableTo as string);
+    }
+
+    // Enforce 90-day lifetime cap for paid listings
+    if (existing.isPaid && existing.paidAt && data.expiresAt) {
+      const cap = new Date(existing.paidAt.getTime() + 90 * 24 * 60 * 60 * 1000);
+      if ((data.expiresAt as Date) > cap) {
+        data.expiresAt = cap;
+      }
     }
   }
 
@@ -277,12 +289,14 @@ export async function PATCH(
   }
 
   if (Array.isArray(data.photos)) {
-    const removedPhotos = existing.photos.filter(
-      (url) => !(data.photos as string[]).includes(url),
-    );
+    const removedPhotos = existing.photos.filter((url) => !(data.photos as string[]).includes(url));
     if (removedPhotos.length > 0) {
       await deletePhotosFromStorage(removedPhotos);
     }
+  }
+
+  if (data.expiresAt !== undefined) {
+    data.expiringNotifiedAt = null;
   }
 
   const listing = await prisma.listing.update({

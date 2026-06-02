@@ -1,38 +1,42 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useEffect } from "react";
-import { Link } from "@/i18n/navigation";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useCallback, useEffect } from 'react';
+import { Link } from '@/i18n/navigation';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
-  MapPin, Bed, Bath, Maximize2, Zap, Users, CalendarRange,
-  ChevronLeft, ChevronRight, Image as ImageIcon,
-} from "lucide-react";
-import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
-import useEmblaCarousel from "embla-carousel-react";
-import { FavoriteButton } from "@/components/listings/favorite-button";
-import type { Listing, ListingType } from "@/lib/listings-data";
+  MapPin,
+  Bed,
+  Bath,
+  Maximize2,
+  Zap,
+  Users,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+} from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { motion } from 'framer-motion';
+import useEmblaCarousel from 'embla-carousel-react';
+import { FavoriteButton } from '@/components/listings/favorite-button';
+import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import type { Listing, ListingType } from '@/lib/listings-data';
 
 const TYPE_BADGE_STYLES: Record<ListingType, string> = {
-  replacement: "bg-blue-500/90 text-white",
-  roommate: "bg-violet-500/90 text-white",
-  sublet: "bg-amber-500/90 text-white",
+  replacement: 'bg-blue-500/90 text-white',
+  roommate: 'bg-violet-500/90 text-white',
+  sublet: 'bg-amber-500/90 text-white',
 };
 
 const TYPE_ROUTE: Record<ListingType, string> = {
-  replacement: "replacement",
-  roommate: "roommate",
-  sublet: "sublet",
+  replacement: 'replacement',
+  roommate: 'roommate',
+  sublet: 'sublet',
 };
 
-function CardCarousel({
-  images,
-  alt,
-}: {
-  images: string[];
-  alt: string;
-}) {
+function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -43,9 +47,11 @@ function CardCarousel({
 
   useEffect(() => {
     if (!emblaApi) return;
-    emblaApi.on("select", onSelect);
+    emblaApi.on('select', onSelect);
     onSelect();
-    return () => { emblaApi.off("select", onSelect); };
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
   }, [emblaApi, onSelect]);
 
   const scrollPrev = useCallback(
@@ -93,11 +99,7 @@ function CardCarousel({
         <div className="flex h-full">
           {images.map((src, i) => (
             <div key={i} className="h-full min-w-0 shrink-0 grow-0 basis-full">
-              <img
-                src={src}
-                alt={`${alt} ${i + 1}`}
-                className="h-full w-full object-cover"
-              />
+              <img src={src} alt={`${alt} ${i + 1}`} className="h-full w-full object-cover" />
             </div>
           ))}
         </div>
@@ -124,13 +126,11 @@ function CardCarousel({
           <span
             key={i}
             className={`block h-1.5 w-1.5 rounded-full transition-colors ${
-              i === currentIndex ? "bg-white" : "bg-white/50"
+              i === currentIndex ? 'bg-white' : 'bg-white/50'
             }`}
           />
         ))}
-        {images.length > 5 && (
-          <span className="block h-1.5 w-1.5 rounded-full bg-white/30" />
-        )}
+        {images.length > 5 && <span className="block h-1.5 w-1.5 rounded-full bg-white/30" />}
       </div>
     </>
   );
@@ -145,24 +145,32 @@ interface ListingCardProps {
   onToggleFavorite?: (id: string) => void;
 }
 
-export function ListingCard({ listing, citySlug, isHovered, onHover, isFavorite, onToggleFavorite }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  citySlug,
+  isHovered,
+  onHover,
+  isFavorite,
+  onToggleFavorite,
+}: ListingCardProps) {
   const t = useTranslations();
-  const listingType = listing.type ?? "replacement";
+  const promotedListingsEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED);
+  const listingType = listing.type ?? 'replacement';
   const route = TYPE_ROUTE[listingType];
 
   const highlights: { key: string; label: string; green?: boolean }[] = [];
   if (listing.registrationPossible)
-    highlights.push({ key: "reg", label: t("listings.registrationPossible"), green: true });
+    highlights.push({ key: 'reg', label: t('listings.registrationPossible'), green: true });
   if (listing.petsAllowed)
-    highlights.push({ key: "pets", label: t("listings.thingsToKnow.petsAllowed") });
-  if (listing.features.includes("ac"))
-    highlights.push({ key: "ac", label: t("listings.features.ac") });
+    highlights.push({ key: 'pets', label: t('listings.thingsToKnow.petsAllowed') });
+  if (listing.features.includes('ac'))
+    highlights.push({ key: 'ac', label: t('listings.features.ac') });
   if (listing.furnished)
-    highlights.push({ key: "furnished", label: t("listings.features.furnished") });
-  if (listing.features.includes("balcony"))
-    highlights.push({ key: "balcony", label: t("listings.features.balcony") });
-  if (listing.features.includes("wifi"))
-    highlights.push({ key: "wifi", label: t("listings.features.wifi") });
+    highlights.push({ key: 'furnished', label: t('listings.features.furnished') });
+  if (listing.features.includes('balcony'))
+    highlights.push({ key: 'balcony', label: t('listings.features.balcony') });
+  if (listing.features.includes('wifi'))
+    highlights.push({ key: 'wifi', label: t('listings.features.wifi') });
   const topHighlights = highlights.slice(0, 3);
 
   return (
@@ -177,119 +185,122 @@ export function ListingCard({ listing, citySlug, isHovered, onHover, isFavorite,
         onMouseLeave={() => onHover?.(null)}
       >
         <div className="rounded-2xl bg-gradient-to-br from-primary/20 via-border/50 to-primary/10 p-[1px]">
-        <Card
-          className={`group overflow-hidden rounded-2xl border-0 py-0 gap-0 transition-all duration-300 ${
-            isHovered
-              ? "ring-2 ring-primary shadow-lg shadow-primary/10 scale-[1.01]"
-              : "hover:shadow-lg hover:shadow-primary/5"
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row">
-            <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-t-2xl bg-muted/30 sm:aspect-auto sm:min-h-36 sm:w-48 sm:rounded-l-2xl sm:rounded-tr-none">
-              <CardCarousel images={listing.images} alt={listing.title} />
+          <Card
+            className={`group overflow-hidden rounded-2xl border-0 py-0 gap-0 transition-all duration-300 ${
+              isHovered
+                ? 'ring-2 ring-primary shadow-lg shadow-primary/10 scale-[1.01]'
+                : 'hover:shadow-lg hover:shadow-primary/5'
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row">
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-t-2xl bg-muted/30 sm:aspect-auto sm:min-h-36 sm:w-48 sm:rounded-l-2xl sm:rounded-tr-none">
+                <CardCarousel images={listing.images} alt={listing.title} />
 
-              <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
-                {listing.promoted && (
-                  <Badge className="gap-1 border-0 bg-primary/90 text-xs backdrop-blur-sm">
-                    <Zap className="h-3 w-3" />
-                    {t("common.promoted")}
-                  </Badge>
-                )}
-                {listingType !== "replacement" && (
-                  <Badge className={`border-0 text-xs backdrop-blur-sm ${TYPE_BADGE_STYLES[listingType]}`}>
-                    {t(`listings.types.${listingType}`)}
-                  </Badge>
-                )}
-              </div>
-
-              {listing.photoCount > 1 && (
-                <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs text-white backdrop-blur-sm">
-                  <ImageIcon className="h-3 w-3" />
-                  {listing.photoCount}
-                </div>
-              )}
-
-              {onToggleFavorite && (
-                <div className="absolute right-2.5 top-2.5">
-                  <FavoriteButton
-                    isFavorite={!!isFavorite}
-                    onToggle={() => onToggleFavorite(listing.id)}
-                    size="sm"
-                    className="bg-white/80 backdrop-blur-sm hover:bg-white/90 border-0 shadow-sm"
-                  />
-                </div>
-              )}
-            </div>
-
-            <CardContent className="flex flex-1 flex-col p-5 sm:px-7 sm:py-6">
-              <div className="flex-1">
-                <h3 className="line-clamp-1 font-semibold leading-tight transition-colors duration-200 group-hover:text-primary">
-                  {listing.title}
-                </h3>
-
-                <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-primary/60" />
-                  <span className="truncate">
-                    {listing.address}, {listing.district}
-                  </span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
-                    <Bed className="h-3.5 w-3.5" />
-                    {listing.bedrooms}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
-                    <Bath className="h-3.5 w-3.5" />
-                    {listing.bathrooms}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
-                    <Maximize2 className="h-3.5 w-3.5" />
-                    {listing.area}m²
-                  </span>
-                  {listing.floor > 0 && (
-                    <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
-                      {listing.floor} {t("listings.card.floorShort")}
-                    </span>
+                <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+                  {promotedListingsEnabled && listing.promoted && (
+                    <Badge className="gap-1 border-0 bg-primary/90 text-xs backdrop-blur-sm">
+                      <Zap className="h-3 w-3" />
+                      {t('common.promoted')}
+                    </Badge>
                   )}
-                  {listingType === "roommate" && listing.currentRoommates != null && (
-                    <span className="flex items-center gap-1.5 rounded-md bg-violet-500/10 px-2 py-0.5 text-violet-700 dark:text-violet-300">
-                      <Users className="h-3.5 w-3.5" />
-                      {t("listings.card.roommatesCount", { count: listing.currentRoommates })}
-                      {listing.roomType && (
-                        <span className="text-xs">
-                          · {listing.roomType === "private"
-                            ? t("listings.card.privateRoom")
-                            : t("listings.card.sharedRoom")}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-2 flex h-9 flex-wrap items-center gap-1.5">
-                  {topHighlights.map((h) => (
-                    <span
-                      key={h.key}
-                      className={`rounded-full px-2 py-0.5 text-xs ${
-                        h.green
-                          ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
+                  {listingType !== 'replacement' && (
+                    <Badge
+                      className={`border-0 text-xs backdrop-blur-sm ${TYPE_BADGE_STYLES[listingType]}`}
                     >
-                      {h.label}
-                    </span>
-                  ))}
+                      {t(`listings.types.${listingType}`)}
+                    </Badge>
+                  )}
                 </div>
+
+                {listing.photoCount > 1 && (
+                  <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs text-white backdrop-blur-sm">
+                    <ImageIcon className="h-3 w-3" />
+                    {listing.photoCount}
+                  </div>
+                )}
+
+                {onToggleFavorite && (
+                  <div className="absolute right-2.5 top-2.5">
+                    <FavoriteButton
+                      isFavorite={!!isFavorite}
+                      onToggle={() => onToggleFavorite(listing.id)}
+                      size="sm"
+                      className="bg-white/80 backdrop-blur-sm hover:bg-white/90 border-0 shadow-sm"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="mt-4 flex items-end justify-between border-t border-border/50 pt-3">
-                <ListingPrice listing={listing} type={listingType} t={t} />
-                <ListingDateInfo listing={listing} type={listingType} t={t} />
-              </div>
-            </CardContent>
-          </div>
-        </Card>
+              <CardContent className="flex flex-1 flex-col p-5 sm:px-7 sm:py-6">
+                <div className="flex-1">
+                  <h3 className="line-clamp-1 font-semibold leading-tight transition-colors duration-200 group-hover:text-primary">
+                    {listing.title}
+                  </h3>
+
+                  <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-primary/60" />
+                    <span className="truncate">
+                      {listing.address}, {listing.district}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
+                      <Bed className="h-3.5 w-3.5" />
+                      {listing.bedrooms}
+                    </span>
+                    <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
+                      <Bath className="h-3.5 w-3.5" />
+                      {listing.bathrooms}
+                    </span>
+                    <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      {listing.area}m²
+                    </span>
+                    {listing.floor > 0 && (
+                      <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
+                        {listing.floor} {t('listings.card.floorShort')}
+                      </span>
+                    )}
+                    {listingType === 'roommate' && listing.currentRoommates != null && (
+                      <span className="flex items-center gap-1.5 rounded-md bg-violet-500/10 px-2 py-0.5 text-violet-700 dark:text-violet-300">
+                        <Users className="h-3.5 w-3.5" />
+                        {t('listings.card.roommatesCount', { count: listing.currentRoommates })}
+                        {listing.roomType && (
+                          <span className="text-xs">
+                            ·{' '}
+                            {listing.roomType === 'private'
+                              ? t('listings.card.privateRoom')
+                              : t('listings.card.sharedRoom')}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex h-9 flex-wrap items-center gap-1.5">
+                    {topHighlights.map((h) => (
+                      <span
+                        key={h.key}
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          h.green
+                            ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {h.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-end justify-between border-t border-border/50 pt-3">
+                  <ListingPrice listing={listing} type={listingType} t={t} />
+                  <ListingDateInfo listing={listing} type={listingType} t={t} />
+                </div>
+              </CardContent>
+            </div>
+          </Card>
         </div>
       </Link>
     </motion.div>
@@ -306,47 +317,37 @@ function ListingPrice({
   t: ReturnType<typeof useTranslations>;
 }) {
   switch (type) {
-    case "roommate": {
+    case 'roommate': {
       const price = listing.pricePerPerson ?? listing.totalCost;
       return (
         <div>
-          <p className="text-xs text-muted-foreground">
-            {t("listings.card.totalMonthly")}
-          </p>
+          <p className="text-xs text-muted-foreground">{t('listings.card.totalMonthly')}</p>
           <p className="text-lg font-bold text-primary">
             {price.toLocaleString()} PLN
             <span className="text-sm font-normal text-muted-foreground">
-              {t("listings.card.perPerson")}
+              {t('listings.card.perPerson')}
             </span>
           </p>
         </div>
       );
     }
-    case "sublet": {
+    case 'sublet': {
       const price = listing.priceTotal ?? listing.totalCost;
       const days = listing.durationDays;
       return (
         <div>
           <p className="text-xs text-muted-foreground">
-            {days
-              ? t("listings.card.forDays", { days })
-              : t("listings.card.totalMonthly")}
+            {days ? t('listings.card.forDays', { days }) : t('listings.card.totalMonthly')}
           </p>
-          <p className="text-lg font-bold text-primary">
-            {price.toLocaleString()} PLN
-          </p>
+          <p className="text-lg font-bold text-primary">{price.toLocaleString()} PLN</p>
         </div>
       );
     }
     default:
       return (
         <div>
-          <p className="text-xs text-muted-foreground">
-            {t("listings.card.totalMonthly")}
-          </p>
-          <p className="text-lg font-bold text-primary">
-            {listing.totalCost.toLocaleString()} PLN
-          </p>
+          <p className="text-xs text-muted-foreground">{t('listings.card.totalMonthly')}</p>
+          <p className="text-lg font-bold text-primary">{listing.totalCost.toLocaleString()} PLN</p>
         </div>
       );
   }
@@ -362,17 +363,17 @@ function ListingDateInfo({
   t: ReturnType<typeof useTranslations>;
 }) {
   const formatShort = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
+    new Date(dateStr).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
     });
 
-  if (type === "sublet" && listing.availableFrom && listing.availableTo) {
+  if (type === 'sublet' && listing.availableFrom && listing.availableTo) {
     return (
       <div className="text-right">
         <p className="text-xs text-muted-foreground">
           <CalendarRange className="mr-0.5 inline h-3 w-3" />
-          {t("listings.card.available")}
+          {t('listings.card.available')}
         </p>
         <p className="text-sm font-medium">
           {formatShort(listing.availableFrom)} – {formatShort(listing.availableTo)}
@@ -383,7 +384,7 @@ function ListingDateInfo({
 
   return (
     <div className="text-right">
-      <p className="text-xs text-muted-foreground">{t("listings.card.available")}</p>
+      <p className="text-xs text-muted-foreground">{t('listings.card.available')}</p>
       <p className="text-sm font-medium">{formatShort(listing.availableFrom)}</p>
     </div>
   );
@@ -398,7 +399,14 @@ interface ListingGridProps {
   onToggleFavorite?: (id: string) => void;
 }
 
-export function ListingGrid({ listings, citySlug, hoveredId, onHover, isFavorite, onToggleFavorite }: ListingGridProps) {
+export function ListingGrid({
+  listings,
+  citySlug,
+  hoveredId,
+  onHover,
+  isFavorite,
+  onToggleFavorite,
+}: ListingGridProps) {
   const t = useTranslations();
   if (listings.length === 0) {
     return (
@@ -411,9 +419,7 @@ export function ListingGrid({ listings, citySlug, hoveredId, onHover, isFavorite
           <MapPin className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-semibold">{t('listings.empty')}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('listings.emptyDesc')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('listings.emptyDesc')}</p>
       </motion.div>
     );
   }

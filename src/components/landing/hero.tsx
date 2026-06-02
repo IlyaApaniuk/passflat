@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
-import { motion, useAnimation } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import { Plus, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
+const MIN_STAT_THRESHOLD = 5;
 
 interface HeroProps {
   stats?: {
@@ -19,20 +21,28 @@ interface HeroProps {
 
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
-  const controls = useAnimation();
+  const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
 
-  const formatStat = (n: number) => n > 100 ? `${n.toLocaleString()}+` : n.toString();
+  const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
-  const stats = [
-    { value: liveStats ? formatStat(liveStats.listings) : '0', labelKey: 'statsListings' as const },
-    { value: liveStats ? formatStat(liveStats.costReports) : '0', labelKey: 'statsCostReports' as const },
-    { value: liveStats ? liveStats.districts.toString() : '0', labelKey: 'statsDistricts' as const },
-    { value: '4.9', labelKey: 'statsAvgRating' as const },
+  const allStats = [
+    {
+      raw: liveStats?.listings ?? 0,
+      value: liveStats ? formatStat(liveStats.listings) : '0',
+      labelKey: 'statsListings' as const,
+    },
+    {
+      raw: liveStats?.costReports ?? 0,
+      value: liveStats ? formatStat(liveStats.costReports) : '0',
+      labelKey: 'statsCostReports' as const,
+    },
+    {
+      raw: liveStats?.districts ?? 0,
+      value: liveStats ? liveStats.districts.toString() : '0',
+      labelKey: 'statsDistricts' as const,
+    },
   ];
-
-  useEffect(() => {
-    controls.start('visible');
-  }, [controls]);
+  const stats = allStats.filter((s) => s.raw >= MIN_STAT_THRESHOLD);
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
@@ -46,74 +56,30 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
       <div className="relative z-10 container mx-auto px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-5xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5 }}
-            className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent"
-          >
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent">
             <Sparkles className="h-4 w-4" />
             <span>{t('badge')}</span>
-          </motion.div>
+          </div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl"
-          >
+          <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl">
             <span className="block">{t('title')}</span>
             <span className="gradient-text block">{t('titleHighlight')}</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl"
-          >
+          <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
             {t('subtitle')}
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-          >
-            <Button
-              size="lg"
-              className="group h-12 rounded-full px-8 text-base"
-              asChild
-            >
-              <Link href={`/${DEFAULT_CITY}/replacement`}>
-                {t('browseCta')}
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
+              <Link href="/create-listing">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('addCta')}
               </Link>
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-full border-border px-8 text-base hover:bg-secondary"
-              asChild
-            >
-              <Link href={`/${DEFAULT_CITY}/costs`}>
-                {t('costsCta')}
-              </Link>
-            </Button>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5, delay: 0.35 }}
-            className="mt-6 flex flex-wrap items-center justify-center gap-2"
-          >
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             <Link
               href={`/${DEFAULT_CITY}/replacement`}
               className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
@@ -135,43 +101,37 @@ export function Hero({ stats: liveStats }: HeroProps) {
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               {t('trustSublet')}
             </Link>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mx-auto mt-20 grid max-w-3xl grid-cols-2 gap-4 sm:gap-8 md:grid-cols-4"
-          >
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.labelKey}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={controls}
-                variants={{ visible: { opacity: 1, scale: 1 } }}
-                transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
-                className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
-              >
-                <div className="text-2xl font-bold text-accent sm:text-3xl">
-                  {stat.value}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                  {t(stat.labelKey)}
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+          {showStats && stats.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className={`mx-auto mt-20 grid max-w-3xl gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : 'grid-cols-2 md:grid-cols-3'}`}
+            >
+              {stats.map((stat, i) => (
+                <motion.div
+                  key={stat.labelKey}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: i * 0.1 }}
+                  className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
+                >
+                  <div className="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
+                  <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                    {t(stat.labelKey)}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={controls}
-        variants={{ visible: { opacity: 1 } }}
-        transition={{ delay: 1, duration: 0.5 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-      >
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -179,7 +139,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
         >
           <motion.div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
         </motion.div>
-      </motion.div>
+      </div>
     </section>
   );
 }

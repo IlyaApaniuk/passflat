@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -40,9 +42,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   }
 
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 10 * 1024 * 1024; // 10MB
   if (file.size > maxSize) {
-    return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
+    return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
   }
 
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -61,10 +63,7 @@ export async function POST(request: NextRequest) {
     .upload(path, file, { cacheControl: '31536000', upsert: false });
 
   if (uploadError) {
-    return NextResponse.json(
-      { error: `Upload failed: ${uploadError.message}` },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
   }
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
@@ -95,7 +94,9 @@ export async function DELETE(request: NextRequest) {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

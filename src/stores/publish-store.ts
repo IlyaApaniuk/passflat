@@ -1,47 +1,45 @@
 import { create } from 'zustand';
 import imageCompression from 'browser-image-compression';
 
-export type PublishStatus = 'idle' | 'compressing' | 'uploading' | 'creating' | 'done' | 'error';
+export type PhotoUploadStatus = 'idle' | 'compressing' | 'uploading' | 'done' | 'error';
 
-interface LocalPhoto {
+export interface ManagedPhoto {
+  id: string;
   file: File;
   preview: string;
-}
-
-interface FormPayload {
-  [key: string]: unknown;
-}
-
-interface PublishState {
-  status: PublishStatus;
-  progress: { current: number; total: number };
+  status: PhotoUploadStatus;
+  url: string | null;
   error: string | null;
-  listingId: string | null;
-  listingType: string | null;
-  citySlug: string | null;
+}
 
-  _files: LocalPhoto[];
-  _payload: FormPayload | null;
-  _uploadedUrls: string[];
+interface PhotoUploadState {
+  photos: ManagedPhoto[];
 
-  startPublish: (files: LocalPhoto[], payload: FormPayload) => Promise<void>;
-  retry: () => Promise<void>;
-  dismiss: () => void;
+  addPhotos: (files: File[]) => void;
+  removePhoto: (id: string) => void;
+  reorderPhotos: (fromIndex: number, toIndex: number) => void;
+  retryPhoto: (id: string) => void;
+  clearAll: () => void;
+
+  initFromRemote: (urls: string[]) => void;
+  getUploadedUrls: () => string[];
+  allUploaded: () => boolean;
+  hasErrors: () => boolean;
 }
 
 const COMPRESSION_OPTIONS = {
-  maxSizeMB: 1.5,
+  maxSizeMB: 1.0,
   maxWidthOrHeight: 2048,
   useWebWorker: true,
   fileType: 'image/jpeg' as const,
 };
 
 async function compressPhoto(file: File): Promise<File> {
-  if (file.size <= 1.5 * 1024 * 1024) return file;
+  if (file.size <= 1.0 * 1024 * 1024) return file;
   return imageCompression(file, COMPRESSION_OPTIONS);
 }
 
-async function uploadPhoto(file: File): Promise<string> {
+async function uploadSingle(file: File): Promise<string> {
   const fd = new FormData();
   fd.append('file', file);
   const res = await fetch('/api/upload', { method: 'POST', body: fd });
@@ -53,128 +51,132 @@ async function uploadPhoto(file: File): Promise<string> {
   return data.url;
 }
 
-async function createListing(payload: FormPayload): Promise<{ id: string; type: string }> {
-  const res = await fetch('/api/listings', {
-    method: 'POST',
+async function deleteSingle(url: string): Promise<void> {
+  await fetch('/api/upload', {
+    method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Failed to create listing');
-  }
-  const data = await res.json();
-  return { id: data.listing.id, type: data.listing.type };
+    body: JSON.stringify({ url }),
+  }).catch(() => {});
 }
 
-export const usePublishStore = create<PublishState>((set, get) => ({
-  status: 'idle',
-  progress: { current: 0, total: 0 },
-  error: null,
-  listingId: null,
-  listingType: null,
-  citySlug: null,
+function processPhoto(
+  id: string,
+  file: File,
+  set: (fn: (state: PhotoUploadState) => Partial<PhotoUploadState>) => void,
+) {
+  const updatePhoto = (id: string, updates: Partial<ManagedPhoto>) => {
+    set((state) => ({
+      photos: state.photos.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    }));
+  };
 
-  _files: [],
-  _payload: null,
-  _uploadedUrls: [],
-
-  startPublish: async (files, payload) => {
-    const total = files.length;
-    set({
-      status: 'compressing',
-      progress: { current: 0, total },
-      error: null,
-      listingId: null,
-      listingType: (payload.type as string) || null,
-      citySlug: (payload.citySlug as string) || null,
-      _files: files,
-      _payload: payload,
-      _uploadedUrls: [],
-    });
-
+  (async () => {
     try {
-      const compressed: File[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const result = await compressPhoto(files[i].file);
-        compressed.push(result);
-        set({ progress: { current: i + 1, total } });
-      }
-
-      set({ status: 'uploading', progress: { current: 0, total } });
-
-      const urls: string[] = [];
-      for (let i = 0; i < compressed.length; i++) {
-        const url = await uploadPhoto(compressed[i]);
-        urls.push(url);
-        set({ _uploadedUrls: [...urls], progress: { current: i + 1, total } });
-      }
-
-      set({ status: 'creating' });
-
-      const result = await createListing({ ...payload, photos: urls });
-      set({
-        status: 'done',
-        listingId: result.id,
-        listingType: result.type,
-        _files: [],
-        _payload: null,
-        _uploadedUrls: [],
-      });
+      updatePhoto(id, { status: 'compressing' });
+      const compressed = await compressPhoto(file);
+      updatePhoto(id, { status: 'uploading' });
+      const url = await uploadSingle(compressed);
+      updatePhoto(id, { status: 'done', url });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Something went wrong', status: 'error' });
+      updatePhoto(id, {
+        status: 'error',
+        error: err instanceof Error ? err.message : 'Upload failed',
+      });
+    }
+  })();
+}
+
+export const usePhotoUploadStore = create<PhotoUploadState>((set, get) => ({
+  photos: [],
+
+  addPhotos: (files) => {
+    const newPhotos: ManagedPhoto[] = files.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: URL.createObjectURL(file),
+      status: 'idle' as const,
+      url: null,
+      error: null,
+    }));
+
+    set((state) => ({ photos: [...state.photos, ...newPhotos] }));
+
+    for (const photo of newPhotos) {
+      processPhoto(photo.id, photo.file, set);
     }
   },
 
-  retry: async () => {
-    const { _files, _payload, _uploadedUrls } = get();
-    if (!_payload || _files.length === 0) return;
+  removePhoto: (id) => {
+    const photo = get().photos.find((p) => p.id === id);
+    if (!photo) return;
 
-    const alreadyUploaded = _uploadedUrls.length;
-    const remaining = _files.slice(alreadyUploaded);
-    const total = _files.length;
+    URL.revokeObjectURL(photo.preview);
 
-    set({ status: 'uploading', error: null, progress: { current: alreadyUploaded, total } });
-
-    try {
-      const urls = [..._uploadedUrls];
-
-      for (let i = 0; i < remaining.length; i++) {
-        const compressed = await compressPhoto(remaining[i].file);
-        const url = await uploadPhoto(compressed);
-        urls.push(url);
-        set({ _uploadedUrls: [...urls], progress: { current: alreadyUploaded + i + 1, total } });
-      }
-
-      set({ status: 'creating' });
-
-      const result = await createListing({ ..._payload, photos: urls });
-      set({
-        status: 'done',
-        listingId: result.id,
-        listingType: result.type,
-        _files: [],
-        _payload: null,
-        _uploadedUrls: [],
-      });
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Something went wrong', status: 'error' });
+    if (photo.url) {
+      deleteSingle(photo.url);
     }
+
+    set((state) => ({ photos: state.photos.filter((p) => p.id !== id) }));
   },
 
-  dismiss: () => {
-    const { _files } = get();
-    _files.forEach((f) => URL.revokeObjectURL(f.preview));
-    set({
-      status: 'idle',
-      progress: { current: 0, total: 0 },
-      error: null,
-      listingId: null,
-      listingType: null,
-      citySlug: null,
-      _files: [],
-      _payload: null,
-      _uploadedUrls: [],
+  reorderPhotos: (fromIndex, toIndex) => {
+    set((state) => {
+      const next = [...state.photos];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return { photos: next };
     });
+  },
+
+  retryPhoto: (id) => {
+    const photo = get().photos.find((p) => p.id === id);
+    if (!photo || photo.status !== 'error') return;
+
+    set((state) => ({
+      photos: state.photos.map((p) =>
+        p.id === id ? { ...p, status: 'idle' as const, error: null } : p,
+      ),
+    }));
+
+    processPhoto(id, photo.file, set);
+  },
+
+  clearAll: () => {
+    const { photos } = get();
+    photos.forEach((p) => {
+      URL.revokeObjectURL(p.preview);
+    });
+    set({ photos: [] });
+  },
+
+  initFromRemote: (urls) => {
+    const remotePhotos: ManagedPhoto[] = urls.map((url) => ({
+      id: crypto.randomUUID(),
+      file: new File([], 'remote'),
+      preview: url,
+      status: 'done' as const,
+      url,
+      error: null,
+    }));
+    set({ photos: remotePhotos });
+  },
+
+  getUploadedUrls: () => {
+    return get()
+      .photos.filter((p) => p.status === 'done' && p.url)
+      .map((p) => p.url!);
+  },
+
+  allUploaded: () => {
+    const { photos } = get();
+    return photos.length === 0 || photos.every((p) => p.status === 'done');
+  },
+
+  hasErrors: () => {
+    return get().photos.some((p) => p.status === 'error');
   },
 }));
+
+// Re-export for backward compatibility with PublishSnackbar
+export type PublishStatus = PhotoUploadStatus;
+export const usePublishStore = usePhotoUploadStore;

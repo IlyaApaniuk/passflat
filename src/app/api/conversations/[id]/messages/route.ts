@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { sendNewMessageEmail } from '@/lib/resend';
 import { trackServerEvent } from '@/lib/posthog-server';
 import { broadcastNewMessage, broadcastUnread, broadcastRead } from '@/lib/supabase/broadcast';
+import { localeUrl } from '@/lib/email/url';
+import { resolveEmailLocale } from '@/lib/email/types';
 
 async function getUser() {
   const supabase = await createClient();
@@ -13,10 +15,7 @@ async function getUser() {
   return user;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -42,9 +41,7 @@ export async function GET(
     where: { conversationId },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
-    ...(cursor
-      ? { cursor: { id: cursor }, skip: 1 }
-      : {}),
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
       sender: {
         select: { id: true, displayName: true, contactValue: true },
@@ -65,8 +62,7 @@ export async function GET(
     id: m.id,
     content: m.content,
     senderId: m.senderId,
-    senderName:
-      m.sender.displayName || m.sender.contactValue || 'User',
+    senderName: m.sender.displayName || m.sender.contactValue || 'User',
     createdAt: m.createdAt.toISOString(),
     isOwn: m.senderId === user.id,
   }));
@@ -77,10 +73,7 @@ export async function GET(
   });
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -91,10 +84,7 @@ export async function POST(
   const { content } = body;
 
   if (!content?.trim()) {
-    return NextResponse.json(
-      { error: 'content is required' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'content is required' }, { status: 400 });
   }
 
   const participant = await prisma.conversationParticipant.findUnique({
@@ -133,7 +123,7 @@ export async function POST(
       participants: {
         where: { userId: { not: user.id } },
         include: {
-          user: { select: { contactValue: true } },
+          user: { select: { contactValue: true, locale: true } },
         },
       },
     },
@@ -146,16 +136,16 @@ export async function POST(
       : null;
 
     if (recipientEmail) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const senderName =
-        user.user_metadata?.display_name || user.email || 'Someone';
+      const senderName = user.user_metadata?.display_name || user.email || 'Someone';
+      const locale = resolveEmailLocale(otherParticipant?.user.locale);
 
       await sendNewMessageEmail({
         to: recipientEmail,
+        locale,
         listingTitle: conversation.listing.title,
         senderName,
         messageText: content.trim(),
-        conversationUrl: `${appUrl}/pl/messages?c=${conversationId}`,
+        conversationUrl: localeUrl(locale, `/messages?c=${conversationId}`),
       });
     }
   }

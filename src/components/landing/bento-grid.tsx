@@ -3,23 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
-import {
-  ArrowRight,
-  TrendingDown,
-  Shield,
-  Eye,
-  Zap,
-  Building2,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, TrendingDown, MessageSquare, BadgePercent, Rocket, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
-
-interface BentoGridProps {
-  buildings?: number;
-  users?: number;
-}
 
 interface BentoItem {
   titleKey: string;
@@ -32,8 +19,8 @@ interface BentoItem {
 
 const bentoItems: BentoItem[] = [
   {
-    titleKey: 'realCostTitle',
-    descKey: 'realCostDesc',
+    titleKey: 'realCostDataTitle',
+    descKey: 'realCostDataDesc',
     icon: Eye,
     className: 'md:col-span-2 md:row-span-2',
     gradient: 'from-accent/20 via-transparent to-transparent',
@@ -44,45 +31,33 @@ const bentoItems: BentoItem[] = [
     descKey: 'saveDepositDesc',
     icon: TrendingDown,
     className: 'md:col-span-1',
-    gradient: 'from-blue-500/10 via-transparent to-transparent',
+    gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'verifiedTitle',
-    descKey: 'verifiedDesc',
-    icon: Shield,
+    titleKey: 'directContactTitle',
+    descKey: 'directContactDesc',
+    icon: MessageSquare,
     className: 'md:col-span-1',
-    gradient: 'from-emerald-500/10 via-transparent to-transparent',
+    gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'buildingsTitle',
-    descKey: 'buildingsDesc',
-    icon: Building2,
+    titleKey: 'noAgencyFeesTitle',
+    descKey: 'noAgencyFeesDesc',
+    icon: BadgePercent,
     className: 'md:col-span-1',
-    gradient: 'from-orange-500/10 via-transparent to-transparent',
+    gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'matchingTitle',
-    descKey: 'matchingDesc',
-    icon: Zap,
+    titleKey: 'quickProcessTitle',
+    descKey: 'quickProcessDesc',
+    icon: Rocket,
     className: 'md:col-span-1',
-    gradient: 'from-yellow-500/10 via-transparent to-transparent',
-  },
-  {
-    titleKey: 'communityTitle',
-    descKey: 'communityDesc',
-    icon: Users,
-    className: 'md:col-span-2',
-    gradient: 'from-pink-500/10 via-transparent to-transparent',
+    gradient: 'from-accent/10 via-transparent to-transparent',
   },
 ];
 
-export function BentoGrid({ buildings, users }: BentoGridProps) {
+export function BentoGrid() {
   const t = useTranslations('landing.bentoGrid');
-
-  const translationValues: Record<string, Record<string, string | number>> = {
-    buildingsTitle: { count: buildings ?? 0 },
-    communityDesc: { count: users ?? 0 },
-  };
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
@@ -96,13 +71,10 @@ export function BentoGrid({ buildings, users }: BentoGridProps) {
           className="mb-16 text-center"
         >
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            {t('titleBefore')}{' '}
-            <span className="gradient-text">{t('titleHighlight')}</span>
+            {t('titleBefore')} <span className="gradient-text">{t('titleHighlight')}</span>
             {t('titleAfter')}
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            {t('subtitle')}
-          </p>
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
         </motion.div>
 
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-4">
@@ -129,21 +101,19 @@ export function BentoGrid({ buildings, users }: BentoGridProps) {
                 <div
                   className={`mb-4 flex items-center justify-center rounded-2xl bg-secondary transition-transform group-hover:scale-110 ${item.featured ? 'h-14 w-14' : 'h-12 w-12'}`}
                 >
-                  <item.icon
-                    className={`text-accent ${item.featured ? 'h-7 w-7' : 'h-5 w-5'}`}
-                  />
+                  <item.icon className={`text-accent ${item.featured ? 'h-7 w-7' : 'h-5 w-5'}`} />
                 </div>
 
                 <div>
                   <h3
                     className={`mb-2 font-semibold ${item.featured ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
                   >
-                    {t(item.titleKey, translationValues[item.titleKey])}
+                    {t(item.titleKey)}
                   </h3>
                   <p
                     className={`text-muted-foreground ${item.featured ? 'text-base sm:text-lg' : 'text-sm'}`}
                   >
-                    {t(item.descKey, translationValues[item.descKey])}
+                    {t(item.descKey)}
                   </p>
                 </div>
 

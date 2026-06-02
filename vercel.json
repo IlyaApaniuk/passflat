@@ -5,12 +5,20 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/expiring-listings",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/cleanup-accounts",
       "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/cleanup-expired",
       "schedule": "0 5 * * 0"
+    },
+    {
+      "path": "/api/cron/cleanup-orphan-photos",
+      "schedule": "0 6 * * *"
     }
   ]
 }

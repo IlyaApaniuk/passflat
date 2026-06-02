@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { Home } from "lucide-react";
+import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import { Home, Linkedin, Instagram } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -15,18 +16,22 @@ export function Footer() {
       { label: t('landing.footer.roommateSearch'), href: `/${DEFAULT_CITY}/roommate` },
       { label: t('landing.footer.temporarySublets'), href: `/${DEFAULT_CITY}/sublet` },
       { label: t('landing.footer.costReports'), href: `/${DEFAULT_CITY}/costs` },
-      { label: t('landing.footer.addListing'), href: "/create-listing" },
+      { label: t('landing.footer.addListing'), href: '/create-listing' },
+      { label: t('landing.footer.pricing'), href: '/pricing' },
+      ...(isDocumentTemplatesEnabled()
+        ? [{ label: t('landing.footer.resources'), href: '/resources' }]
+        : []),
     ],
     company: [
-      { label: t('landing.footer.aboutUs'), href: "/about" },
-      { label: t('landing.footer.howItWorks'), href: "/how-it-works" },
-      { label: t('landing.footer.blog'), href: "/blog" },
-      { label: t('landing.footer.contactUs'), href: "/contact" },
+      { label: t('landing.footer.aboutUs'), href: '/about' },
+      { label: t('landing.footer.howItWorks'), href: '/how-it-works' },
+      { label: `${t('landing.footer.blog')} (Beta)`, href: '/blog' },
+      { label: t('landing.footer.contactUs'), href: '/contact' },
     ],
     legal: [
-      { label: t('landing.footer.privacyPolicy'), href: "/privacy" },
-      { label: t('landing.footer.termsOfService'), href: "/terms" },
-      { label: t('landing.footer.helpCenter'), href: "/help" },
+      { label: t('landing.footer.privacyPolicy'), href: '/privacy' },
+      { label: t('landing.footer.termsOfService'), href: '/terms' },
+      { label: t('landing.footer.helpCenter'), href: '/help' },
     ],
   };
 
@@ -42,12 +47,28 @@ export function Footer() {
               </div>
               <span className="text-xl font-semibold tracking-tight">{t('common.appName')}</span>
             </Link>
-            <p className="mb-4 text-sm text-muted-foreground">
-              {t('landing.footer.tagline')}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t('landing.footer.expanding')}
-            </p>
+            <p className="mb-4 text-sm text-muted-foreground">{t('landing.footer.tagline')}</p>
+            <p className="text-sm text-muted-foreground">{t('landing.footer.expanding')}</p>
+            <div className="mt-4 flex items-center gap-3">
+              <a
+                href="https://linkedin.com/company/passflat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
+              </a>
+              <a
+                href="https://instagram.com/passflat.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
           {/* Product */}
@@ -105,7 +126,8 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} {t('common.appName')}. {t('landing.footer.allRightsReserved')}
+            &copy; {new Date().getFullYear()} {t('common.appName')}.{' '}
+            {t('landing.footer.allRightsReserved')}
           </p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />

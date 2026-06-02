@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
-import { DashboardClient } from "./client";
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
+import { DashboardClient } from './client';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -10,20 +10,20 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login?next=/dashboard");
+    redirect('/auth/login?next=/dashboard');
   }
 
   const [listings, savedListings] = await Promise.all([
     prisma.listing.findMany({
       where: { authorId: user.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       include: {
         building: { include: { district: true, city: true } },
       },
     }),
     prisma.savedListing.findMany({
       where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       include: {
         listing: {
           include: {
@@ -34,17 +34,20 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const freeListingsUsed = listings.filter((l) => l.status === 'active' && !l.isPaid).length;
+
   const serializedListings = listings.map((l) => ({
     id: l.id,
     title: l.title,
-    type: l.type as "replacement" | "roommate" | "sublet",
+    type: l.type as 'replacement' | 'roommate' | 'sublet',
     address: l.building.addressFull,
-    district: l.building.district?.nameKey ?? "",
+    district: l.building.district?.nameKey ?? '',
     citySlug: l.building.city.slug,
     price: Number(l.totalMonthly ?? l.pricePerPerson ?? l.priceTotal ?? 0),
-    status: l.status as "active" | "pending" | "expired" | "closed",
+    status: l.status as 'active' | 'pending' | 'expired' | 'closed' | 'pending_payment',
     promoted: l.isPromoted,
     promotedUntil: l.promotedUntil?.toISOString() ?? null,
+    isPaid: l.isPaid,
     views: l.viewsCount,
     inquiries: l.responsesCount,
     image: l.photos[0] ?? null,
@@ -52,18 +55,15 @@ export default async function DashboardPage() {
   }));
 
   const serializedSaved = savedListings
-    .filter((s) => s.listing.status === "active")
+    .filter((s) => s.listing.status === 'active')
     .map((s) => ({
       id: s.listing.id,
       title: s.listing.title,
-      type: s.listing.type as "replacement" | "roommate" | "sublet",
+      type: s.listing.type as 'replacement' | 'roommate' | 'sublet',
       address: s.listing.building.addressFull,
-      district: s.listing.building.district?.nameKey ?? "",
+      district: s.listing.building.district?.nameKey ?? '',
       price: Number(
-        s.listing.totalMonthly ??
-          s.listing.pricePerPerson ??
-          s.listing.priceTotal ??
-          0,
+        s.listing.totalMonthly ?? s.listing.pricePerPerson ?? s.listing.priceTotal ?? 0,
       ),
       image: s.listing.photos[0] ?? null,
       savedAt: s.createdAt.toISOString(),
@@ -73,7 +73,8 @@ export default async function DashboardPage() {
     <DashboardClient
       listings={serializedListings}
       savedListings={serializedSaved}
-      userEmail={user.email ?? ""}
+      userEmail={user.email ?? ''}
+      freeListingsUsed={freeListingsUsed}
     />
   );
 }

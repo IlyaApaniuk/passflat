@@ -1,15 +1,29 @@
-"use client";
+'use client';
 
-import { useState, useEffect, lazy, Suspense } from "react";
-import { useTranslations } from "next-intl";
-import { usePostHog } from "posthog-js/react";
-import { motion } from "framer-motion";
-import { Link, useRouter } from "@/i18n/navigation";
-import { Header } from "@/components/landing/header";
-import { Footer } from "@/components/landing/footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
+import { useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { format, type Locale } from 'date-fns';
+import { enUS, pl, ru, uk } from 'date-fns/locale';
+import { Link, useRouter } from '@/i18n/navigation';
+import { Header } from '@/components/landing/header';
+import { Footer } from '@/components/landing/footer';
+import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { PRICES_PLN } from '@/lib/pricing';
+import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Building2,
   Search,
@@ -26,10 +40,17 @@ import {
   AlertTriangle,
   Pencil,
   Mail,
-} from "lucide-react";
+  ShoppingCart,
+  CalendarClock,
+  RefreshCw,
+  Clock,
+  Ruler,
+} from 'lucide-react';
+
+const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
 
 const CostsMap = lazy(() =>
-  import("@/components/map/CostsMap").then((m) => ({ default: m.CostsMap })),
+  import('@/components/map/CostsMap').then((m) => ({ default: m.CostsMap })),
 );
 
 interface BuildingData {
@@ -39,9 +60,11 @@ interface BuildingData {
   district: string;
   districtSlug: string;
   reports: number;
-  avgTotal: number;
-  avgRent: number;
-  avgUtilities: number;
+  medianTotal: number;
+  medianRent: number;
+  medianAdminFee: number;
+  medianRentPerM2: number | null;
+  medianAdminFeePerM2: number | null;
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
@@ -58,9 +81,10 @@ interface DistrictStatsData {
   name: string;
   buildingCount: number;
   reportCount: number;
-  avgTotal: number;
-  avgRent: number;
-  avgUtilities: number;
+  medianTotal: number;
+  medianRent: number;
+  medianAdminFee: number;
+  medianRentPerM2: number;
 }
 
 interface CityBounds {
@@ -74,7 +98,8 @@ interface CostsOverviewClientProps {
   buildings: BuildingData[];
   districts: DistrictData[];
   districtStats: DistrictStatsData[];
-  hasContributed: boolean;
+  hasContributedData: boolean;
+  costAccessUntil: string | null;
   isFlagged?: boolean;
   citySlug: string;
   cityBounds?: CityBounds;
@@ -83,7 +108,11 @@ interface CostsOverviewClientProps {
 }
 
 function stripDiacritics(str: string) {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0142/g, "l").replace(/\u0141/g, "L");
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0142/g, 'l')
+    .replace(/\u0141/g, 'L');
 }
 
 const PAGE_SIZE = 20;
@@ -93,7 +122,7 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, delay: (i % PAGE_SIZE) * 0.08, ease: "easeOut" as const },
+    transition: { duration: 0.4, delay: (i % PAGE_SIZE) * 0.08, ease: 'easeOut' as const },
   }),
 };
 
@@ -101,7 +130,8 @@ export function CostsOverviewClient({
   buildings,
   districts,
   districtStats,
-  hasContributed,
+  hasContributedData,
+  costAccessUntil,
   isFlagged = false,
   citySlug,
   cityBounds,
@@ -109,31 +139,56 @@ export function CostsOverviewClient({
   initialDistrict,
 }: CostsOverviewClientProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const posthog = usePostHog();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const [rentalTypeFilter, setRentalTypeFilter] = useState<"all" | "apartment" | "room">("all");
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [rentalTypeFilter, setRentalTypeFilter] = useState<'all' | 'apartment' | 'room'>('all');
   const [expandedDistrict, setExpandedDistrict] = useState<string | null>(initialDistrict);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [districtSort, setDistrictSort] = useState<'default' | 'total' | 'perM2' | 'reports'>(
+    'default',
+  );
+
+  const accessGranted = useMemo(
+    () => hasContributedData || (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
+    [hasContributedData, costAccessUntil],
+  );
+  const paidActive =
+    !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) > new Date();
+  const paidExpired =
+    !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) <= new Date();
+  const dateFmtLocale = DATE_LOCALE_MAP[locale] ?? enUS;
 
   useEffect(() => {
-    if (!hasContributed) {
-      posthog?.capture("cost_unlock_prompted", { city: citySlug });
+    const param = searchParams.get('cost_access');
+    if (param === 'success') {
+      toast.success(t('costs.buyAccess.successToast'));
+    } else if (param === 'cancel') {
+      toast.error(t('costs.buyAccess.cancelToast'));
+    }
+    if (param) {
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(
-    initialDistrict
-  );
+
+  useEffect(() => {
+    if (!accessGranted) {
+      posthog?.capture('cost_unlock_prompted', { city: citySlug });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
   const searchAndTypeFiltered = buildings.filter((building) => {
     const q = stripDiacritics(searchQuery.toLowerCase());
     const matchesSearch =
-      q === "" ||
+      q === '' ||
       stripDiacritics(building.address.toLowerCase()).includes(q) ||
       stripDiacritics(building.district.toLowerCase()).includes(q);
     const matchesRentalType =
-      rentalTypeFilter === "all" || building.rentalType === rentalTypeFilter;
+      rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
     return matchesSearch && matchesRentalType;
   });
 
@@ -142,22 +197,47 @@ export function CostsOverviewClient({
   );
 
   const computedDistrictStats = districtStats.map((ds) => {
-    if (rentalTypeFilter === "all") return ds;
+    if (rentalTypeFilter === 'all') return ds;
     const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
-    if (dBuildings.length === 0) return { ...ds, buildingCount: 0, reportCount: 0, avgTotal: 0, avgRent: 0, avgUtilities: 0 };
-    const avgOf = (vals: number[]) => {
-      const nums = vals.filter((v) => v > 0);
-      return nums.length === 0 ? 0 : Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-    };
+    if (dBuildings.length === 0)
+      return {
+        ...ds,
+        buildingCount: 0,
+        reportCount: 0,
+        medianTotal: 0,
+        medianRent: 0,
+        medianAdminFee: 0,
+        medianRentPerM2: 0,
+      };
+    const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
     return {
       ...ds,
       buildingCount: dBuildings.length,
       reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
-      avgTotal: avgOf(dBuildings.map((b) => b.avgTotal)),
-      avgRent: avgOf(dBuildings.map((b) => b.avgRent)),
-      avgUtilities: avgOf(dBuildings.map((b) => b.avgUtilities)),
+      medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
+      medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
+      medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
+      medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
     };
   });
+
+  // District list ordering. "default" preserves the server ordering; the other
+  // options sort by a district stat. Cost metrics sort ascending (cheapest
+  // first) with empty values pushed to the end; report count sorts descending.
+  const visibleDistricts = useMemo(() => {
+    const list = districts.filter((d) => d.count > 0);
+    if (districtSort === 'default') return list;
+    const statOf = (slug: string) => computedDistrictStats.find((s) => s.slug === slug);
+    return [...list].sort((a, b) => {
+      const sa = statOf(a.slug);
+      const sb = statOf(b.slug);
+      if (districtSort === 'reports') {
+        return (sb?.reportCount ?? 0) - (sa?.reportCount ?? 0);
+      }
+      const key = districtSort === 'total' ? 'medianTotal' : 'medianRentPerM2';
+      return ((sa?.[key] || Infinity) as number) - ((sb?.[key] || Infinity) as number);
+    });
+  }, [districts, districtSort, computedDistrictStats]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -166,10 +246,10 @@ export function CostsOverviewClient({
   const handleDistrictSelect = (slug: string | null) => {
     setSelectedDistrict(slug);
     const params = new URLSearchParams();
-    if (slug) params.set("district", slug);
-    if (searchQuery) params.set("q", searchQuery);
+    if (slug) params.set('district', slug);
+    if (searchQuery) params.set('q', searchQuery);
     const qs = params.toString();
-    window.history.replaceState(null, "", `/${citySlug}/costs${qs ? `?${qs}` : ""}`);
+    window.history.replaceState(null, '', `/${citySlug}/costs${qs ? `?${qs}` : ''}`);
   };
 
   return (
@@ -188,43 +268,79 @@ export function CostsOverviewClient({
             >
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-sm font-medium">
                 <TrendingUp className="h-4 w-4" />
-                {t("costs.overview.badge")}
+                {t('costs.overview.badge')}
               </div>
               <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                {t("costs.overview.title")}
+                {t('costs.overview.title')}
               </h1>
-              <p className="mt-4 text-muted-foreground">
-                {t("costs.overview.subtitle")}
-              </p>
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
-                className="mt-8 flex gap-2"
+                className="mt-8 space-y-4"
               >
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t("costs.overview.searchPlaceholder")}
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder={t('costs.overview.searchPlaceholder')}
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  {hasContributedData && (
+                    <Button variant="outline" asChild>
+                      <Link href={`/${citySlug}/costs/submit?edit=true`}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('costs.submit.editReport')}
+                      </Link>
+                    </Button>
+                  )}
                 </div>
-                {hasContributed ? (
-                  <Button variant="outline" asChild>
-                    <Link href={`/${citySlug}/costs/submit?edit=true`}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      {t("costs.submit.editReport")}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" asChild>
-                    <Link href={`/${citySlug}/costs/submit`}>
-                      {t("costs.overview.submitCosts")}
-                    </Link>
-                  </Button>
+
+                {!accessGranted && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">{t('costs.overview.gateLead')}</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Link
+                        href={`/${citySlug}/costs/submit`}
+                        className="group relative flex flex-col rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
+                      >
+                        <span className="absolute -top-2.5 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                          {t('costs.overview.gateRecommended')}
+                        </span>
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Pencil className="h-5 w-5 text-primary" />
+                        </div>
+                        <p className="font-semibold">{t('costs.overview.gateFreeTitle')}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {t('costs.overview.gateFreeBenefit')}
+                        </p>
+                        <p className="mt-auto pt-2 text-xs text-muted-foreground">
+                          {t('costs.overview.gateFreeNote')}
+                        </p>
+                      </Link>
+
+                      <BuyAccessDialog citySlug={citySlug}>
+                        <button className="group flex flex-col rounded-xl border-2 border-border p-4 text-left transition-colors hover:border-primary/30 hover:bg-muted/50">
+                          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <p className="font-semibold">{t('costs.overview.gatePaidTitle')}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {t('costs.overview.gatePaidBenefit', {
+                              price: PRICES_PLN.COST_ACCESS_7,
+                            })}
+                          </p>
+                          <p className="mt-auto pt-2 text-xs text-muted-foreground">
+                            {t('costs.overview.gatePaidNote')}
+                          </p>
+                        </button>
+                      </BuyAccessDialog>
+                    </div>
+                  </div>
                 )}
               </motion.div>
             </motion.div>
@@ -240,95 +356,160 @@ export function CostsOverviewClient({
               className="lg:col-span-1"
             >
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {t("costs.overview.districts")}
-                  </CardTitle>
+                <CardHeader className="gap-3">
+                  <CardTitle className="text-lg">{t('costs.overview.districts')}</CardTitle>
+                  <Select
+                    value={districtSort}
+                    onValueChange={(v) =>
+                      setDistrictSort(v as 'default' | 'total' | 'perM2' | 'reports')
+                    }
+                  >
+                    <SelectTrigger size="sm" className="w-full">
+                      <span className="text-muted-foreground">{t('costs.overview.sortLabel')}</span>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">{t('costs.overview.sortDefault')}</SelectItem>
+                      <SelectItem value="total">{t('costs.overview.sortTotal')}</SelectItem>
+                      <SelectItem value="perM2">{t('costs.overview.sortPerM2')}</SelectItem>
+                      <SelectItem value="reports">{t('costs.overview.sortReports')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y">
                     <button
                       onClick={() => handleDistrictSelect(null)}
                       className={`flex w-full items-center justify-between px-6 py-3 text-left text-sm transition-colors hover:bg-muted/50 ${
-                        selectedDistrict === null
-                          ? "bg-primary/5 font-medium text-primary"
-                          : ""
+                        selectedDistrict === null ? 'bg-primary/5 font-medium text-primary' : ''
                       }`}
                     >
-                      <span>{t("costs.overview.allDistricts")}</span>
-                      <span className="text-muted-foreground">
-                        {searchAndTypeFiltered.length}
-                      </span>
+                      <span>{t('costs.overview.allDistricts')}</span>
+                      <span className="text-muted-foreground">{searchAndTypeFiltered.length}</span>
                     </button>
-                    {districts
-                      .filter((d) => d.count > 0)
-                      .map((district) => {
-                        const isActive = selectedDistrict === district.slug;
-                        const isExpanded = expandedDistrict === district.slug;
-                        const stats = computedDistrictStats.find((s) => s.slug === district.slug);
-                        const hasStats = stats && stats.buildingCount > 0;
-                        return (
-                          <div key={district.slug}>
-                            <div
-                              className={`flex w-full items-center justify-between px-6 py-3 text-sm transition-colors ${
-                                isActive ? "bg-primary/5 font-medium text-primary" : ""
-                              }`}
+                    {visibleDistricts.map((district) => {
+                      const isActive = selectedDistrict === district.slug;
+                      const isExpanded = expandedDistrict === district.slug;
+                      const stats = computedDistrictStats.find((s) => s.slug === district.slug);
+                      const hasStats = stats && stats.buildingCount > 0;
+                      const lowData =
+                        !!stats &&
+                        stats.reportCount > 0 &&
+                        stats.reportCount <= TRUST_THRESHOLDS.lowDataMax;
+                      return (
+                        <div key={district.slug}>
+                          <div
+                            className={`flex w-full items-center justify-between px-6 py-3 text-sm transition-colors ${
+                              isActive ? 'bg-primary/5 font-medium text-primary' : ''
+                            }`}
+                          >
+                            <button
+                              onClick={() => {
+                                handleDistrictSelect(isActive ? null : district.slug);
+                                if (!isActive) setExpandedDistrict(district.slug);
+                              }}
+                              className="min-w-0 flex-1 text-left hover:text-primary transition-colors"
                             >
-                              <button
-                                onClick={() => {
-                                  handleDistrictSelect(isActive ? null : district.slug);
-                                  if (!isActive) setExpandedDistrict(district.slug);
-                                }}
-                                className="flex-1 text-left hover:text-primary transition-colors"
-                              >
-                                {district.name}
-                              </button>
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">
-                                  {searchAndTypeFiltered.filter((b) => b.districtSlug === district.slug).length}
+                              <span className="block truncate">{district.name}</span>
+                              {stats && stats.reportCount > 0 && (
+                                <span
+                                  className={`mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] font-normal text-muted-foreground ${
+                                    lowData ? 'opacity-60' : ''
+                                  }`}
+                                >
+                                  <span>
+                                    {t('costs.overview.nReports', { count: stats.reportCount })}
+                                  </span>
+                                  {accessGranted && stats.medianRentPerM2 > 0 && (
+                                    <span className="inline-flex items-center gap-0.5">
+                                      <span>·</span>
+                                      <Ruler className="h-3 w-3" />≈{' '}
+                                      {stats.medianRentPerM2.toLocaleString()}{' '}
+                                      {t('costs.overview.perM2')}
+                                    </span>
+                                  )}
                                 </span>
-                                {hasStats && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedDistrict(isExpanded ? null : district.slug);
-                                    }}
-                                    className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                  >
-                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                                  </button>
-                                )}
-                              </div>
+                              )}
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">
+                                {
+                                  searchAndTypeFiltered.filter(
+                                    (b) => b.districtSlug === district.slug,
+                                  ).length
+                                }
+                              </span>
+                              {hasStats && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedDistrict(isExpanded ? null : district.slug);
+                                  }}
+                                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                >
+                                  <ChevronDown
+                                    className={`h-3.5 w-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                  />
+                                </button>
+                              )}
                             </div>
-                            {isExpanded && hasStats && (
-                              <div className="border-t bg-muted/30 px-6 py-3">
-                                {hasContributed ? (
+                          </div>
+                          {isExpanded && hasStats && (
+                            <div className="border-t bg-muted/30 px-6 py-3">
+                              {accessGranted ? (
+                                <div className="space-y-2">
                                   <div className="flex min-w-0 gap-2 text-center">
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgRent")}</p>
-                                      <p className="text-sm font-bold">{stats.avgRent.toLocaleString()}</p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {t('costs.overview.districtMedianRent')}
+                                      </p>
+                                      <p className="text-sm font-bold">
+                                        ≈ {stats.medianRent.toLocaleString()}
+                                      </p>
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgUtilities")}</p>
-                                      <p className="text-sm font-bold">{stats.avgUtilities.toLocaleString()}</p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {t('costs.overview.districtMedianCzynsz')}
+                                      </p>
+                                      <p className="text-sm font-bold">
+                                        ≈ {stats.medianAdminFee.toLocaleString()}
+                                      </p>
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-[10px] text-muted-foreground">{t("costs.overview.districtAvgTotal")}</p>
-                                      <p className="text-sm font-bold text-primary">{stats.avgTotal.toLocaleString()}</p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {t('costs.overview.districtMedianTotal')}
+                                      </p>
+                                      <p className="text-sm font-bold text-primary">
+                                        ≈ {stats.medianTotal.toLocaleString()}
+                                      </p>
                                     </div>
                                   </div>
-                                ) : (
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Lock className="h-3.5 w-3.5" />
-                                    {t("costs.overview.submitToUnlock")}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                  {stats.medianRentPerM2 > 0 && (
+                                    <div className="flex items-center justify-center gap-1.5 border-t pt-2 text-[10px] text-muted-foreground">
+                                      <Ruler className="h-3 w-3" />
+                                      <span>{t('costs.overview.districtMedianPerM2')}</span>
+                                      <span className="font-semibold text-foreground">
+                                        ≈ {stats.medianRentPerM2.toLocaleString()}{' '}
+                                        {t('costs.overview.perM2')}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Lock className="h-3.5 w-3.5" />
+                                  {t('costs.overview.submitToUnlock')}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+                  <p className="border-t px-6 py-3 text-[11px] leading-snug text-muted-foreground">
+                    {t('costs.overview.estimateLegend')}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -343,24 +524,22 @@ export function CostsOverviewClient({
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
                         <div>
-                          <p className="font-medium">
-                            {t("costs.overview.flaggedTitle")}
-                          </p>
+                          <p className="font-medium">{t('costs.overview.flaggedTitle')}</p>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {t("costs.overview.flaggedDesc")}
+                            {t('costs.overview.flaggedDesc')}
                           </p>
                           <div className="mt-3 flex flex-col gap-2">
                             <Button size="sm" asChild>
                               <Link href={`/${citySlug}/costs/submit?edit=true`}>
                                 <Pencil className="mr-2 h-3.5 w-3.5" />
-                                {t("costs.submit.editReport")}
+                                {t('costs.submit.editReport')}
                               </Link>
                             </Button>
                             <Button size="sm" variant="outline" asChild>
-                              <a href="mailto:contact@passflat.eu?subject=Cost report review">
+                              <Link href={'/contact?subject=costs' as '/'}>
                                 <Mail className="mr-2 h-3.5 w-3.5" />
-                                {t("costs.submit.contactUs")}
-                              </a>
+                                {t('costs.submit.contactUs')}
+                              </Link>
                             </Button>
                           </div>
                         </div>
@@ -370,7 +549,38 @@ export function CostsOverviewClient({
                 </motion.div>
               )}
 
-              {!hasContributed && !isFlagged && (
+              {paidActive && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Card className="mt-4 border-accent/50 bg-accent/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <CalendarClock className="mt-0.5 h-5 w-5 text-accent" />
+                        <div>
+                          <p className="font-medium">
+                            {t('costs.access.activeUntil', {
+                              date: format(new Date(costAccessUntil!), 'PP', {
+                                locale: dateFmtLocale,
+                              }),
+                            })}
+                          </p>
+                          <BuyAccessDialog citySlug={citySlug}>
+                            <Button size="sm" variant="outline" className="mt-3 gap-2">
+                              <RefreshCw className="h-3.5 w-3.5" />
+                              {t('costs.access.renew')}
+                            </Button>
+                          </BuyAccessDialog>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {!accessGranted && !isFlagged && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -381,17 +591,40 @@ export function CostsOverviewClient({
                       <div className="flex items-start gap-3">
                         <Lock className="mt-0.5 h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium">
-                            {t("costs.overview.unlockFullData")}
-                          </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {t("costs.overview.unlockDesc")}
-                          </p>
-                          <Button size="sm" className="mt-3" asChild>
-                            <Link href={`/${citySlug}/costs/submit`}>
-                              {t("costs.overview.submitMyCosts")}
-                            </Link>
-                          </Button>
+                          {paidExpired ? (
+                            <>
+                              <p className="font-medium">
+                                {t('costs.access.expiredOn', {
+                                  date: format(new Date(costAccessUntil!), 'PP', {
+                                    locale: dateFmtLocale,
+                                  }),
+                                })}
+                              </p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {t('costs.access.expiredCta')}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-medium">{t('costs.overview.unlockFullData')}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {t('costs.overview.unlockDesc')}
+                              </p>
+                            </>
+                          )}
+                          <div className="mt-3 flex flex-col gap-2">
+                            <Button size="sm" asChild>
+                              <Link href={`/${citySlug}/costs/submit`}>
+                                {t('costs.overview.submitMyCosts')}
+                              </Link>
+                            </Button>
+                            <BuyAccessDialog citySlug={citySlug}>
+                              <Button size="sm" variant="outline" className="gap-2">
+                                <ShoppingCart className="h-3.5 w-3.5" />
+                                {t('costs.overview.buyAccessBtn')}
+                              </Button>
+                            </BuyAccessDialog>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -408,64 +641,62 @@ export function CostsOverviewClient({
                 className="mb-6 flex flex-wrap items-center gap-3"
               >
                 <p className="text-sm text-muted-foreground sm:mr-auto">
-                  <span className="font-medium text-foreground">
-                    {filteredBuildings.length}
-                  </span>{" "}
-                  {t("costs.overview.buildingsWithReports")}
+                  <span className="font-medium text-foreground">{filteredBuildings.length}</span>{' '}
+                  {t('costs.overview.buildingsWithReports')}
                 </p>
                 <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
-                  {(["all", "apartment", "room"] as const).map((type) => (
+                  {(['all', 'apartment', 'room'] as const).map((type) => (
                     <button
                       key={type}
                       onClick={() => setRentalTypeFilter(type)}
                       className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
                         rentalTypeFilter === type
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      {type === "apartment" && <Home className="h-3.5 w-3.5" />}
-                      {type === "room" && <DoorOpen className="h-3.5 w-3.5" />}
-                      {type === "all"
-                        ? t("costs.overview.filterAll")
-                        : type === "apartment"
-                          ? t("costs.overview.filterApartment")
-                          : t("costs.overview.filterRoom")}
+                      {type === 'apartment' && <Home className="h-3.5 w-3.5" />}
+                      {type === 'room' && <DoorOpen className="h-3.5 w-3.5" />}
+                      {type === 'all'
+                        ? t('costs.overview.filterAll')
+                        : type === 'apartment'
+                          ? t('costs.overview.filterApartment')
+                          : t('costs.overview.filterRoom')}
                     </button>
                   ))}
                 </div>
                 <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
                   <button
-                    onClick={() => setViewMode("list")}
+                    onClick={() => setViewMode('list')}
                     className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
-                      viewMode === "list"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                      viewMode === 'list'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <List className="h-4 w-4" />
-                    {t("costs.overview.listView")}
+                    {t('costs.overview.listView')}
                   </button>
                   <button
-                    onClick={() => setViewMode("map")}
+                    onClick={() => setViewMode('map')}
                     className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
-                      viewMode === "map"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                      viewMode === 'map'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <Map className="h-4 w-4" />
-                    {t("costs.overview.mapView")}
+                    {t('costs.overview.mapView')}
                   </button>
                 </div>
               </motion.div>
 
-              {viewMode === "map" && (
+              {viewMode === 'map' && (
                 <Suspense
                   fallback={
                     <div className="flex h-[500px] items-center justify-center rounded-lg border bg-muted/30">
                       <p className="text-sm text-muted-foreground">
-                        {t("costs.overview.loadingMap")}
+                        {t('costs.overview.loadingMap')}
                       </p>
                     </div>
                   }
@@ -482,8 +713,8 @@ export function CostsOverviewClient({
                           address: b.address,
                           district: b.district,
                           reports: b.reports,
-                          avgTotal: b.avgTotal,
-                          hasContributed,
+                          avgTotal: b.medianTotal,
+                          hasContributed: accessGranted,
                         }))}
                       citySlug={citySlug}
                       bounds={cityBounds}
@@ -492,7 +723,7 @@ export function CostsOverviewClient({
                 </Suspense>
               )}
 
-              {viewMode === "list" && (
+              {viewMode === 'list' && (
                 <>
                   <div className="space-y-4">
                     {filteredBuildings.slice(0, visibleCount).map((building, i) => (
@@ -522,19 +753,18 @@ export function CostsOverviewClient({
                                       </span>
                                       <span className="flex items-center gap-1">
                                         <Users className="h-3.5 w-3.5" />
-                                        {building.reports}{" "}
-                                        {t("costs.overview.reports")}
+                                        {building.reports} {t('costs.overview.reports')}
                                       </span>
                                       {building.rentalType && (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                                          {building.rentalType === "apartment" ? (
+                                          {building.rentalType === 'apartment' ? (
                                             <Home className="h-3 w-3" />
                                           ) : (
                                             <DoorOpen className="h-3 w-3" />
                                           )}
-                                          {building.rentalType === "apartment"
-                                            ? t("costs.overview.filterApartment")
-                                            : t("costs.overview.filterRoom")}
+                                          {building.rentalType === 'apartment'
+                                            ? t('costs.overview.filterApartment')
+                                            : t('costs.overview.filterRoom')}
                                         </span>
                                       )}
                                     </div>
@@ -542,20 +772,26 @@ export function CostsOverviewClient({
                                 </div>
 
                                 <div className="flex items-center gap-6">
-                                  {hasContributed ? (
+                                  {accessGranted ? (
                                     <div className="text-right">
                                       <p className="text-xs text-muted-foreground">
-                                        {t("costs.overview.avgMonthlyTotal")}
+                                        {t('costs.overview.medianMonthlyTotal')}
                                       </p>
                                       <p className="text-lg font-bold text-primary">
-                                        {building.avgTotal.toLocaleString()} PLN
+                                        ≈ {building.medianTotal.toLocaleString()} PLN
                                       </p>
+                                      {building.medianRentPerM2 ? (
+                                        <p className="text-xs text-muted-foreground">
+                                          ≈ {building.medianRentPerM2.toLocaleString()}{' '}
+                                          {t('costs.overview.perM2')}
+                                        </p>
+                                      ) : null}
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Lock className="h-4 w-4" />
                                       <span className="text-sm">
-                                        {t("costs.overview.submitToUnlock")}
+                                        {t('costs.overview.submitToUnlock')}
                                       </span>
                                     </div>
                                   )}
@@ -575,7 +811,7 @@ export function CostsOverviewClient({
                         variant="outline"
                         onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
                       >
-                        {t("costs.overview.showMore", {
+                        {t('costs.overview.showMore', {
                           remaining: filteredBuildings.length - visibleCount,
                         })}
                       </Button>
@@ -592,23 +828,30 @@ export function CostsOverviewClient({
                         <CardContent className="flex flex-col items-center py-16 text-center">
                           <Building2 className="mb-4 h-12 w-12 text-muted-foreground" />
                           <h3 className="text-lg font-semibold">
-                            {t("costs.overview.noBuildingsFound")}
+                            {t('costs.overview.noBuildingsFound')}
                           </h3>
                           <p className="mt-1 text-muted-foreground">
-                            {t("costs.overview.noBuildingsDesc")}
+                            {t('costs.overview.noBuildingsDesc')}
                           </p>
-                          <Button className="mt-6" asChild>
-                            <Link href={`/${citySlug}/costs/submit`}>
-                              {t("costs.overview.submitCostReport")}
-                            </Link>
-                          </Button>
+                          <div className="mt-6 flex flex-col items-center gap-2">
+                            <Button asChild>
+                              <Link href={`/${citySlug}/costs/submit`}>
+                                {t('costs.overview.submitCostReport')}
+                              </Link>
+                            </Button>
+                            <BuyAccessDialog citySlug={citySlug}>
+                              <Button variant="outline" className="gap-2">
+                                <ShoppingCart className="h-4 w-4" />
+                                {t('costs.overview.buyAccessBtn')}
+                              </Button>
+                            </BuyAccessDialog>
+                          </div>
                         </CardContent>
                       </Card>
                     </motion.div>
                   )}
                 </>
               )}
-
             </div>
           </div>
         </div>

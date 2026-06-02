@@ -21,9 +21,7 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown';
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 
   if (isRateLimited(ip)) {
     return NextResponse.json(
@@ -39,34 +37,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, email, subject, message } = body as {
+  const { name, email, subject, message, consent } = body as {
     name?: string;
     email?: string;
     subject?: string;
     message?: string;
+    consent?: boolean;
   };
 
   if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
-    return NextResponse.json(
-      { error: 'All fields are required' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+  }
+
+  if (!consent) {
+    return NextResponse.json({ error: 'Consent to data processing is required' }, { status: 400 });
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return NextResponse.json(
-      { error: 'Invalid email address' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
   }
 
   if (!process.env.RESEND_API_KEY) {
     console.error('[contact] RESEND_API_KEY not configured');
-    return NextResponse.json(
-      { error: 'Email service is not configured' },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: 'Email service is not configured' }, { status: 503 });
   }
 
   const result = await sendContactFormEmail({
@@ -77,14 +71,13 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.success) {
-    return NextResponse.json(
-      { error: 'Failed to send message' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
 
   trackServerEvent(email, 'contact_form_sent', {
     subject_category: subject.trim(),
+    consent_given: true,
+    consent_timestamp: new Date().toISOString(),
   });
 
   return NextResponse.json({ success: true }, { status: 200 });

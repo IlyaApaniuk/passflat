@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # `next build` imports server modules (e.g. src/lib/stripe.ts creates a
+          # Stripe client at module load), so these must be present or the build
+          # throws. CI does not hit any real services — these are inert dummies.
+          # Wire real values via repo/Environment secrets if a build ever needs
+          # to reach an external service.
+          DATABASE_URL: postgresql://user:password@localhost:5432/passflat
+          DIRECT_URL: postgresql://user:password@localhost:5432/passflat
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          STRIPE_SECRET_KEY: sk_test_dummy
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          STRIPE_PRICE_EXTRA_LISTING: price_dummy
+          STRIPE_PRICE_PROMOTE_7: price_dummy
+          STRIPE_PRICE_PROMOTE_14: price_dummy
+          STRIPE_PRICE_PROMOTE_30: price_dummy
+          STRIPE_PRICE_COST_ACCESS_7: price_dummy
+          STRIPE_PRICE_COST_ACCESS_30: price_dummy
+          STRIPE_PRICE_COST_ACCESS_90: price_dummy
+          RESEND_API_KEY: re_dummy
+          CRON_SECRET: dummy-cron-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES: 'true'
+
+  # End-to-end smoke tests run as a separate, non-blocking job. They build and
+  # boot the app and drive a real browser, so they are slower and kept off the
+  # critical path for the lint/typecheck/test/build gate above.
+  e2e:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    # Don't fail the overall CI run if only the smoke test is flaky.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/passflat
+          DIRECT_URL: postgresql://user:password@localhost:5432/passflat
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          STRIPE_SECRET_KEY: sk_test_dummy
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          STRIPE_PRICE_EXTRA_LISTING: price_dummy
+          STRIPE_PRICE_PROMOTE_7: price_dummy
+          STRIPE_PRICE_PROMOTE_14: price_dummy
+          STRIPE_PRICE_PROMOTE_30: price_dummy
+          STRIPE_PRICE_COST_ACCESS_7: price_dummy
+          STRIPE_PRICE_COST_ACCESS_30: price_dummy
+          STRIPE_PRICE_COST_ACCESS_90: price_dummy
+          RESEND_API_KEY: re_dummy
+          CRON_SECRET: dummy-cron-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES: 'true'
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

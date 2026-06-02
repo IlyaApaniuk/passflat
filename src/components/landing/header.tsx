@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -29,37 +29,41 @@ const languages = [
 
 const DEFAULT_CITY = 'warsaw';
 
-export function Header() {
+interface HeaderProps {
+  initialUser?: { email?: string; id?: string } | null;
+}
+
+export function Header({ initialUser }: HeaderProps = {}) {
   const t = useTranslations();
   const { locale } = useParams<{ locale: string }>();
   const router = useRouter();
   const pathname = usePathname();
 
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<SupabaseUser | null>(
+    initialUser ? (initialUser as SupabaseUser) : null,
+  );
+  const [loading, setLoading] = useState(!initialUser);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const headerControls = useAnimation();
-
-  useEffect(() => {
-    headerControls.start({ y: 0, opacity: 1 });
-  }, [headerControls]);
 
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      setLoading(false);
-    });
+    if (!initialUser) {
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data.user);
+        setLoading(false);
+      });
+    }
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initialUser]);
 
   function switchLocale(newLocale: string) {
     router.replace(pathname, { locale: newLocale as 'en' | 'pl' | 'ru' | 'uk' });
@@ -76,12 +80,7 @@ export function Header() {
   ];
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={headerControls}
-      transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50"
-    >
+    <header className="fixed top-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3">
           {/* Logo */}
@@ -90,9 +89,7 @@ export function Header() {
               <Home className="h-4 w-4 text-primary-foreground" />
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">
-              {t('common.appName')}
-            </span>
+            <span className="text-xl font-semibold tracking-tight">{t('common.appName')}</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -120,10 +117,7 @@ export function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {languages.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang.code}
-                    onClick={() => switchLocale(lang.code)}
-                  >
+                  <DropdownMenuItem key={lang.code} onClick={() => switchLocale(lang.code)}>
                     {lang.label}
                   </DropdownMenuItem>
                 ))}
@@ -135,62 +129,56 @@ export function Header() {
               <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
             ) : user ? (
               <>
-              <Link href="/messages" className="relative">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {userInitial}
-                      </AvatarFallback>
-                    </Avatar>
+                <Link href="/messages" className="relative">
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <MessageSquare className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
-                    {user.email}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/messages" className="gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      {t('chat.conversations')}
-                      {unreadCount > 0 && (
-                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      {t('common.dashboard')}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => signOut()}
-                    className="gap-2 text-destructive focus:text-destructive"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {t('common.logout')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
+                      {user.email}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/messages" className="gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        {t('chat.conversations')}
+                        {unreadCount > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        {t('common.dashboard')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => signOut()}
+                      className="gap-2 text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {t('common.logout')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
@@ -200,7 +188,10 @@ export function Header() {
                   </Button>
                 </Link>
                 <Link href="/create-listing">
-                  <Button size="sm" className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
+                  >
                     {t('listings.create.title')}
                   </Button>
                 </Link>
@@ -293,9 +284,7 @@ export function Header() {
                       </Button>
                     </Link>
                     <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                      <Button className="mt-2 w-full rounded-xl">
-                        {t('common.dashboard')}
-                      </Button>
+                      <Button className="mt-2 w-full rounded-xl">{t('common.dashboard')}</Button>
                     </Link>
                     <Button
                       variant="outline"
@@ -327,6 +316,6 @@ export function Header() {
           )}
         </AnimatePresence>
       </div>
-    </motion.header>
+    </header>
   );
 }

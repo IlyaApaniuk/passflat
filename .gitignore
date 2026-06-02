@@ -47,3 +47,13 @@ prisma/*.db-journal
 
 # supabase
 supabase/.temp/
+
+# testing
+coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# husky internals (managed by `npx husky`)
+.husky/_/
