@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
+import { isCostImportAdmin } from '@/lib/import-constants';
 import { CostSubmitClient } from './client';
 
 interface PageProps {
@@ -31,6 +32,8 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   if (!user) {
     redirect(`/${locale}/auth/login?next=/${locale}/${citySlug}/costs/submit`);
   }
+
+  const canFillOnBehalf = isCostImportAdmin(user.email);
 
   let existingReport = null;
   if (isEditMode) {
@@ -88,6 +91,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
       cityBounds={cityBounds}
       editMode={isEditMode && existingReport != null}
       existingReport={existingReport}
+      canFillOnBehalf={canFillOnBehalf}
     />
   );
 }

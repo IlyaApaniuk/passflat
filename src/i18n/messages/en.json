@@ -747,6 +747,8 @@
       "deposit": "Deposit (kaucja)",
       "rentalTypeRequired": "Please select what you are renting (apartment or room)",
       "addressOutsideCity": "Please choose an address within {city}.",
+      "ownerEmail": "Owner email (optional)",
+      "ownerEmailHint": "Links this report to that account when they log in. Leave empty to keep it unattributed.",
       "submitButton": "Submit Cost Report",
       "saveChanges": "Save Changes",
       "editReport": "Edit My Report",

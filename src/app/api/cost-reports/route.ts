@@ -7,6 +7,11 @@ import { validateCostReport } from '@/lib/cost-validation';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
 import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
+import {
+  IMPORT_AUTHOR_ID,
+  IMPORT_AUTHOR_DISPLAY_NAME,
+  isCostImportAdmin,
+} from '@/lib/import-constants';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -81,7 +86,28 @@ export async function POST(request: NextRequest) {
       livedFrom,
       livedUntil,
       periodicCharges: periodicChargesInput,
+      importedEmail: importedEmailInput,
     } = body;
+
+    // Admin "fill on behalf" mode: an authorized admin enters a friend's data
+    // through the normal form. The report is owned by the system import profile
+    // and tagged with an optional owner email, so it auto-claims when that
+    // person logs in (see auth/callback). Coordinates still come from Places.
+    const isAdmin = isCostImportAdmin(user.email);
+    const fillOnBehalfRequested = importedEmailInput !== undefined;
+    if (fillOnBehalfRequested && !isAdmin) {
+      // Never let a non-admin attribute a report to someone else. Ignore the
+      // field and fall back to a normal self-submission.
+      console.warn(
+        `[cost-reports POST] non-admin user ${user.id} sent importedEmail; ignoring fill-on-behalf`,
+      );
+    }
+    const fillOnBehalf = fillOnBehalfRequested && isAdmin;
+    const normalizedImportedEmail =
+      fillOnBehalf && typeof importedEmailInput === 'string' && importedEmailInput.trim()
+        ? importedEmailInput.trim().toLowerCase()
+        : null;
+    const effectiveAuthorId = fillOnBehalf ? IMPORT_AUTHOR_ID : user.id;
 
     const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
 
@@ -231,19 +257,24 @@ export async function POST(request: NextRequest) {
 
     // One report per user PER BUILDING. A user may report for several buildings,
     // but a duplicate for the same building should be edited instead of recreated.
-    const existingReport = await prisma.costReport.findFirst({
-      where: { authorId: user.id, buildingId: building.id },
-      select: { id: true },
-    });
-    if (existingReport) {
-      return NextResponse.json(
-        {
-          error: 'You already have a cost report for this building. Please edit your existing one.',
-          code: 'ALREADY_EXISTS',
-          reportId: existingReport.id,
-        },
-        { status: 409 },
-      );
+    // Skipped in fill-on-behalf mode: the system import profile legitimately owns
+    // many reports per building (one per friend), like the bulk CSV import.
+    if (!fillOnBehalf) {
+      const existingReport = await prisma.costReport.findFirst({
+        where: { authorId: user.id, buildingId: building.id },
+        select: { id: true },
+      });
+      if (existingReport) {
+        return NextResponse.json(
+          {
+            error:
+              'You already have a cost report for this building. Please edit your existing one.',
+            code: 'ALREADY_EXISTS',
+            reportId: existingReport.id,
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const electricityAvg = electricityIncluded
@@ -273,10 +304,22 @@ export async function POST(request: NextRequest) {
       (parseFloat(otherCosts) || 0) +
       periodicChargesMonthlyTotal(periodicCharges);
 
+    // The system import profile must exist before we point a report's FK at it.
+    if (fillOnBehalf) {
+      await prisma.profile.upsert({
+        where: { id: IMPORT_AUTHOR_ID },
+        create: { id: IMPORT_AUTHOR_ID, displayName: IMPORT_AUTHOR_DISPLAY_NAME },
+        update: {},
+      });
+    }
+
     const costReport = await prisma.costReport.create({
       data: {
         buildingId: building.id,
-        authorId: user.id,
+        authorId: effectiveAuthorId,
+        source: fillOnBehalf ? 'import' : 'user',
+        importedEmail: fillOnBehalf ? normalizedImportedEmail : null,
+        claimedAt: null,
         currency: 'PLN',
         rent: rent ? parseFloat(rent) : null,
         adminFee: adminFee ? parseFloat(adminFee) : null,
@@ -313,8 +356,9 @@ export async function POST(request: NextRequest) {
       include: { building: true, periodicCharges: true },
     });
 
-    // Only mark hasContributed if data was not flagged
-    if (!wasFlagged) {
+    // Only mark hasContributed for genuine self-submissions (not flagged, and
+    // not fill-on-behalf where the admin is entering someone else's data).
+    if (!wasFlagged && !fillOnBehalf) {
       await prisma.profile.update({
         where: { id: user.id },
         data: { hasContributedCost: true },
@@ -325,6 +369,7 @@ export async function POST(request: NextRequest) {
       building_id: building.id,
       city: citySlug || 'warsaw',
       was_flagged: wasFlagged,
+      fill_on_behalf: fillOnBehalf,
     });
 
     return NextResponse.json({ costReport, wasFlagged }, { status: 201 });

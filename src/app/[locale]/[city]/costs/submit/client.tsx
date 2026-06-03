@@ -131,6 +131,7 @@ interface CostSubmitClientProps {
   cityBounds?: CityBounds;
   editMode?: boolean;
   existingReport?: ExistingReport | null;
+  canFillOnBehalf?: boolean;
 }
 
 function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
@@ -143,10 +144,15 @@ export function CostSubmitClient({
   cityBounds,
   editMode = false,
   existingReport = null,
+  canFillOnBehalf = false,
 }: CostSubmitClientProps) {
   const t = useTranslations();
   const router = useRouter();
   const placeCityRef = useRef('');
+  // Admin-only "fill on behalf": owner email links the report to that account
+  // when they log in. Only available for new submissions, never edits.
+  const showFillOnBehalf = canFillOnBehalf && !editMode;
+  const [ownerEmail, setOwnerEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
@@ -334,6 +340,7 @@ export function CostSubmitClient({
             citySlug,
             placeCity: placeCityRef.current || undefined,
             isCurrentTenant: true,
+            ...(showFillOnBehalf && ownerEmail.trim() ? { importedEmail: ownerEmail.trim() } : {}),
             ...sharedFields,
           };
 
@@ -604,6 +611,22 @@ export function CostSubmitClient({
                         />
                         <p className="text-xs text-muted-foreground">
                           {t('listings.create.addressHint')}
+                        </p>
+                      </div>
+                    )}
+
+                    {showFillOnBehalf && (
+                      <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+                        <Label htmlFor="ownerEmail">{t('costs.submit.ownerEmail')}</Label>
+                        <Input
+                          id="ownerEmail"
+                          type="email"
+                          placeholder="owner@example.com"
+                          value={ownerEmail}
+                          onChange={(e) => setOwnerEmail(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t('costs.submit.ownerEmailHint')}
                         </p>
                       </div>
                     )}
