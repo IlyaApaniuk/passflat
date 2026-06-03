@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
+import { useReveal } from '@/hooks/use-reveal';
 import { HelpCircle } from 'lucide-react';
 import {
   Accordion,
@@ -14,18 +15,14 @@ const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'] as const;
 
 export function FAQ() {
   const t = useTranslations('landing.faq');
+  const reveal = useReveal();
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       <div className="absolute inset-0 dot-pattern opacity-30" />
 
       <div className="relative z-10 container mx-auto max-w-3xl px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12 text-center"
-        >
+        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-12 text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
             <HelpCircle className="h-4 w-4" />
             FAQ
@@ -35,12 +32,7 @@ export function FAQ() {
           </h2>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div {...reveal({ opacity: 0, y: 20 }, { delay: 0.1 })}>
           <Accordion type="single" collapsible className="w-full">
             {FAQ_KEYS.map((key, i) => (
               <AccordionItem key={key} value={key} className="border-border/50">

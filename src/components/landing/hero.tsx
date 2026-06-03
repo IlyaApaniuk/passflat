@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import { useIsTouch, useReveal } from '@/hooks/use-reveal';
 import { Plus, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -22,6 +23,8 @@ interface HeroProps {
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
+  const reveal = useReveal();
+  const isTouch = useIsTouch();
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -48,9 +51,15 @@ export function Hero({ stats: liveStats }: HeroProps) {
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
       <div className="absolute inset-0 grid-pattern opacity-50" />
 
-      <div className="absolute -left-32 top-1/4 h-96 w-96 animate-pulse rounded-full bg-accent/20 blur-[120px]" />
       <div
-        className="absolute -right-32 bottom-1/4 h-96 w-96 animate-pulse rounded-full bg-accent/10 blur-[120px]"
+        className={`absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-accent/20 blur-[120px] ${
+          isTouch ? '' : 'animate-pulse'
+        }`}
+      />
+      <div
+        className={`absolute -right-32 bottom-1/4 h-96 w-96 rounded-full bg-accent/10 blur-[120px] ${
+          isTouch ? '' : 'animate-pulse'
+        }`}
         style={{ animationDelay: '1s' }}
       />
 
@@ -105,19 +114,13 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
           {showStats && stats.length > 0 && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              {...reveal({ opacity: 0, y: 20 }, { duration: 0.5 })}
               className={`mx-auto mt-20 grid max-w-3xl gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : 'grid-cols-2 md:grid-cols-3'}`}
             >
               {stats.map((stat, i) => (
                 <motion.div
                   key={stat.labelKey}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.3, delay: i * 0.1 }}
+                  {...reveal({ opacity: 0, scale: 0.9 }, { duration: 0.3, delay: i * 0.1 })}
                   className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
                 >
                   <div className="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
@@ -133,11 +136,11 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
         <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          animate={isTouch ? undefined : { y: [0, 8, 0] }}
+          transition={isTouch ? undefined : { duration: 1.5, repeat: Infinity }}
           className="flex h-10 w-6 items-start justify-center rounded-full border-2 border-muted-foreground/30 p-2"
         >
-          <motion.div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
+          <div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
         </motion.div>
       </div>
     </section>

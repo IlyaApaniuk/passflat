@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import imageCompression from 'browser-image-compression';
 
 export type PhotoUploadStatus = 'idle' | 'compressing' | 'uploading' | 'done' | 'error';
 
@@ -36,6 +35,11 @@ const COMPRESSION_OPTIONS = {
 
 async function compressPhoto(file: File): Promise<File> {
   if (file.size <= 1.0 * 1024 * 1024) return file;
+  // Load the (heavy) compression library lazily so it is only pulled into the
+  // bundle when a photo actually needs compressing. This store is imported by
+  // <PublishSnackbar> which lives in the root layout, so a static import would
+  // ship browser-image-compression on every route.
+  const { default: imageCompression } = await import('browser-image-compression');
   return imageCompression(file, COMPRESSION_OPTIONS);
 }
 

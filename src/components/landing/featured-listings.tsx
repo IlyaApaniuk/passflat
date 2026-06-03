@@ -1,9 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
+import { useReveal } from '@/hooks/use-reveal';
 import {
   ArrowUpRight,
   MapPin,
@@ -59,6 +60,7 @@ interface FeaturedListingsProps {
 
 export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedListingsProps) {
   const t = useTranslations();
+  const reveal = useReveal();
   const promotedListingsEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED);
 
   if (!promotedListingsEnabled) return null;
@@ -69,12 +71,7 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
   return (
     <section className="relative py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12"
-        >
+        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-12">
           <h2 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             {t('landing.featured.title')}
           </h2>
@@ -109,10 +106,7 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
             {listings.map((listing, index) => (
               <motion.div
                 key={listing.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                {...reveal({ opacity: 0, y: 20 }, { delay: index * 0.1 })}
               >
                 <FeaturedCard listing={listing} citySlug={citySlug} t={t} />
               </motion.div>
@@ -120,9 +114,7 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
           </div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            {...reveal({ opacity: 0, y: 20 })}
             className="mx-auto max-w-md rounded-2xl border border-dashed border-border/80 bg-card/30 p-10 text-center"
           >
             <p className="mb-1 text-lg font-medium">{t('landing.featured.comingSoonTitle')}</p>
@@ -154,6 +146,7 @@ function FeaturedCard({
 }) {
   const listingType = listing.type ?? 'replacement';
   const route = TYPE_ROUTE[listingType];
+  const format = useFormatter();
 
   const formatShort = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('en-GB', {
@@ -167,7 +160,7 @@ function FeaturedCard({
         const price = listing.pricePerPerson ?? listing.totalCost;
         return (
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{price.toLocaleString()}</span>
+            <span className="text-2xl font-bold">{format.number(price)}</span>
             <span className="text-sm text-muted-foreground">PLN{t('listings.card.perPerson')}</span>
           </div>
         );
@@ -176,7 +169,7 @@ function FeaturedCard({
         const price = listing.priceTotal ?? listing.totalCost;
         return (
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{price.toLocaleString()}</span>
+            <span className="text-2xl font-bold">{format.number(price)}</span>
             <span className="text-sm text-muted-foreground">
               PLN
               {listing.durationDays
@@ -189,7 +182,7 @@ function FeaturedCard({
       default:
         return (
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{listing.totalCost.toLocaleString()}</span>
+            <span className="text-2xl font-bold">{format.number(listing.totalCost)}</span>
             <span className="text-sm text-muted-foreground">PLN{t('common.perMonth')}</span>
           </div>
         );

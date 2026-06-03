@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { useReveal } from '@/hooks/use-reveal';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CalendarRange, Search, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -43,16 +44,12 @@ const personas: PersonaConfig[] = [
 
 export function ForWhom() {
   const t = useTranslations('landing');
+  const reveal = useReveal();
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       <div className="relative z-10 container mx-auto px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mx-auto max-w-5xl"
-        >
+        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mx-auto max-w-5xl">
           <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 p-8 backdrop-blur-xl sm:p-12 md:p-16">
             <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/20 blur-[120px]" />
             <div className="absolute bottom-0 right-0 h-64 w-64 translate-x-1/4 translate-y-1/4 rounded-full bg-accent/10 blur-[80px]" />
@@ -72,10 +69,7 @@ export function ForWhom() {
                 {personas.map((persona, i) => (
                   <motion.div
                     key={persona.key}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
+                    {...reveal({ opacity: 0, y: 20 }, { delay: i * 0.1 })}
                     className={`group relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br bg-background/50 p-6 backdrop-blur-sm transition-colors ${persona.color}`}
                   >
                     <div

@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { useReveal } from '@/hooks/use-reveal';
 import { Button } from '@/components/ui/button';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { ArrowRight, Lock, Eye, CheckCircle2, ShieldCheck, ShoppingCart } from 'lucide-react';
@@ -31,31 +32,33 @@ export function CostTransparency({
   buildingData,
 }: CostTransparencyProps) {
   const t = useTranslations();
+  const format = useFormatter();
+  const reveal = useReveal();
 
   const costData = [
     {
       label: t('common.rent'),
-      value: `${(buildingData?.avgRent ?? 3200).toLocaleString()} PLN`,
+      value: `${format.number(buildingData?.avgRent ?? 3200)} PLN`,
       visible: true,
     },
     {
       label: t('common.adminFee'),
-      value: `${(buildingData?.avgAdminFee ?? 450).toLocaleString()} PLN`,
+      value: `${format.number(buildingData?.avgAdminFee ?? 450)} PLN`,
       visible: true,
     },
     {
       label: t('landing.costTransparency.electricity'),
-      value: `${(buildingData?.avgElectricity ?? 280).toLocaleString()} PLN`,
+      value: `${format.number(buildingData?.avgElectricity ?? 280)} PLN`,
       visible: hasContributed,
     },
     {
       label: t('landing.costTransparency.internet'),
-      value: `${(buildingData?.avgInternet ?? 89).toLocaleString()} PLN`,
+      value: `${format.number(buildingData?.avgInternet ?? 89)} PLN`,
       visible: hasContributed,
     },
     {
       label: t('landing.costTransparency.gasHeating'),
-      value: `${(buildingData?.avgGasHeating ?? 180).toLocaleString()} PLN`,
+      value: `${format.number(buildingData?.avgGasHeating ?? 180)} PLN`,
       visible: hasContributed,
     },
   ];
@@ -67,11 +70,7 @@ export function CostTransparency({
       <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           {/* Content */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <motion.div {...reveal({ opacity: 0, x: -20 })}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
               <Eye className="h-4 w-4" />
               {t('landing.costTransparency.badge')}
@@ -110,12 +109,7 @@ export function CostTransparency({
           </motion.div>
 
           {/* Interactive Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="relative"
-          >
+          <motion.div {...reveal({ opacity: 0, x: 20 })} className="relative">
             <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/80 p-6 backdrop-blur-xl sm:p-8">
               <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent/20 blur-[80px]" />
 
@@ -134,10 +128,7 @@ export function CostTransparency({
                 {costData.map((item, i) => (
                   <motion.div
                     key={item.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
+                    {...reveal({ opacity: 0, y: 10 }, { delay: i * 0.1 })}
                     className={`flex items-center justify-between rounded-xl p-3 ${
                       item.visible ? 'bg-secondary/50' : 'bg-secondary/30'
                     }`}
@@ -197,7 +188,7 @@ export function CostTransparency({
               <div className="relative mt-6 flex items-center justify-between border-t border-border/50 pt-4">
                 <span className="text-muted-foreground">{t('common.totalMonthly')}</span>
                 <span className="text-2xl font-bold text-accent">
-                  ~{(buildingData?.totalMonthly ?? 4199).toLocaleString()} PLN
+                  ~{format.number(buildingData?.totalMonthly ?? 4199)} PLN
                 </span>
               </div>
             </div>
