@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
@@ -26,7 +27,7 @@ interface AboutStats {
 }
 
 export function AboutClient({
-  hasContributed = false,
+  hasContributed: hasContributedInitial = false,
   stats,
 }: {
   hasContributed?: boolean;
@@ -34,6 +35,8 @@ export function AboutClient({
 }) {
   const t = useTranslations('about');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
+  // Display-only CTA toggle resolved on the client so this page stays static.
+  const hasContributed = useHasContributed(hasContributedInitial);
 
   return (
     <>

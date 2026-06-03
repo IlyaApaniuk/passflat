@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { ConversationList, type ConversationListItem } from '@/components/chat/conversation-list';
 import { ChatWindow } from '@/components/chat/chat-window';
@@ -77,7 +76,6 @@ export function MessagesClient({ userId }: MessagesClientProps) {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Header />
         <main className="flex-1 flex items-center justify-center pt-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </main>
@@ -87,8 +85,6 @@ export function MessagesClient({ userId }: MessagesClientProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 pt-24">
         <div className="container mx-auto h-[calc(100vh-96px)] max-w-6xl px-0 lg:px-4 lg:py-4">
           <div className="flex h-full overflow-hidden rounded-none lg:rounded-xl lg:border lg:border-border">

@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/landing/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -418,7 +417,6 @@ export function CostSubmitClient({
   if (submitted && wasFlagged) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Header />
         <main className="flex flex-1 items-center justify-center p-8 pt-24">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -466,7 +464,6 @@ export function CostSubmitClient({
   if (submitted) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Header />
         <main className="flex flex-1 items-center justify-center p-8 pt-24">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -505,8 +502,6 @@ export function CostSubmitClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div

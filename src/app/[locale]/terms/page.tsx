@@ -1,6 +1,5 @@
 import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { TermsClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -24,7 +23,6 @@ export default function TermsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Terms', path: '/terms' }])} />
-      <Header />
       <main className="flex-1 pt-24">
         <TermsClient />
       </main>

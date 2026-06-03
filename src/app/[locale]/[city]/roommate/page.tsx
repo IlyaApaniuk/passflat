@@ -1,9 +1,13 @@
-import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { ListingsPageClient } from "@/components/listings/listings-page-client";
-import { queryListings, serializeListing, parseSearchParams } from "@/lib/listings-query";
-import type { CityBounds } from "@/lib/listings-data";
+import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { ListingsPageClient } from '@/components/listings/listings-page-client';
+import {
+  queryListings,
+  serializeListing,
+  parseSearchParams,
+  getCityWithDistricts,
+} from '@/lib/listings-query';
+import type { CityBounds } from '@/lib/listings-data';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
@@ -14,15 +18,12 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   const { city: citySlug } = await params;
   const search = await searchParams;
 
-  const city = await prisma.city.findUnique({
-    where: { slug: citySlug },
-    include: { districts: true },
-  });
+  const city = await getCityWithDistricts(citySlug);
 
   if (!city) notFound();
 
   const parsed = parseSearchParams(search);
-  const listings = await queryListings({ cityId: city.id, type: "roommate", ...parsed });
+  const listings = await queryListings({ cityId: city.id, type: 'roommate', ...parsed });
   const serialized = listings.map(serializeListing);
 
   const districts = city.districts.map((d) => ({
@@ -33,7 +34,9 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   const cityBounds = city.bounds as CityBounds | null;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <ListingsPageClient
