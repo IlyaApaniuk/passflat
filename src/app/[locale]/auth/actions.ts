@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
+import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/site-url';
 import { sendEmail } from '@/lib/email/send';
 import { resolveEmailLocale } from '@/lib/email/types';
@@ -67,10 +68,16 @@ export async function signInWithGoogle(locale: string) {
   redirect(data.url);
 }
 
-export async function signOut() {
+export async function signOut(locale?: string) {
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect('/');
+  // `local` scope only clears this device's session (no global token-revocation
+  // round-trip to the Supabase Auth server), making logout feel instant.
+  await supabase.auth.signOut({ scope: 'local' });
+  const targetLocale =
+    locale && routing.locales.includes(locale as (typeof routing.locales)[number])
+      ? locale
+      : routing.defaultLocale;
+  redirect(`/${targetLocale}`);
 }
 
 export async function requestPasswordReset(formData: FormData) {

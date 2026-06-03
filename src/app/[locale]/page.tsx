@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { unstable_cache } from 'next/cache';
 import { Header } from '@/components/landing/header';
 import { Hero } from '@/components/landing/hero';
 import { Districts } from '@/components/landing/districts';
@@ -139,6 +140,19 @@ async function getServerUser() {
   return { user: null, hasContributed: false };
 }
 
+// Cache the request-independent landing data so locale switches and repeat
+// visits don't re-run these queries on every render. These functions read
+// only from the database (no cookies/headers), so they're safe to cache.
+const getFeaturedListingsCached = unstable_cache(getFeaturedListings, ['home-featured-listings'], {
+  revalidate: 300,
+});
+const getStatsCached = unstable_cache(getStats, ['home-stats'], { revalidate: 300 });
+const getTopBuildingCostDataCached = unstable_cache(
+  getTopBuildingCostData,
+  ['home-top-building-cost'],
+  { revalidate: 600 },
+);
+
 export default function Home() {
   return (
     <Suspense fallback={<HomeSkeleton />}>
@@ -180,9 +194,9 @@ function HomeSkeleton() {
 
 async function HomeContent() {
   const [featuredResult, statsResult, costResult, authResult] = await Promise.allSettled([
-    getFeaturedListings(),
-    getStats(),
-    getTopBuildingCostData(),
+    getFeaturedListingsCached(),
+    getStatsCached(),
+    getTopBuildingCostDataCached(),
     getServerUser(),
   ]);
 

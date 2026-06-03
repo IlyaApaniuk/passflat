@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
@@ -65,8 +65,16 @@ export function Header({ initialUser }: HeaderProps = {}) {
     return () => subscription.unsubscribe();
   }, [initialUser]);
 
+  const [isSigningOut, startSignOut] = useTransition();
+
   function switchLocale(newLocale: string) {
     router.replace(pathname, { locale: newLocale as 'en' | 'pl' | 'ru' | 'uk' });
+  }
+
+  function handleSignOut() {
+    startSignOut(() => {
+      void signOut(locale);
+    });
   }
 
   const { unreadCount } = useUnreadCount(user?.id ?? null);
@@ -171,11 +179,15 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => signOut()}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        handleSignOut();
+                      }}
+                      disabled={isSigningOut}
                       className="gap-2 text-destructive focus:text-destructive"
                     >
                       <LogOut className="h-4 w-4" />
-                      {t('common.logout')}
+                      {isSigningOut ? t('common.loading') : t('common.logout')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -290,12 +302,13 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     <Button
                       variant="outline"
                       className="mt-2 w-full rounded-xl"
+                      disabled={isSigningOut}
                       onClick={() => {
-                        signOut();
+                        handleSignOut();
                         setMobileMenuOpen(false);
                       }}
                     >
-                      {t('common.logout')}
+                      {isSigningOut ? t('common.loading') : t('common.logout')}
                     </Button>
                   </>
                 ) : (
