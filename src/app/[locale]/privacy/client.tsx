@@ -58,6 +58,7 @@ export function PrivacyClient() {
             <ul>
               <li>{t('dataCollected.costReports.item1')}</li>
               <li>{t('dataCollected.costReports.item2')}</li>
+              <li>{t('dataCollected.costReports.item3')}</li>
             </ul>
 
             <h3>{t('dataCollected.usage.title')}</h3>
@@ -84,6 +85,10 @@ export function PrivacyClient() {
               <li>{t('howWeUse.legalBases.consent')}</li>
             </ul>
 
+            {/* Imported cost reports */}
+            <h3>{t('howWeUse.imported.title')}</h3>
+            <p>{t('howWeUse.imported.description')}</p>
+
             {/* Data Sharing */}
             <h2>{t('dataSharing.title')}</h2>
             <p>{t('dataSharing.intro')}</p>
@@ -105,6 +110,7 @@ export function PrivacyClient() {
               <li>{t('retention.account')}</li>
               <li>{t('retention.listings')}</li>
               <li>{t('retention.costReports')}</li>
+              <li>{t('retention.importedEmail')}</li>
             </ul>
 
             {/* Your Rights (GDPR) */}

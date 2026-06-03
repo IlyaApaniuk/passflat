@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { validateCostReport } from '@/lib/cost-validation';
+import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -26,14 +27,13 @@ async function getUser() {
       },
     },
   );
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,7 +43,7 @@ export async function GET(
 
   const costReport = await prisma.costReport.findFirst({
     where: { id, authorId: user.id },
-    include: { building: true },
+    include: { building: true, periodicCharges: true },
   });
 
   if (!costReport) {
@@ -53,10 +53,7 @@ export async function GET(
   return NextResponse.json({ costReport });
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -96,11 +93,23 @@ export async function PATCH(
     areaM2,
     floor,
     rentalType,
+    periodicCharges: periodicChargesInput,
   } = body;
 
+  const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
+
   const validation = validateCostReport({
-    rent, adminFee, deposit, areaM2, rooms,
-    electricity, gas, heating, water, internet, otherCosts,
+    rent,
+    adminFee,
+    deposit,
+    areaM2,
+    rooms,
+    electricity,
+    gas,
+    heating,
+    water,
+    internet,
+    otherCosts,
   });
 
   if (!validation.valid) {
@@ -136,7 +145,8 @@ export async function PATCH(
     (heatingAvg || 0) +
     (waterIncluded ? 0 : parseFloat(water) || 0) +
     (parseFloat(internet) || 0) +
-    (parseFloat(otherCosts) || 0);
+    (parseFloat(otherCosts) || 0) +
+    periodicChargesMonthlyTotal(periodicCharges);
 
   const costReport = await prisma.costReport.update({
     where: { id },
@@ -153,7 +163,7 @@ export async function PATCH(
       heatingWinter: heatingWinter ? parseFloat(heatingWinter) : null,
       heatingSummer: heatingSummer ? parseFloat(heatingSummer) : null,
       heatingIncluded: heatingIncluded ?? null,
-      water: waterIncluded ? null : (water ? parseFloat(water) : null),
+      water: waterIncluded ? null : water ? parseFloat(water) : null,
       waterIncluded: waterIncluded ?? null,
       internet: internet ? parseFloat(internet) : null,
       internetProvider: internetProvider || null,
@@ -166,8 +176,12 @@ export async function PATCH(
       rentalType: rentalType || null,
       isVisible: !wasFlagged,
       verificationStatus: wasFlagged ? 'flagged' : 'unverified',
+      periodicCharges: {
+        deleteMany: {},
+        ...(periodicCharges.length ? { create: periodicCharges } : {}),
+      },
     },
-    include: { building: true },
+    include: { building: true, periodicCharges: true },
   });
 
   // Update hasContributed based on new flag status

@@ -4,8 +4,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport } from '@/lib/cost-validation';
-import { generateBuildingSlug } from '@/lib/slugify';
+import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
+import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       lat,
       lng,
       citySlug,
+      placeCity,
       rent,
       adminFee,
       deposit,
@@ -78,7 +80,10 @@ export async function POST(request: NextRequest) {
       isCurrentTenant,
       livedFrom,
       livedUntil,
+      periodicCharges: periodicChargesInput,
     } = body;
+
+    const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
 
     if (
       !street ||
@@ -134,6 +139,48 @@ export async function POST(request: NextRequest) {
     if (!city) {
       return NextResponse.json({ error: 'City not found' }, { status: 404 });
     }
+
+    // Reject addresses that don't belong to the route's city, before any building
+    // create/attach (runs regardless of the placeId match below).
+    type CityBoundsShape = { north: number; south: number; east: number; west: number };
+    const cityBounds = (city.bounds ?? null) as CityBoundsShape | null;
+    const latNum = lat != null && lat !== '' ? Number(lat) : null;
+    const lngNum = lng != null && lng !== '' ? Number(lng) : null;
+
+    if (
+      cityBounds &&
+      latNum != null &&
+      lngNum != null &&
+      Number.isFinite(latNum) &&
+      Number.isFinite(lngNum)
+    ) {
+      const insideCity =
+        latNum <= cityBounds.north &&
+        latNum >= cityBounds.south &&
+        lngNum <= cityBounds.east &&
+        lngNum >= cityBounds.west;
+      if (!insideCity) {
+        return NextResponse.json(
+          { error: 'ADDRESS_OUTSIDE_CITY', message: 'The selected address is outside this city.' },
+          { status: 400 },
+        );
+      }
+    } else if (typeof placeCity === 'string' && placeCity.trim()) {
+      const norm = (s: string) =>
+        transliterate(s)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '');
+      const placeCityNorm = norm(placeCity);
+      const slugNorm = norm(citySlug || 'warsaw');
+      if (placeCityNorm && slugNorm && placeCityNorm !== slugNorm) {
+        return NextResponse.json(
+          { error: 'ADDRESS_OUTSIDE_CITY', message: 'The selected address is outside this city.' },
+          { status: 400 },
+        );
+      }
+    }
+    // When bounds/coords are missing and no place city name was provided, we cannot
+    // reliably determine the location, so we let it through to avoid false rejections.
 
     const cleanedStreet = cleanStreet(street);
     const addressNormalized = normalizeAddress(cleanedStreet, buildingNumber);
@@ -223,7 +270,8 @@ export async function POST(request: NextRequest) {
       (heatingAvg || 0) +
       (waterIncluded ? 0 : parseFloat(water) || 0) +
       (parseFloat(internet) || 0) +
-      (parseFloat(otherCosts) || 0);
+      (parseFloat(otherCosts) || 0) +
+      periodicChargesMonthlyTotal(periodicCharges);
 
     const costReport = await prisma.costReport.create({
       data: {
@@ -260,8 +308,9 @@ export async function POST(request: NextRequest) {
         livedUntil: livedUntil ? new Date(livedUntil) : null,
         isVisible: !wasFlagged,
         verificationStatus: wasFlagged ? 'flagged' : 'unverified',
+        periodicCharges: periodicCharges.length ? { create: periodicCharges } : undefined,
       },
-      include: { building: true },
+      include: { building: true, periodicCharges: true },
     });
 
     // Only mark hasContributed if data was not flagged

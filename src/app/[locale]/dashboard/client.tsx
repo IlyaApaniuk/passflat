@@ -84,9 +84,22 @@ interface DashboardSavedListing {
   savedAt: string;
 }
 
+interface DashboardCostReport {
+  id: string;
+  address: string;
+  citySlug: string;
+  slug: string;
+  district: string;
+  total: number;
+  status: 'flagged' | 'visible';
+  periodicCount: number;
+  createdAt: string;
+}
+
 interface Props {
   listings: DashboardListing[];
   savedListings: DashboardSavedListing[];
+  costReports: DashboardCostReport[];
   userEmail: string;
   freeListingsUsed: number;
 }
@@ -112,7 +125,13 @@ interface PaymentRow {
   hasReceipt: boolean;
 }
 
-export function DashboardClient({ listings, savedListings, userEmail, freeListingsUsed }: Props) {
+export function DashboardClient({
+  listings,
+  savedListings,
+  costReports,
+  userEmail,
+  freeListingsUsed,
+}: Props) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -128,6 +147,7 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
   const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [receiptLoadingId, setReceiptLoadingId] = useState<string | null>(null);
+  const initialTab = searchParams.get('tab') ?? 'listings';
 
   const loadPayments = async () => {
     if (payments !== null || paymentsLoading) return;
@@ -182,6 +202,11 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
       window.history.replaceState({}, '', url.toString());
     }
   }, [searchParams, t]);
+
+  useEffect(() => {
+    if (initialTab === 'billing') loadPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRemoveFavorite = async (listingId: string) => {
     try {
@@ -348,7 +373,7 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
             transition={{ delay: 0.4 }}
           >
             <Tabs
-              defaultValue="listings"
+              defaultValue={initialTab}
               onValueChange={(v) => {
                 if (v === 'billing') loadPayments();
               }}
@@ -363,6 +388,13 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
                   {t('dashboard.savedListings')}
                   {savedItems.length > 0 && (
                     <span className="ml-1 text-xs opacity-70">{savedItems.length}</span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="costs" className="gap-2">
+                  <Receipt className="h-4 w-4" />
+                  {t('dashboard.costReportsTab')}
+                  {costReports.length > 0 && (
+                    <span className="ml-1 text-xs opacity-70">{costReports.length}</span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="billing" className="gap-2">
@@ -783,6 +815,112 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              </TabsContent>
+
+              <TabsContent value="costs" className="mt-6">
+                {costReports.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center py-16 text-center">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Receipt className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold">{t('dashboard.noCostReports')}</h3>
+                      <p className="mt-1 text-muted-foreground">
+                        {t('dashboard.noCostReportsDesc')}
+                      </p>
+                      <Button className="mt-6 gap-2" asChild>
+                        <Link href="/warsaw/costs/submit">
+                          <Plus className="h-4 w-4" />
+                          {t('dashboard.addCostReport')}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <Button className="gap-2" asChild>
+                        <Link href={`/${costReports[0]?.citySlug ?? 'warsaw'}/costs/submit`}>
+                          <Plus className="h-4 w-4" />
+                          {t('dashboard.addCostReport')}
+                        </Link>
+                      </Button>
+                    </div>
+                    {costReports.map((r, i) => (
+                      <motion.div
+                        key={r.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <Link href={`/${r.citySlug}/building/${r.slug}`} className="block">
+                          <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/20">
+                            <CardContent className="p-4">
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      r.status === 'flagged'
+                                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                        : statusConfig.active.className
+                                    }
+                                  >
+                                    {r.status === 'flagged'
+                                      ? t('dashboard.costReportFlagged')
+                                      : t('dashboard.costReportVisible')}
+                                  </Badge>
+                                  <p className="mt-2 flex items-center gap-1 font-medium">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    {r.address}
+                                  </p>
+                                  {r.district && (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                      {r.district}
+                                    </p>
+                                  )}
+                                  {r.periodicCount > 0 && (
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      {t('costs.building.periodic')} · {r.periodicCount}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-start gap-2 sm:items-end">
+                                  <p className="text-lg font-bold text-primary">
+                                    {r.total.toLocaleString()} PLN
+                                    <span className="text-sm font-normal text-muted-foreground">
+                                      {t('common.perMonth')}
+                                    </span>
+                                  </p>
+                                  <div
+                                    className="flex items-center gap-2"
+                                    onClick={(e) => e.preventDefault()}
+                                  >
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-1.5"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        router.push(
+                                          `/${r.citySlug}/costs/submit?edit=true&id=${r.id}`,
+                                        );
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                      {t('common.edit')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="billing" className="mt-6">

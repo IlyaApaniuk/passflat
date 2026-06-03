@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates } from '@/lib/seo';
 import { computeStats, median, perAreaValues, type CostStats } from '@/lib/cost-stats';
+import { periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,7 +69,11 @@ async function findBuildingBySlugOrUuid(citySlug: string, slug: string) {
       include: {
         district: true,
         city: true,
-        costReports: { where: { isVisible: true }, orderBy: { createdAt: 'desc' as const } },
+        costReports: {
+          where: { isVisible: true },
+          orderBy: { createdAt: 'desc' as const },
+          include: { periodicCharges: true },
+        },
       },
     });
   }
@@ -78,7 +83,11 @@ async function findBuildingBySlugOrUuid(citySlug: string, slug: string) {
     include: {
       district: true,
       city: true,
-      costReports: { where: { isVisible: true }, orderBy: { createdAt: 'desc' as const } },
+      costReports: {
+        where: { isVisible: true },
+        orderBy: { createdAt: 'desc' as const },
+        include: { periodicCharges: true },
+      },
     },
   });
 }
@@ -145,6 +154,12 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           water: statsForField(recs, 'water'),
           internet: statsForField(recs, 'internet'),
           otherCosts: statsForField(recs, 'otherCosts'),
+          periodic: computeStats(
+            reports.map((r) => {
+              const total = periodicChargesMonthlyTotal(r.periodicCharges);
+              return total > 0 ? total : null;
+            }),
+          ),
           totalMonthlyAvg: statsForField(recs, 'totalMonthlyAvg'),
           deposit: statsForField(recs, 'depositAmount'),
         }

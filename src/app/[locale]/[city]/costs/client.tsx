@@ -292,9 +292,9 @@ export function CostsOverviewClient({
                   </div>
                   {hasContributedData && (
                     <Button variant="outline" asChild>
-                      <Link href={`/${citySlug}/costs/submit?edit=true`}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {t('costs.submit.editReport')}
+                      <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
+                        <List className="mr-2 h-4 w-4" />
+                        {t('costs.overview.myReports')}
                       </Link>
                     </Button>
                   )}
@@ -530,9 +530,9 @@ export function CostsOverviewClient({
                       </p>
                       <div className="mt-3 flex flex-col gap-2">
                         <Button size="sm" asChild>
-                          <Link href={`/${citySlug}/costs/submit?edit=true`}>
-                            <Pencil className="mr-2 h-3.5 w-3.5" />
-                            {t('costs.submit.editReport')}
+                          <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
+                            <List className="mr-2 h-3.5 w-3.5" />
+                            {t('costs.overview.myReports')}
                           </Link>
                         </Button>
                         <Button size="sm" variant="outline" asChild>

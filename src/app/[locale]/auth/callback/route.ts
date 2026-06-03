@@ -11,12 +11,7 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const tokenHash = searchParams.get('token_hash');
-  const type = searchParams.get('type') as
-    | 'signup'
-    | 'email'
-    | 'recovery'
-    | 'invite'
-    | undefined;
+  const type = searchParams.get('type') as 'signup' | 'email' | 'recovery' | 'invite' | undefined;
   const next = searchParams.get('next') || `/${locale}/dashboard`;
 
   const supabase = await createClient();
@@ -55,15 +50,34 @@ export async function GET(
         where: { id: user.id },
         create: {
           id: user.id,
-          displayName:
-            user.user_metadata?.full_name ||
-            user.email?.split('@')[0] ||
-            null,
+          displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || null,
           locale,
           cityId: defaultCity?.id,
         },
         update: {},
       });
+
+      // Auto-link any cost reports imported with this user's email (e.g. early
+      // Google Form submissions) to their account on first matching login.
+      if (user.email) {
+        try {
+          const claimed = await prisma.costReport.updateMany({
+            where: { importedEmail: user.email.toLowerCase(), claimedAt: null },
+            data: { authorId: user.id, claimedAt: new Date() },
+          });
+          if (claimed.count > 0) {
+            await prisma.profile.update({
+              where: { id: user.id },
+              data: { hasContributedCost: true },
+            });
+            trackServerEvent(user.id, 'imported_cost_reports_claimed', {
+              count: claimed.count,
+            });
+          }
+        } catch (claimErr) {
+          console.error('[auth callback] failed to claim imported cost reports', claimErr);
+        }
+      }
 
       const authMethod = user.app_metadata?.provider === 'google' ? 'google' : 'email';
 
@@ -89,7 +103,5 @@ export async function GET(
     return NextResponse.redirect(new URL(next, request.url));
   }
 
-  return NextResponse.redirect(
-    new URL(`/${locale}/auth/login?error=auth`, request.url),
-  );
+  return NextResponse.redirect(new URL(`/${locale}/auth/login?error=auth`, request.url));
 }

@@ -81,6 +81,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         if (consent === 'declined') {
           ph.opt_out_capturing();
         }
+        // Providing `bootstrap.featureFlags` makes posthog-js mark flags as
+        // already loaded, so it skips its automatic first-load fetch. Flags not
+        // listed in the bootstrap object (e.g. cost-report-delete-enabled) would
+        // then stay `undefined` until a much later refresh. Force one fetch so
+        // every flag resolves to its server value on initial page load.
+        ph.reloadFeatureFlags();
       },
     });
   }, []);

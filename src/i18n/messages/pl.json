@@ -647,6 +647,7 @@
       "unlockFullData": "Odblokuj pełne dane",
       "unlockDesc": "Zgłoś swoje koszty, aby uzyskać dostęp do szczegółowych raportów",
       "submitMyCosts": "Zgłoś moje koszty",
+      "myReports": "Moje raporty",
       "buyAccessBtn": "Kup dostęp",
       "gateLead": "Dane są ukryte. Odblokuj je jednym ze sposobów:",
       "gateRecommended": "Polecane",
@@ -745,9 +746,11 @@
       "privacyDesc": "Pokazujemy tylko dane zagregowane. Dokładne koszty nigdy nie są publicznie wyświetlane.",
       "deposit": "Kaucja",
       "rentalTypeRequired": "Wybierz co wynajmujesz (mieszkanie lub pokój)",
+      "addressOutsideCity": "Wybierz adres w granicach miasta {city}.",
       "submitButton": "Wyślij raport kosztów",
       "saveChanges": "Zapisz zmiany",
       "editReport": "Edytuj mój raport",
+      "viewMyReports": "Moje raporty",
       "contactUs": "Napisz do nas",
       "editPageTitle": "Edytuj swój raport kosztów",
       "editPageSubtitle": "Zaktualizuj koszty lub dodaj szczegóły mediów.",
@@ -767,7 +770,27 @@
       "internetProvider": "Dostawca internetu",
       "internetProviderPlaceholder": "np. UPC, Orange",
       "otherCostsNote": "Co jest wliczone?",
-      "otherCostsNotePlaceholder": "np. parking, komórka"
+      "otherCostsNotePlaceholder": "np. parking, komórka",
+      "periodicAddButton": "Płacisz coś nie co miesiąc? (np. woda raz na pół roku)",
+      "periodicSectionTitle": "Opłaty okresowe / rozliczenia",
+      "periodicSectionHint": "Rachunki płacone rzadziej niż co miesiąc — np. rozliczenia za wodę lub prąd co kilka miesięcy.",
+      "periodicCategoryLabel": "Kategoria",
+      "periodicFrequencyLabel": "Jak często",
+      "periodicAmountPlaceholder": "Kwota",
+      "periodicNotePlaceholder": "Notatka (opcjonalnie)",
+      "periodicAddRow": "Dodaj kolejną",
+      "periodicRemove": "Usuń",
+      "periodicSummaryLabel": "Rozliczenia (śr./mies.)",
+      "periodicPerMonth": "mies.",
+      "freqBimonthly": "Co 2 miesiące",
+      "freqQuarterly": "Co 3 miesiące",
+      "freqSemiannual": "Co pół roku",
+      "freqAnnual": "Raz w roku",
+      "catWater": "Woda",
+      "catElectricity": "Prąd",
+      "catGas": "Gaz",
+      "catHeating": "Ogrzewanie",
+      "catOther": "Inne"
     },
     "building": {
       "avgRent": "Średni czynsz",
@@ -812,6 +835,7 @@
       "matchesAverage": "Zgodne ze średnią",
       "matchesMedian": "Zgodne z medianą",
       "otherCosts": "Inne koszty",
+      "periodic": "Rozliczenia okresowe (śr./mies.)",
       "deposit": "Kaucja",
       "depositDesc": "Jednorazowa kaucja zwrotna",
       "winterSummer": "zima {winter} / lato {summer}",
@@ -931,7 +955,7 @@
       "label": "Przejrzystość kosztów",
       "title": "Poznaj realne koszty przed podpisaniem",
       "step1Title": "Zgłoś anonimowy raport kosztów",
-      "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet.",
+      "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet — w tym rachunkami, które przychodzą rzadziej (np. rozliczenie wody co 6 miesięcy), które przeliczamy na równowartość miesięczną.",
       "step2Title": "Odblokuj pełną bazę danych",
       "step2Desc": "Po dodaniu raportu uzyskasz pełny dostęp do danych o kosztach wszystkich budynków. Alternatywnie możesz kupić czasowy dostęp (7, 30 lub 90 dni), jeśli nie masz jeszcze danych do udostępnienia.",
       "step3Title": "Porównaj przed podpisaniem",
@@ -968,7 +992,9 @@
       "q4": "Ile kosztuje Passflat?",
       "a4": "Masz 2 darmowe aktywne ogłoszenia. Kolejne wymagają jednorazowej opłaty. Opcjonalne promowane ogłoszenia (dla lepszej widoczności) zaczynają się od 39 PLN. Raporty kosztów są bezpłatne po dodaniu własnych danych — możesz też kupić czasowy dostęp.",
       "q5": "Czy Passflat jest dostępny poza Warszawą?",
-      "a5": "Zaczynamy od Warszawy, ale platforma jest zaprojektowana z myślą o ekspansji na wiele miast. Kraków, Wrocław i inne europejskie miasta są w naszym planie."
+      "a5": "Zaczynamy od Warszawy, ale platforma jest zaprojektowana z myślą o ekspansji na wiele miast. Kraków, Wrocław i inne europejskie miasta są w naszym planie.",
+      "q6": "Czy mogę dodać raporty kosztów dla więcej niż jednego budynku?",
+      "a6": "Masz więcej niż jedno mieszkanie? Możesz dodać osobny raport kosztów dla każdego budynku i zarządzać nimi wszystkimi z zakładki Raporty kosztów w swoim panelu."
     },
     "ctaTitle": "Gotowy, aby zacząć?",
     "ctaBrowse": "Przeglądaj oferty",
@@ -995,7 +1021,7 @@
       "pillar3Title": "Tymczasowy podnajem",
       "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
       "pillar4Title": "Przejrzystość kosztów",
-      "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę, zanim podpiszesz umowę."
+      "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę."
     },
     "team": {
       "label": "Kim jesteśmy",
@@ -1009,9 +1035,9 @@
       "principle1": "Żadnych ukrytych informacji",
       "principle1Desc": "Pokazujemy realne liczby — nawet gdy są niewygodne dla rynku. Każde ogłoszenie zawiera pełny podział kosztów, zanim się z kimkolwiek skontaktujesz.",
       "principle2": "Twoje dane należą do Ciebie",
-      "principle2Desc": "Każdy raport kosztów pozostaje anonimowy i bezpłatny dla wszystkich. Nigdy nie ukrywamy danych społeczności za paywallem ani nie sprzedajemy ich.",
+      "principle2Desc": "Każdy raport kosztów pozostaje anonimowy i nigdy nie sprzedajemy go stronom trzecim. Dane o kosztach nie są ukryte za sztywnym paywallem — dodanie jednego własnego raportu odblokowuje całą bazę za darmo.",
       "principle3": "Otwarte domyślnie",
-      "principle3Desc": "Wszystkie dane społeczności są dostępne bez rejestracji. Bez planów premium, bez ukrytych treści, bez limitów. Jeśli informacja istnieje — jest dostępna dla każdego.",
+      "principle3Desc": "Ogłoszenia są w pełni otwarte — bez rejestracji, bez planów premium. Dane o kosztach od społeczności odblokowujesz, dodając jeden własny raport (lub kupując opcjonalny czasowy dostęp), dzięki czemu baza wciąż rośnie dla wszystkich.",
       "principle4": "Najemca na pierwszym miejscu",
       "principle4Desc": "Nie współpracujemy z agencjami i nie sprzedajemy Twoich danych. Każda decyzja produktowa podejmowana jest z perspektywy najemcy."
     },
@@ -1062,6 +1088,12 @@
     "myInquiries": "Moje zapytania",
     "noListings": "Brak ogłoszeń",
     "noListingsDesc": "Dodaj pierwsze ogłoszenie, aby zacząć otrzymywać zapytania",
+    "costReportsTab": "Raporty kosztów",
+    "noCostReports": "Brak raportów kosztów",
+    "noCostReportsDesc": "Podziel się swoimi kosztami, aby odblokować wszystkie dane o budynkach.",
+    "addCostReport": "Dodaj koszty",
+    "costReportVisible": "Widoczny",
+    "costReportFlagged": "Ukryty (oznaczony)",
     "noInquiries": "Brak zapytań",
     "noInquiriesDesc": "Gdy ktoś zainteresuje się Twoim ogłoszeniem, wiadomość pojawi się tutaj",
     "statusActive": "Aktywne",
@@ -1256,7 +1288,8 @@
       "costReports": {
         "title": "Dane raportów kosztów",
         "item1": "Adres budynku i powierzchnia mieszkania",
-        "item2": "Miesięczne koszty mediów (prąd, gaz, ogrzewanie, woda, internet) — wyświetlane wyłącznie w formie zagregowanej"
+        "item2": "Miesięczne koszty mediów (prąd, gaz, ogrzewanie, woda, internet) — wyświetlane wyłącznie w formie zagregowanej",
+        "item3": "Jeśli wcześniej przesłałeś dane o kosztach przez zewnętrzny formularz (np. wczesny formularz Google), przechowujemy podany przez Ciebie adres e-mail wyłącznie po to, aby powiązać to zgłoszenie z Twoim kontem, gdy później zalogujesz się tym samym adresem e-mail."
       },
       "usage": {
         "title": "Dane użytkowania i dane techniczne",
@@ -1276,6 +1309,10 @@
         "contract": "Wykonanie umowy (art. 6 ust. 1 lit. b) — przetwarzanie niezbędne do świadczenia usługi, w tym wyświetlanie ogłoszeń, dopasowywanie najemców i raporty kosztów.",
         "legitimateInterest": "Uzasadniony interes (art. 6 ust. 1 lit. f) — przetwarzanie w celach analitycznych, bezpieczeństwa platformy, zapobiegania nadużyciom i ulepszania platformy.",
         "consent": "Zgoda (art. 6 ust. 1 lit. a) — przetwarzanie w celach analitycznych plików cookies (PostHog) oraz komunikacji marketingowej, którą możesz wycofać w dowolnym momencie."
+      },
+      "imported": {
+        "title": "Zaimportowane raporty kosztów",
+        "description": "Część wczesnych raportów kosztów zebrano przez formularz Google i jest przechowywana w formie zanonimizowanej pod systemowym symbolem zastępczym. Gdy zalogujesz się adresem e-mail użytym przy tym zgłoszeniu, automatycznie przypisujemy te raporty do Twojego konta i przyznajemy Ci dostęp jako współtwórcy. Podstawą prawną jest nasz uzasadniony interes (art. 6 ust. 1 lit. f) polegający na utrzymaniu współtwórcom dostępu do ich własnych zgłoszeń; w każdej chwili możesz zażądać usunięcia danych."
       }
     },
     "dataSharing": {
@@ -1300,7 +1337,8 @@
       "title": "Przechowywanie danych",
       "account": "Dane konta: przechowywane do momentu usunięcia konta",
       "listings": "Ogłoszenia: aktywne przez 60 dni, następnie archiwizowane na 30 dni przed usunięciem",
-      "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie. Po anonimizacji dane te nie stanowią już danych osobowych w rozumieniu RODO (motyw 26) i są utrzymywane w celu wsparcia bazy danych społeczności"
+      "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie. Po anonimizacji dane te nie stanowią już danych osobowych w rozumieniu RODO (motyw 26) i są utrzymywane w celu wsparcia bazy danych społeczności",
+      "importedEmail": "Adresy e-mail z zaimportowanych zgłoszeń są przechowywane do momentu powiązania zgłoszenia przy logowaniu lub do chwili, gdy zażądasz ich usunięcia."
     },
     "rights": {
       "title": "Twoje prawa (RODO)",

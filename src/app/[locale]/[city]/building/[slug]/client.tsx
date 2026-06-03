@@ -88,6 +88,7 @@ interface BuildingCostsClientProps {
     water: CostStats | null;
     internet: CostStats | null;
     otherCosts: CostStats | null;
+    periodic: CostStats | null;
     totalMonthlyAvg: CostStats | null;
     deposit: CostStats | null;
   } | null;
@@ -263,6 +264,17 @@ export function BuildingCostsClient({
                 color: 'text-muted-foreground',
                 bgColor: 'bg-muted',
                 data: costs.otherCosts,
+              },
+            ]
+          : []),
+        ...(costs.periodic
+          ? [
+              {
+                label: t('costs.building.periodic'),
+                icon: RefreshCw,
+                color: 'text-violet-500',
+                bgColor: 'bg-violet-500/10',
+                data: costs.periodic,
               },
             ]
           : []),
