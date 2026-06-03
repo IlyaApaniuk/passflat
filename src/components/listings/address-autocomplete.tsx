@@ -1,13 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Input } from "@/components/ui/input";
-import { MapPin } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Input } from '@/components/ui/input';
+import { MapPin } from 'lucide-react';
 
 export interface PlaceResult {
   street: string;
   buildingNumber: string;
   district: string;
+  city: string;
   postalCode: string;
   lat: number;
   lng: number;
@@ -15,10 +16,18 @@ export interface PlaceResult {
   formattedAddress: string;
 }
 
+interface CityBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 interface AddressAutocompleteProps {
   onPlaceSelect: (place: PlaceResult) => void;
   placeholder?: string;
   defaultValue?: string;
+  bounds?: CityBounds;
 }
 
 let placesLibPromise: Promise<void> | null = null;
@@ -27,7 +36,7 @@ function bootstrapGoogleMaps() {
   const w = window as any;
   const g = (w.google = w.google || {});
   const m = (g.maps = g.maps || {});
-  if (typeof m.importLibrary === "function") return;
+  if (typeof m.importLibrary === 'function') return;
 
   const pending = new Set<string>();
   let coreReady: Promise<void> | null = null;
@@ -39,16 +48,16 @@ function bootstrapGoogleMaps() {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY!;
         const params = new URLSearchParams({
           key: apiKey,
-          v: "weekly",
-          libraries: [...pending].join(","),
-          loading: "async",
-          callback: "__gmcb",
+          v: 'weekly',
+          libraries: [...pending].join(','),
+          loading: 'async',
+          callback: '__gmcb',
         });
         w.__gmcb = resolve;
-        const s = document.createElement("script");
+        const s = document.createElement('script');
         s.src = `https://maps.googleapis.com/maps/api/js?${params}`;
         s.async = true;
-        s.onerror = () => reject(new Error("Failed to load Google Maps"));
+        s.onerror = () => reject(new Error('Failed to load Google Maps'));
         document.head.appendChild(s);
       });
     }
@@ -59,14 +68,15 @@ function bootstrapGoogleMaps() {
 function ensureMapsLoaded(): Promise<void> {
   if (placesLibPromise) return placesLibPromise;
   bootstrapGoogleMaps();
-  placesLibPromise = google.maps.importLibrary("places").then(() => {});
+  placesLibPromise = google.maps.importLibrary('places').then(() => {});
   return placesLibPromise;
 }
 
 export function AddressAutocomplete({
   onPlaceSelect,
-  placeholder = "Start typing address...",
-  defaultValue = "",
+  placeholder = 'Start typing address...',
+  defaultValue = '',
+  bounds,
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
@@ -84,29 +94,42 @@ export function AddressAutocomplete({
     });
   }, []);
 
-  const fetchSuggestions = useCallback(async (input: string) => {
-    if (!input || input.length < 3) {
-      setSuggestions([]);
-      setIsOpen(false);
-      return;
-    }
+  const fetchSuggestions = useCallback(
+    async (input: string) => {
+      if (!input || input.length < 3) {
+        setSuggestions([]);
+        setIsOpen(false);
+        return;
+      }
 
-    try {
-      const { suggestions: results } =
-        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+      try {
+        const request: google.maps.places.AutocompleteRequest = {
           input,
-          includedRegionCodes: ["pl"],
+          includedRegionCodes: ['pl'],
           sessionToken: sessionTokenRef.current!,
-        });
+        };
+        if (bounds) {
+          request.locationRestriction = {
+            north: bounds.north,
+            south: bounds.south,
+            east: bounds.east,
+            west: bounds.west,
+          };
+        }
 
-      setSuggestions(results);
-      setIsOpen(results.length > 0);
-      setActiveIndex(-1);
-    } catch (err) {
-      setSuggestions([]);
-      setIsOpen(false);
-    }
-  }, []);
+        const { suggestions: results } =
+          await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+
+        setSuggestions(results);
+        setIsOpen(results.length > 0);
+        setActiveIndex(-1);
+      } catch (err) {
+        setSuggestions([]);
+        setIsOpen(false);
+      }
+    },
+    [bounds],
+  );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,23 +148,27 @@ export function AddressAutocomplete({
 
       const place = prediction.toPlace();
       await place.fetchFields({
-        fields: ["addressComponents", "location", "formattedAddress", "id"],
+        fields: ['addressComponents', 'location', 'formattedAddress', 'id'],
       });
 
       const components = place.addressComponents ?? [];
-      const get = (type: string) =>
-        components.find((c) => c.types.includes(type))?.longText ?? "";
+      const get = (type: string) => components.find((c) => c.types.includes(type))?.longText ?? '';
 
       const loc = place.location;
       const result: PlaceResult = {
-        street: get("route"),
-        buildingNumber: get("street_number"),
-        district: get("sublocality_level_1") || get("locality") || "",
-        postalCode: get("postal_code"),
+        street: get('route'),
+        buildingNumber: get('street_number'),
+        district: get('sublocality_level_1') || get('locality') || '',
+        city:
+          get('locality') ||
+          get('administrative_area_level_2') ||
+          get('administrative_area_level_1') ||
+          '',
+        postalCode: get('postal_code'),
         lat: loc?.lat() ?? 0,
         lng: loc?.lng() ?? 0,
-        placeId: place.id ?? "",
-        formattedAddress: place.formattedAddress ?? "",
+        placeId: place.id ?? '',
+        formattedAddress: place.formattedAddress ?? '',
       };
 
       setValue(result.formattedAddress);
@@ -157,16 +184,16 @@ export function AddressAutocomplete({
     (e: React.KeyboardEvent) => {
       if (!isOpen || suggestions.length === 0) return;
 
-      if (e.key === "ArrowDown") {
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActiveIndex((i) => (i < suggestions.length - 1 ? i + 1 : 0));
-      } else if (e.key === "ArrowUp") {
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActiveIndex((i) => (i > 0 ? i - 1 : suggestions.length - 1));
-      } else if (e.key === "Enter" && activeIndex >= 0) {
+      } else if (e.key === 'Enter' && activeIndex >= 0) {
         e.preventDefault();
         handleSelect(suggestions[activeIndex]);
-      } else if (e.key === "Escape") {
+      } else if (e.key === 'Escape') {
         setIsOpen(false);
       }
     },
@@ -198,14 +225,10 @@ export function AddressAutocomplete({
                 key={prediction.placeId}
                 onMouseDown={() => handleSelect(suggestion)}
                 className={`cursor-pointer rounded-sm px-3 py-2 text-sm transition-colors ${
-                  i === activeIndex
-                    ? "bg-accent text-accent-foreground"
-                    : "hover:bg-accent/50"
+                  i === activeIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
                 }`}
               >
-                <span className="font-medium">
-                  {prediction.mainText?.text ?? ""}
-                </span>
+                <span className="font-medium">{prediction.mainText?.text ?? ''}</span>
                 {prediction.secondaryText?.text && (
                   <span className="ml-1 text-muted-foreground">
                     {prediction.secondaryText.text}
@@ -214,9 +237,7 @@ export function AddressAutocomplete({
               </li>
             );
           })}
-          <li className="px-3 py-1.5 text-[10px] text-muted-foreground">
-            Powered by Google
-          </li>
+          <li className="px-3 py-1.5 text-[10px] text-muted-foreground">Powered by Google</li>
         </ul>
       )}
     </div>

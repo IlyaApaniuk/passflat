@@ -647,6 +647,7 @@
       "unlockFullData": "Unlock Full Data",
       "unlockDesc": "Submit your costs to access detailed reports",
       "submitMyCosts": "Submit My Costs",
+      "myReports": "My reports",
       "buyAccessBtn": "Buy Access",
       "gateLead": "Cost data is locked. Unlock it in one of two ways:",
       "gateRecommended": "Recommended",
@@ -745,9 +746,11 @@
       "privacyDesc": "We only show aggregated data. Exact costs are never publicly displayed.",
       "deposit": "Deposit (kaucja)",
       "rentalTypeRequired": "Please select what you are renting (apartment or room)",
+      "addressOutsideCity": "Please choose an address within {city}.",
       "submitButton": "Submit Cost Report",
       "saveChanges": "Save Changes",
       "editReport": "Edit My Report",
+      "viewMyReports": "My reports",
       "contactUs": "Contact Us",
       "editPageTitle": "Edit Your Cost Report",
       "editPageSubtitle": "Update your costs or add utility details.",
@@ -767,7 +770,27 @@
       "internetProvider": "Internet provider",
       "internetProviderPlaceholder": "e.g. UPC, Orange",
       "otherCostsNote": "What's included?",
-      "otherCostsNotePlaceholder": "e.g. parking, storage"
+      "otherCostsNotePlaceholder": "e.g. parking, storage",
+      "periodicAddButton": "Pay something not monthly? (e.g. water every 6 months)",
+      "periodicSectionTitle": "Periodic surcharges / recalculations",
+      "periodicSectionHint": "Bills paid less often than monthly — e.g. water or electricity recalculations every few months.",
+      "periodicCategoryLabel": "Category",
+      "periodicFrequencyLabel": "How often",
+      "periodicAmountPlaceholder": "Amount",
+      "periodicNotePlaceholder": "Note (optional)",
+      "periodicAddRow": "Add another",
+      "periodicRemove": "Remove",
+      "periodicSummaryLabel": "Recalculations (avg/mo)",
+      "periodicPerMonth": "mo",
+      "freqBimonthly": "Every 2 months",
+      "freqQuarterly": "Every 3 months",
+      "freqSemiannual": "Every 6 months",
+      "freqAnnual": "Once a year",
+      "catWater": "Water",
+      "catElectricity": "Electricity",
+      "catGas": "Gas",
+      "catHeating": "Heating",
+      "catOther": "Other"
     },
     "building": {
       "avgRent": "Avg Rent",
@@ -812,6 +835,7 @@
       "matchesAverage": "Matches average",
       "matchesMedian": "Matches median",
       "otherCosts": "Other Costs",
+      "periodic": "Periodic recalculations (avg/mo)",
       "deposit": "Deposit (kaucja)",
       "depositDesc": "One-time refundable security deposit",
       "winterSummer": "winter {winter} / summer {summer}",
@@ -931,7 +955,7 @@
       "label": "Cost Transparency",
       "title": "Know real costs before you sign",
       "step1Title": "Submit an anonymous cost report",
-      "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet.",
+      "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet — including bills that come less often (e.g. a water recalculation every 6 months), which we show as a monthly equivalent.",
       "step2Title": "Unlock the full database",
       "step2Desc": "After submitting your report, you get full access to cost data for all buildings. Alternatively, you can buy time-limited access (7, 30, or 90 days) if you don't have data to share yet.",
       "step3Title": "Compare before signing",
@@ -968,7 +992,9 @@
       "q4": "How much does Passflat cost?",
       "a4": "You get 2 free active listings. Additional listings require a one-time payment. Optional promoted listings (for better visibility) start at 39 PLN. Cost reports are free if you contribute your own data, or you can buy time-limited access.",
       "q5": "Is Passflat available outside Warsaw?",
-      "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap."
+      "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap.",
+      "q6": "Can I submit cost reports for more than one building?",
+      "a6": "Have more than one flat? You can add a separate cost report for each building and manage them all from the Cost reports tab in your dashboard."
     },
     "ctaTitle": "Ready to get started?",
     "ctaBrowse": "Browse Listings",
@@ -995,7 +1021,7 @@
       "pillar3Title": "Temporary Sublet",
       "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
       "pillar4Title": "Cost Transparency",
-      "pillar4Desc": "Community-sourced real utility costs. Know exactly what you'll pay for electricity, gas, heating, and water before you sign."
+      "pillar4Desc": "Community-sourced real utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign."
     },
     "team": {
       "label": "Who We Are",
@@ -1009,9 +1035,9 @@
       "principle1": "No hidden information",
       "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
       "principle2": "Your data belongs to you",
-      "principle2Desc": "Every cost report stays anonymous and free for all. We never paywall community data or sell it to third parties.",
+      "principle2Desc": "Every cost report stays anonymous, and we never sell it to third parties. Cost data isn't hidden behind a hard paywall — contributing one report of your own unlocks the whole database for free.",
       "principle3": "Open by default",
-      "principle3Desc": "All community data is accessible without registration. No premium tiers, no hidden content, no limits. If the information exists — it's available to everyone.",
+      "principle3Desc": "Listings are fully open — no registration, no premium tiers. Community cost data is unlocked by contributing one report of your own (or optional time-limited access), so the database keeps growing for everyone.",
       "principle4": "Tenants first",
       "principle4Desc": "We don't work with agencies and we don't sell your data. Every product decision is made from the tenant's perspective."
     },
@@ -1062,6 +1088,12 @@
     "myInquiries": "My Inquiries",
     "noListings": "No listings yet",
     "noListingsDesc": "Create your first listing to start receiving inquiries",
+    "costReportsTab": "Cost reports",
+    "noCostReports": "No cost reports yet",
+    "noCostReportsDesc": "Share your rental costs to unlock all building data.",
+    "addCostReport": "Add costs",
+    "costReportVisible": "Visible",
+    "costReportFlagged": "Hidden (flagged)",
     "noInquiries": "No inquiries yet",
     "noInquiriesDesc": "When someone is interested in your listing, their message will appear here",
     "statusActive": "Active",
@@ -1256,7 +1288,8 @@
       "costReports": {
         "title": "Cost Report Data",
         "item1": "Building address and apartment size",
-        "item2": "Monthly utility costs (electricity, gas, heating, water, internet) — displayed only in aggregated form"
+        "item2": "Monthly utility costs (electricity, gas, heating, water, internet) — displayed only in aggregated form",
+        "item3": "If you previously submitted cost data through an external form (e.g. an early Google Form), we store the email address you provided solely to link that submission to your account when you later sign in with the same email."
       },
       "usage": {
         "title": "Usage & Technical Data",
@@ -1276,6 +1309,10 @@
         "contract": "Contract performance (Art. 6(1)(b)) — processing necessary to provide the service, including displaying listings, tenant matching, and cost reports.",
         "legitimateInterest": "Legitimate interest (Art. 6(1)(f)) — processing for analytics, platform security, fraud prevention, and platform improvement.",
         "consent": "Consent (Art. 6(1)(a)) — processing for analytics cookies (PostHog) and marketing communications, which you can withdraw at any time."
+      },
+      "imported": {
+        "title": "Imported cost reports",
+        "description": "Some early cost reports were collected via a Google Form and are stored anonymized under a system placeholder. When you log in with the email used for that submission, we automatically associate those reports with your account and grant you contributor access. The legal basis is our legitimate interest (Art. 6(1)(f)) in maintaining contributors' access to their own submissions; you can request deletion at any time."
       }
     },
     "dataSharing": {
@@ -1300,7 +1337,8 @@
       "title": "Data Retention",
       "account": "Account data: retained until you delete your account",
       "listings": "Listings: active for 60 days, then archived for 30 days before deletion",
-      "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form. Once anonymized, this data is no longer personal data under GDPR (Recital 26) and is maintained to support the community database"
+      "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form. Once anonymized, this data is no longer personal data under GDPR (Recital 26) and is maintained to support the community database",
+      "importedEmail": "Email addresses from imported submissions are retained until the submission is claimed at login or until you request removal."
     },
     "rights": {
       "title": "Your Rights (GDPR)",

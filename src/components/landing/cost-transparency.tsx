@@ -116,10 +116,10 @@ export function CostTransparency({
               {/* Header */}
               <div className="relative mb-6">
                 <h3 className="text-lg font-semibold">
-                  {buildingData?.address ?? 'ul. Pulawska 45'}
+                  {buildingData?.address ?? 'ul. Puławska 45'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {buildingData?.district ?? 'Mokotow'}, Warsaw
+                  {buildingData?.district ?? 'Mokotów'}, Warsaw
                 </p>
               </div>
 

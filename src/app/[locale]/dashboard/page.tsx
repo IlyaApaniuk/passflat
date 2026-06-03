@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     redirect('/auth/login?next=/dashboard');
   }
 
-  const [listings, savedListings] = await Promise.all([
+  const [listings, savedListings, costReports] = await Promise.all([
     prisma.listing.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -30,6 +30,14 @@ export default async function DashboardPage() {
             building: { include: { district: true } },
           },
         },
+      },
+    }),
+    prisma.costReport.findMany({
+      where: { authorId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        building: { include: { city: true, district: true } },
+        periodicCharges: true,
       },
     }),
   ]);
@@ -69,10 +77,26 @@ export default async function DashboardPage() {
       savedAt: s.createdAt.toISOString(),
     }));
 
+  const serializedCostReports = costReports.map((r) => ({
+    id: r.id,
+    address: r.building.addressFull,
+    citySlug: r.building.city.slug,
+    slug: r.building.slug,
+    district: r.building.district?.nameKey ?? '',
+    total: Number(r.totalMonthlyAvg ?? 0),
+    status:
+      r.verificationStatus === 'flagged' && !r.isVisible
+        ? ('flagged' as const)
+        : ('visible' as const),
+    periodicCount: r.periodicCharges.length,
+    createdAt: r.createdAt.toISOString(),
+  }));
+
   return (
     <DashboardClient
       listings={serializedListings}
       savedListings={serializedSaved}
+      costReports={serializedCostReports}
       userEmail={user.email ?? ''}
       freeListingsUsed={freeListingsUsed}
     />

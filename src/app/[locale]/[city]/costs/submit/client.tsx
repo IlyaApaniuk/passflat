@@ -25,8 +25,19 @@ import {
   AlertTriangle,
   Pencil,
   Mail,
+  RefreshCw,
+  Plus,
+  X,
 } from 'lucide-react';
 import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import type { CityBounds } from '@/lib/listings-data';
+import {
+  PERIODIC_CATEGORIES,
+  PERIODIC_FREQUENCIES,
+  monthlyEquivalent,
+  type PeriodicCategory,
+  type PeriodicFrequency,
+} from '@/lib/periodic-charges';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -36,6 +47,24 @@ const fadeUp = {
     transition: { duration: 0.4, delay: i * 0.1, ease: 'easeOut' as const },
   }),
 };
+
+const CATEGORY_LABEL_KEY: Record<PeriodicCategory, string> = {
+  water: 'catWater',
+  electricity: 'catElectricity',
+  gas: 'catGas',
+  heating: 'catHeating',
+  other: 'catOther',
+};
+
+const FREQUENCY_LABEL_KEY: Record<PeriodicFrequency, string> = {
+  bimonthly: 'freqBimonthly',
+  quarterly: 'freqQuarterly',
+  semiannual: 'freqSemiannual',
+  annual: 'freqAnnual',
+};
+
+const selectClass =
+  'h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
 
 interface ExistingReport {
   id: string;
@@ -68,6 +97,14 @@ interface ExistingReport {
   internetProvider: string;
   other: string;
   otherCostsNote: string;
+  periodicCharges: PeriodicChargeRow[];
+}
+
+interface PeriodicChargeRow {
+  category: PeriodicCategory;
+  amount: string;
+  frequency: PeriodicFrequency;
+  note: string;
 }
 
 function hasDetailedUtilities(report: ExistingReport): boolean {
@@ -90,19 +127,29 @@ function hasDetailedUtilities(report: ExistingReport): boolean {
 
 interface CostSubmitClientProps {
   citySlug: string;
+  cityName: string;
+  cityBounds?: CityBounds;
   editMode?: boolean;
   existingReport?: ExistingReport | null;
 }
 
+function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
+  return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
+}
+
 export function CostSubmitClient({
   citySlug,
+  cityName,
+  cityBounds,
   editMode = false,
   existingReport = null,
 }: CostSubmitClientProps) {
   const t = useTranslations();
   const router = useRouter();
+  const placeCityRef = useRef('');
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
+  const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
@@ -141,6 +188,7 @@ export function CostSubmitClient({
           internetProvider: '',
           other: '',
           otherCostsNote: '',
+          periodicCharges: [] as PeriodicChargeRow[],
         },
   );
 
@@ -153,12 +201,46 @@ export function CostSubmitClient({
   const [showHeatingSeasonal, setShowHeatingSeasonal] = useState(
     () => !!(existingReport?.heatingWinter || existingReport?.heatingSummer),
   );
+  const [showPeriodic, setShowPeriodic] = useState(() => !!existingReport?.periodicCharges?.length);
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
+  const addPeriodicRow = () => {
+    setShowPeriodic(true);
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: [
+        ...prev.periodicCharges,
+        { category: 'water', amount: '', frequency: 'semiannual', note: '' },
+      ],
+    }));
+  };
+
+  const updatePeriodicRow = (index: number, patch: Partial<PeriodicChargeRow>) => {
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: prev.periodicCharges.map((row, i) =>
+        i === index ? { ...row, ...patch } : row,
+      ),
+    }));
+  };
+
+  const removePeriodicRow = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: prev.periodicCharges.filter((_, i) => i !== index),
+    }));
+  };
+
   const handlePlaceSelect = (place: PlaceResult) => {
+    if (cityBounds && place.lat && place.lng && !isInsideBounds(place.lat, place.lng, cityBounds)) {
+      setError(t('costs.submit.addressOutsideCity', { city: cityName }));
+      return;
+    }
+    setError(null);
+    placeCityRef.current = place.city;
     updateFormData({
       street: place.street,
       buildingNumber: place.buildingNumber,
@@ -230,6 +312,14 @@ export function CostSubmitClient({
         areaM2: formData.areaM2 || undefined,
         floor: formData.floor || undefined,
         rentalType: formData.rentalType || undefined,
+        periodicCharges: formData.periodicCharges
+          .map((c) => ({
+            category: c.category,
+            amount: c.amount ? parseFloat(c.amount) : NaN,
+            frequency: c.frequency,
+            note: c.note || undefined,
+          }))
+          .filter((c) => Number.isFinite(c.amount) && c.amount > 0),
       };
 
       const requestBody = editMode
@@ -242,6 +332,7 @@ export function CostSubmitClient({
             lat: formData.lat || undefined,
             lng: formData.lng || undefined,
             citySlug,
+            placeCity: placeCityRef.current || undefined,
             isCurrentTenant: true,
             ...sharedFields,
           };
@@ -261,9 +352,14 @@ export function CostSubmitClient({
       }
 
       if (!response.ok) {
+        if (data.error === 'ADDRESS_OUTSIDE_CITY') {
+          throw new Error(t('costs.submit.addressOutsideCity', { city: cityName }));
+        }
         throw new Error((data.error as string) || 'Failed to submit');
       }
 
+      const costReport = data.costReport as { id?: string } | undefined;
+      setSubmittedReportId(costReport?.id ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
     } catch (err) {
@@ -305,8 +401,19 @@ export function CostSubmitClient({
     ? detailedUtilities
     : parseInt(formData.extraBills) || 0;
 
+  const periodicMonthly = Math.round(
+    formData.periodicCharges.reduce((sum, c) => {
+      const amt = parseFloat(c.amount);
+      if (!Number.isFinite(amt) || amt <= 0) return sum;
+      return sum + monthlyEquivalent(amt, c.frequency);
+    }, 0),
+  );
+
   const totalMonthly =
-    (parseInt(formData.rent) || 0) + (parseInt(formData.adminFee) || 0) + totalUtilities;
+    (parseInt(formData.rent) || 0) +
+    (parseInt(formData.adminFee) || 0) +
+    totalUtilities +
+    periodicMonthly;
 
   if (submitted && wasFlagged) {
     return (
@@ -332,7 +439,11 @@ export function CostSubmitClient({
                 <p className="mt-2 text-muted-foreground">{t('costs.submit.flaggedDesc')}</p>
                 <div className="mt-6 flex flex-col gap-3">
                   <Button asChild>
-                    <Link href={`/${citySlug}/costs/submit?edit=true`}>
+                    <Link
+                      href={`/${citySlug}/costs/submit?edit=true${
+                        submittedReportId ? `&id=${submittedReportId}` : ''
+                      }`}
+                    >
                       <Pencil className="mr-2 h-4 w-4" />
                       {t('costs.submit.editReport')}
                     </Link>
@@ -376,12 +487,12 @@ export function CostSubmitClient({
                 <p className="mt-2 text-muted-foreground">{t('costs.submit.thankYouDesc')}</p>
                 <div className="mt-6 flex flex-col gap-3">
                   <Button asChild>
-                    <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
+                    <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
+                      {t('costs.submit.viewMyReports')}
+                    </Link>
                   </Button>
                   <Button variant="outline" asChild>
-                    <Link href={`/${citySlug}/replacement`}>
-                      {t('costs.submit.browseListings')}
-                    </Link>
+                    <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -489,6 +600,7 @@ export function CostSubmitClient({
                         <AddressAutocomplete
                           onPlaceSelect={handlePlaceSelect}
                           placeholder={t('listings.create.addressPlaceholder')}
+                          bounds={cityBounds}
                         />
                         <p className="text-xs text-muted-foreground">
                           {t('listings.create.addressHint')}
@@ -945,6 +1057,120 @@ export function CostSubmitClient({
                         </div>
                       </div>
                     )}
+
+                    {/* Periodic surcharges / recalculations */}
+                    <div className="border-t pt-4">
+                      {!showPeriodic && formData.periodicCharges.length === 0 ? (
+                        <button
+                          type="button"
+                          onClick={addPeriodicRow}
+                          className="flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          {t('costs.submit.periodicAddButton')}
+                        </button>
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                              <RefreshCw className="h-4 w-4" />
+                              {t('costs.submit.periodicSectionTitle')}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {t('costs.submit.periodicSectionHint')}
+                            </p>
+                          </div>
+
+                          {formData.periodicCharges.map((row, i) => {
+                            const amt = parseFloat(row.amount);
+                            const perMonth =
+                              Number.isFinite(amt) && amt > 0
+                                ? Math.round(monthlyEquivalent(amt, row.frequency))
+                                : null;
+                            return (
+                              <div
+                                key={i}
+                                className="space-y-2 rounded-lg border border-border bg-background p-3"
+                              >
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <select
+                                    className={selectClass}
+                                    value={row.category}
+                                    onChange={(e) =>
+                                      updatePeriodicRow(i, {
+                                        category: e.target.value as PeriodicCategory,
+                                      })
+                                    }
+                                  >
+                                    {PERIODIC_CATEGORIES.map((c) => (
+                                      <option key={c} value={c}>
+                                        {t(`costs.submit.${CATEGORY_LABEL_KEY[c]}`)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    className={selectClass}
+                                    value={row.frequency}
+                                    onChange={(e) =>
+                                      updatePeriodicRow(i, {
+                                        frequency: e.target.value as PeriodicFrequency,
+                                      })
+                                    }
+                                  >
+                                    {PERIODIC_FREQUENCIES.map((f) => (
+                                      <option key={f} value={f}>
+                                        {t(`costs.submit.${FREQUENCY_LABEL_KEY[f]}`)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder={t('costs.submit.periodicAmountPlaceholder')}
+                                    value={row.amount}
+                                    onChange={(e) =>
+                                      updatePeriodicRow(i, { amount: e.target.value })
+                                    }
+                                  />
+                                  <Input
+                                    type="text"
+                                    placeholder={t('costs.submit.periodicNotePlaceholder')}
+                                    value={row.note}
+                                    onChange={(e) => updatePeriodicRow(i, { note: e.target.value })}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground">
+                                    {perMonth != null
+                                      ? `≈ ${perMonth.toLocaleString()} PLN/${t('costs.submit.periodicPerMonth')}`
+                                      : ''}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removePeriodicRow(i)}
+                                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                    {t('costs.submit.periodicRemove')}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          <button
+                            type="button"
+                            onClick={addPeriodicRow}
+                            className="flex items-center gap-1.5 text-xs text-primary underline-offset-2 hover:underline"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            {t('costs.submit.periodicAddRow')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -977,6 +1203,14 @@ export function CostSubmitClient({
                             </span>
                             <span>{totalUtilities.toLocaleString()} PLN</span>
                           </div>
+                          {periodicMonthly > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {t('costs.submit.periodicSummaryLabel')}
+                              </span>
+                              <span>{periodicMonthly.toLocaleString()} PLN</span>
+                            </div>
+                          )}
                           <div className="flex justify-between border-t pt-2">
                             <span className="font-semibold">{t('common.totalMonthly')}</span>
                             <span className="text-xl font-bold text-primary">

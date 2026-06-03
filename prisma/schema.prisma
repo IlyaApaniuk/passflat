@@ -272,13 +272,36 @@ model CostReport {
 
   verificationStatus String   @default("unverified") @map("verification_status")
   isVisible          Boolean  @default(true) @map("is_visible")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  building Building @relation(fields: [buildingId], references: [id])
-  author   Profile  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // Source & email-claim (for imported submissions, e.g. Google Form)
+  source        String    @default("user") // 'user' | 'import'
+  importedEmail String?   @map("imported_email") // normalized lowercase, used to auto-link on login
+  claimedAt     DateTime? @map("claimed_at")
 
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  building        Building                   @relation(fields: [buildingId], references: [id])
+  author          Profile                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  periodicCharges CostReportPeriodicCharge[]
+
+  @@index([importedEmail])
   @@map("cost_reports")
+}
+
+model CostReportPeriodicCharge {
+  id           String   @id @default(uuid()) @db.Uuid
+  costReportId String   @map("cost_report_id") @db.Uuid
+  category     String // 'water' | 'electricity' | 'gas' | 'heating' | 'other'
+  amount       Decimal
+  frequency    String // 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  costReport CostReport @relation(fields: [costReportId], references: [id], onDelete: Cascade)
+
+  @@index([costReportId])
+  @@map("cost_report_periodic_charges")
 }
 
 model CostTermLabel {
