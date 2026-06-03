@@ -200,9 +200,15 @@ function ListingsPageInner({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex items-center justify-between border-b bg-card px-4 py-3"
+            className="border-b bg-card px-4 py-3"
           >
-            <div className="flex items-center gap-2 overflow-hidden">
+            <p className="mb-2 text-sm text-muted-foreground">
+              {t.rich('listings.listingsInCity', {
+                count: visibleListings.length,
+                b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+              })}
+            </p>
+            <div className="flex items-center justify-between">
               <ListingFiltersMobile
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
@@ -211,35 +217,29 @@ function ListingsPageInner({
                 listingType={listingType}
                 resultCount={filteredListings.length}
               />
-              <p className="whitespace-nowrap text-sm text-muted-foreground">
-                {t.rich('listings.listingsInCity', {
-                  count: visibleListings.length,
-                  b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-                })}
-              </p>
-            </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[116px] sm:w-[180px]">
-                  <SelectValue placeholder={t('listings.sort.sortBy')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">{t('listings.sort.newest')}</SelectItem>
-                  <SelectItem value="price-asc">{t('listings.sort.priceAsc')}</SelectItem>
-                  <SelectItem value="price-desc">{t('listings.sort.priceDesc')}</SelectItem>
-                  <SelectItem value="area-desc">{t('listings.sort.largestFirst')}</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                  <SelectTrigger className="w-[140px] sm:w-[180px]">
+                    <SelectValue placeholder={t('listings.sort.sortBy')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">{t('listings.sort.newest')}</SelectItem>
+                    <SelectItem value="price-asc">{t('listings.sort.priceAsc')}</SelectItem>
+                    <SelectItem value="price-desc">{t('listings.sort.priceDesc')}</SelectItem>
+                    <SelectItem value="area-desc">{t('listings.sort.largestFirst')}</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setShowMap(!showMap)}
-              >
-                {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
-              </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden"
+                  onClick={() => setShowMap(!showMap)}
+                >
+                  {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </motion.div>
 

@@ -66,6 +66,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       },
       persistence: 'localStorage+cookie',
       opt_out_capturing_by_default: consent !== 'accepted',
+      bootstrap: {
+        featureFlags: {
+          [FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED]: false,
+          [FEATURE_FLAGS.SESSION_RECORDING_SAMPLE]: false,
+          [FEATURE_FLAGS.SHOW_STATS]: false,
+          [FEATURE_FLAGS.SHOW_TESTIMONIALS]: false,
+        },
+      },
       loaded: (ph) => {
         if (process.env.NODE_ENV === 'development') {
           ph.debug();
