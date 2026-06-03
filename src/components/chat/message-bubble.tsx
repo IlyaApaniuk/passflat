@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface MessageBubbleProps {
@@ -10,7 +11,7 @@ interface MessageBubbleProps {
   showSender?: boolean;
 }
 
-export function MessageBubble({
+function MessageBubbleImpl({
   content,
   isOwn,
   senderName,
@@ -23,9 +24,7 @@ export function MessageBubble({
   });
 
   return (
-    <div
-      className={cn('flex w-full', isOwn ? 'justify-end' : 'justify-start')}
-    >
+    <div className={cn('flex w-full', isOwn ? 'justify-end' : 'justify-start')}>
       <div className={cn('max-w-[75%] space-y-1', isOwn ? 'items-end' : 'items-start')}>
         {showSender && !isOwn && senderName && (
           <p className="text-xs text-muted-foreground px-1">{senderName}</p>
@@ -33,9 +32,7 @@ export function MessageBubble({
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-            isOwn
-              ? 'bg-primary text-primary-foreground rounded-br-md'
-              : 'bg-muted rounded-bl-md',
+            isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md',
           )}
         >
           <p className="whitespace-pre-wrap break-words">{content}</p>
@@ -52,3 +49,7 @@ export function MessageBubble({
     </div>
   );
 }
+
+// Memoized so an incoming/optimistic message only re-renders the new bubble
+// rather than the entire (potentially long) message list on every update.
+export const MessageBubble = memo(MessageBubbleImpl);

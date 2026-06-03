@@ -226,9 +226,10 @@ export function Header({ initialUser }: HeaderProps = {}) {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ y: -10 }}
+              animate={{ y: 0 }}
               exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
               className="md:hidden mt-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl p-4"
             >
               <nav className="flex flex-col gap-1">

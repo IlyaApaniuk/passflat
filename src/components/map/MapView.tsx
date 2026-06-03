@@ -1,13 +1,7 @@
-"use client";
+'use client';
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-  useEffect,
-} from "react";
-import { usePostHog } from "posthog-js/react";
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { usePostHog } from 'posthog-js/react';
 import MapGL, {
   Source,
   Layer,
@@ -17,18 +11,18 @@ import MapGL, {
   type MapLayerMouseEvent,
   type ViewStateChangeEvent,
   type LayerProps,
-} from "react-map-gl";
-import type { GeoJSONSource } from "mapbox-gl";
-import type { FeatureCollection, Point } from "geojson";
-import type { ListingType, MapBounds } from "@/lib/listings-data";
-import Link from "next/link";
-import { X } from "lucide-react";
-import "mapbox-gl/dist/mapbox-gl.css";
+} from 'react-map-gl';
+import type { GeoJSONSource } from 'mapbox-gl';
+import type { FeatureCollection, Point } from 'geojson';
+import type { ListingType, MapBounds } from '@/lib/listings-data';
+import Link from 'next/link';
+import { X } from 'lucide-react';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 const TYPE_ROUTE: Record<ListingType, string> = {
-  replacement: "replacement",
-  roommate: "roommate",
-  sublet: "sublet",
+  replacement: 'replacement',
+  roommate: 'roommate',
+  sublet: 'sublet',
 };
 
 export interface MapListing {
@@ -75,46 +69,30 @@ function zoomForBounds(
 }
 
 const clusterLayer: LayerProps = {
-  id: "clusters",
-  type: "circle",
-  source: "listings",
-  filter: ["has", "point_count"],
+  id: 'clusters',
+  type: 'circle',
+  source: 'listings',
+  filter: ['has', 'point_count'],
   paint: {
-    "circle-color": [
-      "step",
-      ["get", "point_count"],
-      "#2b44ff",
-      5,
-      "#1a30e0",
-      10,
-      "#0f20c0",
-    ],
-    "circle-radius": [
-      "step",
-      ["get", "point_count"],
-      18,
-      5,
-      22,
-      10,
-      28,
-    ],
-    "circle-stroke-width": 2,
-    "circle-stroke-color": "#ffffff",
+    'circle-color': ['step', ['get', 'point_count'], '#2b44ff', 5, '#1a30e0', 10, '#0f20c0'],
+    'circle-radius': ['step', ['get', 'point_count'], 18, 5, 22, 10, 28],
+    'circle-stroke-width': 2,
+    'circle-stroke-color': '#ffffff',
   },
 };
 
 const clusterCountLayer: LayerProps = {
-  id: "cluster-count",
-  type: "symbol",
-  source: "listings",
-  filter: ["has", "point_count"],
+  id: 'cluster-count',
+  type: 'symbol',
+  source: 'listings',
+  filter: ['has', 'point_count'],
   layout: {
-    "text-field": ["get", "point_count_abbreviated"],
-    "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-    "text-size": 13,
+    'text-field': ['get', 'point_count_abbreviated'],
+    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+    'text-size': 13,
   },
   paint: {
-    "text-color": "#ffffff",
+    'text-color': '#ffffff',
   },
 };
 
@@ -130,21 +108,21 @@ export function ListingsMap({
   const mapRef = useRef<MapRef>(null);
   const posthog = usePostHog();
   const [popupInfo, setPopupInfo] = useState<MapListing | null>(null);
-  const [cursor, setCursor] = useState("auto");
+  const [cursor, setCursor] = useState('auto');
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const geojson = useMemo<FeatureCollection<Point>>(
     () => ({
-      type: "FeatureCollection",
+      type: 'FeatureCollection',
       features: listings.map((l) => ({
-        type: "Feature" as const,
-        geometry: { type: "Point" as const, coordinates: [l.lng, l.lat] },
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [l.lng, l.lat] },
         properties: {
           id: l.id,
           title: l.title,
           address: l.address,
           totalCost: l.totalCost,
-          image: l.images[0] ?? "",
+          image: l.images[0] ?? '',
           promoted: l.promoted,
         },
       })),
@@ -154,30 +132,30 @@ export function ListingsMap({
 
   const unclusteredPointLayer: LayerProps = useMemo(
     () => ({
-      id: "unclustered-point",
-      type: "circle" as const,
-      source: "listings",
-      filter: ["!", ["has", "point_count"]],
+      id: 'unclustered-point',
+      type: 'circle' as const,
+      source: 'listings',
+      filter: ['!', ['has', 'point_count']],
       paint: {
-        "circle-radius": [
-          "case",
-          ["==", ["get", "id"], hoveredId ?? ""],
+        'circle-radius': [
+          'case',
+          ['==', ['get', 'id'], hoveredId ?? ''],
           14,
-          ["==", ["get", "promoted"], true],
+          ['==', ['get', 'promoted'], true],
           11,
           10,
         ],
-        "circle-color": [
-          "case",
-          ["==", ["get", "id"], hoveredId ?? ""],
-          "#2b44ff",
-          ["==", ["get", "promoted"], true],
-          "#2b44ff",
-          "#1a1a2e",
+        'circle-color': [
+          'case',
+          ['==', ['get', 'id'], hoveredId ?? ''],
+          '#2b44ff',
+          ['==', ['get', 'promoted'], true],
+          '#2b44ff',
+          '#1a1a2e',
         ],
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.95,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.95,
       },
     }),
     [hoveredId],
@@ -191,7 +169,7 @@ export function ListingsMap({
 
   const onMouseEnter = useCallback(
     (e: MapLayerMouseEvent) => {
-      setCursor("pointer");
+      setCursor('pointer');
       const feature = e.features?.[0];
       if (feature?.properties && !feature.properties.cluster) {
         onHover(feature.properties.id);
@@ -201,7 +179,7 @@ export function ListingsMap({
   );
 
   const onMouseLeave = useCallback(() => {
-    setCursor("auto");
+    setCursor('auto');
     onHover(null);
   }, [onHover]);
 
@@ -240,32 +218,27 @@ export function ListingsMap({
         const clusterId = feature.properties.cluster_id as number;
         const pointCount = feature.properties.point_count as number;
 
-        posthog?.capture("map_marker_clicked", {
+        posthog?.capture('map_marker_clicked', {
           is_cluster: true,
           cluster_size: pointCount,
         });
 
-        const source = mapRef.current?.getSource(
-          "listings",
-        ) as unknown as GeoJSONSource;
-        source?.getClusterExpansionZoom(
-          clusterId,
-          (err?: Error | null, zoom?: number | null) => {
-            if (err || zoom == null) return;
-            const coords = (feature.geometry as Point).coordinates;
-            mapRef.current?.easeTo({
-              center: [coords[0], coords[1]],
-              zoom,
-              duration: 500,
-            });
-          },
-        );
+        const source = mapRef.current?.getSource('listings') as unknown as GeoJSONSource;
+        source?.getClusterExpansionZoom(clusterId, (err?: Error | null, zoom?: number | null) => {
+          if (err || zoom == null) return;
+          const coords = (feature.geometry as Point).coordinates;
+          mapRef.current?.easeTo({
+            center: [coords[0], coords[1]],
+            zoom,
+            duration: 500,
+          });
+        });
         return;
       }
 
       const props = feature.properties;
       if (props?.id) {
-        posthog?.capture("map_marker_clicked", {
+        posthog?.capture('map_marker_clicked', {
           is_cluster: false,
         });
 
@@ -299,9 +272,7 @@ export function ListingsMap({
 
   if (!MAPBOX_TOKEN) {
     return (
-      <div
-        className="flex h-full w-full items-center justify-center bg-muted"
-      >
+      <div className="flex h-full w-full items-center justify-center bg-muted">
         <p className="text-sm text-muted-foreground">
           Map unavailable — set NEXT_PUBLIC_MAPBOX_TOKEN
         </p>
@@ -316,9 +287,9 @@ export function ListingsMap({
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={initialViewState}
         maxBounds={maxBounds}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/light-v11"
-        interactiveLayerIds={["clusters", "unclustered-point"]}
+        interactiveLayerIds={['clusters', 'unclustered-point']}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
@@ -370,14 +341,12 @@ export function ListingsMap({
                 <img
                   src={popupInfo.images[0]}
                   alt={popupInfo.title}
+                  loading="lazy"
+                  decoding="async"
                   className="mb-2 h-[100px] w-full rounded object-cover"
                 />
-                <h4 className="mb-1 text-sm font-semibold">
-                  {popupInfo.title}
-                </h4>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  {popupInfo.address}
-                </p>
+                <h4 className="mb-1 text-sm font-semibold">{popupInfo.title}</h4>
+                <p className="mb-2 text-xs text-muted-foreground">{popupInfo.address}</p>
                 <p className="text-base font-bold text-primary">
                   {popupInfo.totalCost.toLocaleString()} PLN/mo
                 </p>

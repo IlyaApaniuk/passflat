@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X, Expand, Grid3X3 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, X, Expand, Grid3X3 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PhotoGalleryProps {
   images: string[];
@@ -30,13 +30,13 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
     if (!lightboxOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") handlePrevious();
-      if (e.key === "ArrowRight") handleNext();
-      if (e.key === "Escape") setLightboxOpen(false);
+      if (e.key === 'ArrowLeft') handlePrevious();
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'Escape') setLightboxOpen(false);
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxOpen, handlePrevious, handleNext]);
 
   if (images.length === 0) {
@@ -71,7 +71,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
             </div>
           </motion.button>
         ) : (
-          <div className="grid grid-cols-4 grid-rows-2 gap-1.5" style={{ height: "280px" }}>
+          <div className="grid grid-cols-4 grid-rows-2 gap-1.5" style={{ height: '280px' }}>
             <motion.button
               whileHover={{ scale: 1.01 }}
               onClick={() => {
@@ -97,12 +97,14 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                   setLightboxOpen(true);
                 }}
                 className={`group relative cursor-pointer overflow-hidden ${
-                  index === 1 ? "rounded-tr-xl" : index === 3 ? "rounded-br-xl" : ""
+                  index === 1 ? 'rounded-tr-xl' : index === 3 ? 'rounded-br-xl' : ''
                 }`}
               >
                 <img
                   src={image}
                   alt={`${title} - Photo ${index + 2}`}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
@@ -126,10 +128,10 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                   key={`empty-${index}`}
                   className={`bg-muted/50 ${
                     images.length + index === 2
-                      ? "rounded-tr-xl"
+                      ? 'rounded-tr-xl'
                       : images.length + index === 4
-                      ? "rounded-br-xl"
-                      : ""
+                        ? 'rounded-br-xl'
+                        : ''
                   }`}
                 />
               ))}
@@ -215,13 +217,15 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                   onClick={() => setCurrentIndex(index)}
                   className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-md transition-all duration-200 ${
                     index === currentIndex
-                      ? "ring-2 ring-primary scale-105"
-                      : "opacity-50 hover:opacity-100 hover:scale-105"
+                      ? 'ring-2 ring-primary scale-105'
+                      : 'opacity-50 hover:opacity-100 hover:scale-105'
                   }`}
                 >
                   <img
                     src={image}
                     alt={`Thumbnail ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                 </button>

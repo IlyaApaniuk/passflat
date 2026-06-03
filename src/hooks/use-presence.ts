@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export function usePresence(currentUserId: string | null) {
@@ -37,5 +37,7 @@ export function usePresence(currentUserId: string | null) {
     };
   }, [currentUserId]);
 
-  return { onlineUsers, isOnline: (id: string) => onlineUsers.has(id) };
+  const isOnline = useCallback((id: string) => onlineUsers.has(id), [onlineUsers]);
+
+  return { onlineUsers, isOnline };
 }

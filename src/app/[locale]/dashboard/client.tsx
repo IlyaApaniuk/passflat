@@ -440,6 +440,8 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
                                     <img
                                       src={listing.image}
                                       alt={listing.title}
+                                      loading="lazy"
+                                      decoding="async"
                                       className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                                     />
                                   ) : (
@@ -700,6 +702,8 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
                                     <img
                                       src={saved.image}
                                       alt={saved.title}
+                                      loading="lazy"
+                                      decoding="async"
                                       className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                                     />
                                   ) : (

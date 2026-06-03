@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +86,8 @@ function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
         <img
           src={images[0]}
           alt={alt}
+          loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -99,7 +101,13 @@ function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
         <div className="flex h-full">
           {images.map((src, i) => (
             <div key={i} className="h-full min-w-0 shrink-0 grow-0 basis-full">
-              <img src={src} alt={`${alt} ${i + 1}`} className="h-full w-full object-cover" />
+              <img
+                src={src}
+                alt={`${alt} ${i + 1}`}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
             </div>
           ))}
         </div>
@@ -145,7 +153,7 @@ interface ListingCardProps {
   onToggleFavorite?: (id: string) => void;
 }
 
-export function ListingCard({
+function ListingCardImpl({
   listing,
   citySlug,
   isHovered,
@@ -307,6 +315,12 @@ export function ListingCard({
   );
 }
 
+// Memoized: in the grid, hovering one card, toggling a favorite, or changing a
+// filter would otherwise re-render every card. With stable props (listing
+// objects are reused across filtered arrays, handlers are useCallback'd) only
+// the affected cards re-render.
+export const ListingCard = memo(ListingCardImpl);
+
 function ListingPrice({
   listing,
   type,
@@ -431,7 +445,7 @@ export function ListingGrid({
           key={listing.id}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
+          transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
         >
           <ListingCard
             listing={listing}

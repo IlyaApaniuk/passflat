@@ -43,6 +43,10 @@ export function ChatWindow({
   const [hintDismissed, setHintDismissed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Whether the user is currently pinned near the bottom of the thread. Used to
+  // avoid yanking them down while they scroll up to read history or click
+  // "load more" (which prepends older messages).
+  const isNearBottomRef = useRef(true);
 
   const templateDocKey =
     isDocumentTemplatesEnabled() && listingType in LISTING_TYPE_TO_DOC
@@ -55,11 +59,26 @@ export function ChatWindow({
   );
   const { isOtherTyping, sendTyping } = useTyping(conversationId, currentUserId);
 
+  // Reset the pin-to-bottom intent when switching conversations.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    isNearBottomRef.current = true;
+  }, [conversationId]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !isNearBottomRef.current) return;
+    // Defer to the next frame so layout has settled, then jump to bottom in a
+    // single write to avoid synchronous layout thrash on large threads.
+    const id = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
   }, [messages, isOtherTyping]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
@@ -101,7 +120,7 @@ export function ChatWindow({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
         {hasMore && (
           <div className="flex justify-center py-2">
             <Button variant="ghost" size="sm" onClick={loadMore} className="gap-1 text-xs">

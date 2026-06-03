@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { useReveal } from '@/hooks/use-reveal';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -91,18 +92,14 @@ const districts: DistrictConfig[] = [
 
 export function Districts() {
   const t = useTranslations('landing.districts');
+  const reveal = useReveal();
 
   return (
     <section className="relative overflow-hidden border-y border-border/50 py-24 sm:py-32">
       <div className="absolute inset-0 dot-pattern opacity-30" />
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12 text-center"
-        >
+        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-12 text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             {t('title')} <span className="gradient-text">{t('titleHighlight')}</span>
           </h2>
@@ -113,10 +110,7 @@ export function Districts() {
           {districts.map((district, i) => (
             <motion.div
               key={district.key}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
+              {...reveal({ opacity: 0, y: 20 }, { delay: i * 0.05 })}
               className="h-full"
             >
               <Link

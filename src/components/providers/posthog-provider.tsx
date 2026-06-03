@@ -4,6 +4,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { MotionConfig } from 'framer-motion';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { useAnalyticsConsent } from '@/lib/consent';
 
@@ -76,17 +77,23 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // `reducedMotion="user"` makes every framer-motion animation app-wide honor
+  // the OS "reduce motion" setting (transform/layout animations are skipped),
+  // which the CSS-only media query in globals.css cannot do for JS-driven
+  // animations. Visuals are unchanged for users without the preference.
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    return <>{children}</>;
+    return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
   }
 
   return (
-    <PHProvider client={posthog}>
-      <Suspense fallback={null}>
-        <PostHogPageView />
-      </Suspense>
-      <SessionRecordingGate />
-      {children}
-    </PHProvider>
+    <MotionConfig reducedMotion="user">
+      <PHProvider client={posthog}>
+        <Suspense fallback={null}>
+          <PostHogPageView />
+        </Suspense>
+        <SessionRecordingGate />
+        {children}
+      </PHProvider>
+    </MotionConfig>
   );
 }

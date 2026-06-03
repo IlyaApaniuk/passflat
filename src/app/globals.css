@@ -346,3 +346,68 @@ html body[data-scroll-locked] {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Touch / coarse-pointer devices (phones, tablets) have a much weaker GPU
+ * compositor than desktops. Large blur radii — frosted-glass surfaces
+ * (backdrop-blur) and big decorative gradient blobs (blur-[80px]+) — are the
+ * single biggest cause of dropped frames, scroll jank, and Safari layer
+ * eviction (blank repaints). We cap the blur radius on coarse pointers while
+ * leaving the full effect intact on fine-pointer (desktop) devices, so the
+ * tasteful desktop visuals are unchanged.
+ */
+@media (pointer: coarse) {
+  /*
+   * On iOS Safari the COST of `backdrop-filter` is driven by the NUMBER of
+   * filtered layers, not the blur radius: every element gets its own
+   * compositor layer that is re-rasterized (with a backdrop read-back) as it
+   * moves. During momentum scrolling Safari lazily rasterizes / evicts these
+   * layers, which is exactly what makes repeated frosted cards "pop in" or
+   * appear to fade/re-animate as you scroll past them, and what drops frames.
+   *
+   * The page has MANY small frosted surfaces — 12 district cards, the hero
+   * stat cards, the for-whom persona cards, the bento tiles, etc. — all using
+   * the small `backdrop-blur-sm` / `backdrop-blur` utilities. Capping their
+   * radius does NOT remove the per-layer read-back, so we drop the backdrop
+   * filter on these repeated surfaces entirely on touch. The translucent
+   * gradient + border look is preserved; only the (barely visible) blur of the
+   * static background behind them is removed. This is a pure compositing/perf
+   * fix — no animation is disabled.
+   */
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /*
+   * The larger frosted panels (sticky header/nav, single big glass cards) are
+   * one-per-section, so a single capped read-back is affordable and the blur
+   * genuinely matters there (content scrolls under the sticky header). Keep
+   * them, but cap the radius.
+   */
+  .backdrop-blur-xl,
+  .backdrop-blur-lg,
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(6px) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+
+  .blur-\[160px\],
+  .blur-\[140px\],
+  .blur-\[120px\],
+  .blur-\[100px\],
+  .blur-\[80px\] {
+    filter: blur(40px) !important;
+  }
+
+  /*
+   * Animating a -webkit-background-clip:text gradient (.gradient-text) on large
+   * headings forces a full per-frame repaint and is a major mobile scroll-jank
+   * source. Disable the animation on coarse pointers while keeping the static
+   * gradient appearance. Desktop (fine-pointer) visuals are unchanged.
+   */
+  .gradient-text {
+    animation: none !important;
+  }
+}

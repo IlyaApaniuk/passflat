@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { useReveal } from '@/hooks/use-reveal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +14,7 @@ import { Globe, Send, CheckCircle2, MapPin } from 'lucide-react';
 export function CityNotify() {
   const t = useTranslations('landing.cityNotify');
   const locale = useLocale();
+  const reveal = useReveal();
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('');
   const [consent, setConsent] = useState(false);
@@ -52,11 +54,7 @@ export function CityNotify() {
 
       <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <motion.div {...reveal({ opacity: 0, x: -20 })}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
               <Globe className="h-4 w-4" />
               {t('badge')}
@@ -74,11 +72,7 @@ export function CityNotify() {
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <motion.div {...reveal({ opacity: 0, x: 20 })}>
             <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/80 p-6 backdrop-blur-xl sm:p-8">
               <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent/20 blur-[80px]" />
 
