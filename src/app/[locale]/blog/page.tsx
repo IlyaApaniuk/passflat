@@ -32,7 +32,7 @@ export default async function BlogPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Blog', path: '/blog' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <BlogClient posts={serialized} />
       </main>
       <Footer />

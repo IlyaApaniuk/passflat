@@ -5,10 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
-import {
-  ConversationList,
-  type ConversationListItem,
-} from '@/components/chat/conversation-list';
+import { ConversationList, type ConversationListItem } from '@/components/chat/conversation-list';
 import { ChatWindow } from '@/components/chat/chat-window';
 import { usePresence } from '@/hooks/use-presence';
 import { createClient } from '@/lib/supabase/client';
@@ -22,12 +19,8 @@ interface MessagesClientProps {
 export function MessagesClient({ userId }: MessagesClientProps) {
   const t = useTranslations();
   const searchParams = useSearchParams();
-  const [conversations, setConversations] = useState<ConversationListItem[]>(
-    [],
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    searchParams.get('c'),
-  );
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('c'));
   const [loading, setLoading] = useState(true);
   const { isOnline } = usePresence(userId);
 
@@ -77,11 +70,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
     setSelectedId(id);
     // Mark as read
     fetch(`/api/conversations/${id}/read`, { method: 'PATCH' }).then(() => {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === id ? { ...c, unreadCount: 0 } : c,
-        ),
-      );
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
     });
   };
 
@@ -89,7 +78,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex-1 flex items-center justify-center pt-20">
+        <main className="flex-1 flex items-center justify-center pt-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </main>
       </div>
@@ -100,14 +89,14 @@ export function MessagesClient({ userId }: MessagesClientProps) {
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 pt-20">
-        <div className="container mx-auto h-[calc(100vh-80px)] max-w-6xl px-0 md:px-4 md:py-4">
-          <div className="flex h-full overflow-hidden rounded-none md:rounded-xl md:border md:border-border">
+      <main className="flex-1 pt-24">
+        <div className="container mx-auto h-[calc(100vh-96px)] max-w-6xl px-0 lg:px-4 lg:py-4">
+          <div className="flex h-full overflow-hidden rounded-none lg:rounded-xl lg:border lg:border-border">
             {/* Conversation list panel */}
             <div
               className={cn(
-                'w-full flex-col border-r md:w-80 lg:w-96 md:flex',
-                selectedId ? 'hidden md:flex' : 'flex',
+                'w-full flex-col border-r lg:w-80 xl:w-96 lg:flex',
+                selectedId ? 'hidden lg:flex' : 'flex',
               )}
             >
               <div className="border-b px-4 py-3">
@@ -127,12 +116,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
             </div>
 
             {/* Chat panel */}
-            <div
-              className={cn(
-                'flex-1 flex-col',
-                selectedId ? 'flex' : 'hidden md:flex',
-              )}
-            >
+            <div className={cn('flex-1 flex-col', selectedId ? 'flex' : 'hidden lg:flex')}>
               {selectedConv ? (
                 <ChatWindow
                   conversationId={selectedConv.id}
@@ -148,9 +132,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
                 <div className="flex flex-1 items-center justify-center">
                   <div className="text-center">
                     <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                    <p className="mt-4 text-muted-foreground">
-                      {t('chat.selectConversation')}
-                    </p>
+                    <p className="mt-4 text-muted-foreground">{t('chat.selectConversation')}</p>
                   </div>
                 </div>
               )}
@@ -159,7 +141,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
         </div>
       </main>
 
-      <div className={cn(selectedId ? 'hidden md:block' : '')}>
+      <div className={cn(selectedId ? 'hidden lg:block' : '')}>
         <Footer />
       </div>
     </div>

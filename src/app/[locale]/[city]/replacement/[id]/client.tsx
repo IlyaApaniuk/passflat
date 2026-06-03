@@ -194,7 +194,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <div className="container mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, x: -10 }}

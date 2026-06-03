@@ -93,7 +93,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {navLinks.map((item) => (
               <Link
                 key={item.href}
@@ -106,7 +106,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             {/* Language Switcher */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
@@ -202,7 +202,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
           {/* Mobile Menu Button (animated hamburger) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden relative w-8 h-8 flex items-center justify-center"
+            className="lg:hidden relative w-8 h-8 flex items-center justify-center"
             aria-label="Toggle menu"
           >
             <div className="flex flex-col gap-1.5">
@@ -230,7 +230,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
               animate={{ y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="md:hidden mt-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl p-4"
+              className="lg:hidden mt-2 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl p-4"
             >
               <nav className="flex flex-col gap-1">
                 {navLinks.map((item) => (

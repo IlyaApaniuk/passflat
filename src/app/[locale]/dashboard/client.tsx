@@ -284,7 +284,7 @@ export function DashboardClient({ listings, savedListings, userEmail, freeListin
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 bg-muted/30 pt-20">
+      <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

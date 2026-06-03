@@ -1,38 +1,32 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { SlidersHorizontal, X, RotateCcw, CalendarIcon, Bed } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
-import { useRouter } from "@/i18n/navigation";
-import { AMENITY_CATEGORIES } from "@/lib/amenities";
-import type { ListingFilters, ListingType } from "@/lib/listings-data";
+} from '@/components/ui/accordion';
+import { SlidersHorizontal, X, RotateCcw, CalendarIcon, Bed } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
+import { useRouter } from '@/i18n/navigation';
+import { AMENITY_CATEGORIES } from '@/lib/amenities';
+import type { ListingFilters, ListingType } from '@/lib/listings-data';
 
-const LISTING_TYPES: ListingType[] = ["replacement", "roommate", "sublet"];
+const LISTING_TYPES: ListingType[] = ['replacement', 'roommate', 'sublet'];
 
-const PRICE_RANGES: Record<ListingType | "default", { min: number; max: number; step: number }> = {
+const PRICE_RANGES: Record<ListingType | 'default', { min: number; max: number; step: number }> = {
   replacement: { min: 0, max: 10000, step: 100 },
   roommate: { min: 0, max: 5000, step: 100 },
   sublet: { min: 0, max: 15000, step: 100 },
@@ -49,7 +43,7 @@ function PriceRangeSlider({
   listingType?: ListingType;
 }) {
   const t = useTranslations();
-  const range = PRICE_RANGES[listingType ?? "default"];
+  const range = PRICE_RANGES[listingType ?? 'default'];
   const currentMin = filters.priceMin ?? range.min;
   const currentMax = filters.priceMax ?? range.max;
 
@@ -81,7 +75,7 @@ function PriceRangeSlider({
   };
 
   const handleInputChange = (index: 0 | 1, raw: string) => {
-    const num = raw === "" ? (index === 0 ? range.min : range.max) : Number(raw);
+    const num = raw === '' ? (index === 0 ? range.min : range.max) : Number(raw);
     if (isNaN(num)) return;
     const clamped = Math.min(Math.max(num, range.min), range.max);
     const next: [number, number] =
@@ -94,7 +88,7 @@ function PriceRangeSlider({
 
   const label = listingType
     ? t(`listings.filters.priceLabel_${listingType}`)
-    : t("listings.filters.priceRange");
+    : t('listings.filters.priceRange');
 
   const isFiltered =
     (filters.priceMin != null && filters.priceMin > range.min) ||
@@ -124,10 +118,10 @@ function PriceRangeSlider({
           min={range.min}
           max={range.max}
           step={range.step}
-          value={localValues[0] || ""}
+          value={localValues[0] || ''}
           onChange={(e) => handleInputChange(0, e.target.value)}
           className="h-8 bg-background/50 text-xs tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          aria-label={t("listings.filters.min")}
+          aria-label={t('listings.filters.min')}
         />
         <span className="text-muted-foreground">—</span>
         <Input
@@ -135,10 +129,10 @@ function PriceRangeSlider({
           min={range.min}
           max={range.max}
           step={range.step}
-          value={localValues[1] || ""}
+          value={localValues[1] || ''}
           onChange={(e) => handleInputChange(1, e.target.value)}
           className="h-8 bg-background/50 text-xs tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          aria-label={t("listings.filters.max")}
+          aria-label={t('listings.filters.max')}
         />
       </div>
     </div>
@@ -165,12 +159,12 @@ function DatesFilter({
   const t = useTranslations();
   const selectedFrom = filters.availableFrom ? new Date(filters.availableFrom) : undefined;
   const selectedTo = filters.availableTo ? new Date(filters.availableTo) : undefined;
-  const showTo = listingType === "sublet";
+  const showTo = listingType === 'sublet';
 
   return (
-    <div className={`grid gap-3 ${showTo ? "grid-cols-2" : "grid-cols-1"}`}>
+    <div className={`grid gap-3 ${showTo ? 'grid-cols-2' : 'grid-cols-1'}`}>
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">{t("listings.filters.availableFrom")}</span>
+        <span className="text-xs text-muted-foreground">{t('listings.filters.availableFrom')}</span>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -179,10 +173,10 @@ function DatesFilter({
             >
               <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
               {selectedFrom ? (
-                format(selectedFrom, "PP")
+                format(selectedFrom, 'PP')
               ) : (
                 <span className="text-muted-foreground text-xs">
-                  {t("listings.filters.availableFrom")}
+                  {t('listings.filters.availableFrom')}
                 </span>
               )}
             </Button>
@@ -194,7 +188,7 @@ function DatesFilter({
               onSelect={(date) =>
                 onFiltersChange({
                   ...filters,
-                  availableFrom: date ? format(date, "yyyy-MM-dd") : undefined,
+                  availableFrom: date ? format(date, 'yyyy-MM-dd') : undefined,
                 })
               }
             />
@@ -208,14 +202,14 @@ function DatesFilter({
             onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
           >
             <X className="mr-1 h-3 w-3" />
-            {t("listings.filters.clearAll")}
+            {t('listings.filters.clearAll')}
           </Button>
         )}
       </div>
 
       {showTo && (
         <div className="space-y-2">
-          <span className="text-xs text-muted-foreground">{t("listings.filters.availableTo")}</span>
+          <span className="text-xs text-muted-foreground">{t('listings.filters.availableTo')}</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -224,10 +218,10 @@ function DatesFilter({
               >
                 <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                 {selectedTo ? (
-                  format(selectedTo, "PP")
+                  format(selectedTo, 'PP')
                 ) : (
                   <span className="text-muted-foreground text-xs">
-                    {t("listings.filters.availableTo")}
+                    {t('listings.filters.availableTo')}
                   </span>
                 )}
               </Button>
@@ -239,7 +233,7 @@ function DatesFilter({
                 onSelect={(date) =>
                   onFiltersChange({
                     ...filters,
-                    availableTo: date ? format(date, "yyyy-MM-dd") : undefined,
+                    availableTo: date ? format(date, 'yyyy-MM-dd') : undefined,
                   })
                 }
               />
@@ -253,7 +247,7 @@ function DatesFilter({
               onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
             >
               <X className="mr-1 h-3 w-3" />
-              {t("listings.filters.clearAll")}
+              {t('listings.filters.clearAll')}
             </Button>
           )}
         </div>
@@ -278,8 +272,8 @@ function BedroomsFilter({
             key={num}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
               isActive
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
             onClick={() => {
               const current = filters.bedrooms || [];
@@ -362,9 +356,9 @@ function RoomTypeFilter({
 }) {
   const t = useTranslations();
   const options = [
-    { value: undefined, label: t("listings.filters.roomTypeAll") },
-    { value: "private" as const, label: t("listings.filters.roomTypePrivate") },
-    { value: "shared" as const, label: t("listings.filters.roomTypeShared") },
+    { value: undefined, label: t('listings.filters.roomTypeAll') },
+    { value: 'private' as const, label: t('listings.filters.roomTypePrivate') },
+    { value: 'shared' as const, label: t('listings.filters.roomTypeShared') },
   ];
 
   return (
@@ -374,14 +368,12 @@ function RoomTypeFilter({
         return (
           <Button
             key={idx}
-            variant={isActive ? "default" : "outline"}
+            variant={isActive ? 'default' : 'outline'}
             size="sm"
             className={`h-8 text-xs transition-all ${
-              isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+              isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
-            onClick={() =>
-              onFiltersChange({ ...filters, roomType: option.value })
-            }
+            onClick={() => onFiltersChange({ ...filters, roomType: option.value })}
           >
             {option.label}
           </Button>
@@ -400,9 +392,9 @@ function PreferredGenderFilter({
 }) {
   const t = useTranslations();
   const options = [
-    { value: undefined, label: t("listings.filters.genderAny") },
-    { value: "male" as const, label: t("listings.filters.genderMale") },
-    { value: "female" as const, label: t("listings.filters.genderFemale") },
+    { value: undefined, label: t('listings.filters.genderAny') },
+    { value: 'male' as const, label: t('listings.filters.genderMale') },
+    { value: 'female' as const, label: t('listings.filters.genderFemale') },
   ];
 
   return (
@@ -415,14 +407,12 @@ function PreferredGenderFilter({
         return (
           <Button
             key={idx}
-            variant={isActive ? "default" : "outline"}
+            variant={isActive ? 'default' : 'outline'}
             size="sm"
             className={`h-8 text-xs transition-all ${
-              isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+              isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
-            onClick={() =>
-              onFiltersChange({ ...filters, preferredGender: option.value })
-            }
+            onClick={() => onFiltersChange({ ...filters, preferredGender: option.value })}
           >
             {option.label}
           </Button>
@@ -444,12 +434,14 @@ function ApartmentParamsFilter({
   return (
     <div className="space-y-4">
       <div>
-        <span className="text-xs text-muted-foreground mb-1.5 block">{t("listings.filters.area")}</span>
+        <span className="text-xs text-muted-foreground mb-1.5 block">
+          {t('listings.filters.area')}
+        </span>
         <div className="flex items-center gap-2">
           <Input
             type="number"
-            placeholder={t("listings.filters.min")}
-            value={filters.areaMin || ""}
+            placeholder={t('listings.filters.min')}
+            value={filters.areaMin || ''}
             onChange={(e) =>
               onFiltersChange({
                 ...filters,
@@ -461,8 +453,8 @@ function ApartmentParamsFilter({
           <span className="text-muted-foreground">—</span>
           <Input
             type="number"
-            placeholder={t("listings.filters.max")}
-            value={filters.areaMax || ""}
+            placeholder={t('listings.filters.max')}
+            value={filters.areaMax || ''}
             onChange={(e) =>
               onFiltersChange({
                 ...filters,
@@ -474,12 +466,14 @@ function ApartmentParamsFilter({
         </div>
       </div>
       <div>
-        <span className="text-xs text-muted-foreground mb-1.5 block">{t("listings.filters.floor")}</span>
+        <span className="text-xs text-muted-foreground mb-1.5 block">
+          {t('listings.filters.floor')}
+        </span>
         <div className="flex items-center gap-2">
           <Input
             type="number"
-            placeholder={t("listings.filters.min")}
-            value={filters.floorMin ?? ""}
+            placeholder={t('listings.filters.min')}
+            value={filters.floorMin ?? ''}
             onChange={(e) =>
               onFiltersChange({
                 ...filters,
@@ -492,8 +486,8 @@ function ApartmentParamsFilter({
           <span className="text-muted-foreground">—</span>
           <Input
             type="number"
-            placeholder={t("listings.filters.max")}
-            value={filters.floorMax ?? ""}
+            placeholder={t('listings.filters.max')}
+            value={filters.floorMax ?? ''}
             onChange={(e) =>
               onFiltersChange({
                 ...filters,
@@ -521,7 +515,7 @@ function WithPhotosFilter({
   return (
     <div className="flex items-center justify-between">
       <Label htmlFor="photos-toggle" className="text-sm font-normal cursor-pointer">
-        {t("listings.filters.withPhotos")}
+        {t('listings.filters.withPhotos')}
       </Label>
       <Switch
         id="photos-toggle"
@@ -549,7 +543,7 @@ function UtilitiesIncludedFilter({
   return (
     <div className="flex items-center justify-between">
       <Label htmlFor="utilities-toggle" className="text-sm font-normal cursor-pointer">
-        {t("listings.filters.utilitiesIncluded")}
+        {t('listings.filters.utilitiesIncluded')}
       </Label>
       <Switch
         id="utilities-toggle"
@@ -577,7 +571,7 @@ function InternetIncludedFilter({
   return (
     <div className="flex items-center justify-between">
       <Label htmlFor="internet-toggle" className="text-sm font-normal cursor-pointer">
-        {t("listings.filters.internetIncluded")}
+        {t('listings.filters.internetIncluded')}
       </Label>
       <Switch
         id="internet-toggle"
@@ -605,7 +599,7 @@ function RegistrationPossibleFilter({
   return (
     <div className="flex items-center justify-between">
       <Label htmlFor="registration-toggle" className="text-sm font-normal cursor-pointer">
-        {t("listings.filters.registrationPossible")}
+        {t('listings.filters.registrationPossible')}
       </Label>
       <Switch
         id="registration-toggle"
@@ -654,10 +648,10 @@ export function ListingFiltersDesktop({
             return (
               <Button
                 key={typeOption}
-                variant={isActive ? "default" : "outline"}
+                variant={isActive ? 'default' : 'outline'}
                 size="sm"
                 className={`h-8 text-xs transition-all ${
-                  isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+                  isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
                 }`}
                 onClick={() => {
                   if (typeOption !== listingType && citySlug) {
@@ -676,7 +670,7 @@ export function ListingFiltersDesktop({
       <div className="mt-4 space-y-3">
         <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
         <RegistrationPossibleFilter filters={filters} onFiltersChange={onFiltersChange} />
-        {listingType === "sublet" && (
+        {listingType === 'sublet' && (
           <>
             <UtilitiesIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
             <InternetIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -686,20 +680,36 @@ export function ListingFiltersDesktop({
 
       <Accordion
         type="multiple"
-        defaultValue={["price", "bedrooms", "dates", "params", "amenities", "roommate", "districts"]}
+        defaultValue={[
+          'price',
+          'bedrooms',
+          'dates',
+          'params',
+          'amenities',
+          'roommate',
+          'districts',
+        ]}
         className="mt-4"
       >
         {/* 3. Price */}
         <AccordionItem value="price" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.priceRange')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.priceRange')}
+          </AccordionTrigger>
           <AccordionContent>
-            <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
+            <PriceRangeSlider
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              listingType={listingType}
+            />
           </AccordionContent>
         </AccordionItem>
 
         {/* 4. Bedrooms — pill-chips with bed icon */}
         <AccordionItem value="bedrooms" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.bedrooms')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.bedrooms')}
+          </AccordionTrigger>
           <AccordionContent>
             <BedroomsFilter filters={filters} onFiltersChange={onFiltersChange} />
           </AccordionContent>
@@ -707,15 +717,23 @@ export function ListingFiltersDesktop({
 
         {/* 5. Dates — combined from/to */}
         <AccordionItem value="dates" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.dates')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.dates')}
+          </AccordionTrigger>
           <AccordionContent>
-            <DatesFilter filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
+            <DatesFilter
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              listingType={listingType}
+            />
           </AccordionContent>
         </AccordionItem>
 
         {/* 6. Apartment params — area + floor */}
         <AccordionItem value="params" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.apartmentParams')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.apartmentParams')}
+          </AccordionTrigger>
           <AccordionContent>
             <ApartmentParamsFilter filters={filters} onFiltersChange={onFiltersChange} />
           </AccordionContent>
@@ -723,7 +741,9 @@ export function ListingFiltersDesktop({
 
         {/* 7. Amenities (grouped by category) */}
         <AccordionItem value="amenities" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.amenities')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.amenities')}
+          </AccordionTrigger>
           <AccordionContent>
             <div className="max-h-48 overflow-y-auto pr-1 scrollbar-thin">
               <AmenitiesFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -732,15 +752,17 @@ export function ListingFiltersDesktop({
         </AccordionItem>
 
         {/* 8. Roommate-specific */}
-        {listingType === "roommate" && (
+        {listingType === 'roommate' && (
           <AccordionItem value="roommate" className="border-border/50">
-            <AccordionTrigger className="text-sm font-medium">{t('listings.filters.roomType')}</AccordionTrigger>
+            <AccordionTrigger className="text-sm font-medium">
+              {t('listings.filters.roomType')}
+            </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4">
                 <RoomTypeFilter filters={filters} onFiltersChange={onFiltersChange} />
                 <div>
                   <span className="text-xs text-muted-foreground mb-1.5 block">
-                    {t("listings.filters.genderPreference")}
+                    {t('listings.filters.genderPreference')}
                   </span>
                   <PreferredGenderFilter filters={filters} onFiltersChange={onFiltersChange} />
                 </div>
@@ -751,11 +773,16 @@ export function ListingFiltersDesktop({
 
         {/* 9. Districts */}
         <AccordionItem value="districts" className="border-border/50">
-          <AccordionTrigger className="text-sm font-medium">{t('listings.filters.districts')}</AccordionTrigger>
+          <AccordionTrigger className="text-sm font-medium">
+            {t('listings.filters.districts')}
+          </AccordionTrigger>
           <AccordionContent>
             <div className="max-h-48 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
               {districts?.map((district) => (
-                <div key={district} className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50">
+                <div
+                  key={district}
+                  className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
+                >
                   <Checkbox
                     id={`district-${district}`}
                     checked={filters.districts?.includes(district) || false}
@@ -798,7 +825,7 @@ export function ListingFiltersMobile({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const activeCount = Object.values(filters).filter(
-    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true)
+    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
   ).length;
 
   return (
@@ -819,7 +846,7 @@ export function ListingFiltersMobile({
           <SheetTitle>{t('listings.filters.title')}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-6 px-4">
           {/* Type */}
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
@@ -829,10 +856,10 @@ export function ListingFiltersMobile({
                 return (
                   <Button
                     key={typeOption}
-                    variant={isActive ? "default" : "outline"}
+                    variant={isActive ? 'default' : 'outline'}
                     size="sm"
                     className={`h-8 text-xs transition-all ${
-                      isActive ? "shadow-sm shadow-primary/20" : "hover:border-primary/40"
+                      isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
                     }`}
                     onClick={() => {
                       if (typeOption !== listingType && citySlug) {
@@ -852,7 +879,7 @@ export function ListingFiltersMobile({
           <div className="space-y-3">
             <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
             <RegistrationPossibleFilter filters={filters} onFiltersChange={onFiltersChange} />
-            {listingType === "sublet" && (
+            {listingType === 'sublet' && (
               <>
                 <UtilitiesIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
                 <InternetIncludedFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -864,7 +891,11 @@ export function ListingFiltersMobile({
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.priceRange')}</Label>
             <div className="mt-2">
-              <PriceRangeSlider filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
+              <PriceRangeSlider
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                listingType={listingType}
+              />
             </div>
           </div>
 
@@ -880,7 +911,11 @@ export function ListingFiltersMobile({
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.dates')}</Label>
             <div className="mt-2">
-              <DatesFilter filters={filters} onFiltersChange={onFiltersChange} listingType={listingType} />
+              <DatesFilter
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                listingType={listingType}
+              />
             </div>
           </div>
 
@@ -901,7 +936,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Roommate-specific */}
-          {listingType === "roommate" && (
+          {listingType === 'roommate' && (
             <>
               <div>
                 <Label className="text-sm font-medium">{t('listings.filters.roomType')}</Label>
@@ -910,7 +945,9 @@ export function ListingFiltersMobile({
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">{t('listings.filters.genderPreference')}</Label>
+                <Label className="text-sm font-medium">
+                  {t('listings.filters.genderPreference')}
+                </Label>
                 <div className="mt-2">
                   <PreferredGenderFilter filters={filters} onFiltersChange={onFiltersChange} />
                 </div>
@@ -923,7 +960,10 @@ export function ListingFiltersMobile({
             <Label className="text-sm font-medium">{t('listings.filters.districts')}</Label>
             <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
               {districts?.map((district) => (
-                <div key={district} className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50">
+                <div
+                  key={district}
+                  className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
+                >
                   <Checkbox
                     id={`mobile-district-${district}`}
                     checked={filters.districts?.includes(district) || false}
@@ -950,12 +990,8 @@ export function ListingFiltersMobile({
           </div>
         </div>
 
-        <div className="mt-8 flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => onFiltersChange({})}
-          >
+        <div className="mt-8 flex gap-3 px-4 pb-4">
+          <Button variant="outline" className="flex-1" onClick={() => onFiltersChange({})}>
             {t('listings.filters.clearAll')}
           </Button>
           <Button className="flex-1" onClick={() => setOpen(false)}>
@@ -969,13 +1005,10 @@ export function ListingFiltersMobile({
   );
 }
 
-export function ActiveFilters({
-  filters,
-  onFiltersChange,
-}: ListingFiltersProps) {
+export function ActiveFilters({ filters, onFiltersChange }: ListingFiltersProps) {
   const t = useTranslations();
   const hasFilters = Object.values(filters).some(
-    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true)
+    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
   );
 
   if (!hasFilters) return null;
@@ -983,7 +1016,7 @@ export function ActiveFilters({
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
+      animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       className="flex flex-wrap items-center gap-2"
     >
@@ -1000,7 +1033,9 @@ export function ActiveFilters({
               variant="secondary"
               size="sm"
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, priceMin: undefined, priceMax: undefined })}
+              onClick={() =>
+                onFiltersChange({ ...filters, priceMin: undefined, priceMax: undefined })
+              }
             >
               {filters.priceMin && filters.priceMax
                 ? `${filters.priceMin.toLocaleString()} – ${filters.priceMax.toLocaleString()} PLN`
@@ -1049,9 +1084,11 @@ export function ActiveFilters({
               variant="secondary"
               size="sm"
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, areaMin: undefined, areaMax: undefined })}
+              onClick={() =>
+                onFiltersChange({ ...filters, areaMin: undefined, areaMax: undefined })
+              }
             >
-              {t("listings.filters.area")}:{" "}
+              {t('listings.filters.area')}:{' '}
               {filters.areaMin != null && filters.areaMax != null
                 ? `${filters.areaMin}–${filters.areaMax}`
                 : filters.areaMin != null
@@ -1100,7 +1137,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
             >
-              {t("listings.filters.availableFrom")}: {filters.availableFrom}
+              {t('listings.filters.availableFrom')}: {filters.availableFrom}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1144,9 +1181,9 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, roomType: undefined })}
             >
-              {filters.roomType === "private"
-                ? t("listings.filters.roomTypePrivate")
-                : t("listings.filters.roomTypeShared")}
+              {filters.roomType === 'private'
+                ? t('listings.filters.roomTypePrivate')
+                : t('listings.filters.roomTypeShared')}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1165,7 +1202,12 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, preferredGender: undefined })}
             >
-              {t("listings.filters.genderPreference")}: {t(`listings.filters.gender${filters.preferredGender.charAt(0).toUpperCase() + filters.preferredGender.slice(1)}` as Parameters<typeof t>[0])}
+              {t('listings.filters.genderPreference')}:{' '}
+              {t(
+                `listings.filters.gender${filters.preferredGender.charAt(0).toUpperCase() + filters.preferredGender.slice(1)}` as Parameters<
+                  typeof t
+                >[0],
+              )}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1184,7 +1226,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
             >
-              {t("listings.filters.availableTo")}: {filters.availableTo}
+              {t('listings.filters.availableTo')}: {filters.availableTo}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1203,7 +1245,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, utilitiesIncluded: undefined })}
             >
-              {t("listings.filters.utilitiesIncluded")}
+              {t('listings.filters.utilitiesIncluded')}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1220,9 +1262,11 @@ export function ActiveFilters({
               variant="secondary"
               size="sm"
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, floorMin: undefined, floorMax: undefined })}
+              onClick={() =>
+                onFiltersChange({ ...filters, floorMin: undefined, floorMax: undefined })
+              }
             >
-              {t("listings.filters.floor")}:{" "}
+              {t('listings.filters.floor')}:{' '}
               {filters.floorMin != null && filters.floorMax != null
                 ? `${filters.floorMin}–${filters.floorMax}`
                 : filters.floorMin != null
@@ -1246,7 +1290,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, hasPhotos: undefined })}
             >
-              {t("listings.filters.withPhotos")}
+              {t('listings.filters.withPhotos')}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1265,7 +1309,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, internetIncluded: undefined })}
             >
-              {t("listings.filters.internetIncluded")}
+              {t('listings.filters.internetIncluded')}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>
@@ -1284,7 +1328,7 @@ export function ActiveFilters({
               className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFiltersChange({ ...filters, registrationPossible: undefined })}
             >
-              {t("listings.filters.registrationPossible")}
+              {t('listings.filters.registrationPossible')}
               <X className="h-3 w-3" />
             </Button>
           </motion.div>

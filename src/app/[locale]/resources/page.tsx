@@ -29,7 +29,7 @@ export default async function ResourcesPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Resources', path: '/resources' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <ResourcesClient />
       </main>
       <Footer />

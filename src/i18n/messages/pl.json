@@ -319,7 +319,7 @@
     "titleReplacement": "Cesje najmu",
     "titleRoommate": "Szukam współlokatora",
     "titleSublet": "Tymczasowy podnajem",
-    "listingsInCity": "{count} ofert w Warszawie",
+    "listingsInCity": "<b>{count}</b> ofert w Warszawie",
     "filters": {
       "title": "Filtry",
       "clearAll": "Wyczyść wszystko",

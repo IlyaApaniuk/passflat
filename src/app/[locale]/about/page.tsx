@@ -57,7 +57,7 @@ export default async function AboutPage() {
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={breadcrumbJsonLd([{ name: 'About', path: '/about' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <AboutClient hasContributed={hasContributed} stats={stats} />
       </main>
       <Footer />

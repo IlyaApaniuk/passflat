@@ -26,7 +26,7 @@ export default function ContactPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Contact', path: '/contact' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <Suspense>
           <ContactClient />
         </Suspense>

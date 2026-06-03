@@ -25,7 +25,7 @@ export default function TermsPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Terms', path: '/terms' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <TermsClient />
       </main>
       <Footer />

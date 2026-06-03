@@ -273,7 +273,7 @@ export function BuildingCostsClient({
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 bg-muted/30 pt-20">
+      <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             initial={{ opacity: 0, x: -10 }}
@@ -370,7 +370,7 @@ export function BuildingCostsClient({
             >
               <Card className="relative overflow-hidden">
                 <CardContent className="p-8">
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {costItems.slice(0, 6).map((item) => (
                       <div key={item.label} className="rounded-lg bg-muted/50 p-4">
                         <div className="flex items-center gap-2">

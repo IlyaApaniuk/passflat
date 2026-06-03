@@ -154,7 +154,7 @@ function HomeSkeleton() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3">
             <div className="h-8 w-28 rounded-lg bg-muted animate-pulse" />
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
               <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
               <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />

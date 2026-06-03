@@ -319,7 +319,7 @@
     "titleReplacement": "Передача аренды",
     "titleRoommate": "Поиск соседа",
     "titleSublet": "Временная субаренда",
-    "listingsInCity": "{count} объявлений в Варшаве",
+    "listingsInCity": "<b>{count}</b> объявлений в Варшаве",
     "filters": {
       "title": "Фильтры",
       "clearAll": "Очистить все",

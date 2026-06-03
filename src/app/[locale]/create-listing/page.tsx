@@ -844,7 +844,7 @@ export default function CreateListingPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex-1 bg-muted/30 pt-20">
+        <main className="flex-1 bg-muted/30 pt-24">
           <div className="container mx-auto flex items-center justify-center px-4 py-32">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -857,7 +857,7 @@ export default function CreateListingPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 bg-muted/30 pt-20">
+      <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             initial={{ opacity: 0, y: -10 }}

@@ -26,7 +26,7 @@ export function ResourcesClient() {
             {t('resources.intro')}
           </p>
 
-          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {DOCS.map((doc) => (
               <TemplateDownload key={doc} documentKey={doc} source="resources" showDescription />
             ))}
