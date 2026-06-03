@@ -63,7 +63,7 @@ export default async function BlogPostPage({ params }: Props) {
         })}
       />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <BlogArticle post={post} />
       </main>
       <Footer />

@@ -141,7 +141,7 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
 
       <Button
         variant="outline"
-        className="mt-3 w-full gap-2 md:hidden"
+        className="mt-3 w-full gap-2 lg:hidden"
         onClick={() => {
           setCurrentIndex(0);
           setLightboxOpen(true);

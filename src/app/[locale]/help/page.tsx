@@ -48,7 +48,7 @@ export default async function HelpPage() {
       <JsonLd data={breadcrumbJsonLd([{ name: 'Help', path: '/help' }])} />
       <JsonLd data={faqPageJsonLd(faqItems)} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <HelpCenterClient />
       </main>
       <Footer />

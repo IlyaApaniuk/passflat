@@ -25,7 +25,7 @@ export default function PrivacyPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Privacy', path: '/privacy' }])} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <PrivacyClient />
       </main>
       <Footer />

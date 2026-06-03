@@ -319,7 +319,7 @@
     "titleReplacement": "Lease Takeovers",
     "titleRoommate": "Roommate Search",
     "titleSublet": "Temporary Sublets",
-    "listingsInCity": "{count} listings in Warsaw",
+    "listingsInCity": "<b>{count}</b> listings in Warsaw",
     "filters": {
       "title": "Filters",
       "clearAll": "Clear all",

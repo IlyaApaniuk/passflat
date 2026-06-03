@@ -106,7 +106,7 @@ export function Districts() {
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
         </motion.div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-2 items-stretch gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
           {districts.map((district, i) => (
             <motion.div
               key={district.key}

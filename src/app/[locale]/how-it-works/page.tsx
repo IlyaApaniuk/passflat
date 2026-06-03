@@ -89,7 +89,7 @@ export default async function HowItWorksPage() {
       <JsonLd data={costsHowTo} />
       <JsonLd data={faqPageJsonLd(faqItems)} />
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <HowItWorksClient hasContributed={hasContributed} />
       </main>
       <Footer />

@@ -100,7 +100,7 @@ export function ChatWindow({
       {/* Header */}
       <div className="flex items-center gap-3 border-b px-4 py-3">
         {onBack && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 md:hidden">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 lg:hidden">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}

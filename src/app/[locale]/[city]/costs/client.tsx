@@ -256,7 +256,7 @@ export function CostsOverviewClient({
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-24">
         <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
           <div className="absolute inset-0 grid-pattern opacity-30" />
           <div className="container relative mx-auto px-4">
@@ -521,28 +521,26 @@ export function CostsOverviewClient({
                 >
                   <Card className="mt-4 border-destructive/50 bg-destructive/5">
                     <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
-                        <div>
-                          <p className="font-medium">{t('costs.overview.flaggedTitle')}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {t('costs.overview.flaggedDesc')}
-                          </p>
-                          <div className="mt-3 flex flex-col gap-2">
-                            <Button size="sm" asChild>
-                              <Link href={`/${citySlug}/costs/submit?edit=true`}>
-                                <Pencil className="mr-2 h-3.5 w-3.5" />
-                                {t('costs.submit.editReport')}
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={'/contact?subject=costs' as '/'}>
-                                <Mail className="mr-2 h-3.5 w-3.5" />
-                                {t('costs.submit.contactUs')}
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        <p className="font-medium">{t('costs.overview.flaggedTitle')}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {t('costs.overview.flaggedDesc')}
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2">
+                        <Button size="sm" asChild>
+                          <Link href={`/${citySlug}/costs/submit?edit=true`}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            {t('costs.submit.editReport')}
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={'/contact?subject=costs' as '/'}>
+                            <Mail className="mr-2 h-3.5 w-3.5" />
+                            {t('costs.submit.contactUs')}
+                          </Link>
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -557,24 +555,22 @@ export function CostsOverviewClient({
                 >
                   <Card className="mt-4 border-accent/50 bg-accent/5">
                     <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <CalendarClock className="mt-0.5 h-5 w-5 text-accent" />
-                        <div>
-                          <p className="font-medium">
-                            {t('costs.access.activeUntil', {
-                              date: format(new Date(costAccessUntil!), 'PP', {
-                                locale: dateFmtLocale,
-                              }),
-                            })}
-                          </p>
-                          <BuyAccessDialog citySlug={citySlug}>
-                            <Button size="sm" variant="outline" className="mt-3 gap-2">
-                              <RefreshCw className="h-3.5 w-3.5" />
-                              {t('costs.access.renew')}
-                            </Button>
-                          </BuyAccessDialog>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-5 w-5 text-accent" />
+                        <p className="font-medium">
+                          {t('costs.access.activeUntil', {
+                            date: format(new Date(costAccessUntil!), 'PP', {
+                              locale: dateFmtLocale,
+                            }),
+                          })}
+                        </p>
                       </div>
+                      <BuyAccessDialog citySlug={citySlug}>
+                        <Button size="sm" variant="outline" className="mt-3 w-full gap-2">
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          {t('costs.access.renew')}
+                        </Button>
+                      </BuyAccessDialog>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -588,44 +584,37 @@ export function CostsOverviewClient({
                 >
                   <Card className="mt-4 border-primary/50 bg-primary/5">
                     <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <Lock className="mt-0.5 h-5 w-5 text-primary" />
-                        <div>
-                          {paidExpired ? (
-                            <>
-                              <p className="font-medium">
-                                {t('costs.access.expiredOn', {
-                                  date: format(new Date(costAccessUntil!), 'PP', {
-                                    locale: dateFmtLocale,
-                                  }),
-                                })}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {t('costs.access.expiredCta')}
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="font-medium">{t('costs.overview.unlockFullData')}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {t('costs.overview.unlockDesc')}
-                              </p>
-                            </>
-                          )}
-                          <div className="mt-3 flex flex-col gap-2">
-                            <Button size="sm" asChild>
-                              <Link href={`/${citySlug}/costs/submit`}>
-                                {t('costs.overview.submitMyCosts')}
-                              </Link>
-                            </Button>
-                            <BuyAccessDialog citySlug={citySlug}>
-                              <Button size="sm" variant="outline" className="gap-2">
-                                <ShoppingCart className="h-3.5 w-3.5" />
-                                {t('costs.overview.buyAccessBtn')}
-                              </Button>
-                            </BuyAccessDialog>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-primary" />
+                        {paidExpired ? (
+                          <p className="font-medium">
+                            {t('costs.access.expiredOn', {
+                              date: format(new Date(costAccessUntil!), 'PP', {
+                                locale: dateFmtLocale,
+                              }),
+                            })}
+                          </p>
+                        ) : (
+                          <p className="font-medium">{t('costs.overview.unlockFullData')}</p>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {paidExpired
+                          ? t('costs.access.expiredCta')
+                          : t('costs.overview.unlockDesc')}
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2">
+                        <Button size="sm" asChild>
+                          <Link href={`/${citySlug}/costs/submit`}>
+                            {t('costs.overview.submitMyCosts')}
+                          </Link>
+                        </Button>
+                        <BuyAccessDialog citySlug={citySlug}>
+                          <Button size="sm" variant="outline" className="w-full gap-2">
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                            {t('costs.overview.buyAccessBtn')}
+                          </Button>
+                        </BuyAccessDialog>
                       </div>
                     </CardContent>
                   </Card>

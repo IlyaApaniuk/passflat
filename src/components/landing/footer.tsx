@@ -38,9 +38,9 @@ export function Footer() {
   return (
     <footer className="relative border-t border-border/50 pb-8 pt-16">
       <div className="container mx-auto px-4 sm:px-6">
-        <div className="mb-12 grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="mb-12 grid grid-cols-2 gap-8 lg:grid-cols-4">
           {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="col-span-2 lg:col-span-1">
             <Link href="/" className="group mb-4 flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Home className="h-4 w-4 text-primary-foreground" />

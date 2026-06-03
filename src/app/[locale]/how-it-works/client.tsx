@@ -261,7 +261,7 @@ export function HowItWorksClient({ hasContributed = false }: { hasContributed?: 
             <h2 className="mb-12 text-center text-3xl font-bold tracking-tight md:text-4xl">
               {t('testimonials.title')}
             </h2>
-            <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
+            <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-3">
               {[
                 {
                   name: t('testimonials.t1Name'),

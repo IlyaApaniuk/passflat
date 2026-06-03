@@ -183,7 +183,7 @@ function ListingsPageInner({
   }, []);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden pt-20">
+    <div className="flex h-screen flex-col overflow-hidden pt-24">
       <Header />
 
       <div className="flex min-h-0 flex-1">
@@ -202,7 +202,7 @@ function ListingsPageInner({
             transition={{ duration: 0.3 }}
             className="flex items-center justify-between border-b bg-card px-4 py-3"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 overflow-hidden">
               <ListingFiltersMobile
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
@@ -211,14 +211,17 @@ function ListingsPageInner({
                 listingType={listingType}
                 resultCount={filteredListings.length}
               />
-              <p className="text-sm text-muted-foreground">
-                {t('listings.listingsInCity', { count: visibleListings.length })}
+              <p className="whitespace-nowrap text-sm text-muted-foreground">
+                {t.rich('listings.listingsInCity', {
+                  count: visibleListings.length,
+                  b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+                })}
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[140px] sm:w-[180px]">
+                <SelectTrigger className="w-[116px] sm:w-[180px]">
                   <SelectValue placeholder={t('listings.sort.sortBy')} />
                 </SelectTrigger>
                 <SelectContent>

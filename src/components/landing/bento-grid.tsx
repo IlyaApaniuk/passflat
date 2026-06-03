@@ -23,7 +23,7 @@ const bentoItems: BentoItem[] = [
     titleKey: 'realCostDataTitle',
     descKey: 'realCostDataDesc',
     icon: Eye,
-    className: 'md:col-span-2 md:row-span-2',
+    className: 'lg:col-span-2 lg:row-span-2',
     gradient: 'from-accent/20 via-transparent to-transparent',
     featured: true,
   },
@@ -31,28 +31,28 @@ const bentoItems: BentoItem[] = [
     titleKey: 'saveDepositTitle',
     descKey: 'saveDepositDesc',
     icon: TrendingDown,
-    className: 'md:col-span-1',
+    className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
     titleKey: 'directContactTitle',
     descKey: 'directContactDesc',
     icon: MessageSquare,
-    className: 'md:col-span-1',
+    className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
     titleKey: 'noAgencyFeesTitle',
     descKey: 'noAgencyFeesDesc',
     icon: BadgePercent,
-    className: 'md:col-span-1',
+    className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
     titleKey: 'quickProcessTitle',
     descKey: 'quickProcessDesc',
     icon: Rocket,
-    className: 'md:col-span-1',
+    className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
 ];
@@ -74,7 +74,7 @@ export function BentoGrid() {
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
         </motion.div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 lg:grid-cols-4">
           {bentoItems.map((item, index) => (
             <motion.div
               key={item.titleKey}
@@ -90,7 +90,7 @@ export function BentoGrid() {
               </div>
 
               <div
-                className={`relative z-10 flex h-full flex-col p-6 sm:p-8 ${item.featured ? 'min-h-[300px] justify-between md:min-h-[400px]' : 'min-h-[180px]'}`}
+                className={`relative z-10 flex h-full flex-col p-6 sm:p-8 ${item.featured ? 'min-h-[300px] justify-between lg:min-h-[400px]' : 'min-h-[180px]'}`}
               >
                 <div
                   className={`mb-4 flex items-center justify-center rounded-2xl bg-secondary transition-transform group-hover:scale-110 ${item.featured ? 'h-14 w-14' : 'h-12 w-12'}`}
