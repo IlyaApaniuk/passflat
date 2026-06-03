@@ -1,6 +1,5 @@
 import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { HelpCenterClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -47,7 +46,6 @@ export default async function HelpPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Help', path: '/help' }])} />
       <JsonLd data={faqPageJsonLd(faqItems)} />
-      <Header />
       <main className="flex-1 pt-24">
         <HelpCenterClient />
       </main>

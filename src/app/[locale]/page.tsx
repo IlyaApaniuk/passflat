@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
-import { Header } from '@/components/landing/header';
 import { Hero } from '@/components/landing/hero';
 import { Districts } from '@/components/landing/districts';
 import { BentoGrid } from '@/components/landing/bento-grid';
@@ -14,7 +13,6 @@ import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import type { ListingType } from '@/lib/listings-data';
 
 const DEFAULT_CITY = 'warsaw';
@@ -110,36 +108,6 @@ async function getTopBuildingCostData() {
   };
 }
 
-async function getServerUser() {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      const [report, profile] = await Promise.all([
-        prisma.costReport.findFirst({
-          where: { authorId: user.id, isVisible: true },
-          select: { id: true },
-        }),
-        prisma.profile.findUnique({
-          where: { id: user.id },
-          select: { costAccessUntil: true },
-        }),
-      ]);
-      const hasContributed =
-        !!report || (!!profile?.costAccessUntil && profile.costAccessUntil > new Date());
-      return {
-        user: { email: user.email ?? undefined, id: user.id },
-        hasContributed,
-      };
-    }
-  } catch {
-    // Auth unavailable
-  }
-  return { user: null, hasContributed: false };
-}
-
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
@@ -164,20 +132,6 @@ export default function Home() {
 function HomeSkeleton() {
   return (
     <div className="flex min-h-screen flex-col">
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3">
-            <div className="h-8 w-28 rounded-lg bg-muted animate-pulse" />
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
-              <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
-            </div>
-            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-          </div>
-        </div>
-      </div>
-
       <div className="flex min-h-screen items-center justify-center pt-24">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="mx-auto max-w-5xl text-center space-y-6">
@@ -193,22 +147,18 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [featuredResult, statsResult, costResult, authResult] = await Promise.allSettled([
+  const [featuredResult, statsResult, costResult] = await Promise.allSettled([
     getFeaturedListingsCached(),
     getStatsCached(),
     getTopBuildingCostDataCached(),
-    getServerUser(),
   ]);
 
   const featuredListings = featuredResult.status === 'fulfilled' ? featuredResult.value : [];
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
-  const { user: serverUser, hasContributed } =
-    authResult.status === 'fulfilled' ? authResult.value : { user: null, hasContributed: false };
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header initialUser={serverUser} />
       <LandingContent>
         <main className="flex-1">
           <Hero stats={heroStats} />
@@ -216,7 +166,7 @@ async function HomeContent() {
           <BentoGrid />
           <FeaturedListings listings={featuredListings} citySlug={DEFAULT_CITY} />
           <HowItWorks />
-          <CostTransparency hasContributed={hasContributed} buildingData={costBuildingData} />
+          <CostTransparency buildingData={costBuildingData} />
           <ForWhom />
           <CityNotify />
           <FAQ />

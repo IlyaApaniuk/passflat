@@ -6,7 +6,6 @@ import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Link, useRouter } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { PhotoGallery } from '@/components/listings/photo-gallery';
 import { InterestModal } from '@/components/listings/interest-modal';
@@ -192,8 +191,6 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 pt-24">
         <div className="container mx-auto px-4 py-6">
           <motion.div

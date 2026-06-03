@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { useReveal } from '@/hooks/use-reveal';
+import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Button } from '@/components/ui/button';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { ArrowRight, Lock, Eye, CheckCircle2, ShieldCheck, ShoppingCart } from 'lucide-react';
@@ -28,12 +29,16 @@ interface CostTransparencyProps {
 
 export function CostTransparency({
   citySlug = DEFAULT_CITY,
-  hasContributed = false,
+  hasContributed: hasContributedInitial = false,
   buildingData,
 }: CostTransparencyProps) {
   const t = useTranslations();
   const format = useFormatter();
   const reveal = useReveal();
+  // Resolved on the client so the landing page can render statically. Defaults
+  // to `false` (blurred values + "contribute" CTA) until/unless the user is
+  // confirmed to have access — never reveals gated UI optimistically.
+  const hasContributed = useHasContributed(hasContributedInitial);
 
   const costData = [
     {

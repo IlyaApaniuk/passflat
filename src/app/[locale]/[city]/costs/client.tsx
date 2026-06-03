@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link, useRouter } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { PRICES_PLN } from '@/lib/pricing';
@@ -254,8 +253,6 @@ export function CostsOverviewClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 pt-24">
         <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
           <div className="absolute inset-0 grid-pattern opacity-30" />

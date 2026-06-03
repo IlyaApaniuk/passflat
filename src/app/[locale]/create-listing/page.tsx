@@ -26,7 +26,6 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Header } from '@/components/landing/header';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -843,7 +842,6 @@ export default function CreateListingPage() {
   if (isLoadingEdit) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Header />
         <main className="flex-1 bg-muted/30 pt-24">
           <div className="container mx-auto flex items-center justify-center px-4 py-32">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -855,8 +853,6 @@ export default function CreateListingPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div

@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { getPostBySlug, getPostSlugs } from '@/lib/blog';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -62,7 +61,6 @@ export default async function BlogPostPage({ params }: Props) {
           locale: post.locale,
         })}
       />
-      <Header />
       <main className="flex-1 pt-24">
         <BlogArticle post={post} />
       </main>

@@ -39,16 +39,23 @@ export function Header({ initialUser }: HeaderProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // The Header is rendered once in the locale layout WITHOUT a server-resolved
+  // user, so the layout stays free of auth cookies and public routes can render
+  // statically. Auth is therefore normally resolved on the client (below). If a
+  // caller does pass `initialUser` (even `null`), we trust it and skip the
+  // client `getUser()` — `serverResolved` keeps that path working.
+  const serverResolved = initialUser !== undefined;
+
   const [user, setUser] = useState<SupabaseUser | null>(
     initialUser ? (initialUser as SupabaseUser) : null,
   );
-  const [loading, setLoading] = useState(!initialUser);
+  const [loading, setLoading] = useState(!serverResolved);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    if (!initialUser) {
+    if (!serverResolved) {
       supabase.auth.getUser().then(({ data }) => {
         setUser(data.user);
         setLoading(false);
@@ -57,13 +64,16 @@ export function Header({ initialUser }: HeaderProps = {}) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore the initial replay when the server already hydrated us — it can
+      // momentarily report no session and flip a logged-in header to logged-out.
+      if (event === 'INITIAL_SESSION' && serverResolved) return;
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [initialUser]);
+  }, [serverResolved]);
 
   const [isSigningOut, startSignOut] = useTransition();
 
@@ -134,7 +144,10 @@ export function Header({ initialUser }: HeaderProps = {}) {
 
             {/* Auth Actions */}
             {loading ? (
-              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+              // Calm, non-animated placeholder that reserves the avatar's space
+              // until client auth resolves (no pulsing skeleton flash, no wrong
+              // CTA shown).
+              <div className="h-8 w-8 rounded-full bg-muted/40" />
             ) : user ? (
               <>
                 <Link href="/messages" className="relative">
@@ -278,7 +291,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
               {/* Mobile Auth */}
               <div className="border-t border-border/50 mt-2 pt-3 px-4">
                 {loading ? (
-                  <div className="h-10 w-full rounded-xl bg-muted animate-pulse" />
+                  <div className="h-10 w-full rounded-xl bg-muted/40" />
                 ) : user ? (
                   <>
                     <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">

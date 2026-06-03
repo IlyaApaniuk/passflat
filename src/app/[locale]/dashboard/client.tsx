@@ -8,7 +8,6 @@ import { usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -307,8 +306,6 @@ export function DashboardClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div

@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { Button } from '@/components/ui/button';
@@ -283,8 +282,6 @@ export function BuildingCostsClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div

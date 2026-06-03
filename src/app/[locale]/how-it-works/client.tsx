@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useHasContributed } from '@/hooks/use-has-contributed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
@@ -59,10 +60,16 @@ const TAB_COLORS: Record<TabKey, { active: string; icon: string; number: string 
   },
 };
 
-export function HowItWorksClient({ hasContributed = false }: { hasContributed?: boolean }) {
+export function HowItWorksClient({
+  hasContributed: hasContributedInitial = false,
+}: {
+  hasContributed?: boolean;
+}) {
   const t = useTranslations('howItWorksPage');
   const tDocs = useTranslations('documents');
   const showTestimonials = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_TESTIMONIALS);
+  // Display-only CTA toggle resolved on the client so this page stays static.
+  const hasContributed = useHasContributed(hasContributedInitial);
   const [activeTab, setActiveTab] = useState<TabKey>('seekers');
 
   const seekerSteps: { icon: typeof Search; title: string; desc: ReactNode }[] = [

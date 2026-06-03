@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Header } from '@/components/landing/header';
 import {
   ListingFiltersDesktop,
   ListingFiltersMobile,
@@ -184,8 +183,6 @@ function ListingsPageInner({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden pt-24">
-      <Header />
-
       <div className="flex min-h-0 flex-1">
         <ListingFiltersDesktop
           filters={filters}
