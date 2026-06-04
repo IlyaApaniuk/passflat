@@ -361,8 +361,10 @@ export function CostsOverviewClient({
                       setDistrictSort(v as 'default' | 'total' | 'perM2' | 'reports')
                     }
                   >
-                    <SelectTrigger size="sm" className="w-full">
-                      <span className="text-muted-foreground">{t('costs.overview.sortLabel')}</span>
+                    <SelectTrigger size="sm" className="w-full min-w-0">
+                      <span className="shrink-0 text-muted-foreground">
+                        {t('costs.overview.sortLabel')}
+                      </span>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
