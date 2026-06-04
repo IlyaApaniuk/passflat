@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { MapSkeleton } from '@/components/map/map-skeleton';
@@ -44,7 +44,6 @@ import {
   ShoppingCart,
   CalendarClock,
   RefreshCw,
-  Clock,
   Ruler,
 } from 'lucide-react';
 
@@ -218,7 +217,6 @@ export function CostsOverviewClient({
   const t = useTranslations();
   const locale = useLocale();
   const posthog = usePostHog();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // `null` = pending (auth not yet resolved). We deliberately do NOT default to
@@ -282,45 +280,57 @@ export function CostsOverviewClient({
   }, [accessStatus, posthog, citySlug]);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
-  const searchAndTypeFiltered = buildings.filter((building) => {
-    const q = stripDiacritics(searchQuery.toLowerCase());
-    const matchesSearch =
-      q === '' ||
-      stripDiacritics(building.address.toLowerCase()).includes(q) ||
-      stripDiacritics(building.district.toLowerCase()).includes(q);
-    const matchesRentalType =
-      rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
-    return matchesSearch && matchesRentalType;
-  });
-
-  const filteredBuildings = searchAndTypeFiltered.filter(
-    (building) => selectedDistrict === null || building.districtSlug === selectedDistrict,
+  const searchAndTypeFiltered = useMemo(
+    () =>
+      buildings.filter((building) => {
+        const q = stripDiacritics(searchQuery.toLowerCase());
+        const matchesSearch =
+          q === '' ||
+          stripDiacritics(building.address.toLowerCase()).includes(q) ||
+          stripDiacritics(building.district.toLowerCase()).includes(q);
+        const matchesRentalType =
+          rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
+        return matchesSearch && matchesRentalType;
+      }),
+    [buildings, searchQuery, rentalTypeFilter],
   );
 
-  const computedDistrictStats = districtStats.map((ds) => {
-    if (rentalTypeFilter === 'all') return ds;
-    const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
-    if (dBuildings.length === 0)
-      return {
-        ...ds,
-        buildingCount: 0,
-        reportCount: 0,
-        medianTotal: 0,
-        medianRent: 0,
-        medianAdminFee: 0,
-        medianRentPerM2: 0,
-      };
-    const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
-    return {
-      ...ds,
-      buildingCount: dBuildings.length,
-      reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
-      medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
-      medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
-      medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
-      medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
-    };
-  });
+  const filteredBuildings = useMemo(
+    () =>
+      searchAndTypeFiltered.filter(
+        (building) => selectedDistrict === null || building.districtSlug === selectedDistrict,
+      ),
+    [searchAndTypeFiltered, selectedDistrict],
+  );
+
+  const computedDistrictStats = useMemo(
+    () =>
+      districtStats.map((ds) => {
+        if (rentalTypeFilter === 'all') return ds;
+        const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
+        if (dBuildings.length === 0)
+          return {
+            ...ds,
+            buildingCount: 0,
+            reportCount: 0,
+            medianTotal: 0,
+            medianRent: 0,
+            medianAdminFee: 0,
+            medianRentPerM2: 0,
+          };
+        const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
+        return {
+          ...ds,
+          buildingCount: dBuildings.length,
+          reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
+          medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
+          medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
+          medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
+          medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
+        };
+      }),
+    [districtStats, rentalTypeFilter, searchAndTypeFiltered],
+  );
 
   // District list ordering. "default" preserves the server ordering; the other
   // options sort by a district stat. Cost metrics sort ascending (cheapest
@@ -341,6 +351,9 @@ export function CostsOverviewClient({
   }, [districts, districtSort, computedDistrictStats]);
 
   useEffect(() => {
+    // Reset pagination back to the first page whenever the active filters change
+    // (external-sync of derived UI state); a cascading render here is intended.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(PAGE_SIZE);
   }, [searchQuery, selectedDistrict, rentalTypeFilter]);
 
