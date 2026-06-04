@@ -401,6 +401,26 @@
       "buildingInfo": "Building Information",
       "buildingCostHint": "Want to see real utility costs for this building reported by tenants?",
       "viewBuildingCosts": "View Building Cost Reports",
+      "locationScore": {
+        "title": "Location score",
+        "subtitle": "Convenience of the surroundings",
+        "level": {
+          "excellent": "Excellent location",
+          "good": "Good location",
+          "fair": "Decent location",
+          "poor": "Limited amenities nearby"
+        },
+        "categories": {
+          "groceries": "Groceries",
+          "transit": "Public transport",
+          "pharmacy": "Pharmacies",
+          "dining": "Cafes & restaurants",
+          "education": "Schools & kindergartens",
+          "parks": "Parks & greenery"
+        },
+        "none": "Nothing nearby",
+        "poweredBy": "Based on OpenStreetMap data"
+      },
       "monthlyCosts": "Monthly Costs",
       "imInterested": "Write to Tenant",
       "contactHint": "Send a message to the current tenant to schedule a viewing or ask questions",
@@ -658,6 +678,7 @@
       "gatePaidTitle": "Buy access",
       "gatePaidBenefit": "Instant \u00b7 from {price} PLN",
       "gatePaidNote": "7\u201390 days",
+      "gateOrBuyAccess": "or buy access",
       "avgMonthlyTotal": "Avg Monthly Total",
       "medianMonthlyTotal": "Median Monthly Total",
       "perM2": "zł/m²",
