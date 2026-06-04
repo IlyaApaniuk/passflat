@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -8,6 +9,12 @@ import { CostsOverviewClient, type CostAccess } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { median, perAreaValues } from '@/lib/cost-stats';
 import type { CityBounds } from '@/lib/listings-data';
+
+const ANON_ACCESS: CostAccess = {
+  hasContributedData: false,
+  costAccessUntil: null,
+  isFlagged: false,
+};
 
 type BuildingData = {
   id: string;
@@ -231,14 +238,21 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
     .filter((d): d is NonNullable<typeof d> => d !== null)
     .sort((a, b) => b.reportCount - a.reportCount);
 
-  // Not awaited: streamed into the client via Suspense so the table paints first.
-  const accessPromise = getCostAccess();
+  // Fast cookie check: if no Supabase session cookie is present the visitor is
+  // definitely anonymous — resolve to locked immediately (no skeleton, no TTFB
+  // cost). Only start the expensive auth+DB round-trip for logged-in users.
+  const cookieStore = await cookies();
+  const hasSessionCookie = cookieStore.getAll().some((c) => /^sb-.*-auth-token/.test(c.name));
+
+  const initialAccess: CostAccess | null = hasSessionCookie ? null : ANON_ACCESS;
+  const accessPromise = hasSessionCookie ? getCostAccess() : undefined;
 
   return (
     <CostsOverviewClient
       buildings={buildingsData}
       districts={districts}
       districtStats={districtStats}
+      initialAccess={initialAccess}
       accessPromise={accessPromise}
       citySlug={citySlug}
       cityBounds={cityBounds ?? undefined}

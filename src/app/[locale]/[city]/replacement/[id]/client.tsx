@@ -12,6 +12,7 @@ import { InterestModal } from '@/components/listings/interest-modal';
 import { FavoriteButton } from '@/components/listings/favorite-button';
 import { TranslateButton } from '@/components/listings/translate-button';
 import { TemplateDownload } from '@/components/documents/template-download';
+import { LocationScore } from '@/components/listings/location-score';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 import { useFavorites } from '@/hooks/use-favorites';
 import { Button } from '@/components/ui/button';
@@ -846,6 +847,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   </div>
                 </CardContent>
               </Card>
+
+              <div className="mt-4">
+                <LocationScore buildingId={listing.buildingId} />
+              </div>
 
               {isOwner ? (
                 <div className="mt-4 flex flex-col gap-2">

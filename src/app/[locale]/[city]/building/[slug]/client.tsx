@@ -9,6 +9,7 @@ import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { LocationScore } from '@/components/listings/location-score';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -310,7 +311,7 @@ export function BuildingCostsClient({
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {building.district}, {t(building.city)}
+                    {building.district}, {building.city}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
@@ -511,6 +512,10 @@ export function BuildingCostsClient({
                   </Card>
                 </motion.div>
               )}
+
+              <motion.div custom={0.5} initial="hidden" animate="visible" variants={fadeUp}>
+                <LocationScore buildingId={building.id} />
+              </motion.div>
 
               <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card>

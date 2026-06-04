@@ -104,8 +104,10 @@ interface CostsOverviewClientProps {
   buildings: BuildingData[];
   districts: DistrictData[];
   districtStats: DistrictStatsData[];
-  /** Auth-derived access state, streamed in via Suspense (see page.tsx). */
-  accessPromise: Promise<CostAccess>;
+  /** Pre-resolved access for anonymous users (no session cookie). */
+  initialAccess: CostAccess | null;
+  /** Streamed auth promise for logged-in users; omitted for anons. */
+  accessPromise?: Promise<CostAccess>;
   citySlug: string;
   cityBounds?: CityBounds;
   initialSearch: string;
@@ -141,24 +143,14 @@ function AccessResolver({
 }
 
 /**
- * Neutral placeholder for the hero gate while access is pending. Mirrors the
- * gate's footprint (lead line + two bordered cards) so swapping to the real
- * locked CTA produces no layout shift.
+ * Compact single-line skeleton for the hero gate slot. Only shown to
+ * logged-in users while auth resolves (anons skip it entirely).
  */
 function HeroGateSkeleton() {
   return (
-    <div className="space-y-3" aria-hidden="true">
-      <Skeleton className="h-4 w-3/4" />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {[0, 1].map((i) => (
-          <div key={i} className="flex flex-col rounded-xl border-2 border-border p-4">
-            <Skeleton className="mb-3 h-10 w-10 rounded-lg" />
-            <Skeleton className="h-5 w-2/3" />
-            <Skeleton className="mt-2 h-4 w-full" />
-            <Skeleton className="mt-2 h-3 w-1/2" />
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center justify-center gap-3" aria-hidden="true">
+      <Skeleton className="h-9 w-40 rounded-full" />
+      <Skeleton className="h-4 w-28" />
     </div>
   );
 }
@@ -208,6 +200,7 @@ export function CostsOverviewClient({
   buildings,
   districts,
   districtStats,
+  initialAccess,
   accessPromise,
   citySlug,
   cityBounds,
@@ -219,10 +212,10 @@ export function CostsOverviewClient({
   const posthog = usePostHog();
   const searchParams = useSearchParams();
 
-  // `null` = pending (auth not yet resolved). We deliberately do NOT default to
-  // a locked CostAccess, so the access-dependent CTA region can render a neutral
-  // skeleton instead of flashing Buy/Submit CTAs at users who already have access.
-  const [access, setAccess] = useState<CostAccess | null>(null);
+  // `null` = pending (auth not yet resolved, logged-in users only). For
+  // anonymous visitors the server passes a pre-resolved `initialAccess` so the
+  // locked gate renders immediately with no skeleton flash.
+  const [access, setAccess] = useState<CostAccess | null>(initialAccess);
   const accessResolved = access !== null;
   const { hasContributedData, costAccessUntil, isFlagged } = access ?? {
     hasContributedData: false,
@@ -368,9 +361,11 @@ export function CostsOverviewClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Suspense fallback={null}>
-        <AccessResolver promise={accessPromise} onResolve={handleAccessResolved} />
-      </Suspense>
+      {accessPromise && (
+        <Suspense fallback={null}>
+          <AccessResolver promise={accessPromise} onResolve={handleAccessResolved} />
+        </Suspense>
+      )}
       <main className="flex-1 pt-24">
         <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
           <div className="absolute inset-0 grid-pattern opacity-30" />
@@ -395,70 +390,58 @@ export function CostsOverviewClient({
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="mt-8 space-y-4"
               >
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder={t('costs.overview.searchPlaceholder')}
-                      className="pl-10"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  {hasContributedData && (
-                    <Button variant="outline" asChild>
-                      <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
-                        <List className="mr-2 h-4 w-4" />
-                        {t('costs.overview.myReports')}
-                      </Link>
-                    </Button>
-                  )}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t('costs.overview.searchPlaceholder')}
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
 
-                {accessPending && <HeroGateSkeleton />}
+                {/* Compact fixed-height gate slot */}
+                <div className="flex min-h-[2.75rem] items-center justify-center">
+                  {accessPending && <HeroGateSkeleton />}
 
-                {accessStatus === 'locked' && (
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{t('costs.overview.gateLead')}</p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Link
-                        href={`/${citySlug}/costs/submit`}
-                        className="group relative flex flex-col rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
-                      >
-                        <span className="absolute -top-2.5 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                          {t('costs.overview.gateRecommended')}
-                        </span>
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <Pencil className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="font-semibold">{t('costs.overview.gateFreeTitle')}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t('costs.overview.gateFreeBenefit')}
-                        </p>
-                        <p className="mt-auto pt-2 text-xs text-muted-foreground">
-                          {t('costs.overview.gateFreeNote')}
-                        </p>
-                      </Link>
-
+                  {accessStatus === 'locked' && (
+                    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+                      <Button size="sm" className="rounded-full" asChild>
+                        <Link href={`/${citySlug}/costs/submit`}>
+                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                          {t('costs.overview.submitMyCosts')}
+                        </Link>
+                      </Button>
                       <BuyAccessDialog citySlug={citySlug}>
-                        <button className="group flex flex-col rounded-xl border-2 border-border p-4 text-left transition-colors hover:border-primary/30 hover:bg-muted/50">
-                          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <p className="font-semibold">{t('costs.overview.gatePaidTitle')}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {t('costs.overview.gatePaidBenefit', {
-                              price: PRICES_PLN.COST_ACCESS_7,
-                            })}
-                          </p>
-                          <p className="mt-auto pt-2 text-xs text-muted-foreground">
-                            {t('costs.overview.gatePaidNote')}
-                          </p>
-                        </button>
+                        <Button size="sm" variant="outline" className="rounded-full">
+                          <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                          {t('costs.overview.buyAccessBtn')}
+                        </Button>
                       </BuyAccessDialog>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {accessStatus === 'unlocked' && hasContributedData && (
+                    <Link
+                      href={{ pathname: '/dashboard', query: { tab: 'costs' } }}
+                      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      {t('costs.overview.myReports')}
+                    </Link>
+                  )}
+
+                  {accessStatus === 'unlocked' && paidActive && (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {t('costs.access.activeUntil', {
+                        date: format(new Date(costAccessUntil!), 'PP', {
+                          locale: dateFmtLocale,
+                        }),
+                      })}
+                    </span>
+                  )}
+                </div>
               </motion.div>
             </motion.div>
           </div>
