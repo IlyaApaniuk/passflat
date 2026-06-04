@@ -11,6 +11,8 @@ import {
   ActiveFilters,
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
+import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
+import { MapSkeleton } from '@/components/map/map-skeleton';
 
 // Mapbox GL + react-map-gl is a large, WebGL-only dependency. Code-split it so
 // it loads as its own chunk after hydration instead of bloating the listings
@@ -19,7 +21,7 @@ const ListingsMap = dynamic(
   () => import('@/components/listings/listings-map').then((m) => m.ListingsMap),
   {
     ssr: false,
-    loading: () => <div className="h-full w-full bg-muted/30" />,
+    loading: () => <MapSkeleton className="rounded-none border-0" />,
   },
 );
 import { Button } from '@/components/ui/button';
@@ -48,7 +50,7 @@ interface Props {
 
 export function ListingsPageClient(props: Props) {
   return (
-    <Suspense>
+    <Suspense fallback={<ListingsPageSkeleton />}>
       <ListingsPageInner {...props} />
     </Suspense>
   );

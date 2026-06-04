@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
 import { ContactClient } from './client';
+import { ContactSkeleton } from './contact-skeleton';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,7 +26,7 @@ export default function ContactPage() {
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Contact', path: '/contact' }])} />
       <main className="flex-1 pt-24">
-        <Suspense>
+        <Suspense fallback={<ContactSkeleton />}>
           <ContactClient />
         </Suspense>
       </main>
