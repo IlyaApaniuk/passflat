@@ -51,13 +51,16 @@ export async function signup(formData: FormData) {
   return { success: true };
 }
 
-export async function signInWithGoogle(locale: string) {
+export async function signInWithGoogle(locale: string, next?: string) {
   const supabase = await createClient();
+
+  const callbackUrl = new URL(`/${locale}/auth/callback`, SITE_URL);
+  if (next) callbackUrl.searchParams.set('next', next);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${SITE_URL}/${locale}/auth/callback`,
+      redirectTo: callbackUrl.toString(),
     },
   });
 

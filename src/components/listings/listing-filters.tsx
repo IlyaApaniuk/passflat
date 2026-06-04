@@ -625,7 +625,7 @@ export function ListingFiltersDesktop({
   const t = useTranslations();
   const router = useRouter();
   return (
-    <div className="hidden w-72 shrink-0 overflow-y-auto border-r border-border/50 bg-card/50 backdrop-blur-sm p-5 lg:block">
+    <div className="hidden w-72 shrink-0 overflow-y-auto border-r border-border/50 bg-card/50 backdrop-blur-sm p-5 xl:block">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">{t('listings.filters.title')}</h2>
         <Button
@@ -831,7 +831,7 @@ export function ListingFiltersMobile({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 lg:hidden hover:border-primary/40">
+        <Button variant="outline" size="sm" className="gap-2 xl:hidden hover:border-primary/40">
           <SlidersHorizontal className="h-4 w-4" />
           {t('listings.filters.title')}
           {activeCount > 0 && (

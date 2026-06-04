@@ -231,7 +231,7 @@ function ListingsPageInner({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="lg:hidden"
+                  className="xl:hidden"
                   onClick={() => setShowMap(!showMap)}
                 >
                   {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
@@ -257,7 +257,7 @@ function ListingsPageInner({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className={`flex-1 overflow-y-auto p-4 ${
-                  showMap ? 'hidden lg:block lg:max-w-xl' : ''
+                  showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
                 <ListingGrid
@@ -271,7 +271,7 @@ function ListingsPageInner({
               </motion.div>
             </AnimatePresence>
 
-            <div className={`relative flex-1 border-l ${showMap ? '' : 'hidden lg:block'}`}>
+            <div className={`relative flex-1 border-l ${showMap ? '' : 'hidden xl:block'}`}>
               <div className="absolute inset-0">
                 <ListingsMap
                   listings={sortedListings}
