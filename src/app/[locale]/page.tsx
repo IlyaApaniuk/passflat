@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
+import { setRequestLocale } from 'next-intl/server';
 import { Hero } from '@/components/landing/hero';
 import { Districts } from '@/components/landing/districts';
 import { BentoGrid } from '@/components/landing/bento-grid';
@@ -121,7 +122,11 @@ const getTopBuildingCostDataCached = unstable_cache(
   { revalidate: 600 },
 );
 
-export default function Home() {
+export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  // Opt this route into static prerendering for each locale.
+  setRequestLocale(locale);
+
   return (
     <Suspense fallback={<HomeSkeleton />}>
       <HomeContent />

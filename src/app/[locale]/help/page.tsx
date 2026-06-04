@@ -1,9 +1,14 @@
-import { getTranslations } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
 import { HelpCenterClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
+import { pickMessages } from '@/i18n/messages';
 import { JsonLd, faqPageJsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
+
+type PageProps = { params: Promise<{ locale: string }> };
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('helpCenter');
   const m = await getTranslations('meta');
@@ -19,8 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function HelpPage() {
+export default async function HelpPage({ params }: PageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   const t = await getTranslations('helpCenter');
+  const messages = await getMessages();
 
   const faqItems = [
     { question: t('general.q1'), answer: t('general.a1') },
@@ -47,7 +56,9 @@ export default async function HelpPage() {
       <JsonLd data={breadcrumbJsonLd([{ name: 'Help', path: '/help' }])} />
       <JsonLd data={faqPageJsonLd(faqItems)} />
       <main className="flex-1 pt-24">
-        <HelpCenterClient />
+        <NextIntlClientProvider messages={pickMessages(messages, ['helpCenter', 'common'])}>
+          <HelpCenterClient />
+        </NextIntlClientProvider>
       </main>
       <Footer />
     </div>

@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Reveal } from '@/components/ui/reveal';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
-import { useIsTouch, useReveal } from '@/hooks/use-reveal';
+import { useIsTouch } from '@/hooks/use-reveal';
 import { Plus, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -23,7 +23,6 @@ interface HeroProps {
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
-  const reveal = useReveal();
   const isTouch = useIsTouch();
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
@@ -113,35 +112,35 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </div>
 
           {showStats && stats.length > 0 && (
-            <motion.div
-              {...reveal({ opacity: 0, y: 20 }, { duration: 0.5 })}
+            <Reveal
               className={`mx-auto mt-20 grid max-w-3xl gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : 'grid-cols-2 md:grid-cols-3'}`}
             >
               {stats.map((stat, i) => (
-                <motion.div
+                <Reveal
                   key={stat.labelKey}
-                  {...reveal({ opacity: 0, scale: 0.9 }, { duration: 0.3, delay: i * 0.1 })}
+                  variant="scale"
+                  delay={i * 0.1}
                   className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
                 >
                   <div className="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
                   <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
                     {t(stat.labelKey)}
                   </div>
-                </motion.div>
+                </Reveal>
               ))}
-            </motion.div>
+            </Reveal>
           )}
         </div>
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-        <motion.div
-          animate={isTouch ? undefined : { y: [0, 8, 0] }}
-          transition={isTouch ? undefined : { duration: 1.5, repeat: Infinity }}
-          className="flex h-10 w-6 items-start justify-center rounded-full border-2 border-muted-foreground/30 p-2"
+        <div
+          className={`flex h-10 w-6 items-start justify-center rounded-full border-2 border-muted-foreground/30 p-2 ${
+            isTouch ? '' : 'animate-scroll-hint'
+          }`}
         >
           <div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
-        </motion.div>
+        </div>
       </div>
     </section>
   );

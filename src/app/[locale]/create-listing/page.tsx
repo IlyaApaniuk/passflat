@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { Suspense, useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -26,6 +26,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { CreateListingFormSkeleton } from './form-skeleton';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -238,7 +239,7 @@ const stepTransition = {
   transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
 };
 
-export default function CreateListingPage() {
+function CreateListingForm() {
   const t = useTranslations();
   const locale = useLocale();
   const params = useParams();
@@ -2174,5 +2175,19 @@ export default function CreateListingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * `useSearchParams()` (used inside `CreateListingForm` to read `?edit=`) requires a
+ * Suspense boundary so the route can be statically prerendered without bailing the
+ * whole page into client-side rendering. The fallback mirrors the form's loading
+ * shell to keep CLS at 0.
+ */
+export default function CreateListingPage() {
+  return (
+    <Suspense fallback={<CreateListingFormSkeleton />}>
+      <CreateListingForm />
+    </Suspense>
   );
 }

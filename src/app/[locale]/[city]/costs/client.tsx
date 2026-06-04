@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { use, useCallback, useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { useSearchParams } from 'next/navigation';
@@ -11,6 +11,7 @@ import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { MapSkeleton } from '@/components/map/map-skeleton';
 import { PRICES_PLN } from '@/lib/pricing';
 import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import { Button } from '@/components/ui/button';
@@ -93,17 +94,41 @@ interface CityBounds {
   west: number;
 }
 
+export interface CostAccess {
+  hasContributedData: boolean;
+  costAccessUntil: string | null;
+  isFlagged: boolean;
+}
+
 interface CostsOverviewClientProps {
   buildings: BuildingData[];
   districts: DistrictData[];
   districtStats: DistrictStatsData[];
-  hasContributedData: boolean;
-  costAccessUntil: string | null;
-  isFlagged?: boolean;
+  /** Auth-derived access state, streamed in via Suspense (see page.tsx). */
+  accessPromise: Promise<CostAccess>;
   citySlug: string;
   cityBounds?: CityBounds;
   initialSearch: string;
   initialDistrict: string | null;
+}
+
+/**
+ * Unwraps the streamed access promise inside a Suspense boundary and lifts the
+ * result into the parent's state, so the (cached) cost table renders
+ * immediately in its locked default while auth resolves in the background.
+ */
+function AccessResolver({
+  promise,
+  onResolve,
+}: {
+  promise: Promise<CostAccess>;
+  onResolve: (access: CostAccess) => void;
+}) {
+  const resolved = use(promise);
+  useEffect(() => {
+    onResolve(resolved);
+  }, [resolved, onResolve]);
+  return null;
 }
 
 function stripDiacritics(str: string) {
@@ -129,9 +154,7 @@ export function CostsOverviewClient({
   buildings,
   districts,
   districtStats,
-  hasContributedData,
-  costAccessUntil,
-  isFlagged = false,
+  accessPromise,
   citySlug,
   cityBounds,
   initialSearch,
@@ -142,6 +165,15 @@ export function CostsOverviewClient({
   const posthog = usePostHog();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Locked by default; upgraded once the streamed auth state resolves.
+  const [access, setAccess] = useState<CostAccess>({
+    hasContributedData: false,
+    costAccessUntil: null,
+    isFlagged: false,
+  });
+  const { hasContributedData, costAccessUntil, isFlagged } = access;
+  const handleAccessResolved = useCallback((next: CostAccess) => setAccess(next), []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [rentalTypeFilter, setRentalTypeFilter] = useState<'all' | 'apartment' | 'room'>('all');
@@ -253,6 +285,9 @@ export function CostsOverviewClient({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <Suspense fallback={null}>
+        <AccessResolver promise={accessPromise} onResolve={handleAccessResolved} />
+      </Suspense>
       <main className="flex-1 pt-24">
         <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
           <div className="absolute inset-0 grid-pattern opacity-30" />
@@ -682,10 +717,8 @@ export function CostsOverviewClient({
               {viewMode === 'map' && (
                 <Suspense
                   fallback={
-                    <div className="flex h-[500px] items-center justify-center rounded-lg border bg-muted/30">
-                      <p className="text-sm text-muted-foreground">
-                        {t('costs.overview.loadingMap')}
-                      </p>
+                    <div className="h-[500px] md:h-[600px]">
+                      <MapSkeleton />
                     </div>
                   }
                 >

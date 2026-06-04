@@ -1,9 +1,6 @@
-'use client';
-
-import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
-import { useReveal } from '@/hooks/use-reveal';
+import { Reveal } from '@/components/ui/reveal';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -103,29 +100,24 @@ const districts: DistrictConfig[] = [
   },
 ];
 
-export function Districts() {
-  const t = useTranslations('landing.districts');
-  const reveal = useReveal();
+export async function Districts() {
+  const t = await getTranslations('landing.districts');
 
   return (
     <section className="relative overflow-hidden border-y border-border/50 py-24 sm:py-32">
       <div className="absolute inset-0 dot-pattern opacity-30" />
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6">
-        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-12 text-center">
+        <Reveal className="mb-12 text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             {t('title')} <span className="gradient-text">{t('titleHighlight')}</span>
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
-        </motion.div>
+        </Reveal>
 
         <div className="mx-auto grid max-w-6xl grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
           {districts.map((district, i) => (
-            <motion.div
-              key={district.key}
-              {...reveal({ opacity: 0, y: 20 }, { delay: i * 0.05 })}
-              className="h-full"
-            >
+            <Reveal key={district.key} delay={i * 0.05} className="h-full">
               <Link
                 href={`/${DEFAULT_CITY}/replacement?districts=${district.nameKey}`}
                 className={`group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br p-4 backdrop-blur-sm transition-all hover:scale-[1.02] sm:p-5 ${district.color}`}
@@ -142,7 +134,7 @@ export function Districts() {
                   <ArrowRight className="h-3 w-3" />
                 </div>
               </Link>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </div>

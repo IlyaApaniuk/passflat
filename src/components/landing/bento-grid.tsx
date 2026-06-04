@@ -1,9 +1,6 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
-import { motion } from 'framer-motion';
-import { useReveal } from '@/hooks/use-reveal';
+import { Reveal } from '@/components/ui/reveal';
 import { ArrowRight, TrendingDown, MessageSquare, BadgePercent, Rocket, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -57,28 +54,27 @@ const bentoItems: BentoItem[] = [
   },
 ];
 
-export function BentoGrid() {
-  const t = useTranslations('landing.bentoGrid');
-  const reveal = useReveal();
+export async function BentoGrid() {
+  const t = await getTranslations('landing.bentoGrid');
 
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       <div className="absolute inset-0 dot-pattern opacity-30" />
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6">
-        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-16 text-center">
+        <Reveal className="mb-16 text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             {t('titleBefore')} <span className="gradient-text">{t('titleHighlight')}</span>
             {t('titleAfter')}
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
-        </motion.div>
+        </Reveal>
 
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 lg:grid-cols-4">
           {bentoItems.map((item, index) => (
-            <motion.div
+            <Reveal
               key={item.titleKey}
-              {...reveal({ opacity: 0, y: 20 }, { delay: index * 0.1 })}
+              delay={index * 0.1}
               className={`group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm ${item.className}`}
             >
               <div
@@ -123,7 +119,7 @@ export function BentoGrid() {
               </div>
 
               <div className="pointer-events-none absolute inset-0 rounded-3xl border border-accent/0 transition-colors duration-300 group-hover:border-accent/30" />
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </div>
