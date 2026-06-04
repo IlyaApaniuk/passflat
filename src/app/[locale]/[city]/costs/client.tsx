@@ -355,6 +355,9 @@ export function CostsOverviewClient({
               <Card>
                 <CardHeader className="gap-3">
                   <CardTitle className="text-lg">{t('costs.overview.districts')}</CardTitle>
+                  <label className="text-sm text-muted-foreground">
+                    {t('costs.overview.sortLabel')}
+                  </label>
                   <Select
                     value={districtSort}
                     onValueChange={(v) =>
@@ -362,9 +365,6 @@ export function CostsOverviewClient({
                     }
                   >
                     <SelectTrigger size="sm" className="w-full min-w-0">
-                      <span className="shrink-0 text-muted-foreground">
-                        {t('costs.overview.sortLabel')}
-                      </span>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

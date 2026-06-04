@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Manrope, JetBrains_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { getLocale } from 'next-intl/server';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { GoogleAnalytics } from '@/components/providers/google-analytics';
@@ -44,7 +45,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <PublishSnackbar />
         </PostHogProvider>
         <GoogleAnalytics />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );
