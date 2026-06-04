@@ -757,9 +757,9 @@ export function CostsOverviewClient({
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center justify-between gap-6 sm:justify-end">
                                   {accessGranted ? (
-                                    <div className="text-right">
+                                    <div className="text-left sm:text-right">
                                       <p className="text-xs text-muted-foreground">
                                         {t('costs.overview.medianMonthlyTotal')}
                                       </p>

@@ -165,6 +165,7 @@
       "subtitle": "Crowdsourced cost data from real tenants. See what people actually pay for utilities, admin fees, and hidden costs.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
+      "addMoreCosts": "Add new costs",
       "gasHeating": "Gas/Heating",
       "internet": "Internet",
       "avg": "avg",
