@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
@@ -71,10 +71,6 @@ function ListingsPageInner({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
-  const searchTrackedRef = useRef(false);
-
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
 
   const handleFiltersChange = useCallback(
     (newFilters: typeof filters) => {

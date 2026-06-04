@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import {
-  isValidListingType,
   validateTypeSpecificFields,
   computeExpiresAt,
   computePriceFields,

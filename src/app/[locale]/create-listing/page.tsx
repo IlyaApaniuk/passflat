@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react';
-import { Link, useRouter } from '@/i18n/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useParams, useSearchParams } from 'next/navigation';
 import { usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
@@ -834,7 +834,7 @@ function CreateListingForm() {
     },
   } as const;
 
-  const FieldError = ({ field }: { field: string }) => {
+  const renderFieldError = (field: string) => {
     const error = validationErrors[field];
     if (!error) return null;
     return <p className="text-xs text-destructive mt-1">{error}</p>;
@@ -1021,7 +1021,7 @@ function CreateListingForm() {
                             readOnly
                             className="bg-muted"
                           />
-                          <FieldError field="street" />
+                          {renderFieldError('street')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="buildingNumber">
@@ -1038,7 +1038,7 @@ function CreateListingForm() {
                               })
                             }
                           />
-                          <FieldError field="buildingNumber" />
+                          {renderFieldError('buildingNumber')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="apartmentNumber">{t('listings.create.aptNo')}</Label>
@@ -1093,7 +1093,7 @@ function CreateListingForm() {
                           value={formData.title}
                           onChange={(e) => updateFormData({ title: e.target.value })}
                         />
-                        <FieldError field="title" />
+                        {renderFieldError('title')}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">
@@ -1125,7 +1125,7 @@ function CreateListingForm() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <FieldError field="bedrooms" />
+                          {renderFieldError('bedrooms')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="bathrooms">{t('listings.create.bathroomsLabel')} *</Label>
@@ -1154,7 +1154,7 @@ function CreateListingForm() {
                             value={formData.area}
                             onChange={(e) => updateFormData({ area: e.target.value })}
                           />
-                          <FieldError field="area" />
+                          {renderFieldError('area')}
                         </div>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-3">
@@ -1167,7 +1167,7 @@ function CreateListingForm() {
                             value={formData.floor}
                             onChange={(e) => updateFormData({ floor: e.target.value })}
                           />
-                          <FieldError field="floor" />
+                          {renderFieldError('floor')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="totalFloors">{t('listings.create.totalFloors')}</Label>
@@ -1213,7 +1213,7 @@ function CreateListingForm() {
                               />
                             </PopoverContent>
                           </Popover>
-                          <FieldError field="availableFrom" />
+                          {renderFieldError('availableFrom')}
                         </div>
                       </div>
 
@@ -1258,7 +1258,7 @@ function CreateListingForm() {
                                 />
                               </PopoverContent>
                             </Popover>
-                            <FieldError field="availableTo" />
+                            {renderFieldError('availableTo')}
                           </div>
                           {subletDays > 0 && (
                             <div className="flex items-end pb-2">
@@ -1361,7 +1361,7 @@ function CreateListingForm() {
                               value={formData.rent}
                               onChange={(e) => updateFormData({ rent: e.target.value })}
                             />
-                            <FieldError field="rent" />
+                            {renderFieldError('rent')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="adminFee">{t('listings.create.adminFeePln')}</Label>
@@ -1439,7 +1439,7 @@ function CreateListingForm() {
                                 })
                               }
                             />
-                            <FieldError field="pricePerPerson" />
+                            {renderFieldError('pricePerPerson')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="totalApartmentRent">
@@ -1626,7 +1626,7 @@ function CreateListingForm() {
                               value={formData.priceTotal}
                               onChange={(e) => updateFormData({ priceTotal: e.target.value })}
                             />
-                            <FieldError field="priceTotal" />
+                            {renderFieldError('priceTotal')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="depositAmountSublet">

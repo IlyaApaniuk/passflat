@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useCallback, useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { use, useCallback, useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { useSearchParams } from 'next/navigation';
@@ -17,6 +17,7 @@ import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -113,9 +114,18 @@ interface CostsOverviewClientProps {
 }
 
 /**
+ * Tri-state access status. `pending` is the initial state before the streamed
+ * auth promise resolves — used to render neutral skeletons instead of
+ * defaulting to the `locked` (Buy/Submit) UI, which would flash for users who
+ * already have access.
+ */
+type AccessStatus = 'pending' | 'locked' | 'unlocked';
+
+/**
  * Unwraps the streamed access promise inside a Suspense boundary and lifts the
  * result into the parent's state, so the (cached) cost table renders
- * immediately in its locked default while auth resolves in the background.
+ * immediately while auth resolves in the background. The access-dependent CTA
+ * region shows a skeleton until this resolves (see AccessStatus).
  */
 function AccessResolver({
   promise,
@@ -129,6 +139,51 @@ function AccessResolver({
     onResolve(resolved);
   }, [resolved, onResolve]);
   return null;
+}
+
+/**
+ * Neutral placeholder for the hero gate while access is pending. Mirrors the
+ * gate's footprint (lead line + two bordered cards) so swapping to the real
+ * locked CTA produces no layout shift.
+ */
+function HeroGateSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <Skeleton className="h-4 w-3/4" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex flex-col rounded-xl border-2 border-border p-4">
+            <Skeleton className="mb-3 h-10 w-10 rounded-lg" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="mt-2 h-4 w-full" />
+            <Skeleton className="mt-2 h-3 w-1/2" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Neutral placeholder for the sidebar access card while access is pending.
+ * Mirrors the unlock card's footprint (icon + title, description, two buttons).
+ */
+function SidebarAccessSkeleton() {
+  return (
+    <Card className="mt-4" aria-hidden="true">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <Skeleton className="mt-2 h-4 w-full" />
+        <div className="mt-3 flex flex-col gap-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function stripDiacritics(str: string) {
@@ -166,13 +221,16 @@ export function CostsOverviewClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Locked by default; upgraded once the streamed auth state resolves.
-  const [access, setAccess] = useState<CostAccess>({
+  // `null` = pending (auth not yet resolved). We deliberately do NOT default to
+  // a locked CostAccess, so the access-dependent CTA region can render a neutral
+  // skeleton instead of flashing Buy/Submit CTAs at users who already have access.
+  const [access, setAccess] = useState<CostAccess | null>(null);
+  const accessResolved = access !== null;
+  const { hasContributedData, costAccessUntil, isFlagged } = access ?? {
     hasContributedData: false,
     costAccessUntil: null,
     isFlagged: false,
-  });
-  const { hasContributedData, costAccessUntil, isFlagged } = access;
+  };
   const handleAccessResolved = useCallback((next: CostAccess) => setAccess(next), []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -187,6 +245,14 @@ export function CostsOverviewClient({
     () => hasContributedData || (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
     [hasContributedData, costAccessUntil],
   );
+  // Tri-state derived from the resolved promise: `pending` until auth resolves,
+  // then `unlocked`/`locked`. Drives skeleton-vs-CTA rendering in the access region.
+  const accessStatus: AccessStatus = !accessResolved
+    ? 'pending'
+    : accessGranted
+      ? 'unlocked'
+      : 'locked';
+  const accessPending = accessStatus === 'pending';
   const paidActive =
     !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) > new Date();
   const paidExpired =
@@ -205,11 +271,15 @@ export function CostsOverviewClient({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fire once, only after auth resolves to a genuinely locked state — not while
+  // pending (which would mis-attribute every already-unlocked user as prompted).
+  const promptedRef = useRef(false);
   useEffect(() => {
-    if (!accessGranted) {
+    if (accessStatus === 'locked' && !promptedRef.current) {
+      promptedRef.current = true;
       posthog?.capture('cost_unlock_prompted', { city: citySlug });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessStatus, posthog, citySlug]);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
   const searchAndTypeFiltered = buildings.filter((building) => {
@@ -332,7 +402,9 @@ export function CostsOverviewClient({
                   )}
                 </div>
 
-                {!accessGranted && (
+                {accessPending && <HeroGateSkeleton />}
+
+                {accessStatus === 'locked' && (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">{t('costs.overview.gateLead')}</p>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -490,7 +562,15 @@ export function CostsOverviewClient({
                           </div>
                           {isExpanded && hasStats && (
                             <div className="border-t bg-muted/30 px-6 py-3">
-                              {accessGranted ? (
+                              {accessPending ? (
+                                <div className="space-y-2" aria-hidden="true">
+                                  <div className="flex min-w-0 gap-2">
+                                    <Skeleton className="h-8 flex-1" />
+                                    <Skeleton className="h-8 flex-1" />
+                                    <Skeleton className="h-8 flex-1" />
+                                  </div>
+                                </div>
+                              ) : accessGranted ? (
                                 <div className="space-y-2">
                                   <div className="flex min-w-0 gap-2 text-center">
                                     <div className="min-w-0 flex-1">
@@ -547,7 +627,9 @@ export function CostsOverviewClient({
                 </CardContent>
               </Card>
 
-              {isFlagged && (
+              {accessPending && <SidebarAccessSkeleton />}
+
+              {!accessPending && isFlagged && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -581,7 +663,7 @@ export function CostsOverviewClient({
                 </motion.div>
               )}
 
-              {paidActive && (
+              {!accessPending && paidActive && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -610,7 +692,7 @@ export function CostsOverviewClient({
                 </motion.div>
               )}
 
-              {!accessGranted && !isFlagged && (
+              {accessStatus === 'locked' && !isFlagged && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -793,7 +875,12 @@ export function CostsOverviewClient({
                                 </div>
 
                                 <div className="flex items-center justify-between gap-6 sm:justify-end">
-                                  {accessGranted ? (
+                                  {accessPending ? (
+                                    <div className="text-left sm:text-right" aria-hidden="true">
+                                      <Skeleton className="h-3 w-24 sm:ml-auto" />
+                                      <Skeleton className="mt-1.5 h-6 w-28 sm:ml-auto" />
+                                    </div>
+                                  ) : accessGranted ? (
                                     <div className="text-left sm:text-right">
                                       <p className="text-xs text-muted-foreground">
                                         {t('costs.overview.medianMonthlyTotal')}
