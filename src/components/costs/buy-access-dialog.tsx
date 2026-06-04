@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
 import { Clock, ShoppingCart, Loader2 } from 'lucide-react';
 
@@ -56,7 +55,7 @@ export function BuyAccessDialog({ citySlug, children }: BuyAccessDialogProps) {
       }
 
       const { url } = await res.json();
-      if (url) window.location.href = url;
+      if (url) window.location.assign(url);
     } catch {
       setLoadingTier(null);
     }

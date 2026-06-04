@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
-import { useParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,6 @@ import { resetPassword } from '../actions';
 export function ResetPasswordForm({ tokenHash }: { tokenHash?: string }) {
   const t = useTranslations('auth');
   const tc = useTranslations('common');
-  const { locale } = useParams<{ locale: string }>();
   const router = useRouter();
 
   const [error, setError] = useState<string | null>(null);

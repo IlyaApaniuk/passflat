@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
@@ -17,9 +16,7 @@ export async function DELETE() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         },
       },
     },
@@ -80,9 +77,7 @@ export async function GET() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         },
       },
     },
@@ -122,9 +117,7 @@ export async function GET() {
     .map((l) => ({
       id: l.id,
       title: l.title,
-      daysRemaining: Math.ceil(
-        (l.promotedUntil!.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-      ),
+      daysRemaining: Math.ceil((l.promotedUntil!.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
     }));
 
   return NextResponse.json({

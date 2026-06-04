@@ -1,18 +1,16 @@
-import { headers } from "next/headers";
-import { createHash } from "crypto";
-import { prisma } from "@/lib/prisma";
+import { headers } from 'next/headers';
+import { createHash } from 'crypto';
+import { prisma } from '@/lib/prisma';
 
-export async function trackView(listingId: string, authorId?: string) {
+export async function trackView(listingId: string, _authorId?: string) {
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? headersList.get("x-real-ip")
-    ?? "unknown";
-  const ua = headersList.get("user-agent") ?? "";
+  const ip =
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    headersList.get('x-real-ip') ??
+    'unknown';
+  const ua = headersList.get('user-agent') ?? '';
 
-  const viewerHash = createHash("sha256")
-    .update(`${ip}:${ua}`)
-    .digest("hex")
-    .slice(0, 32);
+  const viewerHash = createHash('sha256').update(`${ip}:${ua}`).digest('hex').slice(0, 32);
 
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 

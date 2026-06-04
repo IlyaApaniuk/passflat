@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -144,7 +143,6 @@ export function CostSubmitClient({
   existingReport = null,
 }: CostSubmitClientProps) {
   const t = useTranslations();
-  const router = useRouter();
   const placeCityRef = useRef('');
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
