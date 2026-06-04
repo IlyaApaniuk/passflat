@@ -100,7 +100,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/95 px-4 sm:px-6 py-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">

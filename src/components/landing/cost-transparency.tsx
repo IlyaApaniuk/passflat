@@ -109,7 +109,7 @@ export function CostTransparency({
 
           {/* Interactive Card */}
           <motion.div {...reveal({ opacity: 0, x: 20 })} className="relative">
-            <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/80 p-6 backdrop-blur-xl sm:p-8">
+            <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card p-6 sm:p-8">
               <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent/20 blur-[80px]" />
 
               {/* Header */}
