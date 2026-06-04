@@ -1,13 +1,39 @@
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
 import { CostsOverviewClient } from './client';
+import { getAlternates, getOgImage } from '@/lib/seo';
 import { median, perAreaValues } from '@/lib/cost-stats';
 import type { CityBounds } from '@/lib/listings-data';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { city } = await params;
+  const cityRecord = await prisma.city.findUnique({
+    where: { slug: city },
+    select: { nameKey: true },
+  });
+  const t = await getTranslations();
+  const cityName = cityRecord ? t(cityRecord.nameKey) : city;
+  const title = `${t('costs.title')} — ${cityName}`;
+  const description = t('costs.subtitle');
+
+  return {
+    title,
+    description,
+    alternates: getAlternates(`/${city}/costs`),
+    openGraph: {
+      title,
+      description,
+      images: [getOgImage(title, description)],
+    },
+  };
 }
 
 export default async function CostsPage({ params, searchParams }: PageProps) {

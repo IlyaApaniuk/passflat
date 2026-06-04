@@ -84,32 +84,6 @@ export async function GET(request: NextRequest) {
       >
         {subtitle}
       </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '80px',
-          right: '80px',
-          display: 'flex',
-          gap: '12px',
-        }}
-      >
-        {['PL', 'EN', 'RU', 'UA'].map((lang) => (
-          <div
-            key={lang}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              background: 'rgba(148, 163, 184, 0.15)',
-              color: '#94a3b8',
-              fontSize: '18px',
-              fontWeight: 600,
-            }}
-          >
-            {lang}
-          </div>
-        ))}
-      </div>
     </div>,
     {
       width: 1200,

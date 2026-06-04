@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
-import { getAlternates } from '@/lib/seo';
+import { getAlternates, getOgImage } from '@/lib/seo';
 import { computeStats, median, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
@@ -113,10 +113,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const t = await getTranslations();
   const cityName = t(building.city.nameKey);
 
+  const title = `${building.addressFull} — Cost Reports | Passflat`;
+  const description = `Real rental costs for ${building.addressFull}, ${building.district?.nameKey ?? cityName}. Crowdsourced from actual tenants.`;
+
   return {
-    title: `${building.addressFull} — Cost Reports | Passflat`,
-    description: `Real rental costs for ${building.addressFull}, ${building.district?.nameKey ?? cityName}. Crowdsourced from actual tenants.`,
+    title,
+    description,
     alternates: getAlternates(`/${city}/building/${building.slug}`),
+    openGraph: {
+      title,
+      description,
+      images: [getOgImage(building.addressFull, cityName)],
+    },
   };
 }
 

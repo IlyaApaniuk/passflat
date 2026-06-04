@@ -43,10 +43,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry('/terms', 'yearly', 0.3),
   ];
 
+  let cityPages: MetadataRoute.Sitemap = [];
   let listingPages: MetadataRoute.Sitemap = [];
   let buildingPages: MetadataRoute.Sitemap = [];
 
   try {
+    const cities = await prisma.city.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+    });
+
+    cityPages = cities.flatMap((c) => [
+      entry(`/${c.slug}/costs`, 'weekly', 0.8),
+      entry(`/${c.slug}/replacement`, 'weekly', 0.7),
+      entry(`/${c.slug}/sublet`, 'weekly', 0.5),
+      entry(`/${c.slug}/roommate`, 'weekly', 0.5),
+    ]);
+
     const listings = await prisma.listing.findMany({
       where: { status: 'active' },
       select: {
@@ -94,5 +107,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry(`/blog/${slug}`, 'monthly', 0.6),
   );
 
-  return [...staticPages, ...blogPages, ...listingPages, ...buildingPages];
+  return [...staticPages, ...cityPages, ...blogPages, ...listingPages, ...buildingPages];
 }
