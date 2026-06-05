@@ -5,7 +5,15 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
+    // Vercel Image Optimization (WebP/AVIF, resizing, CDN caching). Listing and
+    // cost-report photos are served from Supabase Storage public buckets.
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
   serverExternalPackages: ['@prisma/client', 'prisma'],
   experimental: {

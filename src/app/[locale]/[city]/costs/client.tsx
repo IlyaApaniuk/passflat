@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { use, useCallback, useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { useSearchParams } from 'next/navigation';
@@ -8,15 +8,16 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
-import { Link, useRouter } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
+import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { MapSkeleton } from '@/components/map/map-skeleton';
 import { PRICES_PLN } from '@/lib/pricing';
 import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -43,7 +44,6 @@ import {
   ShoppingCart,
   CalendarClock,
   RefreshCw,
-  Clock,
   Ruler,
 } from 'lucide-react';
 
@@ -94,17 +94,87 @@ interface CityBounds {
   west: number;
 }
 
+export interface CostAccess {
+  hasContributedData: boolean;
+  costAccessUntil: string | null;
+  isFlagged: boolean;
+}
+
 interface CostsOverviewClientProps {
   buildings: BuildingData[];
   districts: DistrictData[];
   districtStats: DistrictStatsData[];
-  hasContributedData: boolean;
-  costAccessUntil: string | null;
-  isFlagged?: boolean;
+  /** Pre-resolved access for anonymous users (no session cookie). */
+  initialAccess: CostAccess | null;
+  /** Streamed auth promise for logged-in users; omitted for anons. */
+  accessPromise?: Promise<CostAccess>;
   citySlug: string;
   cityBounds?: CityBounds;
   initialSearch: string;
   initialDistrict: string | null;
+}
+
+/**
+ * Tri-state access status. `pending` is the initial state before the streamed
+ * auth promise resolves — used to render neutral skeletons instead of
+ * defaulting to the `locked` (Buy/Submit) UI, which would flash for users who
+ * already have access.
+ */
+type AccessStatus = 'pending' | 'locked' | 'unlocked';
+
+/**
+ * Unwraps the streamed access promise inside a Suspense boundary and lifts the
+ * result into the parent's state, so the (cached) cost table renders
+ * immediately while auth resolves in the background. The access-dependent CTA
+ * region shows a skeleton until this resolves (see AccessStatus).
+ */
+function AccessResolver({
+  promise,
+  onResolve,
+}: {
+  promise: Promise<CostAccess>;
+  onResolve: (access: CostAccess) => void;
+}) {
+  const resolved = use(promise);
+  useEffect(() => {
+    onResolve(resolved);
+  }, [resolved, onResolve]);
+  return null;
+}
+
+/**
+ * Compact single-line skeleton for the hero gate slot. Only shown to
+ * logged-in users while auth resolves (anons skip it entirely).
+ */
+function HeroGateSkeleton() {
+  return (
+    <div className="flex items-center justify-center gap-3" aria-hidden="true">
+      <Skeleton className="h-9 w-40 rounded-full" />
+      <Skeleton className="h-4 w-28" />
+    </div>
+  );
+}
+
+/**
+ * Neutral placeholder for the sidebar access card while access is pending.
+ * Mirrors the unlock card's footprint (icon + title, description, two buttons).
+ */
+function SidebarAccessSkeleton() {
+  return (
+    <Card className="mt-4" aria-hidden="true">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <Skeleton className="mt-2 h-4 w-full" />
+        <div className="mt-3 flex flex-col gap-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function stripDiacritics(str: string) {
@@ -130,9 +200,8 @@ export function CostsOverviewClient({
   buildings,
   districts,
   districtStats,
-  hasContributedData,
-  costAccessUntil,
-  isFlagged = false,
+  initialAccess,
+  accessPromise,
   citySlug,
   cityBounds,
   initialSearch,
@@ -141,8 +210,19 @@ export function CostsOverviewClient({
   const t = useTranslations();
   const locale = useLocale();
   const posthog = usePostHog();
-  const router = useRouter();
   const searchParams = useSearchParams();
+
+  // `null` = pending (auth not yet resolved, logged-in users only). For
+  // anonymous visitors the server passes a pre-resolved `initialAccess` so the
+  // locked gate renders immediately with no skeleton flash.
+  const [access, setAccess] = useState<CostAccess | null>(initialAccess);
+  const accessResolved = access !== null;
+  const { hasContributedData, costAccessUntil, isFlagged } = access ?? {
+    hasContributedData: false,
+    costAccessUntil: null,
+    isFlagged: false,
+  };
+  const handleAccessResolved = useCallback((next: CostAccess) => setAccess(next), []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [rentalTypeFilter, setRentalTypeFilter] = useState<'all' | 'apartment' | 'room'>('all');
@@ -156,6 +236,14 @@ export function CostsOverviewClient({
     () => hasContributedData || (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
     [hasContributedData, costAccessUntil],
   );
+  // Tri-state derived from the resolved promise: `pending` until auth resolves,
+  // then `unlocked`/`locked`. Drives skeleton-vs-CTA rendering in the access region.
+  const accessStatus: AccessStatus = !accessResolved
+    ? 'pending'
+    : accessGranted
+      ? 'unlocked'
+      : 'locked';
+  const accessPending = accessStatus === 'pending';
   const paidActive =
     !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) > new Date();
   const paidExpired =
@@ -174,52 +262,68 @@ export function CostsOverviewClient({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fire once, only after auth resolves to a genuinely locked state — not while
+  // pending (which would mis-attribute every already-unlocked user as prompted).
+  const promptedRef = useRef(false);
   useEffect(() => {
-    if (!accessGranted) {
+    if (accessStatus === 'locked' && !promptedRef.current) {
+      promptedRef.current = true;
       posthog?.capture('cost_unlock_prompted', { city: citySlug });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessStatus, posthog, citySlug]);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
-  const searchAndTypeFiltered = buildings.filter((building) => {
-    const q = stripDiacritics(searchQuery.toLowerCase());
-    const matchesSearch =
-      q === '' ||
-      stripDiacritics(building.address.toLowerCase()).includes(q) ||
-      stripDiacritics(building.district.toLowerCase()).includes(q);
-    const matchesRentalType =
-      rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
-    return matchesSearch && matchesRentalType;
-  });
-
-  const filteredBuildings = searchAndTypeFiltered.filter(
-    (building) => selectedDistrict === null || building.districtSlug === selectedDistrict,
+  const searchAndTypeFiltered = useMemo(
+    () =>
+      buildings.filter((building) => {
+        const q = stripDiacritics(searchQuery.toLowerCase());
+        const matchesSearch =
+          q === '' ||
+          stripDiacritics(building.address.toLowerCase()).includes(q) ||
+          stripDiacritics(building.district.toLowerCase()).includes(q);
+        const matchesRentalType =
+          rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
+        return matchesSearch && matchesRentalType;
+      }),
+    [buildings, searchQuery, rentalTypeFilter],
   );
 
-  const computedDistrictStats = districtStats.map((ds) => {
-    if (rentalTypeFilter === 'all') return ds;
-    const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
-    if (dBuildings.length === 0)
-      return {
-        ...ds,
-        buildingCount: 0,
-        reportCount: 0,
-        medianTotal: 0,
-        medianRent: 0,
-        medianAdminFee: 0,
-        medianRentPerM2: 0,
-      };
-    const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
-    return {
-      ...ds,
-      buildingCount: dBuildings.length,
-      reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
-      medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
-      medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
-      medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
-      medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
-    };
-  });
+  const filteredBuildings = useMemo(
+    () =>
+      searchAndTypeFiltered.filter(
+        (building) => selectedDistrict === null || building.districtSlug === selectedDistrict,
+      ),
+    [searchAndTypeFiltered, selectedDistrict],
+  );
+
+  const computedDistrictStats = useMemo(
+    () =>
+      districtStats.map((ds) => {
+        if (rentalTypeFilter === 'all') return ds;
+        const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
+        if (dBuildings.length === 0)
+          return {
+            ...ds,
+            buildingCount: 0,
+            reportCount: 0,
+            medianTotal: 0,
+            medianRent: 0,
+            medianAdminFee: 0,
+            medianRentPerM2: 0,
+          };
+        const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
+        return {
+          ...ds,
+          buildingCount: dBuildings.length,
+          reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
+          medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
+          medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
+          medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
+          medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
+        };
+      }),
+    [districtStats, rentalTypeFilter, searchAndTypeFiltered],
+  );
 
   // District list ordering. "default" preserves the server ordering; the other
   // options sort by a district stat. Cost metrics sort ascending (cheapest
@@ -240,6 +344,9 @@ export function CostsOverviewClient({
   }, [districts, districtSort, computedDistrictStats]);
 
   useEffect(() => {
+    // Reset pagination back to the first page whenever the active filters change
+    // (external-sync of derived UI state); a cascading render here is intended.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(PAGE_SIZE);
   }, [searchQuery, selectedDistrict, rentalTypeFilter]);
 
@@ -254,8 +361,11 @@ export function CostsOverviewClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
+      {accessPromise && (
+        <Suspense fallback={null}>
+          <AccessResolver promise={accessPromise} onResolve={handleAccessResolved} />
+        </Suspense>
+      )}
       <main className="flex-1 pt-24">
         <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
           <div className="absolute inset-0 grid-pattern opacity-30" />
@@ -280,68 +390,58 @@ export function CostsOverviewClient({
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="mt-8 space-y-4"
               >
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder={t('costs.overview.searchPlaceholder')}
-                      className="pl-10"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  {hasContributedData && (
-                    <Button variant="outline" asChild>
-                      <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
-                        <List className="mr-2 h-4 w-4" />
-                        {t('costs.overview.myReports')}
-                      </Link>
-                    </Button>
-                  )}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t('costs.overview.searchPlaceholder')}
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
 
-                {!accessGranted && (
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{t('costs.overview.gateLead')}</p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Link
-                        href={`/${citySlug}/costs/submit`}
-                        className="group relative flex flex-col rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
-                      >
-                        <span className="absolute -top-2.5 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                          {t('costs.overview.gateRecommended')}
-                        </span>
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <Pencil className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="font-semibold">{t('costs.overview.gateFreeTitle')}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t('costs.overview.gateFreeBenefit')}
-                        </p>
-                        <p className="mt-auto pt-2 text-xs text-muted-foreground">
-                          {t('costs.overview.gateFreeNote')}
-                        </p>
-                      </Link>
+                {/* Compact fixed-height gate slot */}
+                <div className="flex min-h-[2.75rem] items-center justify-center">
+                  {accessPending && <HeroGateSkeleton />}
 
+                  {accessStatus === 'locked' && (
+                    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+                      <Button size="sm" className="rounded-full" asChild>
+                        <Link href={`/${citySlug}/costs/submit`}>
+                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                          {t('costs.overview.submitMyCosts')}
+                        </Link>
+                      </Button>
                       <BuyAccessDialog citySlug={citySlug}>
-                        <button className="group flex flex-col rounded-xl border-2 border-border p-4 text-left transition-colors hover:border-primary/30 hover:bg-muted/50">
-                          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <p className="font-semibold">{t('costs.overview.gatePaidTitle')}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {t('costs.overview.gatePaidBenefit', {
-                              price: PRICES_PLN.COST_ACCESS_7,
-                            })}
-                          </p>
-                          <p className="mt-auto pt-2 text-xs text-muted-foreground">
-                            {t('costs.overview.gatePaidNote')}
-                          </p>
-                        </button>
+                        <Button size="sm" variant="outline" className="rounded-full">
+                          <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                          {t('costs.overview.buyAccessBtn')}
+                        </Button>
                       </BuyAccessDialog>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {accessStatus === 'unlocked' && hasContributedData && (
+                    <Link
+                      href={{ pathname: '/dashboard', query: { tab: 'costs' } }}
+                      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      {t('costs.overview.myReports')}
+                    </Link>
+                  )}
+
+                  {accessStatus === 'unlocked' && paidActive && (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {t('costs.access.activeUntil', {
+                        date: format(new Date(costAccessUntil!), 'PP', {
+                          locale: dateFmtLocale,
+                        }),
+                      })}
+                    </span>
+                  )}
+                </div>
               </motion.div>
             </motion.div>
           </div>
@@ -358,14 +458,16 @@ export function CostsOverviewClient({
               <Card>
                 <CardHeader className="gap-3">
                   <CardTitle className="text-lg">{t('costs.overview.districts')}</CardTitle>
+                  <label className="text-sm text-muted-foreground">
+                    {t('costs.overview.sortLabel')}
+                  </label>
                   <Select
                     value={districtSort}
                     onValueChange={(v) =>
                       setDistrictSort(v as 'default' | 'total' | 'perM2' | 'reports')
                     }
                   >
-                    <SelectTrigger size="sm" className="w-full">
-                      <span className="text-muted-foreground">{t('costs.overview.sortLabel')}</span>
+                    <SelectTrigger size="sm" className="w-full min-w-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -456,7 +558,15 @@ export function CostsOverviewClient({
                           </div>
                           {isExpanded && hasStats && (
                             <div className="border-t bg-muted/30 px-6 py-3">
-                              {accessGranted ? (
+                              {accessPending ? (
+                                <div className="space-y-2" aria-hidden="true">
+                                  <div className="flex min-w-0 gap-2">
+                                    <Skeleton className="h-8 flex-1" />
+                                    <Skeleton className="h-8 flex-1" />
+                                    <Skeleton className="h-8 flex-1" />
+                                  </div>
+                                </div>
+                              ) : accessGranted ? (
                                 <div className="space-y-2">
                                   <div className="flex min-w-0 gap-2 text-center">
                                     <div className="min-w-0 flex-1">
@@ -513,7 +623,9 @@ export function CostsOverviewClient({
                 </CardContent>
               </Card>
 
-              {isFlagged && (
+              {accessPending && <SidebarAccessSkeleton />}
+
+              {!accessPending && isFlagged && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -547,7 +659,7 @@ export function CostsOverviewClient({
                 </motion.div>
               )}
 
-              {paidActive && (
+              {!accessPending && paidActive && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -576,7 +688,7 @@ export function CostsOverviewClient({
                 </motion.div>
               )}
 
-              {!accessGranted && !isFlagged && (
+              {accessStatus === 'locked' && !isFlagged && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -683,10 +795,8 @@ export function CostsOverviewClient({
               {viewMode === 'map' && (
                 <Suspense
                   fallback={
-                    <div className="flex h-[500px] items-center justify-center rounded-lg border bg-muted/30">
-                      <p className="text-sm text-muted-foreground">
-                        {t('costs.overview.loadingMap')}
-                      </p>
+                    <div className="h-[500px] md:h-[600px]">
+                      <MapSkeleton />
                     </div>
                   }
                 >
@@ -760,9 +870,14 @@ export function CostsOverviewClient({
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-6">
-                                  {accessGranted ? (
-                                    <div className="text-right">
+                                <div className="flex items-center justify-between gap-6 sm:justify-end">
+                                  {accessPending ? (
+                                    <div className="text-left sm:text-right" aria-hidden="true">
+                                      <Skeleton className="h-3 w-24 sm:ml-auto" />
+                                      <Skeleton className="mt-1.5 h-6 w-28 sm:ml-auto" />
+                                    </div>
+                                  ) : accessGranted ? (
+                                    <div className="text-left sm:text-right">
                                       <p className="text-xs text-muted-foreground">
                                         {t('costs.overview.medianMonthlyTotal')}
                                       </p>

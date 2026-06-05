@@ -165,6 +165,7 @@
       "subtitle": "Crowdsourced cost data from real tenants. See what people actually pay for utilities, admin fees, and hidden costs.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
+      "addMoreCosts": "Add new costs",
       "gasHeating": "Gas/Heating",
       "internet": "Internet",
       "avg": "avg",
@@ -400,6 +401,29 @@
       "buildingInfo": "Building Information",
       "buildingCostHint": "Want to see real utility costs for this building reported by tenants?",
       "viewBuildingCosts": "View Building Cost Reports",
+      "locationScore": {
+        "title": "Location score",
+        "subtitle": "Convenience of the surroundings",
+        "level": {
+          "excellent": "Excellent location",
+          "good": "Good location",
+          "fair": "Decent location",
+          "poor": "Limited amenities nearby"
+        },
+        "categories": {
+          "supermarket": "Supermarkets",
+          "transitRail": "Metro & rail",
+          "pharmacy": "Pharmacies",
+          "transitBasic": "Bus & tram stops",
+          "convenience": "Convenience stores",
+          "dining": "Cafes & restaurants",
+          "education": "Schools & kindergartens",
+          "parks": "Parks & greenery",
+          "center": "City center"
+        },
+        "none": "Nothing nearby",
+        "poweredBy": "Based on OpenStreetMap data"
+      },
       "monthlyCosts": "Monthly Costs",
       "imInterested": "Write to Tenant",
       "contactHint": "Send a message to the current tenant to schedule a viewing or ask questions",
@@ -657,6 +681,7 @@
       "gatePaidTitle": "Buy access",
       "gatePaidBenefit": "Instant \u00b7 from {price} PLN",
       "gatePaidNote": "7\u201390 days",
+      "gateOrBuyAccess": "or buy access",
       "avgMonthlyTotal": "Avg Monthly Total",
       "medianMonthlyTotal": "Median Monthly Total",
       "perM2": "zł/m²",

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Suspense, useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useParams, useSearchParams } from 'next/navigation';
 import { usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
@@ -26,7 +26,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Header } from '@/components/landing/header';
+import { CreateListingFormSkeleton } from './form-skeleton';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -239,7 +239,7 @@ const stepTransition = {
   transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
 };
 
-export default function CreateListingPage() {
+function CreateListingForm() {
   const t = useTranslations();
   const locale = useLocale();
   const params = useParams();
@@ -834,7 +834,7 @@ export default function CreateListingPage() {
     },
   } as const;
 
-  const FieldError = ({ field }: { field: string }) => {
+  const renderFieldError = (field: string) => {
     const error = validationErrors[field];
     if (!error) return null;
     return <p className="text-xs text-destructive mt-1">{error}</p>;
@@ -843,7 +843,6 @@ export default function CreateListingPage() {
   if (isLoadingEdit) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Header />
         <main className="flex-1 bg-muted/30 pt-24">
           <div className="container mx-auto flex items-center justify-center px-4 py-32">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -855,8 +854,6 @@ export default function CreateListingPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
@@ -1024,7 +1021,7 @@ export default function CreateListingPage() {
                             readOnly
                             className="bg-muted"
                           />
-                          <FieldError field="street" />
+                          {renderFieldError('street')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="buildingNumber">
@@ -1041,7 +1038,7 @@ export default function CreateListingPage() {
                               })
                             }
                           />
-                          <FieldError field="buildingNumber" />
+                          {renderFieldError('buildingNumber')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="apartmentNumber">{t('listings.create.aptNo')}</Label>
@@ -1096,7 +1093,7 @@ export default function CreateListingPage() {
                           value={formData.title}
                           onChange={(e) => updateFormData({ title: e.target.value })}
                         />
-                        <FieldError field="title" />
+                        {renderFieldError('title')}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">
@@ -1128,7 +1125,7 @@ export default function CreateListingPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <FieldError field="bedrooms" />
+                          {renderFieldError('bedrooms')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="bathrooms">{t('listings.create.bathroomsLabel')} *</Label>
@@ -1157,7 +1154,7 @@ export default function CreateListingPage() {
                             value={formData.area}
                             onChange={(e) => updateFormData({ area: e.target.value })}
                           />
-                          <FieldError field="area" />
+                          {renderFieldError('area')}
                         </div>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-3">
@@ -1170,7 +1167,7 @@ export default function CreateListingPage() {
                             value={formData.floor}
                             onChange={(e) => updateFormData({ floor: e.target.value })}
                           />
-                          <FieldError field="floor" />
+                          {renderFieldError('floor')}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="totalFloors">{t('listings.create.totalFloors')}</Label>
@@ -1216,7 +1213,7 @@ export default function CreateListingPage() {
                               />
                             </PopoverContent>
                           </Popover>
-                          <FieldError field="availableFrom" />
+                          {renderFieldError('availableFrom')}
                         </div>
                       </div>
 
@@ -1261,7 +1258,7 @@ export default function CreateListingPage() {
                                 />
                               </PopoverContent>
                             </Popover>
-                            <FieldError field="availableTo" />
+                            {renderFieldError('availableTo')}
                           </div>
                           {subletDays > 0 && (
                             <div className="flex items-end pb-2">
@@ -1364,7 +1361,7 @@ export default function CreateListingPage() {
                               value={formData.rent}
                               onChange={(e) => updateFormData({ rent: e.target.value })}
                             />
-                            <FieldError field="rent" />
+                            {renderFieldError('rent')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="adminFee">{t('listings.create.adminFeePln')}</Label>
@@ -1442,7 +1439,7 @@ export default function CreateListingPage() {
                                 })
                               }
                             />
-                            <FieldError field="pricePerPerson" />
+                            {renderFieldError('pricePerPerson')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="totalApartmentRent">
@@ -1629,7 +1626,7 @@ export default function CreateListingPage() {
                               value={formData.priceTotal}
                               onChange={(e) => updateFormData({ priceTotal: e.target.value })}
                             />
-                            <FieldError field="priceTotal" />
+                            {renderFieldError('priceTotal')}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="depositAmountSublet">
@@ -2178,5 +2175,19 @@ export default function CreateListingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * `useSearchParams()` (used inside `CreateListingForm` to read `?edit=`) requires a
+ * Suspense boundary so the route can be statically prerendered without bailing the
+ * whole page into client-side rendering. The fallback mirrors the form's loading
+ * shell to keep CLS at 0.
+ */
+export default function CreateListingPage() {
+  return (
+    <Suspense fallback={<CreateListingFormSkeleton />}>
+      <CreateListingForm />
+    </Suspense>
   );
 }

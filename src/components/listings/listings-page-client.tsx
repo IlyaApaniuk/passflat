@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Header } from '@/components/landing/header';
 import {
   ListingFiltersDesktop,
   ListingFiltersMobile,
   ActiveFilters,
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
+import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
+import { MapSkeleton } from '@/components/map/map-skeleton';
 
 // Mapbox GL + react-map-gl is a large, WebGL-only dependency. Code-split it so
 // it loads as its own chunk after hydration instead of bloating the listings
@@ -20,7 +21,7 @@ const ListingsMap = dynamic(
   () => import('@/components/listings/listings-map').then((m) => m.ListingsMap),
   {
     ssr: false,
-    loading: () => <div className="h-full w-full bg-muted/30" />,
+    loading: () => <MapSkeleton className="rounded-none border-0" />,
   },
 );
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ interface Props {
 
 export function ListingsPageClient(props: Props) {
   return (
-    <Suspense>
+    <Suspense fallback={<ListingsPageSkeleton />}>
       <ListingsPageInner {...props} />
     </Suspense>
   );
@@ -70,10 +71,6 @@ function ListingsPageInner({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
-  const searchTrackedRef = useRef(false);
-
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
 
   const handleFiltersChange = useCallback(
     (newFilters: typeof filters) => {
@@ -184,8 +181,6 @@ function ListingsPageInner({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden pt-24">
-      <Header />
-
       <div className="flex min-h-0 flex-1">
         <ListingFiltersDesktop
           filters={filters}
@@ -234,7 +229,7 @@ function ListingsPageInner({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="lg:hidden"
+                  className="xl:hidden"
                   onClick={() => setShowMap(!showMap)}
                 >
                   {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
@@ -260,7 +255,7 @@ function ListingsPageInner({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className={`flex-1 overflow-y-auto p-4 ${
-                  showMap ? 'hidden lg:block lg:max-w-xl' : ''
+                  showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
                 <ListingGrid
@@ -274,7 +269,7 @@ function ListingsPageInner({
               </motion.div>
             </AnimatePresence>
 
-            <div className={`relative flex-1 border-l ${showMap ? '' : 'hidden lg:block'}`}>
+            <div className={`relative flex-1 border-l ${showMap ? '' : 'hidden xl:block'}`}>
               <div className="absolute inset-0">
                 <ListingsMap
                   listings={sortedListings}

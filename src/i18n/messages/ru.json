@@ -169,6 +169,7 @@
       "exploreCosts": "Изучить данные о расходах",
       "viewReports": "Изучить данные",
       "submitCosts": "Добавить свои данные",
+      "addMoreCosts": "Добавить новые расходы",
       "gasHeating": "Газ/Отопление",
       "internet": "Интернет",
       "avg": "ср.",
@@ -400,6 +401,29 @@
       "buildingInfo": "Информация о здании",
       "buildingCostHint": "Хотите увидеть реальные коммунальные расходы в этом здании от арендаторов?",
       "viewBuildingCosts": "Смотреть отчёты о расходах здания",
+      "locationScore": {
+        "title": "Оценка локации",
+        "subtitle": "Насколько удобное окружение",
+        "level": {
+          "excellent": "Отличная локация",
+          "good": "Хорошая локация",
+          "fair": "Неплохая локация",
+          "poor": "Мало инфраструктуры рядом"
+        },
+        "categories": {
+          "supermarket": "Супермаркеты",
+          "transitRail": "Метро и ж/д",
+          "pharmacy": "Аптеки",
+          "transitBasic": "Автобусы и трамваи",
+          "convenience": "Продуктовые магазины",
+          "dining": "Кафе и рестораны",
+          "education": "Школы и садики",
+          "parks": "Парки и зелень",
+          "center": "Центр города"
+        },
+        "none": "Рядом ничего нет",
+        "poweredBy": "По данным OpenStreetMap"
+      },
       "monthlyCosts": "Ежемесячные расходы",
       "imInterested": "Написать арендатору",
       "contactHint": "Напишите текущему арендатору, чтобы записаться на просмотр или задать вопросы",
@@ -657,6 +681,7 @@
       "gatePaidTitle": "Купите доступ",
       "gatePaidBenefit": "Мгновенно \u00b7 от {price} PLN",
       "gatePaidNote": "7\u201390 дней",
+      "gateOrBuyAccess": "или купить доступ",
       "avgMonthlyTotal": "Ср. ежемесячная сумма",
       "medianMonthlyTotal": "Медианная сумма в месяц",
       "perM2": "zł/m²",

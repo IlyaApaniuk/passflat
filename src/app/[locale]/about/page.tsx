@@ -1,12 +1,29 @@
-import { getTranslations } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
+import { unstable_cache } from 'next/cache';
 import { Footer } from '@/components/landing/footer';
 import { AboutClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
-import { createClient } from '@/lib/supabase/server';
+import { pickMessages } from '@/i18n/messages';
 import { prisma } from '@/lib/prisma';
 import { JsonLd, organizationJsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
+
+type PageProps = { params: Promise<{ locale: string }> };
+
+// Display-only counts, cached so this page renders statically (no per-request
+// DB hit). The `hasContributed` personalization is resolved on the client.
+const getAboutStats = unstable_cache(
+  async () => {
+    const [listings, costReports] = await Promise.all([
+      prisma.listing.count({ where: { status: 'active' } }),
+      prisma.costReport.count(),
+    ]);
+    return { listings, costReports };
+  },
+  ['about-stats'],
+  { revalidate: 300 },
+);
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('about');
   const m = await getTranslations('meta');
@@ -22,43 +39,28 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function AboutPage() {
-  let hasContributed = false;
+export default async function AboutPage({ params }: PageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   let stats: { listings: number; costReports: number } | undefined;
 
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      const report = await prisma.costReport.findFirst({
-        where: { authorId: user.id, isVisible: true },
-        select: { id: true },
-      });
-      if (report) hasContributed = true;
-    }
-  } catch {
-    // Auth/DB unavailable
-  }
-
-  try {
-    const [listings, costReports] = await Promise.all([
-      prisma.listing.count({ where: { status: 'active' } }),
-      prisma.costReport.count(),
-    ]);
-    stats = { listings, costReports };
+    stats = await getAboutStats();
   } catch {
     // DB unavailable — use defaults
   }
+
+  const messages = await getMessages();
 
   return (
     <div className="flex min-h-screen flex-col">
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={breadcrumbJsonLd([{ name: 'About', path: '/about' }])} />
-      <Header />
       <main className="flex-1 pt-24">
-        <AboutClient hasContributed={hasContributed} stats={stats} />
+        <NextIntlClientProvider messages={pickMessages(messages, ['about', 'common'])}>
+          <AboutClient stats={stats} />
+        </NextIntlClientProvider>
       </main>
       <Footer />
     </div>

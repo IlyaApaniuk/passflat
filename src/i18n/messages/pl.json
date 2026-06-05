@@ -169,6 +169,7 @@
       "exploreCosts": "Przeglądaj dane o kosztach",
       "viewReports": "Przeglądaj dane o kosztach",
       "submitCosts": "Dodaj swoje dane",
+      "addMoreCosts": "Dodaj nowe koszty",
       "gasHeating": "Gaz/Ogrzewanie",
       "internet": "Internet",
       "avg": "śr.",
@@ -400,6 +401,29 @@
       "buildingInfo": "Informacje o budynku",
       "buildingCostHint": "Chcesz zobaczyć realne koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
+      "locationScore": {
+        "title": "Ocena lokalizacji",
+        "subtitle": "Jak wygodne jest otoczenie",
+        "level": {
+          "excellent": "Doskonała lokalizacja",
+          "good": "Dobra lokalizacja",
+          "fair": "Przyzwoita lokalizacja",
+          "poor": "Mało udogodnień w pobliżu"
+        },
+        "categories": {
+          "supermarket": "Supermarkety",
+          "transitRail": "Metro i kolej",
+          "pharmacy": "Apteki",
+          "transitBasic": "Autobusy i tramwaje",
+          "convenience": "Sklepy osiedlowe",
+          "dining": "Kawiarnie i restauracje",
+          "education": "Szkoły i przedszkola",
+          "parks": "Parki i zieleń",
+          "center": "Centrum miasta"
+        },
+        "none": "Nic w pobliżu",
+        "poweredBy": "Na podstawie danych OpenStreetMap"
+      },
       "monthlyCosts": "Koszty miesięczne",
       "imInterested": "Napisz do najemcy",
       "contactHint": "Wyślij wiadomość do obecnego najemcy, aby umówić się na oględziny lub zadać pytania",
@@ -657,6 +681,7 @@
       "gatePaidTitle": "Kup dostęp",
       "gatePaidBenefit": "Od razu \u00b7 od {price} PLN",
       "gatePaidNote": "7\u201390 dni",
+      "gateOrBuyAccess": "lub kup dostęp",
       "avgMonthlyTotal": "Śr. miesięczna suma",
       "medianMonthlyTotal": "Mediana sumy miesięcznej",
       "perM2": "zł/m²",

@@ -169,6 +169,7 @@
       "exploreCosts": "Переглянути дані про витрати",
       "viewReports": "Переглянути дані",
       "submitCosts": "Додати свої дані",
+      "addMoreCosts": "Додати нові витрати",
       "gasHeating": "Газ/Опалення",
       "internet": "Інтернет",
       "avg": "сер.",
@@ -400,6 +401,29 @@
       "buildingInfo": "Інформація про будинок",
       "buildingCostHint": "Хочете побачити реальні комунальні витрати у цьому будинку від орендарів?",
       "viewBuildingCosts": "Переглянути звіти про витрати будинку",
+      "locationScore": {
+        "title": "Оцінка локації",
+        "subtitle": "Наскільки зручне оточення",
+        "level": {
+          "excellent": "Відмінна локація",
+          "good": "Хороша локація",
+          "fair": "Непогана локація",
+          "poor": "Мало інфраструктури поруч"
+        },
+        "categories": {
+          "supermarket": "Супермаркети",
+          "transitRail": "Метро та залізниця",
+          "pharmacy": "Аптеки",
+          "transitBasic": "Автобуси та трамваї",
+          "convenience": "Продуктові магазини",
+          "dining": "Кафе та ресторани",
+          "education": "Школи та садочки",
+          "parks": "Парки та зелень",
+          "center": "Центр міста"
+        },
+        "none": "Поруч нічого немає",
+        "poweredBy": "За даними OpenStreetMap"
+      },
       "monthlyCosts": "Щомісячні витрати",
       "imInterested": "Написати орендарю",
       "contactHint": "Напишіть поточному орендарю, щоб записатися на огляд або задати питання",
@@ -657,6 +681,7 @@
       "gatePaidTitle": "Купіть доступ",
       "gatePaidBenefit": "Миттєво \u00b7 від {price} PLN",
       "gatePaidNote": "7\u201390 днів",
+      "gateOrBuyAccess": "або купити доступ",
       "avgMonthlyTotal": "Сер. щомісячна сума",
       "medianMonthlyTotal": "Медіанна сума на місяць",
       "perM2": "zł/m²",

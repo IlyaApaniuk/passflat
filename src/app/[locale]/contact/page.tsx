@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { ContactClient } from './client';
+import { ContactSkeleton } from './contact-skeleton';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,9 +25,8 @@ export default function ContactPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <JsonLd data={breadcrumbJsonLd([{ name: 'Contact', path: '/contact' }])} />
-      <Header />
       <main className="flex-1 pt-24">
-        <Suspense>
+        <Suspense fallback={<ContactSkeleton />}>
           <ContactClient />
         </Suspense>
       </main>

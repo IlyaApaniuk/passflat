@@ -1,10 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
-import { motion } from 'framer-motion';
-import { useReveal } from '@/hooks/use-reveal';
+import { Reveal } from '@/components/ui/reveal';
 import {
   ArrowUpRight,
   MapPin,
@@ -60,7 +60,6 @@ interface FeaturedListingsProps {
 
 export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedListingsProps) {
   const t = useTranslations();
-  const reveal = useReveal();
   const promotedListingsEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED);
 
   if (!promotedListingsEnabled) return null;
@@ -71,7 +70,7 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
   return (
     <section className="relative py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6">
-        <motion.div {...reveal({ opacity: 0, y: 20 })} className="mb-12">
+        <Reveal className="mb-12">
           <h2 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             {t('landing.featured.title')}
           </h2>
@@ -99,24 +98,18 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
               ))}
             </div>
           </div>
-        </motion.div>
+        </Reveal>
 
         {hasRealListings ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {listings.map((listing, index) => (
-              <motion.div
-                key={listing.id}
-                {...reveal({ opacity: 0, y: 20 }, { delay: index * 0.1 })}
-              >
+              <Reveal key={listing.id} delay={index * 0.1}>
                 <FeaturedCard listing={listing} citySlug={citySlug} t={t} />
-              </motion.div>
+              </Reveal>
             ))}
           </div>
         ) : (
-          <motion.div
-            {...reveal({ opacity: 0, y: 20 })}
-            className="mx-auto max-w-md rounded-2xl border border-dashed border-border/80 bg-card/30 p-10 text-center"
-          >
+          <Reveal className="mx-auto max-w-md rounded-2xl border border-dashed border-border/80 bg-card/30 p-10 text-center">
             <p className="mb-1 text-lg font-medium">{t('landing.featured.comingSoonTitle')}</p>
             <p className="mb-5 text-sm text-muted-foreground">
               {t('landing.featured.comingSoonDesc')}
@@ -128,7 +121,7 @@ export function FeaturedListings({ listings, citySlug = 'warsaw' }: FeaturedList
               <Plus className="h-4 w-4" />
               {t('landing.featured.postCta')}
             </Link>
-          </motion.div>
+          </Reveal>
         )}
       </div>
     </section>
@@ -209,10 +202,12 @@ function FeaturedCard({
     <Link href={`/${citySlug}/${route}/${listing.id}`} className="group block">
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card transition-all duration-300 hover:border-accent/30 hover:shadow-xl hover:shadow-accent/5">
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img
+          <Image
             src={listing.image}
             alt={listing.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
 

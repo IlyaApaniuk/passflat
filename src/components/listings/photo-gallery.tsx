@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
@@ -59,10 +60,13 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
             }}
             className="group relative aspect-[2/1] cursor-pointer overflow-hidden rounded-xl"
           >
-            <img
+            <Image
               src={images[0]}
               alt={`${title} - Photo 1`}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 66vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-background/90 px-3 py-1.5 text-sm font-medium opacity-0 shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2">
@@ -80,10 +84,13 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
               }}
               className="group relative col-span-2 row-span-2 cursor-pointer overflow-hidden rounded-l-xl"
             >
-              <img
+              <Image
                 src={images[0]}
                 alt={`${title} - Photo 1`}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                fill
+                priority
+                sizes="(max-width: 1024px) 50vw, 33vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             </motion.button>
@@ -100,12 +107,12 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                   index === 1 ? 'rounded-tr-xl' : index === 3 ? 'rounded-br-xl' : ''
                 }`}
               >
-                <img
+                <Image
                   src={image}
                   alt={`${title} - Photo ${index + 2}`}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  fill
+                  sizes="(max-width: 1024px) 25vw, 16vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
 

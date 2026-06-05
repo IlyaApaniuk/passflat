@@ -7,9 +7,9 @@ import { motion } from 'framer-motion';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { LocationScore } from '@/components/listings/location-score';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -107,6 +107,15 @@ interface BuildingCostsClientProps {
   hasContributedData: boolean;
   costAccessUntil: string | null;
   citySlug: string;
+  initialLocationScore: {
+    overall: number;
+    categories: Array<{
+      key: string;
+      score: number;
+      nearestM: number | null;
+      name: string | null;
+    }>;
+  } | null;
 }
 
 export function BuildingCostsClient({
@@ -120,6 +129,7 @@ export function BuildingCostsClient({
   hasContributedData,
   costAccessUntil,
   citySlug,
+  initialLocationScore,
 }: BuildingCostsClientProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -283,8 +293,6 @@ export function BuildingCostsClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
@@ -313,7 +321,7 @@ export function BuildingCostsClient({
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {building.district}, {t(building.city)}
+                    {building.district}, {building.city}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
@@ -514,6 +522,10 @@ export function BuildingCostsClient({
                   </Card>
                 </motion.div>
               )}
+
+              <motion.div custom={0.5} initial="hidden" animate="visible" variants={fadeUp}>
+                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
+              </motion.div>
 
               <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card>

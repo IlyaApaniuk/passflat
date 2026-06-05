@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Home, Search } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 
@@ -21,7 +20,6 @@ export default async function LocaleNotFound() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
       <main className="relative flex flex-1 items-center justify-center overflow-hidden pt-24">
         <div className="absolute inset-0 grid-pattern opacity-50" />
         <div className="absolute -left-32 top-1/4 h-96 w-96 animate-pulse rounded-full bg-accent/20 blur-[120px]" />

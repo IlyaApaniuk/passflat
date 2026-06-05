@@ -1,5 +1,3 @@
-'use client';
-
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
@@ -7,6 +5,9 @@ import { Home, Linkedin, Instagram } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
+// No 'use client': `useTranslations` (the non-async hook) is isomorphic, so this
+// renders as a zero-JS Server Component on server pages while still working when
+// rendered inside a Client Component (e.g. the costs/dashboard client views).
 export function Footer() {
   const t = useTranslations();
 

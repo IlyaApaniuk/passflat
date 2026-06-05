@@ -197,14 +197,6 @@ export async function GET() {
     const otherParticipant = conv.participants.find((p) => p.userId !== user.id);
     const lastMessage = conv.messages[0] ?? null;
 
-    let unreadCount = 0;
-    if (currentParticipant) {
-      const lastRead = currentParticipant.lastReadAt;
-      if (!lastRead) {
-        unreadCount = -1; // sentinel: need to count all
-      }
-    }
-
     return {
       id: conv.id,
       listingId: conv.listing.id,

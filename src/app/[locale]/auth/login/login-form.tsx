@@ -71,7 +71,7 @@ export function LoginForm({ next, error: initialError }: { next?: string; error?
   function handleGoogleSignIn() {
     setError(null);
     startTransition(async () => {
-      const result = await signInWithGoogle(locale);
+      const result = await signInWithGoogle(locale, next);
       if (result?.error) {
         setError(result.error);
       }

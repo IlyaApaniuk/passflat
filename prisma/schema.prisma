@@ -78,14 +78,28 @@ model Building {
   yearBuilt             Int?     @map("year_built")
   createdAt             DateTime @default(now()) @map("created_at")
 
-  city        City         @relation(fields: [cityId], references: [id])
-  district    District?    @relation(fields: [districtId], references: [id])
-  listings    Listing[]
-  costReports CostReport[]
+  city          City                   @relation(fields: [cityId], references: [id])
+  district      District?              @relation(fields: [districtId], references: [id])
+  listings      Listing[]
+  costReports   CostReport[]
+  locationScore BuildingLocationScore?
 
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
+  @@index([districtId])
   @@map("buildings")
+}
+
+model BuildingLocationScore {
+  buildingId String   @id @map("building_id") @db.Uuid
+  overall    Int
+  categories Json
+  computedAt DateTime @default(now()) @map("computed_at")
+  version    Int      @default(1)
+
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@map("building_location_scores")
 }
 
 // --- Listings ---
@@ -285,6 +299,8 @@ model CostReport {
   author          Profile                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   periodicCharges CostReportPeriodicCharge[]
 
+  @@index([buildingId])
+  @@index([authorId])
   @@index([importedEmail])
   @@map("cost_reports")
 }

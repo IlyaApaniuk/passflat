@@ -8,7 +8,6 @@ import { usePostHog, useFeatureFlagEnabled } from 'posthog-js/react';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -307,8 +306,6 @@ export function DashboardClient({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
-
       <main className="flex-1 bg-muted/30 pt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
@@ -378,26 +375,26 @@ export function DashboardClient({
                 if (v === 'billing') loadPayments();
               }}
             >
-              <TabsList>
-                <TabsTrigger value="listings" className="gap-2">
+              <TabsList className="w-full max-w-full justify-start overflow-x-auto">
+                <TabsTrigger value="listings" className="shrink-0 gap-2">
                   <Home className="h-4 w-4" />
                   {t('dashboard.myListings')}
                 </TabsTrigger>
-                <TabsTrigger value="saved" className="gap-2">
+                <TabsTrigger value="saved" className="shrink-0 gap-2">
                   <Heart className="h-4 w-4" />
                   {t('dashboard.savedListings')}
                   {savedItems.length > 0 && (
                     <span className="ml-1 text-xs opacity-70">{savedItems.length}</span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="costs" className="gap-2">
+                <TabsTrigger value="costs" className="shrink-0 gap-2">
                   <Receipt className="h-4 w-4" />
                   {t('dashboard.costReportsTab')}
                   {costReports.length > 0 && (
                     <span className="ml-1 text-xs opacity-70">{costReports.length}</span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="billing" className="gap-2">
+                <TabsTrigger value="billing" className="shrink-0 gap-2">
                   <CreditCard className="h-4 w-4" />
                   {t('dashboard.billing.title')}
                 </TabsTrigger>

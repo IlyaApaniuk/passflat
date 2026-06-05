@@ -1,12 +1,13 @@
-import { getTranslations } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { HowItWorksClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
+import { pickMessages } from '@/i18n/messages';
 import { JsonLd, faqPageJsonLd, howToJsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
+
+type PageProps = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('howItWorksPage');
@@ -23,25 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function HowItWorksPage() {
-  const t = await getTranslations('howItWorksPage');
+export default async function HowItWorksPage({ params }: PageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
 
-  let hasContributed = false;
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      const report = await prisma.costReport.findFirst({
-        where: { authorId: user.id, isVisible: true },
-        select: { id: true },
-      });
-      if (report) hasContributed = true;
-    }
-  } catch {
-    // Auth/DB unavailable
-  }
+  const t = await getTranslations('howItWorksPage');
+  const messages = await getMessages();
 
   const plain = (key: string, tags: string[]) => {
     const handlers: Record<string, (chunks: string) => string> = {};
@@ -88,9 +76,12 @@ export default async function HowItWorksPage() {
       <JsonLd data={listerHowTo} />
       <JsonLd data={costsHowTo} />
       <JsonLd data={faqPageJsonLd(faqItems)} />
-      <Header />
       <main className="flex-1 pt-24">
-        <HowItWorksClient hasContributed={hasContributed} />
+        <NextIntlClientProvider
+          messages={pickMessages(messages, ['howItWorksPage', 'documents', 'common'])}
+        >
+          <HowItWorksClient />
+        </NextIntlClientProvider>
       </main>
       <Footer />
     </div>

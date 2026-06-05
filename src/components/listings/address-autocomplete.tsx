@@ -33,6 +33,8 @@ interface AddressAutocompleteProps {
 let placesLibPromise: Promise<void> | null = null;
 
 function bootstrapGoogleMaps() {
+  // Dynamic shim that augments the global window with Google Maps' lazy loader.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w = window as any;
   const g = (w.google = w.google || {});
   const m = (g.maps = g.maps || {});
@@ -123,7 +125,7 @@ export function AddressAutocomplete({
         setSuggestions(results);
         setIsOpen(results.length > 0);
         setActiveIndex(-1);
-      } catch (err) {
+      } catch {
         setSuggestions([]);
         setIsOpen(false);
       }

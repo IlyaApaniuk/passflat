@@ -1,23 +1,10 @@
 import type { Metadata } from 'next';
-import { Manrope, JetBrains_Mono } from 'next/font/google';
-import { Analytics } from '@vercel/analytics/next';
-import { getLocale } from 'next-intl/server';
-import { PostHogProvider } from '@/components/providers/posthog-provider';
-import { GoogleAnalytics } from '@/components/providers/google-analytics';
-import { CookieConsent } from '@/components/cookie-consent';
-import { Toaster } from '@/components/ui/sonner';
-import { PublishSnackbar } from '@/components/publish-snackbar';
-import { JsonLd, organizationJsonLd, webSiteJsonLd } from '@/lib/json-ld';
+import { SITE_URL } from '@/lib/site-url';
 import { robotsMeta } from '@/lib/seo';
 import './globals.css';
 
-const manrope = Manrope({
-  subsets: ['latin', 'latin-ext', 'cyrillic', 'cyrillic-ext'],
-  variable: '--font-manrope',
-});
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin', 'cyrillic'], variable: '--font-mono' });
-
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   icons: {
     icon: { url: '/icon.svg', type: 'image/svg+xml' },
     apple: '/icon.svg',
@@ -25,27 +12,17 @@ export const metadata: Metadata = {
   robots: robotsMeta,
 };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const locale = await getLocale();
-
-  return (
-    <html
-      lang={locale}
-      suppressHydrationWarning
-      className={`${manrope.variable} ${jetbrainsMono.variable}`}
-    >
-      <body className="font-sans antialiased min-h-screen bg-background text-foreground">
-        <JsonLd data={organizationJsonLd()} />
-        <JsonLd data={webSiteJsonLd()} />
-        <PostHogProvider>
-          {children}
-          <CookieConsent />
-          <Toaster />
-          <PublishSnackbar />
-        </PostHogProvider>
-        <GoogleAnalytics />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
-      </body>
-    </html>
-  );
+/**
+ * Pass-through root layout. The real `<html>`/`<body>` shell (fonts, providers,
+ * analytics) lives in `app/[locale]/layout.tsx` so the locale can be resolved
+ * statically from the route segment via `setRequestLocale`, instead of through
+ * a request-bound `getLocale()` call here — which would opt the entire tree
+ * into dynamic rendering and prevent the locale landing routes from being
+ * prerendered/CDN-cached.
+ *
+ * `app/global-error.tsx` and `app/not-found.tsx` render their own `<html>` for
+ * the rare routes that fall outside the `[locale]` segment.
+ */
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return children;
 }
