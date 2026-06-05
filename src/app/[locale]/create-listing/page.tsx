@@ -62,6 +62,8 @@ import {
   CalendarIcon,
   Repeat,
   GripVertical,
+  RefreshCw,
+  Plus,
 } from 'lucide-react';
 import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
 import { usePhotoUploadStore } from '@/stores/publish-store';
@@ -69,6 +71,38 @@ import { toast } from 'sonner';
 
 import { AMENITY_CATEGORIES, THINGS_TO_KNOW_SECTIONS } from '@/lib/amenities';
 import { PRICES_PLN, listingOrderTotal, promotePrice } from '@/lib/pricing';
+import {
+  PERIODIC_CATEGORIES,
+  PERIODIC_FREQUENCIES,
+  monthlyEquivalent,
+  type PeriodicCategory,
+  type PeriodicFrequency,
+} from '@/lib/periodic-charges';
+
+const CATEGORY_LABEL_KEY: Record<PeriodicCategory, string> = {
+  water: 'catWater',
+  electricity: 'catElectricity',
+  gas: 'catGas',
+  heating: 'catHeating',
+  other: 'catOther',
+};
+
+const FREQUENCY_LABEL_KEY: Record<PeriodicFrequency, string> = {
+  bimonthly: 'freqBimonthly',
+  quarterly: 'freqQuarterly',
+  semiannual: 'freqSemiannual',
+  annual: 'freqAnnual',
+};
+
+const periodicSelectClass =
+  'h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+
+interface PeriodicChargeRow {
+  category: PeriodicCategory;
+  amount: string;
+  frequency: PeriodicFrequency;
+  note: string;
+}
 
 const FREE_LISTING_LIMIT = 2;
 type PromoteDays = 0 | 7 | 14 | 30;
@@ -125,6 +159,8 @@ interface ListingFormData {
   utilitiesIncluded: boolean;
   internetIncluded: boolean;
   subletRules: string;
+  // Flexible recurring charges (replacement + sublet)
+  periodicCharges: PeriodicChargeRow[];
 }
 
 const initialFormData: ListingFormData = {
@@ -166,6 +202,7 @@ const initialFormData: ListingFormData = {
   utilitiesIncluded: false,
   internetIncluded: false,
   subletRules: '',
+  periodicCharges: [],
 };
 
 function SortablePhoto({
@@ -275,6 +312,7 @@ function CreateListingForm() {
   const [promoteDays, setPromoteDays] = useState<PromoteDays>(0);
   const promotedListingsEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED);
   const [activeFreeListings, setActiveFreeListings] = useState<number | null>(null);
+  const [showPeriodic, setShowPeriodic] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -336,7 +374,21 @@ function CreateListingForm() {
           utilitiesIncluded: listing.utilitiesIncluded ?? false,
           internetIncluded: listing.internetIncluded ?? false,
           subletRules: listing.subletRules ?? '',
+          periodicCharges: (listing.periodicCharges ?? []).map(
+            (c: {
+              category: string;
+              amount: string | number;
+              frequency: string;
+              note: string | null;
+            }) => ({
+              category: c.category as PeriodicCategory,
+              amount: String(Number(c.amount)),
+              frequency: c.frequency as PeriodicFrequency,
+              note: c.note ?? '',
+            }),
+          ),
         });
+        if ((listing.periodicCharges ?? []).length > 0) setShowPeriodic(true);
         setPhotos(
           (listing.photos ?? []).map((url: string) => ({
             id: crypto.randomUUID(),
@@ -409,6 +461,33 @@ function CreateListingForm() {
       thingsToKnow: prev.thingsToKnow.includes(key)
         ? prev.thingsToKnow.filter((k) => k !== key)
         : [...prev.thingsToKnow, key],
+    }));
+  };
+
+  const addPeriodicRow = () => {
+    setShowPeriodic(true);
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: [
+        ...prev.periodicCharges,
+        { category: 'water', amount: '', frequency: 'semiannual', note: '' },
+      ],
+    }));
+  };
+
+  const updatePeriodicRow = (index: number, patch: Partial<PeriodicChargeRow>) => {
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: prev.periodicCharges.map((row, i) =>
+        i === index ? { ...row, ...patch } : row,
+      ),
+    }));
+  };
+
+  const removePeriodicRow = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      periodicCharges: prev.periodicCharges.filter((_, i) => i !== index),
     }));
   };
 
@@ -584,6 +663,15 @@ function CreateListingForm() {
     setIsSubmitting(true);
     setError(null);
 
+    const serializedPeriodicCharges = formData.periodicCharges
+      .map((c) => ({
+        category: c.category,
+        amount: c.amount ? parseFloat(c.amount) : NaN,
+        frequency: c.frequency,
+        note: c.note || undefined,
+      }))
+      .filter((c) => Number.isFinite(c.amount) && c.amount > 0);
+
     if (editId) {
       const patchPayload: Record<string, unknown> = {
         title: formData.title,
@@ -601,6 +689,7 @@ function CreateListingForm() {
         patchPayload.rent = formData.rent;
         patchPayload.adminFee = formData.adminFee;
         patchPayload.utilitiesAvg = formData.utilities;
+        patchPayload.periodicCharges = serializedPeriodicCharges;
       } else if (formData.listingType === 'roommate') {
         patchPayload.pricePerPerson = formData.pricePerPerson;
         patchPayload.totalApartmentRent = formData.totalApartmentRent || null;
@@ -619,6 +708,7 @@ function CreateListingForm() {
         patchPayload.internetIncluded = formData.internetIncluded;
         patchPayload.subletRules = formData.subletRules || null;
         patchPayload.depositAmount = formData.depositAmount || null;
+        patchPayload.periodicCharges = serializedPeriodicCharges;
       }
 
       const localFiles = photos.filter((p) => p.type === 'local' && p.file);
@@ -697,6 +787,7 @@ function CreateListingForm() {
         rent: formData.rent,
         adminFee: formData.adminFee,
         utilitiesAvg: formData.utilities,
+        periodicCharges: serializedPeriodicCharges,
       };
     } else if (formData.listingType === 'roommate') {
       typePayload = {
@@ -719,6 +810,7 @@ function CreateListingForm() {
         internetIncluded: formData.internetIncluded,
         subletRules: formData.subletRules || undefined,
         depositAmount: formData.depositAmount || undefined,
+        periodicCharges: serializedPeriodicCharges,
       };
     }
 
@@ -780,7 +872,6 @@ function CreateListingForm() {
       }
 
       photoStore.clearAll();
-      toast.success(t('listings.create.publishedTitle'));
       router.push('/dashboard?published=success');
     } catch {
       setError('Failed to create listing');
@@ -788,10 +879,19 @@ function CreateListingForm() {
     }
   };
 
+  const periodicMonthly = Math.round(
+    formData.periodicCharges.reduce((sum, c) => {
+      const amt = parseFloat(c.amount);
+      if (!Number.isFinite(amt) || amt <= 0) return sum;
+      return sum + monthlyEquivalent(amt, c.frequency);
+    }, 0),
+  );
+
   const totalCost =
     (parseInt(formData.rent) || 0) +
     (parseInt(formData.adminFee) || 0) +
-    (parseInt(formData.utilities) || 0);
+    (parseInt(formData.utilities) || 0) +
+    periodicMonthly;
 
   const subletDays =
     formData.availableFrom && formData.availableTo
@@ -840,6 +940,112 @@ function CreateListingForm() {
     return <p className="text-xs text-destructive mt-1">{error}</p>;
   };
 
+  const renderPeriodicCharges = () => (
+    <div className="border-t pt-4">
+      {!showPeriodic && formData.periodicCharges.length === 0 ? (
+        <button
+          type="button"
+          onClick={addPeriodicRow}
+          className="flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {t('costs.submit.periodicAddButton')}
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <RefreshCw className="h-4 w-4" />
+              {t('costs.submit.periodicSectionTitle')}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('costs.submit.periodicSectionHint')}
+            </p>
+          </div>
+
+          {formData.periodicCharges.map((row, i) => {
+            const amt = parseFloat(row.amount);
+            const perMonth =
+              Number.isFinite(amt) && amt > 0
+                ? Math.round(monthlyEquivalent(amt, row.frequency))
+                : null;
+            return (
+              <div key={i} className="space-y-2 rounded-lg border border-border bg-background p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <select
+                    className={periodicSelectClass}
+                    value={row.category}
+                    onChange={(e) =>
+                      updatePeriodicRow(i, { category: e.target.value as PeriodicCategory })
+                    }
+                  >
+                    {PERIODIC_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {t(`costs.submit.${CATEGORY_LABEL_KEY[c]}`)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className={periodicSelectClass}
+                    value={row.frequency}
+                    onChange={(e) =>
+                      updatePeriodicRow(i, { frequency: e.target.value as PeriodicFrequency })
+                    }
+                  >
+                    {PERIODIC_FREQUENCIES.map((f) => (
+                      <option key={f} value={f}>
+                        {t(`costs.submit.${FREQUENCY_LABEL_KEY[f]}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder={t('costs.submit.periodicAmountPlaceholder')}
+                    value={row.amount}
+                    onChange={(e) => updatePeriodicRow(i, { amount: e.target.value })}
+                  />
+                  <Input
+                    type="text"
+                    placeholder={t('costs.submit.periodicNotePlaceholder')}
+                    value={row.note}
+                    onChange={(e) => updatePeriodicRow(i, { note: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {perMonth != null
+                      ? `≈ ${perMonth.toLocaleString()} PLN/${t('costs.submit.periodicPerMonth')}`
+                      : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removePeriodicRow(i)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    {t('costs.submit.periodicRemove')}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={addPeriodicRow}
+            className="flex items-center gap-1.5 text-xs text-primary underline-offset-2 hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('costs.submit.periodicAddRow')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   if (isLoadingEdit) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -862,9 +1068,9 @@ function CreateListingForm() {
             transition={{ duration: 0.4 }}
             className="mb-8"
           >
-            <div className="flex items-center justify-center">
+            <div className="flex min-w-0 items-center justify-center overflow-x-auto">
               {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
+                <div key={step.id} className="flex shrink-0 items-center">
                   <motion.button
                     whileHover={index <= currentStepIndex ? { scale: 1.05 } : {}}
                     whileTap={index <= currentStepIndex ? { scale: 0.95 } : {}}
@@ -874,7 +1080,7 @@ function CreateListingForm() {
                       }
                     }}
                     disabled={index > currentStepIndex}
-                    className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                    className={`flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-medium transition-all sm:px-4 ${
                       index === currentStepIndex
                         ? 'bg-primary text-primary-foreground shadow-md'
                         : index < currentStepIndex
@@ -894,7 +1100,7 @@ function CreateListingForm() {
                       initial={{ scaleX: 0 }}
                       animate={{ scaleX: index < currentStepIndex ? 1 : 0.3 }}
                       transition={{ duration: 0.4 }}
-                      className={`mx-2 h-0.5 w-8 origin-left sm:w-12 ${
+                      className={`mx-1 h-0.5 w-3 origin-left sm:mx-2 sm:w-12 ${
                         index < currentStepIndex ? 'bg-primary' : 'bg-muted'
                       }`}
                     />
@@ -1114,7 +1320,7 @@ function CreateListingForm() {
                             value={formData.bedrooms}
                             onValueChange={(value) => updateFormData({ bedrooms: value })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder={t('listings.create.select')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1133,7 +1339,7 @@ function CreateListingForm() {
                             value={formData.bathrooms}
                             onValueChange={(value) => updateFormData({ bathrooms: value })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder={t('listings.create.select')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1391,6 +1597,7 @@ function CreateListingForm() {
                           {' · '}
                           {t('listings.create.extraBillsHint')}
                         </p>
+                        {renderPeriodicCharges()}
                         <AnimatePresence>
                           {totalCost > 0 && (
                             <motion.div
@@ -1467,7 +1674,7 @@ function CreateListingForm() {
                               value={formData.currentRoommates}
                               onValueChange={(value) => updateFormData({ currentRoommates: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder={t('listings.create.select')} />
                               </SelectTrigger>
                               <SelectContent>
@@ -1485,7 +1692,7 @@ function CreateListingForm() {
                               value={formData.totalRooms}
                               onValueChange={(value) => updateFormData({ totalRooms: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder={t('listings.create.select')} />
                               </SelectTrigger>
                               <SelectContent>
@@ -1503,7 +1710,7 @@ function CreateListingForm() {
                               value={formData.roomType}
                               onValueChange={(value) => updateFormData({ roomType: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder={t('listings.create.select')} />
                               </SelectTrigger>
                               <SelectContent>
@@ -1526,7 +1733,7 @@ function CreateListingForm() {
                               value={formData.preferredGender}
                               onValueChange={(value) => updateFormData({ preferredGender: value })}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1683,6 +1890,7 @@ function CreateListingForm() {
                             </Label>
                           </div>
                         </div>
+                        {renderPeriodicCharges()}
                         <div className="space-y-2">
                           <Label htmlFor="subletRules">{t('listings.create.subletRules')}</Label>
                           <Textarea
