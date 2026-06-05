@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { getOrCreateProfile } from '@/lib/profile';
 import { trackServerEvent, identifyUser } from '@/lib/posthog-server';
 
 export async function GET(
@@ -41,21 +42,7 @@ export async function GET(
 
       const isNewUser = !existingProfile;
 
-      const defaultCity = await prisma.city.findUnique({
-        where: { slug: 'warsaw' },
-        select: { id: true },
-      });
-
-      await prisma.profile.upsert({
-        where: { id: user.id },
-        create: {
-          id: user.id,
-          displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || null,
-          locale,
-          cityId: defaultCity?.id,
-        },
-        update: {},
-      });
+      await getOrCreateProfile(user, locale);
 
       // Auto-link any cost reports imported with this user's email (e.g. early
       // Google Form submissions) to their account on first matching login.

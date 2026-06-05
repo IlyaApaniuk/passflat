@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getOrCreateProfile } from '@/lib/profile';
 import { redirect } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/site-url';
@@ -20,10 +21,17 @@ export async function login(formData: FormData) {
   const next = formData.get('next') as string | null;
   const locale = (formData.get('locale') as string) || 'pl';
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Existing accounts can be authenticated without ever having a profile row
+  // (e.g. email confirmed in another browser, then password login). Ensure it
+  // exists here so subsequent writes don't hit the author_id FK.
+  if (data.user) {
+    await getOrCreateProfile(data.user, locale);
   }
 
   redirect(next || `/${locale}/dashboard`);
@@ -36,7 +44,7 @@ export async function signup(formData: FormData) {
   const password = formData.get('password') as string;
   const locale = (formData.get('locale') as string) || 'pl';
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -46,6 +54,13 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // When email confirmation is disabled, signUp returns a session immediately
+  // and the /auth/callback (which creates the profile) is never hit. Create the
+  // profile here so the user isn't left authenticated without one.
+  if (data.user && data.session) {
+    await getOrCreateProfile(data.user, locale);
   }
 
   return { success: true };
