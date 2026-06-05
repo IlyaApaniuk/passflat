@@ -411,12 +411,15 @@
           "poor": "Мало инфраструктуры рядом"
         },
         "categories": {
-          "groceries": "Магазины",
-          "transit": "Общественный транспорт",
+          "supermarket": "Супермаркеты",
+          "transitRail": "Метро и ж/д",
           "pharmacy": "Аптеки",
+          "transitBasic": "Автобусы и трамваи",
+          "convenience": "Продуктовые магазины",
           "dining": "Кафе и рестораны",
           "education": "Школы и садики",
-          "parks": "Парки и зелень"
+          "parks": "Парки и зелень",
+          "center": "Центр города"
         },
         "none": "Рядом ничего нет",
         "poweredBy": "По данным OpenStreetMap"

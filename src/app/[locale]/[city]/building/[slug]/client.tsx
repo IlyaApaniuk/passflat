@@ -107,6 +107,15 @@ interface BuildingCostsClientProps {
   hasContributedData: boolean;
   costAccessUntil: string | null;
   citySlug: string;
+  initialLocationScore: {
+    overall: number;
+    categories: Array<{
+      key: string;
+      score: number;
+      nearestM: number | null;
+      name: string | null;
+    }>;
+  } | null;
 }
 
 export function BuildingCostsClient({
@@ -120,6 +129,7 @@ export function BuildingCostsClient({
   hasContributedData,
   costAccessUntil,
   citySlug,
+  initialLocationScore,
 }: BuildingCostsClientProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -514,7 +524,7 @@ export function BuildingCostsClient({
               )}
 
               <motion.div custom={0.5} initial="hidden" animate="visible" variants={fadeUp}>
-                <LocationScore buildingId={building.id} />
+                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
               </motion.div>
 
               <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>

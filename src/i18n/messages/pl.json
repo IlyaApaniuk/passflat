@@ -411,12 +411,15 @@
           "poor": "Mało udogodnień w pobliżu"
         },
         "categories": {
-          "groceries": "Sklepy",
-          "transit": "Transport publiczny",
+          "supermarket": "Supermarkety",
+          "transitRail": "Metro i kolej",
           "pharmacy": "Apteki",
+          "transitBasic": "Autobusy i tramwaje",
+          "convenience": "Sklepy osiedlowe",
           "dining": "Kawiarnie i restauracje",
           "education": "Szkoły i przedszkola",
-          "parks": "Parki i zieleń"
+          "parks": "Parki i zieleń",
+          "center": "Centrum miasta"
         },
         "none": "Nic w pobliżu",
         "poweredBy": "Na podstawie danych OpenStreetMap"

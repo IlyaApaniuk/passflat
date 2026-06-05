@@ -7,6 +7,8 @@
  * this only runs once per building (Overpass is not hit on every page view).
  */
 
+export const SCORE_VERSION = 2;
+
 export interface Coord {
   lat: number;
   lng: number;
@@ -46,63 +48,82 @@ const has = (tags: Record<string, string>, key: string, values: string[]) =>
 
 export const CATEGORIES: CategoryConfig[] = [
   {
-    key: 'groceries',
-    filters: ['["shop"~"^(supermarket|convenience|grocery|greengrocer)$"]'],
-    match: (t) => has(t, 'shop', ['supermarket', 'convenience', 'grocery', 'greengrocer']),
-    weight: 25,
+    key: 'supermarket',
+    filters: ['["shop"="supermarket"]'],
+    match: (t) => has(t, 'shop', ['supermarket']),
+    weight: 20,
     idealM: 300,
     maxM: 1500,
   },
   {
-    key: 'transit',
-    filters: [
-      '["highway"="bus_stop"]',
-      '["railway"~"^(tram_stop|station|halt)$"]',
-      '["station"="subway"]',
-      '["public_transport"="station"]',
-    ],
-    match: (t) =>
-      has(t, 'highway', ['bus_stop']) ||
-      has(t, 'railway', ['tram_stop', 'station', 'halt']) ||
-      has(t, 'station', ['subway']) ||
-      has(t, 'public_transport', ['station']),
-    weight: 25,
-    idealM: 250,
-    maxM: 1200,
+    key: 'transitRail',
+    filters: ['["railway"~"^(station|halt)$"]', '["station"="subway"]'],
+    match: (t) => has(t, 'railway', ['station', 'halt']) || has(t, 'station', ['subway']),
+    weight: 15,
+    idealM: 400,
+    maxM: 2000,
   },
   {
     key: 'pharmacy',
     filters: ['["amenity"="pharmacy"]'],
     match: (t) => has(t, 'amenity', ['pharmacy']),
-    weight: 15,
-    idealM: 400,
-    maxM: 2000,
+    weight: 12,
+    idealM: 300,
+    maxM: 1200,
+  },
+  {
+    key: 'transitBasic',
+    filters: [
+      '["highway"="bus_stop"]',
+      '["railway"="tram_stop"]',
+      '["public_transport"="station"]',
+    ],
+    match: (t) =>
+      has(t, 'highway', ['bus_stop']) ||
+      has(t, 'railway', ['tram_stop']) ||
+      has(t, 'public_transport', ['station']),
+    weight: 10,
+    idealM: 150,
+    maxM: 600,
+  },
+  {
+    key: 'convenience',
+    filters: ['["shop"~"^(convenience|grocery|greengrocer)$"]'],
+    match: (t) => has(t, 'shop', ['convenience', 'grocery', 'greengrocer']),
+    weight: 10,
+    idealM: 200,
+    maxM: 800,
   },
   {
     key: 'dining',
     filters: ['["amenity"~"^(cafe|restaurant|bar|fast_food)$"]'],
     match: (t) => has(t, 'amenity', ['cafe', 'restaurant', 'bar', 'fast_food']),
-    weight: 15,
-    idealM: 400,
-    maxM: 1500,
+    weight: 8,
+    idealM: 250,
+    maxM: 1000,
   },
   {
     key: 'education',
     filters: ['["amenity"~"^(school|kindergarten)$"]'],
     match: (t) => has(t, 'amenity', ['school', 'kindergarten']),
-    weight: 10,
-    idealM: 600,
-    maxM: 2500,
+    weight: 8,
+    idealM: 500,
+    maxM: 2000,
   },
   {
     key: 'parks',
     filters: ['["leisure"~"^(park|garden)$"]'],
     match: (t) => has(t, 'leisure', ['park', 'garden']),
-    weight: 10,
-    idealM: 500,
-    maxM: 2000,
+    weight: 7,
+    idealM: 300,
+    maxM: 1200,
   },
 ];
+
+/** Weight for the "center" virtual category (not in CATEGORIES because it has no Overpass query). */
+export const CENTER_WEIGHT = 10;
+export const CENTER_IDEAL_M = 2000;
+export const CENTER_MAX_M = 10000;
 
 const EARTH_RADIUS_M = 6_371_000;
 const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -127,8 +148,12 @@ export function scoreFromDistance(meters: number, idealM: number, maxM: number):
   return Math.round((100 * (maxM - meters)) / (maxM - idealM));
 }
 
-/** Computes per-category scores and a weighted overall from nearby POIs. */
-export function scorePois(origin: Coord, pois: Poi[]): LocationScoreResult {
+/**
+ * Computes per-category scores and a weighted overall from nearby POIs.
+ * If `centerCoord` is provided, an additional "center" category is included
+ * based on straight-line distance to the city center.
+ */
+export function scorePois(origin: Coord, pois: Poi[], centerCoord?: Coord): LocationScoreResult {
   const categories = CATEGORIES.map<CategoryResult>((category) => {
     let nearestM: number | null = null;
     let name: string | null = null;
@@ -153,11 +178,25 @@ export function scorePois(origin: Coord, pois: Poi[]): LocationScoreResult {
     };
   });
 
-  const totalWeight = CATEGORIES.reduce((sum, c) => sum + c.weight, 0);
-  const weighted = categories.reduce(
+  let totalWeight = CATEGORIES.reduce((sum, c) => sum + c.weight, 0);
+  let weighted = categories.reduce(
     (sum, result, i) => sum + result.score * CATEGORIES[i].weight,
     0,
   );
+
+  if (centerCoord) {
+    const centerDistM = haversineMeters(origin, centerCoord);
+    const centerScore = scoreFromDistance(centerDistM, CENTER_IDEAL_M, CENTER_MAX_M);
+    categories.push({
+      key: 'center',
+      score: centerScore,
+      nearestM: Math.round(centerDistM),
+      name: null,
+    });
+    totalWeight += CENTER_WEIGHT;
+    weighted += centerScore * CENTER_WEIGHT;
+  }
+
   const overall = Math.round(weighted / totalWeight);
 
   return { overall, categories };
@@ -224,8 +263,14 @@ async function fetchOverpass(query: string): Promise<Poi[]> {
   throw lastError instanceof Error ? lastError : new Error('Overpass request failed');
 }
 
-/** Fetches nearby POIs and computes the cached location score for a coordinate. */
-export async function computeLocationScore(origin: Coord): Promise<LocationScoreResult> {
+/**
+ * Fetches nearby POIs and computes the location score for a coordinate.
+ * Pass `centerCoord` (the city center) for the center-distance category.
+ */
+export async function computeLocationScore(
+  origin: Coord,
+  centerCoord?: Coord,
+): Promise<LocationScoreResult> {
   const pois = await fetchOverpass(buildOverpassQuery(origin));
-  return scorePois(origin, pois);
+  return scorePois(origin, pois, centerCoord);
 }
