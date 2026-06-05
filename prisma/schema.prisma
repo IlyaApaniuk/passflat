@@ -354,6 +354,7 @@ model CostTermLabel {
 model Profile {
   id                 String    @id @db.Uuid // = auth.users.id
   displayName        String?   @map("display_name")
+  email              String?   @unique
   locale             String?
   cityId             String?   @map("city_id") @db.Uuid
   contactMethod      String?   @map("contact_method")

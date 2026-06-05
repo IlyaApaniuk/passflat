@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     where: { id: listingId },
     include: {
       author: {
-        select: { id: true, contactValue: true, displayName: true, locale: true },
+        select: { id: true, email: true, contactValue: true, displayName: true, locale: true },
       },
       building: { include: { district: true, city: true } },
     },
@@ -107,18 +107,14 @@ export async function POST(request: NextRequest) {
     }),
   ]);
 
-  const authorEmail = listing.author?.contactValue?.includes('@')
-    ? listing.author.contactValue
-    : null;
+  const authorEmail = listing.author?.email ?? null;
 
-  const recipientEmail = authorEmail || user.email;
-
-  if (recipientEmail && process.env.RESEND_API_KEY) {
+  if (authorEmail && process.env.RESEND_API_KEY) {
     const citySlug = listing.building.city?.slug || 'warsaw';
     const locale = resolveEmailLocale(listing.author?.locale);
 
     await sendNewInquiryEmail({
-      to: recipientEmail,
+      to: authorEmail,
       locale,
       listingTitle: listing.title,
       responderName: name || user.email || 'Someone',

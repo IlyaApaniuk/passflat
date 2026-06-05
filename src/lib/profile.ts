@@ -23,10 +23,11 @@ export async function getOrCreateProfile(user: User, locale?: string) {
     where: { id: user.id },
     create: {
       id: user.id,
+      email: user.email ?? null,
       displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || null,
       locale: locale ?? null,
       cityId: defaultCity?.id,
     },
-    update: {},
+    update: { email: user.email ?? null },
   });
 }
