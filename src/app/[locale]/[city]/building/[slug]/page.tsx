@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
@@ -64,6 +65,47 @@ function statsPerM2(
 // React cache() wrappers — deduplicate across generateMetadata & page render
 // ---------------------------------------------------------------------------
 
+const costReportSelect = {
+  rent: true,
+  adminFee: true,
+  electricityAvg: true,
+  electricityWinter: true,
+  electricitySummer: true,
+  electricityIncluded: true,
+  gas: true,
+  heating: true,
+  heatingWinter: true,
+  heatingSummer: true,
+  heatingIncluded: true,
+  water: true,
+  waterIncluded: true,
+  internet: true,
+  otherCosts: true,
+  totalMonthlyAvg: true,
+  depositAmount: true,
+  areaM2: true,
+  createdAt: true,
+  periodicCharges: { select: { amount: true, frequency: true } },
+} as const;
+
+const buildingQuery = {
+  select: {
+    id: true,
+    slug: true,
+    addressFull: true,
+    cityId: true,
+    districtId: true,
+    district: { select: { nameKey: true, slug: true } },
+    city: { select: { nameKey: true } },
+    locationScore: { select: { overall: true, categories: true } },
+    costReports: {
+      where: { isVisible: true },
+      orderBy: { createdAt: 'desc' as const },
+      select: costReportSelect,
+    },
+  },
+} as const;
+
 const getCityId = cache(async (citySlug: string) => {
   const city = await prisma.city.findUnique({ where: { slug: citySlug }, select: { id: true } });
   return city?.id ?? null;
@@ -73,25 +115,33 @@ const getBuilding = cache(async (citySlug: string, slug: string) => {
   const cityId = await getCityId(citySlug);
   if (!cityId) return null;
 
-  const include = {
-    district: true,
-    city: true,
-    costReports: {
-      where: { isVisible: true },
-      orderBy: { createdAt: 'desc' as const },
-      include: { periodicCharges: true },
-    },
-  } as const;
-
   if (UUID_RE.test(slug)) {
-    return prisma.building.findUnique({ where: { id: slug }, include });
+    return prisma.building.findUnique({ where: { id: slug }, ...buildingQuery });
   }
 
   return prisma.building.findUnique({
     where: { cityId_slug: { cityId, slug } },
-    include,
+    ...buildingQuery,
   });
 });
+
+// ---------------------------------------------------------------------------
+// Auth: cookie short-circuit — skip network call for anonymous visitors
+// ---------------------------------------------------------------------------
+
+async function resolveUserId(): Promise<string | null> {
+  const store = await cookies();
+  const hasAuthCookie = store
+    .getAll()
+    .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
+  if (!hasAuthCookie) return null;
+
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // unstable_cache: baseline distributions (revalidate every 10 min)
@@ -303,20 +353,12 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
 
   // Parallel: baselines + auth (all independent of each other)
-  const supabase = await createClient();
-  const [
-    cachedDistrict,
-    cachedCity,
-    {
-      data: { user },
-    },
-  ] = await Promise.all([
+  const [cachedDistrict, cachedCity, userId] = await Promise.all([
     building.districtId ? getDistrictBaseline(building.districtId) : Promise.resolve(null),
     getCityBaseline(building.cityId),
-    supabase.auth.getUser(),
+    resolveUserId(),
   ]);
 
-  // Attach per-building percentile (computed from cached totals distribution)
   const districtBaseline: Baseline | null = cachedDistrict
     ? {
         median: cachedDistrict.median,
@@ -344,14 +386,14 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   let hasContributedData = false;
   let costAccessUntil: string | null = null;
 
-  if (user) {
+  if (userId) {
     const [existingReport, profile] = await Promise.all([
       prisma.costReport.findFirst({
-        where: { authorId: user.id },
+        where: { authorId: userId },
         select: { id: true },
       }),
       prisma.profile.findUnique({
-        where: { id: user.id },
+        where: { id: userId },
         select: { costAccessUntil: true },
       }),
     ]);
@@ -360,6 +402,18 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       costAccessUntil = profile.costAccessUntil.toISOString();
     }
   }
+
+  const initialLocationScore = building.locationScore
+    ? {
+        overall: building.locationScore.overall,
+        categories: building.locationScore.categories as Array<{
+          key: string;
+          score: number;
+          nearestM: number | null;
+          name: string | null;
+        }>,
+      }
+    : null;
 
   return (
     <BuildingCostsClient
@@ -385,6 +439,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       hasContributedData={hasContributedData}
       costAccessUntil={costAccessUntil}
       citySlug={citySlug}
+      initialLocationScore={initialLocationScore}
     />
   );
 }

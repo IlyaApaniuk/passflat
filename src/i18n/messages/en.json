@@ -411,12 +411,15 @@
           "poor": "Limited amenities nearby"
         },
         "categories": {
-          "groceries": "Groceries",
-          "transit": "Public transport",
+          "supermarket": "Supermarkets",
+          "transitRail": "Metro & rail",
           "pharmacy": "Pharmacies",
+          "transitBasic": "Bus & tram stops",
+          "convenience": "Convenience stores",
           "dining": "Cafes & restaurants",
           "education": "Schools & kindergartens",
-          "parks": "Parks & greenery"
+          "parks": "Parks & greenery",
+          "center": "City center"
         },
         "none": "Nothing nearby",
         "poweredBy": "Based on OpenStreetMap data"

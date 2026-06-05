@@ -5,12 +5,15 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import {
   MapPinned,
-  ShoppingCart,
+  Store,
+  ShoppingBasket,
   Bus,
+  TrainFront,
   Pill,
   Utensils,
   GraduationCap,
   Trees,
+  Navigation,
   type LucideIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,12 +32,15 @@ interface LocationScoreResponse {
 }
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  groceries: ShoppingCart,
-  transit: Bus,
+  supermarket: ShoppingBasket,
+  transitRail: TrainFront,
   pharmacy: Pill,
+  transitBasic: Bus,
+  convenience: Store,
   dining: Utensils,
   education: GraduationCap,
   parks: Trees,
+  center: Navigation,
 };
 
 interface TierStyle {
@@ -124,12 +130,22 @@ function ScoreRing({ score, tier }: { score: number; tier: TierStyle }) {
   );
 }
 
-export function LocationScore({ buildingId }: { buildingId: string }) {
+export function LocationScore({
+  buildingId,
+  initialData,
+}: {
+  buildingId: string;
+  initialData?: LocationScoreResponse | null;
+}) {
   const t = useTranslations('listings.detail.locationScore');
-  const [data, setData] = useState<LocationScoreResponse | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [data, setData] = useState<LocationScoreResponse | null>(initialData ?? null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(
+    initialData ? 'ready' : 'loading',
+  );
 
   useEffect(() => {
+    if (initialData) return;
+
     let active = true;
 
     fetch(`/api/buildings/${buildingId}/location-score`)
@@ -150,7 +166,7 @@ export function LocationScore({ buildingId }: { buildingId: string }) {
     return () => {
       active = false;
     };
-  }, [buildingId]);
+  }, [buildingId, initialData]);
 
   const overallTier = data ? tierStyles(data.overall) : null;
 
@@ -172,7 +188,7 @@ export function LocationScore({ buildingId }: { buildingId: string }) {
               <Skeleton className="h-12 w-12 rounded-full" />
               <Skeleton className="h-4 w-28" />
             </div>
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="flex items-center justify-between px-6 py-3">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-7 w-7 rounded-md" />

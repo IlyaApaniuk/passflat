@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CATEGORIES,
+  CENTER_IDEAL_M,
+  CENTER_MAX_M,
+  CENTER_WEIGHT,
   buildOverpassQuery,
   haversineMeters,
   scoreFromDistance,
@@ -14,7 +17,6 @@ describe('haversineMeters', () => {
   });
 
   it('approximates a known short distance', () => {
-    // ~111.2 m per 0.001 deg of latitude near the equator.
     const d = haversineMeters({ lat: 0, lng: 0 }, { lat: 0.001, lng: 0 });
     expect(d).toBeGreaterThan(108);
     expect(d).toBeLessThan(114);
@@ -33,15 +35,26 @@ describe('scoreFromDistance', () => {
   });
 
   it('decays linearly in between', () => {
-    // Midpoint between ideal (300) and max (1500) is 900 -> ~50.
     expect(scoreFromDistance(900, 300, 1500)).toBe(50);
   });
 });
 
+function sampleTagForCategory(category: (typeof CATEGORIES)[number]): Record<string, string> {
+  if (category.match({ shop: 'supermarket' })) return { shop: 'supermarket' };
+  if (category.match({ railway: 'station' })) return { railway: 'station' };
+  if (category.match({ amenity: 'pharmacy' })) return { amenity: 'pharmacy' };
+  if (category.match({ highway: 'bus_stop' })) return { highway: 'bus_stop' };
+  if (category.match({ shop: 'convenience' })) return { shop: 'convenience' };
+  if (category.match({ amenity: 'cafe' })) return { amenity: 'cafe' };
+  if (category.match({ amenity: 'school' })) return { amenity: 'school' };
+  if (category.match({ leisure: 'park' })) return { leisure: 'park' };
+  throw new Error(`No sample tag for category ${category.key}`);
+}
+
 describe('scorePois', () => {
   const origin = { lat: 52.23, lng: 21.01 };
 
-  it('scores every category 0 with an empty POI list', () => {
+  it('scores every category 0 with an empty POI list (no center)', () => {
     const result = scorePois(origin, []);
     expect(result.overall).toBe(0);
     expect(result.categories).toHaveLength(CATEGORIES.length);
@@ -51,21 +64,11 @@ describe('scorePois', () => {
     }
   });
 
-  it('picks the nearest matching POI per category and gives a perfect overall when all are close', () => {
-    const pois = CATEGORIES.map((category) => {
-      const sampleTag: Record<string, string> = category.match({ shop: 'supermarket' })
-        ? { shop: 'supermarket' }
-        : category.match({ highway: 'bus_stop' })
-          ? { highway: 'bus_stop' }
-          : category.match({ amenity: 'pharmacy' })
-            ? { amenity: 'pharmacy' }
-            : category.match({ amenity: 'cafe' })
-              ? { amenity: 'cafe' }
-              : category.match({ amenity: 'school' })
-                ? { amenity: 'school' }
-                : { leisure: 'park' };
-      return { ...origin, tags: { ...sampleTag, name: category.key } };
-    });
+  it('picks the nearest POI per category and gives perfect score when all are at origin (no center)', () => {
+    const pois = CATEGORIES.map((category) => ({
+      ...origin,
+      tags: { ...sampleTagForCategory(category), name: category.key },
+    }));
 
     const result = scorePois(origin, pois);
     expect(result.overall).toBe(100);
@@ -75,14 +78,74 @@ describe('scorePois', () => {
       expect(c.name).toBe(c.key);
     }
   });
+
+  it('includes center category when centerCoord is provided', () => {
+    const pois = CATEGORIES.map((category) => ({
+      ...origin,
+      tags: sampleTagForCategory(category),
+    }));
+    const centerCoord = origin;
+
+    const result = scorePois(origin, pois, centerCoord);
+    expect(result.categories).toHaveLength(CATEGORIES.length + 1);
+    const centerCat = result.categories.find((c) => c.key === 'center');
+    expect(centerCat).toBeDefined();
+    expect(centerCat!.score).toBe(100);
+    expect(centerCat!.nearestM).toBe(0);
+  });
+
+  it('scores center ~62 at 5 km from city center', () => {
+    const centerCoord = { lat: 52.2297, lng: 21.0122 };
+    const fiveKmNorth = { lat: centerCoord.lat + 0.045, lng: centerCoord.lng };
+
+    const result = scorePois(fiveKmNorth, [], centerCoord);
+    const centerCat = result.categories.find((c) => c.key === 'center');
+    expect(centerCat).toBeDefined();
+    expect(centerCat!.score).toBeGreaterThan(55);
+    expect(centerCat!.score).toBeLessThan(70);
+  });
+
+  it('scores center 0 at 10+ km from city center', () => {
+    const centerCoord = { lat: 52.2297, lng: 21.0122 };
+    const tenKmNorth = { lat: centerCoord.lat + 0.09, lng: centerCoord.lng };
+
+    const result = scorePois(tenKmNorth, [], centerCoord);
+    const centerCat = result.categories.find((c) => c.key === 'center');
+    expect(centerCat).toBeDefined();
+    expect(centerCat!.score).toBe(0);
+  });
+
+  it('center category weight affects overall score', () => {
+    const pois = CATEGORIES.map((category) => ({
+      ...origin,
+      tags: sampleTagForCategory(category),
+    }));
+
+    const farCenter = { lat: origin.lat + 0.2, lng: origin.lng };
+    const result = scorePois(origin, pois, farCenter);
+
+    const totalWeight = CATEGORIES.reduce((s, c) => s + c.weight, 0) + CENTER_WEIGHT;
+    const poiWeight = CATEGORIES.reduce((s, c) => s + c.weight, 0);
+    const expectedMax = Math.round((100 * poiWeight) / totalWeight);
+    expect(result.overall).toBeLessThanOrEqual(expectedMax);
+    expect(result.overall).toBeGreaterThan(expectedMax - 2);
+  });
+});
+
+describe('center scoring constants', () => {
+  it('has expected ideal and max distances', () => {
+    expect(CENTER_IDEAL_M).toBe(2000);
+    expect(CENTER_MAX_M).toBe(10000);
+    expect(CENTER_WEIGHT).toBe(10);
+  });
 });
 
 describe('buildOverpassQuery', () => {
   it('includes the coordinates, a radius and every category filter', () => {
-    const query = buildOverpassQuery({ lat: 52.23, lng: 21.01 }, 1500);
+    const query = buildOverpassQuery({ lat: 52.23, lng: 21.01 }, 2000);
     expect(query).toContain('52.23');
     expect(query).toContain('21.01');
-    expect(query).toContain('around:1500');
+    expect(query).toContain('around:2000');
     expect(query).toContain('out:json');
     const filterCount = CATEGORIES.flatMap((c) => c.filters).length;
     expect(query.match(/nwr/g)).toHaveLength(filterCount);
