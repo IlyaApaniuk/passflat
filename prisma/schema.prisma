@@ -173,15 +173,31 @@ model Listing {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  building      Building             @relation(fields: [buildingId], references: [id])
-  author        Profile              @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  responses     ListingResponse[]
-  savedBy       SavedListing[]
-  conversations Conversation[]
-  views         ListingView[]
-  translations  ListingTranslation[]
+  building        Building                @relation(fields: [buildingId], references: [id])
+  author          Profile                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  responses       ListingResponse[]
+  savedBy         SavedListing[]
+  conversations   Conversation[]
+  views           ListingView[]
+  translations    ListingTranslation[]
+  periodicCharges ListingPeriodicCharge[]
 
   @@map("listings")
+}
+
+model ListingPeriodicCharge {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  category  String // 'water' | 'electricity' | 'gas' | 'heating' | 'other'
+  amount    Decimal
+  frequency String // 'bimonthly' | 'quarterly' | 'semiannual' | 'annual'
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("listing_periodic_charges")
 }
 
 model ListingTranslation {

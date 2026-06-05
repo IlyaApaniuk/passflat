@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
@@ -181,16 +181,21 @@ export function DashboardClient({
     setReceiptLoadingId(null);
   };
 
+  const queryToastFired = useRef(false);
   useEffect(() => {
+    if (queryToastFired.current) return;
     const paid = searchParams.get('paid');
     const published = searchParams.get('published');
 
     if (paid === 'success') {
       toast.success(t('dashboard.statusProcessing'));
+      queryToastFired.current = true;
     } else if (paid === 'cancel') {
       toast.info(t('dashboard.statusPendingPayment'));
+      queryToastFired.current = true;
     } else if (published === 'success') {
       toast.success(t('listings.create.publishedTitle'));
+      queryToastFired.current = true;
     }
 
     if (paid || published) {

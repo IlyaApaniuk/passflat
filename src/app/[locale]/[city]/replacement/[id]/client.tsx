@@ -120,7 +120,31 @@ export interface ListingDetailData {
   internetIncluded?: boolean;
   subletRules?: string;
   depositAmount?: number;
+  // Flexible recurring charges (replacement + sublet)
+  periodicCharges?: {
+    id: string;
+    category: string;
+    amount: number;
+    frequency: string;
+    note?: string;
+    monthlyEquivalent: number;
+  }[];
 }
+
+const PERIODIC_CATEGORY_LABEL_KEY: Record<string, string> = {
+  water: 'catWater',
+  electricity: 'catElectricity',
+  gas: 'catGas',
+  heating: 'catHeating',
+  other: 'catOther',
+};
+
+const PERIODIC_FREQUENCY_LABEL_KEY: Record<string, string> = {
+  bimonthly: 'freqBimonthly',
+  quarterly: 'freqQuarterly',
+  semiannual: 'freqSemiannual',
+  annual: 'freqAnnual',
+};
 
 interface Props {
   listing: ListingDetailData;
@@ -845,6 +869,44 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                       </>
                     )}
                   </div>
+                  {listingType !== 'roommate' &&
+                    listing.periodicCharges &&
+                    listing.periodicCharges.length > 0 && (
+                      <div className="border-t px-6 py-4">
+                        <p className="mb-2 text-sm font-medium text-muted-foreground">
+                          {t('costs.submit.periodicSectionTitle')}
+                        </p>
+                        <div className="space-y-2">
+                          {listing.periodicCharges.map((charge) => (
+                            <div
+                              key={charge.id}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <span className="text-muted-foreground">
+                                {t(
+                                  `costs.submit.${PERIODIC_CATEGORY_LABEL_KEY[charge.category] ?? 'catOther'}`,
+                                )}
+                                {charge.note ? ` · ${charge.note}` : ''}
+                                <span className="ml-1 text-xs">
+                                  (
+                                  {t(
+                                    `costs.submit.${PERIODIC_FREQUENCY_LABEL_KEY[charge.frequency] ?? 'freqAnnual'}`,
+                                  )}
+                                  )
+                                </span>
+                              </span>
+                              <span className="text-right font-medium">
+                                {charge.amount.toLocaleString()} PLN
+                                <span className="ml-1 block text-xs font-normal text-muted-foreground">
+                                  ≈ {charge.monthlyEquivalent.toLocaleString()} PLN/
+                                  {t('costs.submit.periodicPerMonth')}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
 

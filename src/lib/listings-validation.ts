@@ -1,3 +1,5 @@
+import { periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
+
 export const LISTING_TYPES = ['replacement', 'roommate', 'sublet'] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
 
@@ -89,8 +91,11 @@ export function computePriceFields(
       const rent = parseFloat(body.rent as string) || 0;
       const adminFee = parseFloat(body.adminFee as string) || 0;
       const utilitiesAvg = parseFloat(body.utilitiesAvg as string) || 0;
+      const periodicMonthly = Array.isArray(body.periodicCharges)
+        ? periodicChargesMonthlyTotal(body.periodicCharges)
+        : 0;
       return {
-        totalMonthly: rent + adminFee + utilitiesAvg || null,
+        totalMonthly: Math.round(rent + adminFee + utilitiesAvg + periodicMonthly) || null,
         pricePerPerson: null,
         priceTotal: null,
       };
