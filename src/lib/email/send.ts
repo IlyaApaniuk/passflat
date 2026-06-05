@@ -10,6 +10,7 @@ import { ListingExpiringEmail } from './templates/ListingExpiringEmail';
 import { NewInquiryEmail } from './templates/NewInquiryEmail';
 import { NewMessageEmail } from './templates/NewMessageEmail';
 import { PasswordResetEmail } from './templates/PasswordResetEmail';
+import { SignupConfirmationEmail } from './templates/SignupConfirmationEmail';
 import { PaymentEmail } from './templates/PaymentEmail';
 import { RefundEmail } from './templates/RefundEmail';
 import type { EmailLocale, EmailTemplate, EmailTranslator } from './types';
@@ -69,6 +70,14 @@ function buildEmail(
       return {
         subject: t('cityLaunch.subject', { city: spec.data.cityName }),
         element: React.createElement(CityLaunchEmail, { t, data: spec.data }),
+      };
+    case 'signupConfirmation':
+      return {
+        subject: t('signupConfirmation.subject'),
+        element: React.createElement(SignupConfirmationEmail, {
+          t,
+          data: spec.data,
+        }),
       };
     case 'listingExpiring':
       return {

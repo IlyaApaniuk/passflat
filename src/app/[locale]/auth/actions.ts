@@ -38,32 +38,52 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
-  const supabase = await createClient();
-
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = (formData.get('locale') as string) || 'pl';
+  const emailLocale = resolveEmailLocale(locale);
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${SITE_URL}/${locale}/auth/callback`,
-    },
-  });
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      password,
+      options: {
+        redirectTo: `${SITE_URL}/${locale}/auth/callback`,
+      },
+    });
 
-  if (error) {
-    return { error: error.message };
+    if (error) {
+      return { error: error.message };
+    }
+
+    const hashedToken = data?.properties?.hashed_token;
+
+    if (hashedToken) {
+      const confirmUrl = localeUrl(
+        emailLocale,
+        `/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=signup`,
+      );
+
+      await sendEmail({
+        to: email,
+        locale: emailLocale,
+        template: 'signupConfirmation',
+        data: { confirmUrl },
+      });
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[auth] Signup failed:', err);
+    captureServerException(err, {
+      distinctId: email,
+      properties: { source: 'auth', action: 'signup' },
+    });
+    await flushPostHog();
+    return { error: 'Something went wrong. Please try again.' };
   }
-
-  // When email confirmation is disabled, signUp returns a session immediately
-  // and the /auth/callback (which creates the profile) is never hit. Create the
-  // profile here so the user isn't left authenticated without one.
-  if (data.user && data.session) {
-    await getOrCreateProfile(data.user, locale);
-  }
-
-  return { success: true };
 }
 
 export async function signInWithGoogle(locale: string, next?: string) {

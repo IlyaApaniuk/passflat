@@ -65,6 +65,47 @@ export async function DELETE() {
   return NextResponse.json({ success: true });
 }
 
+export async function PATCH(request: Request) {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        },
+      },
+    },
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+
+  if (!displayName || displayName.length > 100) {
+    return NextResponse.json({ error: 'displayName must be 1-100 characters' }, { status: 400 });
+  }
+
+  await prisma.profile.update({
+    where: { id: user.id },
+    data: { displayName },
+  });
+
+  return NextResponse.json({ success: true, displayName });
+}
+
 export async function GET() {
   const cookieStore = await cookies();
 

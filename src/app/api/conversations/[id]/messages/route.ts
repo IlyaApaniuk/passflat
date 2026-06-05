@@ -123,7 +123,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       participants: {
         where: { userId: { not: user.id } },
         include: {
-          user: { select: { contactValue: true, locale: true } },
+          user: { select: { email: true, locale: true } },
         },
       },
     },
@@ -131,9 +131,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (conversation && process.env.RESEND_API_KEY) {
     const otherParticipant = conversation.participants[0];
-    const recipientEmail = otherParticipant?.user.contactValue?.includes('@')
-      ? otherParticipant.user.contactValue
-      : null;
+    const recipientEmail = otherParticipant?.user.email ?? null;
 
     if (recipientEmail) {
       const senderName = user.user_metadata?.display_name || user.email || 'Someone';
