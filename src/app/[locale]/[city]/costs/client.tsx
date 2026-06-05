@@ -188,10 +188,9 @@ function stripDiacritics(str: string) {
 const PAGE_SIZE = 20;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0 },
   visible: (i: number) => ({
     opacity: 1,
-    y: 0,
     transition: { duration: 0.4, delay: (i % PAGE_SIZE) * 0.08, ease: 'easeOut' as const },
   }),
 };
@@ -873,8 +872,9 @@ export function CostsOverviewClient({
                                 <div className="flex items-center justify-between gap-6 sm:justify-end">
                                   {accessPending ? (
                                     <div className="text-left sm:text-right" aria-hidden="true">
-                                      <Skeleton className="h-3 w-24 sm:ml-auto" />
-                                      <Skeleton className="mt-1.5 h-6 w-28 sm:ml-auto" />
+                                      <Skeleton className="h-4 w-28 sm:ml-auto" />
+                                      <Skeleton className="mt-1 h-7 w-32 sm:ml-auto" />
+                                      <Skeleton className="mt-1 h-4 w-20 sm:ml-auto" />
                                     </div>
                                   ) : accessGranted ? (
                                     <div className="text-left sm:text-right">
