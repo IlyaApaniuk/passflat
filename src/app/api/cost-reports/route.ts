@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getOrCreateProfile } from '@/lib/profile';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
@@ -42,6 +43,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Guarantee a profile exists before any write that FKs to author_id.
+    await getOrCreateProfile(user);
 
     const body = await request.json();
     const {
