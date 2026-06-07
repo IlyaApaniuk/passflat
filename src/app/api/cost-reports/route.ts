@@ -7,6 +7,7 @@ import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/po
 import { validateCostReport } from '@/lib/cost-validation';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
+import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 import {
   IMPORT_AUTHOR_ID,
@@ -254,9 +255,20 @@ export async function POST(request: NextRequest) {
     const addressNormalized = normalizeAddress(cleanedStreet, buildingNumber);
     const addressFull = `${cleanedStreet} ${buildingNumber}`;
 
-    const matchedDistrict = district
+    // Prefer matching the Google Places district name against known districts.
+    // When that fails (e.g. Places returns a sub-neighbourhood like "Chrzanów"
+    // instead of the dzielnica "Bemowo"), fall back to point-in-polygon on the
+    // coordinates so the building still gets a district instead of null.
+    let matchedDistrict = district
       ? city.districts.find((d) => d.slug === district.toLowerCase() || d.nameKey === district)
       : null;
+
+    if (!matchedDistrict && latNum != null && lngNum != null) {
+      const resolvedSlug = resolveDistrictByPoint(city.slug, latNum, lngNum);
+      if (resolvedSlug) {
+        matchedDistrict = city.districts.find((d) => d.slug === resolvedSlug) ?? null;
+      }
+    }
 
     let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
 

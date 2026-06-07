@@ -14,6 +14,7 @@ import {
 import { trackServerEvent } from '@/lib/posthog-server';
 import { generateBuildingSlug } from '@/lib/slugify';
 import { normalizeAddress } from '@/lib/address';
+import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { FREE_LISTING_LIMIT } from '@/lib/stripe';
 import { sanitizePeriodicCharges } from '@/lib/periodic-charges';
 
@@ -143,9 +144,23 @@ export async function POST(request: NextRequest) {
   const addressNormalized = normalizeAddress(street, buildingNumber);
   const addressFull = `${street} ${buildingNumber}`;
 
-  const matchedDistrict = district
+  // Prefer matching the Google Places district name; fall back to point-in-polygon
+  // on the coordinates when the name does not match a known district, so the
+  // building still gets a district instead of null.
+  let matchedDistrict = district
     ? city.districts.find((d) => d.slug === district.toLowerCase() || d.nameKey === district)
     : null;
+
+  if (!matchedDistrict) {
+    const latNum = lat != null && lat !== '' ? Number(lat) : null;
+    const lngNum = lng != null && lng !== '' ? Number(lng) : null;
+    if (latNum != null && lngNum != null && Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+      const resolvedSlug = resolveDistrictByPoint(city.slug, latNum, lngNum);
+      if (resolvedSlug) {
+        matchedDistrict = city.districts.find((d) => d.slug === resolvedSlug) ?? null;
+      }
+    }
+  }
 
   let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
 
