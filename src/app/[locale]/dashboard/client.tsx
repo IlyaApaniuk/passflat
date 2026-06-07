@@ -360,23 +360,23 @@ export function DashboardClient({
                 animate="visible"
                 variants={statCardVariants}
               >
-                <Card className="transition-shadow hover:shadow-md">
+                <Card className="h-full transition-shadow hover:shadow-md">
                   <CardContent className="flex items-center gap-4 pt-6">
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-full ${stat.iconBg}`}
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${stat.iconBg}`}
                     >
                       <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 + i * 0.1 }}
-                        className="text-2xl font-bold"
+                        className="text-2xl font-bold leading-tight"
                       >
                         {stat.value}
                       </motion.p>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-sm leading-tight text-muted-foreground">{stat.label}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -845,9 +845,9 @@ export function DashboardClient({
                       <p className="mt-1 text-muted-foreground">
                         {t('dashboard.noCostReportsDesc')}
                       </p>
-                      <Button className="mt-6 gap-2" asChild>
+                      <Button variant="outline" className="mt-6 gap-2" asChild>
                         <Link href="/warsaw/costs/submit">
-                          <Plus className="h-4 w-4" />
+                          <Receipt className="h-4 w-4" />
                           {t('dashboard.addCostReport')}
                         </Link>
                       </Button>
@@ -856,9 +856,9 @@ export function DashboardClient({
                 ) : (
                   <div className="space-y-4">
                     <div className="flex justify-end">
-                      <Button className="gap-2" asChild>
+                      <Button variant="outline" className="gap-2" asChild>
                         <Link href={`/${costReports[0]?.citySlug ?? 'warsaw'}/costs/submit`}>
-                          <Plus className="h-4 w-4" />
+                          <Receipt className="h-4 w-4" />
                           {t('dashboard.addCostReport')}
                         </Link>
                       </Button>
