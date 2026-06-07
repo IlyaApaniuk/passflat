@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useEffect } from 'react';
+import NextImage from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,8 @@ function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
   useEffect(() => {
     if (!emblaApi) return;
     emblaApi.on('select', onSelect);
+    // Sync the index to the embla carousel (external library state) on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     onSelect();
     return () => {
       emblaApi.off('select', onSelect);
@@ -83,12 +86,12 @@ function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
   if (images.length === 1) {
     return (
       <>
-        <img
+        <NextImage
           src={images[0]}
           alt={alt}
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       </>
@@ -100,13 +103,13 @@ function CardCarousel({ images, alt }: { images: string[]; alt: string }) {
       <div ref={emblaRef} className="h-full overflow-hidden">
         <div className="flex h-full">
           {images.map((src, i) => (
-            <div key={i} className="h-full min-w-0 shrink-0 grow-0 basis-full">
-              <img
+            <div key={i} className="relative h-full min-w-0 shrink-0 grow-0 basis-full">
+              <NextImage
                 src={src}
                 alt={`${alt} ${i + 1}`}
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover"
               />
             </div>
           ))}

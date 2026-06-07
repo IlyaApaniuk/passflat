@@ -58,6 +58,8 @@ export function Reveal({
     if (!el) return;
 
     if (typeof IntersectionObserver === 'undefined') {
+      // No IO support: reveal immediately. Client-only fallback after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true);
       return;
     }

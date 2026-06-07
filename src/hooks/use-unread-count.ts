@@ -13,8 +13,7 @@ export function useUnreadCount(currentUserId: string | null) {
       if (res.ok) {
         const conversations = await res.json();
         const total = conversations.reduce(
-          (sum: number, c: { unreadCount?: number }) =>
-            sum + (c.unreadCount ?? 0),
+          (sum: number, c: { unreadCount?: number }) => sum + (c.unreadCount ?? 0),
           0,
         );
         setUnreadCount(total);
@@ -27,6 +26,8 @@ export function useUnreadCount(currentUserId: string | null) {
   useEffect(() => {
     if (!currentUserId) return;
 
+    // Initial fetch + realtime subscription on mount (external data source).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUnreadCount();
 
     const supabase = createClient();

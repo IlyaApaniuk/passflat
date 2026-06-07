@@ -31,6 +31,9 @@ export function useIsTouch() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    // Intentionally client-only after mount to avoid a hydration mismatch (see
+    // the JSDoc above) — must not run during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsTouch(window.matchMedia('(pointer: coarse)').matches);
   }, []);
 
