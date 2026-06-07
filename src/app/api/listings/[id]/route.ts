@@ -11,6 +11,7 @@ import {
 import { trackServerEvent } from '@/lib/posthog-server';
 import { trackView } from '@/lib/track-view';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
+import { sanitizePeriodicCharges } from '@/lib/periodic-charges';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -52,6 +53,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       author: {
         select: { displayName: true, createdAt: true },
       },
+      periodicCharges: true,
     },
   });
 
@@ -170,7 +172,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const body = await request.json();
 
-  const existing = await prisma.listing.findUnique({ where: { id } });
+  const existing = await prisma.listing.findUnique({
+    where: { id },
+    include: { periodicCharges: true },
+  });
   if (!existing) {
     return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
   }
@@ -239,6 +244,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
     }
 
+    // Flexible recurring charges (replacement + sublet): delete-then-recreate.
+    const periodicProvided =
+      Array.isArray(body.periodicCharges) &&
+      (listingType === 'replacement' || listingType === 'sublet');
+    const sanitizedPeriodic = periodicProvided
+      ? sanitizePeriodicCharges(body.periodicCharges)
+      : null;
+    if (sanitizedPeriodic) {
+      data.periodicCharges = { deleteMany: {}, create: sanitizedPeriodic };
+    }
+
     // Re-validate type-specific constraints after applying changes
     const merged = { ...existing, ...data } as Record<string, unknown>;
     const validation = validateTypeSpecificFields(listingType, merged);
@@ -247,11 +263,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     // Recompute derived price fields when relevant prices change
-    const priceFieldsChanged = fieldKeys.some((k) =>
-      ['rent', 'adminFee', 'utilitiesAvg', 'pricePerPerson', 'priceTotal'].includes(k),
-    );
+    const priceFieldsChanged =
+      periodicProvided ||
+      fieldKeys.some((k) =>
+        ['rent', 'adminFee', 'utilitiesAvg', 'pricePerPerson', 'priceTotal'].includes(k),
+      );
     if (priceFieldsChanged) {
-      const prices = computePriceFields(listingType, merged);
+      const effectivePeriodic = sanitizedPeriodic ?? existing.periodicCharges;
+      const prices = computePriceFields(listingType, {
+        ...merged,
+        periodicCharges: effectivePeriodic,
+      });
       if (prices.totalMonthly !== null) data.totalMonthly = prices.totalMonthly;
       if (prices.pricePerPerson !== null) data.pricePerPerson = prices.pricePerPerson;
       if (prices.priceTotal !== null) data.priceTotal = prices.priceTotal;

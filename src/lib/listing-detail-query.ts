@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import type { ListingType } from "@/lib/listings-data";
+import { prisma } from '@/lib/prisma';
+import type { ListingType } from '@/lib/listings-data';
+import { monthlyEquivalent, isPeriodicFrequency } from '@/lib/periodic-charges';
 
 export async function queryListingDetail(id: string) {
   return prisma.listing.findUnique({
@@ -7,6 +8,7 @@ export async function queryListingDetail(id: string) {
     include: {
       building: { include: { district: true, city: true } },
       author: { select: { displayName: true, createdAt: true } },
+      periodicCharges: { orderBy: { createdAt: 'asc' } },
     },
   });
 }
@@ -22,7 +24,7 @@ export function serializeListingDetail(
     type,
     title: listing.title,
     address: listing.building.addressFull,
-    district: listing.building.district?.nameKey ?? "",
+    district: listing.building.district?.nameKey ?? '',
     citySlug,
     buildingId: listing.building.id,
     buildingSlug: listing.building.slug,
@@ -39,11 +41,11 @@ export function serializeListingDetail(
     lat: Number(listing.building.lat ?? 52.23),
     lng: Number(listing.building.lng ?? 21.01),
     promoted: listing.isPromoted,
-    availableFrom: listing.availableFrom?.toISOString() ?? "",
+    availableFrom: listing.availableFrom?.toISOString() ?? '',
     features: listing.amenities ?? [],
     thingsToKnow: listing.thingsToKnow ?? [],
     registrationPossible: listing.registrationPossible ?? undefined,
-    description: listing.description ?? "",
+    description: listing.description ?? '',
     locale: listing.locale ?? null,
     createdAt: listing.createdAt.toISOString(),
     author: listing.author?.displayName ?? null,
@@ -53,8 +55,8 @@ export function serializeListingDetail(
     totalApartmentRent: listing.totalApartmentRent ? Number(listing.totalApartmentRent) : undefined,
     currentRoommates: listing.currentRoommates ?? undefined,
     totalRooms: listing.totalRooms ?? undefined,
-    roomType: (listing.roomType as "private" | "shared") ?? undefined,
-    preferredGender: (listing.preferredGender as "any" | "male" | "female") ?? undefined,
+    roomType: (listing.roomType as 'private' | 'shared') ?? undefined,
+    preferredGender: (listing.preferredGender as 'any' | 'male' | 'female') ?? undefined,
     preferredAgeMin: listing.preferredAgeMin ?? undefined,
     preferredAgeMax: listing.preferredAgeMax ?? undefined,
     roommateDescription: listing.roommateDescription ?? undefined,
@@ -73,6 +75,21 @@ export function serializeListingDetail(
     internetIncluded: listing.internetIncluded ?? undefined,
     subletRules: listing.subletRules ?? undefined,
     depositAmount: listing.depositAmount ? Number(listing.depositAmount) : undefined,
+
+    // Flexible recurring charges (replacement + sublet)
+    periodicCharges: (listing.periodicCharges ?? []).map((c) => {
+      const amount = Number(c.amount);
+      return {
+        id: c.id,
+        category: c.category,
+        amount,
+        frequency: c.frequency,
+        note: c.note ?? undefined,
+        monthlyEquivalent: isPeriodicFrequency(c.frequency)
+          ? Math.round(monthlyEquivalent(amount, c.frequency))
+          : 0,
+      };
+    }),
   };
 
   return base;
@@ -84,13 +101,13 @@ export async function generateListingMetadata(id: string) {
     include: { building: { include: { district: true } } },
   });
 
-  if (!listing) return { title: "Not Found" };
+  if (!listing) return { title: 'Not Found' };
 
   return {
     title: `${listing.title} — Passflat`,
     description:
       listing.description?.slice(0, 160) ??
-      `${listing.title} in ${listing.building.district?.nameKey ?? "Warsaw"}`,
+      `${listing.title} in ${listing.building.district?.nameKey ?? 'Warsaw'}`,
     openGraph: {
       title: listing.title,
       description: listing.description?.slice(0, 160) ?? undefined,

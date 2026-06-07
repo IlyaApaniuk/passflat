@@ -1166,6 +1166,14 @@
         "refunded": "Refunded",
         "expired": "Expired"
       }
+    },
+    "account": {
+      "sectionTitle": "Account",
+      "displayNameLabel": "Display name",
+      "displayNamePlaceholder": "Your name",
+      "emailLabel": "Email",
+      "saveSuccess": "Name updated",
+      "saveError": "Failed to update name"
     }
   },
   "favorites": {
@@ -1746,6 +1754,15 @@
       "fallback": "If the button doesn't work, copy and paste this link into your browser:",
       "ignoreNotice": "If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.",
       "footer": "You received this email because a password reset was requested for your Passflat account."
+    },
+    "signupConfirmation": {
+      "subject": "Confirm your email — Passflat",
+      "heading": "Welcome to Passflat!",
+      "intro": "Thanks for signing up. Please confirm your email address by clicking the button below.",
+      "cta": "Confirm email",
+      "fallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "ignoreNotice": "If you didn't create a Passflat account, you can safely ignore this email.",
+      "footer": "You received this email because someone signed up for Passflat with this address."
     },
     "cityNotifyConfirmation": {
       "subject": "You're on the list — Passflat in {city}",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getOrCreateProfile } from '@/lib/profile';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import {
@@ -13,7 +14,9 @@ import {
 import { trackServerEvent } from '@/lib/posthog-server';
 import { generateBuildingSlug } from '@/lib/slugify';
 import { normalizeAddress } from '@/lib/address';
+import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { FREE_LISTING_LIMIT } from '@/lib/stripe';
+import { sanitizePeriodicCharges } from '@/lib/periodic-charges';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -48,6 +51,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Guarantee a profile exists before any write that FKs to author_id.
+  await getOrCreateProfile(user);
 
   const body = await request.json();
   const {
@@ -95,6 +101,8 @@ export async function POST(request: NextRequest) {
     utilitiesIncluded,
     internetIncluded,
     subletRules,
+    // Flexible recurring charges (replacement + sublet)
+    periodicCharges: periodicChargesInput,
     // Content language
     locale,
     // Payment-related
@@ -136,9 +144,23 @@ export async function POST(request: NextRequest) {
   const addressNormalized = normalizeAddress(street, buildingNumber);
   const addressFull = `${street} ${buildingNumber}`;
 
-  const matchedDistrict = district
+  // Prefer matching the Google Places district name; fall back to point-in-polygon
+  // on the coordinates when the name does not match a known district, so the
+  // building still gets a district instead of null.
+  let matchedDistrict = district
     ? city.districts.find((d) => d.slug === district.toLowerCase() || d.nameKey === district)
     : null;
+
+  if (!matchedDistrict) {
+    const latNum = lat != null && lat !== '' ? Number(lat) : null;
+    const lngNum = lng != null && lng !== '' ? Number(lng) : null;
+    if (latNum != null && lngNum != null && Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+      const resolvedSlug = resolveDistrictByPoint(city.slug, latNum, lngNum);
+      if (resolvedSlug) {
+        matchedDistrict = city.districts.find((d) => d.slug === resolvedSlug) ?? null;
+      }
+    }
+  }
 
   let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
 
@@ -219,6 +241,8 @@ export async function POST(request: NextRequest) {
     priceTotal: priceFields.priceTotal,
   };
 
+  const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
+
   if (type === 'replacement') {
     data.rent = rent ? parseFloat(rent) : null;
     data.adminFee = adminFee ? parseFloat(adminFee) : null;
@@ -251,6 +275,10 @@ export async function POST(request: NextRequest) {
     data.internetIncluded = internetIncluded ?? null;
     data.subletRules = subletRules || null;
     data.depositAmount = depositAmount ? parseFloat(depositAmount) : null;
+  }
+
+  if ((type === 'replacement' || type === 'sublet') && periodicCharges.length > 0) {
+    data.periodicCharges = { create: periodicCharges };
   }
 
   const listing = await prisma.listing.create({

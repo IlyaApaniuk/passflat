@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     redirect('/auth/login?next=/dashboard');
   }
 
-  const [listings, savedListings, costReports] = await Promise.all([
+  const [listings, savedListings, costReports, profile] = await Promise.all([
     prisma.listing.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -39,6 +39,10 @@ export default async function DashboardPage() {
         building: { include: { city: true, district: true } },
         periodicCharges: true,
       },
+    }),
+    prisma.profile.findUnique({
+      where: { id: user.id },
+      select: { displayName: true },
     }),
   ]);
 
@@ -99,6 +103,7 @@ export default async function DashboardPage() {
       costReports={serializedCostReports}
       userEmail={user.email ?? ''}
       freeListingsUsed={freeListingsUsed}
+      displayName={profile?.displayName ?? null}
     />
   );
 }

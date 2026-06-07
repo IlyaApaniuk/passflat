@@ -81,7 +81,14 @@ export function Header({ initialUser }: HeaderProps = {}) {
     router.replace(pathname, { locale: newLocale as 'en' | 'pl' | 'ru' | 'uk' });
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    setMobileMenuOpen(false);
+    // Clear the browser session first so GoTrue emits SIGNED_OUT and the header
+    // updates immediately. The server action then clears the server cookie and
+    // redirects. Without this, logout was server-only and the client header
+    // never reacted until an unrelated remount.
+    const supabase = createClient();
+    await supabase.auth.signOut({ scope: 'local' });
     startSignOut(() => {
       void signOut(locale);
     });
@@ -192,9 +199,8 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        handleSignOut();
+                      onSelect={() => {
+                        void handleSignOut();
                       }}
                       disabled={isSigningOut}
                       className="gap-2 text-destructive focus:text-destructive"
@@ -317,8 +323,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
                       className="mt-2 w-full rounded-xl"
                       disabled={isSigningOut}
                       onClick={() => {
-                        handleSignOut();
-                        setMobileMenuOpen(false);
+                        void handleSignOut();
                       }}
                     >
                       {isSigningOut ? t('common.loading') : t('common.logout')}

@@ -75,6 +75,10 @@ export interface CityLaunchEmailData {
   cityUrl: string;
 }
 
+export interface SignupConfirmationEmailData {
+  confirmUrl: string;
+}
+
 export interface ListingExpiringEmailData {
   title: string;
   listingUrl: string;
@@ -94,4 +98,5 @@ export type EmailTemplate =
       data: CityNotifyConfirmationEmailData;
     }
   | { template: 'cityLaunch'; data: CityLaunchEmailData }
+  | { template: 'signupConfirmation'; data: SignupConfirmationEmailData }
   | { template: 'listingExpiring'; data: ListingExpiringEmailData };
