@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
-import { isCostImportAdmin } from '@/lib/import-constants';
+import { isCostImportAdmin, getAdminImportMode } from '@/lib/import-constants';
 import { CostSubmitClient } from './client';
 
 interface PageProps {
@@ -34,6 +34,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   }
 
   const canFillOnBehalf = isCostImportAdmin(user.email);
+  const adminImportMode = getAdminImportMode();
 
   let existingReport = null;
   if (isEditMode) {
@@ -92,6 +93,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
       editMode={isEditMode && existingReport != null}
       existingReport={existingReport}
       canFillOnBehalf={canFillOnBehalf}
+      adminImportMode={adminImportMode}
     />
   );
 }

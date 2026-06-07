@@ -59,10 +59,20 @@ async function getStats() {
   return { listings, costReports, districts, buildings, users };
 }
 
+// Rotate the featured cost building once per day instead of always showing the
+// single top building. We take the top-N buildings by report count (best data)
+// and deterministically pick one by the day (days since epoch), so the address
+// is stable within a day and cycles between days. The pick lives inside the
+// cached function (not in render) — within-day stability comes from the cache's
+// revalidate, and the rotation flips on the first revalidate after midnight.
+const FEATURED_BUILDING_POOL_SIZE = 20;
+
 async function getTopBuildingCostData() {
-  const building = await prisma.building.findFirst({
+  const dayBucket = Math.floor(Date.now() / 86_400_000);
+  const buildings = await prisma.building.findMany({
     orderBy: { costReports: { _count: 'desc' } },
-    where: { costReports: { some: {} } },
+    where: { costReports: { some: { isVisible: true } } },
+    take: FEATURED_BUILDING_POOL_SIZE,
     include: {
       district: true,
       costReports: {
@@ -79,8 +89,10 @@ async function getTopBuildingCostData() {
     },
   });
 
-  if (!building || building.costReports.length === 0) return undefined;
+  const pool = buildings.filter((b) => b.costReports.length > 0);
+  if (pool.length === 0) return undefined;
 
+  const building = pool[dayBucket % pool.length];
   const reports = building.costReports;
   const avg = (field: keyof (typeof reports)[0]) => {
     const values = reports.map((r) => Number(r[field] ?? 0)).filter((v) => v > 0);

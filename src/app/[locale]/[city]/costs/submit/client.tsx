@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { AdminImportMode } from '@/lib/import-constants';
 import {
   ArrowLeft,
   Check,
@@ -130,6 +132,7 @@ interface CostSubmitClientProps {
   editMode?: boolean;
   existingReport?: ExistingReport | null;
   canFillOnBehalf?: boolean;
+  adminImportMode?: AdminImportMode;
 }
 
 function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
@@ -143,13 +146,23 @@ export function CostSubmitClient({
   editMode = false,
   existingReport = null,
   canFillOnBehalf = false,
+  adminImportMode = 'fill_on_behalf',
 }: CostSubmitClientProps) {
   const t = useTranslations();
   const placeCityRef = useRef('');
-  // Admin-only "fill on behalf": owner email links the report to that account
-  // when they log in. Only available for new submissions, never edits.
-  const showFillOnBehalf = canFillOnBehalf && !editMode;
+  // Admin-only import controls, available only for new submissions (never edits).
+  // ADMIN_IMPORT_MODE (server) decides which one is shown:
+  //   fill_on_behalf — owner email links the report to that account on login.
+  //   scraped — report is owned by the system "Scraped" profile, never claimed.
+  const showFillOnBehalf = canFillOnBehalf && !editMode && adminImportMode === 'fill_on_behalf';
+  const showScrapedImport = canFillOnBehalf && !editMode && adminImportMode === 'scraped';
+  // Default on: the admin is doing batch entry, so attribute to the system
+  // profile (Imported / Scraped) unless they explicitly opt out of a given
+  // submission. The owner email is optional — when set it lets the report
+  // auto-claim on that person's login; when empty it stays on Imported.
+  const [fillOnBehalf, setFillOnBehalf] = useState(true);
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [scrapedImport, setScrapedImport] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
@@ -337,7 +350,13 @@ export function CostSubmitClient({
             citySlug,
             placeCity: placeCityRef.current || undefined,
             isCurrentTenant: true,
-            ...(showFillOnBehalf && ownerEmail.trim() ? { importedEmail: ownerEmail.trim() } : {}),
+            ...(showFillOnBehalf && fillOnBehalf
+              ? {
+                  fillOnBehalf: true,
+                  ...(ownerEmail.trim() ? { importedEmail: ownerEmail.trim() } : {}),
+                }
+              : {}),
+            ...(showScrapedImport && scrapedImport ? { scrapedImport: true } : {}),
             ...sharedFields,
           };
 
@@ -359,7 +378,7 @@ export function CostSubmitClient({
         if (data.error === 'ADDRESS_OUTSIDE_CITY') {
           throw new Error(t('costs.submit.addressOutsideCity', { city: cityName }));
         }
-        throw new Error((data.error as string) || 'Failed to submit');
+        throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
       const costReport = data.costReport as { id?: string } | undefined;
@@ -610,17 +629,76 @@ export function CostSubmitClient({
 
                     {showFillOnBehalf && (
                       <div className="space-y-2 rounded-md border border-dashed border-border p-3">
-                        <Label htmlFor="ownerEmail">{t('costs.submit.ownerEmail')}</Label>
-                        <Input
-                          id="ownerEmail"
-                          type="email"
-                          placeholder="owner@example.com"
-                          value={ownerEmail}
-                          onChange={(e) => setOwnerEmail(e.target.value)}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="fillOnBehalf"
+                            checked={fillOnBehalf}
+                            onCheckedChange={(v) => setFillOnBehalf(v === true)}
+                          />
+                          <Label htmlFor="fillOnBehalf">Fill on behalf (save under Imported)</Label>
+                        </div>
+                        {fillOnBehalf && (
+                          <>
+                            <Label htmlFor="ownerEmail">{t('costs.submit.ownerEmail')}</Label>
+                            <Input
+                              id="ownerEmail"
+                              type="email"
+                              placeholder="owner@example.com (optional)"
+                              value={ownerEmail}
+                              onChange={(e) => setOwnerEmail(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.submit.ownerEmailHint')}
+                            </p>
+                          </>
+                        )}
+                        {fillOnBehalf ? (
+                          ownerEmail.trim() ? (
+                            <p className="text-xs font-medium text-foreground">
+                              → Saved under <span className="font-semibold">Imported</span>,
+                              auto-claims to {ownerEmail.trim()} on first login.
+                            </p>
+                          ) : (
+                            <p className="text-xs font-medium text-foreground">
+                              → Saved under <span className="font-semibold">Imported</span> (no
+                              owner email — stays unclaimed).
+                            </p>
+                          )
+                        ) : (
+                          <p className="text-xs font-medium text-amber-600 dark:text-amber-500">
+                            → This will be saved under{' '}
+                            <span className="font-semibold">your own account</span>.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {showScrapedImport && (
+                      <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="scrapedImport"
+                            checked={scrapedImport}
+                            onCheckedChange={(v) => setScrapedImport(v === true)}
+                          />
+                          <Label htmlFor="scrapedImport">Import as scraped</Label>
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          {t('costs.submit.ownerEmailHint')}
+                          Admin only. Saves this report under the system &ldquo;Scraped&rdquo;
+                          profile (no owner email, never claimed). Uncheck to submit as your own
+                          report.
                         </p>
+                        {scrapedImport ? (
+                          <p className="text-xs font-medium text-foreground">
+                            → Saved under the <span className="font-semibold">Scraped</span> system
+                            profile.
+                          </p>
+                        ) : (
+                          <p className="text-xs font-medium text-amber-600 dark:text-amber-500">
+                            → Unchecked: this will be saved under{' '}
+                            <span className="font-semibold">your own account</span>.
+                          </p>
+                        )}
                       </div>
                     )}
 
