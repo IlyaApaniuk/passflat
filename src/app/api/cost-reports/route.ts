@@ -9,6 +9,14 @@ import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
+import {
+  IMPORT_AUTHOR_ID,
+  IMPORT_AUTHOR_DISPLAY_NAME,
+  SCRAPED_AUTHOR_ID,
+  SCRAPED_AUTHOR_DISPLAY_NAME,
+  isCostImportAdmin,
+  getAdminImportMode,
+} from '@/lib/import-constants';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -86,7 +94,63 @@ export async function POST(request: NextRequest) {
       livedFrom,
       livedUntil,
       periodicCharges: periodicChargesInput,
+      fillOnBehalf: fillOnBehalfInput,
+      importedEmail: importedEmailInput,
+      scrapedImport: scrapedImportInput,
     } = body;
+
+    // Admin import modes: an authorized admin enters data through the normal
+    // form, but the report is owned by a system profile rather than the admin.
+    // ADMIN_IMPORT_MODE (env) selects which behaviour the admin section performs:
+    //   'fill_on_behalf' — report is owned by the system "Imported" profile. The
+    //      owner email is OPTIONAL: when given, the report auto-claims to that
+    //      account on login (see auth/callback); when omitted it stays on
+    //      Imported, unclaimed.
+    //   'scraped' — report is owned by the system "Scraped" profile, has no
+    //      owner email and is never claimed (used for scraped listings).
+    // Coordinates still come from Places either way.
+    const isAdmin = isCostImportAdmin(user.email);
+    const adminMode = getAdminImportMode();
+    // Explicit flag is the signal (email is optional now); also treat a bare
+    // importedEmail as a request for backward compatibility.
+    const fillOnBehalfRequested = fillOnBehalfInput === true || importedEmailInput !== undefined;
+    const scrapedRequested = scrapedImportInput === true;
+    if ((fillOnBehalfRequested || scrapedRequested) && !isAdmin) {
+      // Never let a non-admin attribute a report to a system profile. Ignore the
+      // field and fall back to a normal self-submission.
+      console.warn(
+        `[cost-reports POST] non-admin user ${user.id} sent admin import fields; ignoring`,
+      );
+    }
+
+    const fillOnBehalf = isAdmin && adminMode === 'fill_on_behalf' && fillOnBehalfRequested;
+    const scrapedImport = isAdmin && adminMode === 'scraped' && scrapedRequested;
+    const adminImport = fillOnBehalf || scrapedImport;
+
+    // Fail loud instead of silently falling back. If an admin sent an import
+    // signal that the active ADMIN_IMPORT_MODE can't honour, refuse the request
+    // rather than quietly saving the report under the admin's own account — that
+    // silent fallback is exactly how a batch once got mis-attributed and lost.
+    if (isAdmin && (fillOnBehalfRequested || scrapedRequested) && !adminImport) {
+      return NextResponse.json(
+        {
+          error: 'ADMIN_IMPORT_MODE_MISMATCH',
+          message: `Admin import was requested but ADMIN_IMPORT_MODE is "${adminMode}". Set the matching mode (or remove the import field) — refusing to save under your own account.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const normalizedImportedEmail =
+      fillOnBehalf && typeof importedEmailInput === 'string' && importedEmailInput.trim()
+        ? importedEmailInput.trim().toLowerCase()
+        : null;
+    const effectiveAuthorId = scrapedImport
+      ? SCRAPED_AUTHOR_ID
+      : fillOnBehalf
+        ? IMPORT_AUTHOR_ID
+        : user.id;
+    const reportSource = scrapedImport ? 'scraped' : fillOnBehalf ? 'import' : 'user';
 
     const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
 
@@ -247,19 +311,24 @@ export async function POST(request: NextRequest) {
 
     // One report per user PER BUILDING. A user may report for several buildings,
     // but a duplicate for the same building should be edited instead of recreated.
-    const existingReport = await prisma.costReport.findFirst({
-      where: { authorId: user.id, buildingId: building.id },
-      select: { id: true },
-    });
-    if (existingReport) {
-      return NextResponse.json(
-        {
-          error: 'You already have a cost report for this building. Please edit your existing one.',
-          code: 'ALREADY_EXISTS',
-          reportId: existingReport.id,
-        },
-        { status: 409 },
-      );
+    // Skipped in fill-on-behalf mode: the system import profile legitimately owns
+    // many reports per building (one per friend), like the bulk CSV import.
+    if (!fillOnBehalf) {
+      const existingReport = await prisma.costReport.findFirst({
+        where: { authorId: user.id, buildingId: building.id },
+        select: { id: true },
+      });
+      if (existingReport) {
+        return NextResponse.json(
+          {
+            error:
+              'You already have a cost report for this building. Please edit your existing one.',
+            code: 'ALREADY_EXISTS',
+            reportId: existingReport.id,
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const electricityAvg = electricityIncluded
@@ -289,10 +358,25 @@ export async function POST(request: NextRequest) {
       (parseFloat(otherCosts) || 0) +
       periodicChargesMonthlyTotal(periodicCharges);
 
+    // The system profile must exist before we point a report's FK at it.
+    if (adminImport) {
+      const [systemId, systemName] = scrapedImport
+        ? [SCRAPED_AUTHOR_ID, SCRAPED_AUTHOR_DISPLAY_NAME]
+        : [IMPORT_AUTHOR_ID, IMPORT_AUTHOR_DISPLAY_NAME];
+      await prisma.profile.upsert({
+        where: { id: systemId },
+        create: { id: systemId, displayName: systemName },
+        update: {},
+      });
+    }
+
     const costReport = await prisma.costReport.create({
       data: {
         buildingId: building.id,
-        authorId: user.id,
+        authorId: effectiveAuthorId,
+        source: reportSource,
+        importedEmail: fillOnBehalf ? normalizedImportedEmail : null,
+        claimedAt: null,
         currency: 'PLN',
         rent: rent ? parseFloat(rent) : null,
         adminFee: adminFee ? parseFloat(adminFee) : null,
@@ -329,8 +413,9 @@ export async function POST(request: NextRequest) {
       include: { building: true, periodicCharges: true },
     });
 
-    // Only mark hasContributed if data was not flagged
-    if (!wasFlagged) {
+    // Only mark hasContributed for genuine self-submissions (not flagged, and
+    // not an admin import where the admin is entering someone else's data).
+    if (!wasFlagged && !adminImport) {
       await prisma.profile.update({
         where: { id: user.id },
         data: { hasContributedCost: true },
@@ -341,6 +426,8 @@ export async function POST(request: NextRequest) {
       building_id: building.id,
       city: citySlug || 'warsaw',
       was_flagged: wasFlagged,
+      fill_on_behalf: fillOnBehalf,
+      scraped_import: scrapedImport,
     });
 
     return NextResponse.json({ costReport, wasFlagged }, { status: 201 });

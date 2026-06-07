@@ -1,0 +1,10 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const city = await prisma.city.findUnique({ where: { slug: 'warsaw' }, include: { districts: true } });
+console.log('CITY bounds:', JSON.stringify(city?.bounds));
+console.log('CITY id:', city?.id, 'districts:', city?.districts.length);
+const b = await prisma.building.findFirst({ where: { placeId: 'ChIJB5Dk5mjLHkcR33WCkGN9UUk' } });
+console.log('Building by placeId:', b ? b.id : null);
+const prof = await prisma.profile.findFirst({ select: { id: true } });
+console.log('A profile id:', prof?.id);
+await prisma.$disconnect();

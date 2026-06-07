@@ -772,6 +772,8 @@
       "deposit": "Kaucja",
       "rentalTypeRequired": "Wybierz co wynajmujesz (mieszkanie lub pokój)",
       "addressOutsideCity": "Wybierz adres w granicach miasta {city}.",
+      "ownerEmail": "E-mail właściciela (opcjonalnie)",
+      "ownerEmailHint": "Powiąże ten wpis z kontem właściciela, gdy się zaloguje. Pozostaw puste, aby wpis pozostał nieprzypisany.",
       "submitButton": "Wyślij raport kosztów",
       "saveChanges": "Zapisz zmiany",
       "editReport": "Edytuj mój raport",

@@ -32,19 +32,13 @@ const eslintConfig = [
 
   ...nextCoreWebVitals,
 
-  // Project-wide rule adjustments. The existing codebase is large and predates
-  // this lint gate, so a few high-volume rules are relaxed to keep the gate
-  // green and actionable rather than drowning in pre-existing noise. Tighten
-  // these back up incrementally as the code is cleaned.
+  // TypeScript-only relaxations. These reference `@typescript-eslint/*` rules, so
+  // they MUST be scoped to TS files — the plugin is only registered for TS files
+  // (via eslint-config-next). Applying them globally makes `eslint .` fail on
+  // plain .js/.mjs files with "could not find plugin @typescript-eslint".
   {
+    files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
     rules: {
-      // Core ESLint rules that misfire on TypeScript: `no-undef` is redundant
-      // (the compiler checks this and the rule flags global/ambient types), and
-      // the core `no-unused-vars` duplicates the typescript-eslint version
-      // below. Both are the recommended off-switches for TS projects.
-      'no-undef': 'off',
-      'no-unused-vars': 'off',
-
       // The codebase intentionally uses `any` in several integration/boundary
       // spots (Stripe, next-intl, map libs). Warn rather than error.
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -59,6 +53,21 @@ const eslintConfig = [
           ignoreRestSiblings: true,
         },
       ],
+    },
+  },
+
+  // Project-wide rule adjustments. The existing codebase is large and predates
+  // this lint gate, so a few high-volume rules are relaxed to keep the gate
+  // green and actionable rather than drowning in pre-existing noise. Tighten
+  // these back up incrementally as the code is cleaned.
+  {
+    rules: {
+      // Core ESLint rules that misfire on TypeScript: `no-undef` is redundant
+      // (the compiler checks this and the rule flags global/ambient types), and
+      // the core `no-unused-vars` duplicates the typescript-eslint version
+      // below. Both are the recommended off-switches for TS projects.
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
 
       // `no-html-link-for-pages` assumes a `pages/` dir and false-positives
       // across the board on App Router projects.
