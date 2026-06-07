@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
@@ -49,7 +49,13 @@ import {
   Receipt,
   LifeBuoy,
   Loader2,
+  Pencil,
+  Check,
+  X,
+  User,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { DeleteAccountDialog } from '@/components/account/delete-account-dialog';
 
 type ListingType = 'replacement' | 'roommate' | 'sublet';
@@ -101,6 +107,7 @@ interface Props {
   costReports: DashboardCostReport[];
   userEmail: string;
   freeListingsUsed: number;
+  displayName: string | null;
 }
 
 const statCardVariants = {
@@ -130,6 +137,7 @@ export function DashboardClient({
   costReports,
   userEmail,
   freeListingsUsed,
+  displayName: initialDisplayName,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -146,6 +154,10 @@ export function DashboardClient({
   const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [receiptLoadingId, setReceiptLoadingId] = useState<string | null>(null);
+  const [currentDisplayName, setCurrentDisplayName] = useState(initialDisplayName ?? '');
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(initialDisplayName ?? '');
+  const [nameSaving, setNameSaving] = useState(false);
   const initialTab = searchParams.get('tab') ?? 'listings';
 
   const loadPayments = async () => {
@@ -181,16 +193,21 @@ export function DashboardClient({
     setReceiptLoadingId(null);
   };
 
+  const queryToastFired = useRef(false);
   useEffect(() => {
+    if (queryToastFired.current) return;
     const paid = searchParams.get('paid');
     const published = searchParams.get('published');
 
     if (paid === 'success') {
       toast.success(t('dashboard.statusProcessing'));
+      queryToastFired.current = true;
     } else if (paid === 'cancel') {
       toast.info(t('dashboard.statusPendingPayment'));
+      queryToastFired.current = true;
     } else if (published === 'success') {
       toast.success(t('listings.create.publishedTitle'));
+      queryToastFired.current = true;
     }
 
     if (paid || published) {
@@ -1073,13 +1090,129 @@ export function DashboardClient({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mt-16 border-t pt-8"
+            className="mt-12"
           >
-            <h2 className="text-lg font-semibold text-destructive">{t('account.delete.title')}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t('account.delete.warning')}</p>
-            <div className="mt-4">
-              <DeleteAccountDialog userEmail={userEmail} />
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-semibold">{t('dashboard.account.sectionTitle')}</h2>
+                </div>
+
+                <Separator className="my-5" />
+
+                <div className="space-y-5">
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {t('dashboard.account.displayNameLabel')}
+                    </p>
+                    {editingName ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={nameInput}
+                          onChange={(e) => setNameInput(e.target.value)}
+                          placeholder={t('dashboard.account.displayNamePlaceholder')}
+                          className="h-9 max-w-xs"
+                          maxLength={100}
+                          autoFocus
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-green-600 hover:text-green-700"
+                          disabled={nameSaving}
+                          onClick={async () => {
+                            const trimmed = nameInput.trim();
+                            if (!trimmed || trimmed.length > 100) return;
+                            setNameSaving(true);
+                            try {
+                              const res = await fetch('/api/account', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ displayName: trimmed }),
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                setCurrentDisplayName(data.displayName);
+                                setEditingName(false);
+                                toast.success(t('dashboard.account.saveSuccess'));
+                              } else {
+                                toast.error(t('dashboard.account.saveError'));
+                              }
+                            } catch {
+                              toast.error(t('dashboard.account.saveError'));
+                            }
+                            setNameSaving(false);
+                          }}
+                        >
+                          {nameSaving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          disabled={nameSaving}
+                          onClick={() => {
+                            setNameInput(currentDisplayName);
+                            setEditingName(false);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">
+                          {currentDisplayName || (
+                            <span className="italic font-normal text-muted-foreground">
+                              {t('dashboard.account.displayNamePlaceholder')}
+                            </span>
+                          )}
+                        </p>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setNameInput(currentDisplayName);
+                            setEditingName(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {t('dashboard.account.emailLabel')}
+                    </p>
+                    <p className="text-sm font-medium">{userEmail}</p>
+                  </div>
+                </div>
+
+                <Separator className="my-5" />
+
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+                  <h3 className="text-sm font-semibold text-destructive">
+                    {t('account.delete.title')}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('account.delete.warning')}
+                  </p>
+                  <div className="mt-3">
+                    <DeleteAccountDialog userEmail={userEmail} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </main>

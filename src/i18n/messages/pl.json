@@ -1166,6 +1166,14 @@
         "refunded": "Zwrócone",
         "expired": "Wygasłe"
       }
+    },
+    "account": {
+      "sectionTitle": "Konto",
+      "displayNameLabel": "Nazwa wyświetlana",
+      "displayNamePlaceholder": "Twoje imię",
+      "emailLabel": "Email",
+      "saveSuccess": "Nazwa zaktualizowana",
+      "saveError": "Nie udało się zaktualizować nazwy"
     }
   },
   "favorites": {
@@ -1746,6 +1754,15 @@
       "fallback": "Jeśli przycisk nie działa, skopiuj i wklej ten link do przeglądarki:",
       "ignoreNotice": "Jeśli nie prosiłeś o zresetowanie hasła, zignoruj tę wiadomość — Twoje hasło pozostanie bez zmian.",
       "footer": "Otrzymujesz tę wiadomość, ponieważ poproszono o zresetowanie hasła do Twojego konta Passflat."
+    },
+    "signupConfirmation": {
+      "subject": "Potwierdź adres e-mail — Passflat",
+      "heading": "Witaj w Passflat!",
+      "intro": "Dziękujemy za rejestrację. Potwierdź swój adres e-mail, klikając przycisk poniżej.",
+      "cta": "Potwierdź e-mail",
+      "fallback": "Jeśli przycisk nie działa, skopiuj i wklej ten link do przeglądarki:",
+      "ignoreNotice": "Jeśli nie zakładałeś konta w Passflat, zignoruj tę wiadomość.",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ ktoś zarejestrował się w Passflat z tym adresem e-mail."
     },
     "cityNotifyConfirmation": {
       "subject": "Jesteś na liście — Passflat w {city}",

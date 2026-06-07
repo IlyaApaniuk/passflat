@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     where: { id: listingId },
     include: {
       author: {
-        select: { id: true, contactValue: true, displayName: true, locale: true },
+        select: { id: true, email: true, contactValue: true, displayName: true, locale: true },
       },
       building: { include: { city: true } },
     },
@@ -115,15 +115,11 @@ export async function POST(request: NextRequest) {
   const senderDisplayName =
     senderProfile?.displayName || user.user_metadata?.display_name || user.email || 'User';
 
-  const authorEmail = listing.author?.contactValue?.includes('@')
-    ? listing.author.contactValue
-    : null;
-  const recipientEmail = authorEmail || user.email;
-
-  if (recipientEmail && process.env.RESEND_API_KEY) {
+  const authorEmail = listing.author?.email ?? null;
+  if (authorEmail && process.env.RESEND_API_KEY) {
     const locale = resolveEmailLocale(listing.author?.locale);
     await sendNewMessageEmail({
-      to: recipientEmail,
+      to: authorEmail,
       locale,
       listingTitle: listing.title,
       senderName: senderDisplayName,

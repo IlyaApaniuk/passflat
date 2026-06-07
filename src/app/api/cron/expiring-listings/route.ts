@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       type: true,
       title: true,
       expiresAt: true,
-      author: { select: { contactValue: true, locale: true } },
+      author: { select: { email: true, locale: true } },
       building: { select: { city: { select: { slug: true } } } },
     },
   });
@@ -40,9 +40,7 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const recipientEmail = listing.author?.contactValue?.includes('@')
-      ? listing.author.contactValue
-      : null;
+    const recipientEmail = listing.author?.email ?? null;
 
     if (!recipientEmail) {
       failed += 1;
