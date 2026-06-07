@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { Home, MessageSquare } from 'lucide-react';
@@ -42,9 +43,7 @@ export function ConversationList({
           <MessageSquare className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-semibold">{t('chat.noConversations')}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('chat.noConversationsDesc')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('chat.noConversationsDesc')}</p>
       </div>
     );
   }
@@ -54,9 +53,7 @@ export function ConversationList({
       {conversations.map((conv) => {
         const isSelected = selectedId === conv.id;
         const unread = (conv.unreadCount ?? 0) > 0;
-        const lastTime = conv.lastMessage
-          ? formatRelativeTime(conv.lastMessage.createdAt)
-          : '';
+        const lastTime = conv.lastMessage ? formatRelativeTime(conv.lastMessage.createdAt) : '';
 
         return (
           <button
@@ -70,11 +67,7 @@ export function ConversationList({
           >
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
               {conv.listingPhoto ? (
-                <img
-                  src={conv.listingPhoto}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+                <Image src={conv.listingPhoto} alt="" fill sizes="48px" className="object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-muted">
                   <Home className="h-5 w-5 text-muted-foreground" />
@@ -87,28 +80,17 @@ export function ConversationList({
 
             <div className="flex-1 overflow-hidden">
               <div className="flex items-center justify-between gap-2">
-                <p
-                  className={cn(
-                    'truncate text-sm',
-                    unread ? 'font-semibold' : 'font-medium',
-                  )}
-                >
+                <p className={cn('truncate text-sm', unread ? 'font-semibold' : 'font-medium')}>
                   {conv.otherUser.name}
                 </p>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {lastTime}
-                </span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">{lastTime}</span>
               </div>
-              <p className="truncate text-xs text-muted-foreground mt-0.5">
-                {conv.listingTitle}
-              </p>
+              <p className="truncate text-xs text-muted-foreground mt-0.5">{conv.listingTitle}</p>
               {conv.lastMessage && (
                 <p
                   className={cn(
                     'mt-1 truncate text-xs',
-                    unread
-                      ? 'font-medium text-foreground'
-                      : 'text-muted-foreground',
+                    unread ? 'font-medium text-foreground' : 'text-muted-foreground',
                   )}
                 >
                   {conv.lastMessage.content}

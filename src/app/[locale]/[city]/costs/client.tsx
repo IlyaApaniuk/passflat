@@ -12,7 +12,6 @@ import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { MapSkeleton } from '@/components/map/map-skeleton';
-import { PRICES_PLN } from '@/lib/pricing';
 import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

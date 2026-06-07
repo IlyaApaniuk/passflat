@@ -163,6 +163,8 @@ export function ListingsMap({
 
   useEffect(() => {
     if (popupInfo && !listings.some((l) => l.id === popupInfo.id)) {
+      // Reconcile the open popup with the (externally) changed listing set.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPopupInfo(null);
     }
   }, [listings, popupInfo]);

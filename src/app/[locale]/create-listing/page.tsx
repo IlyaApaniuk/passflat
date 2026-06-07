@@ -234,6 +234,9 @@ function SortablePhoto({
         isDragging ? 'opacity-40 ring-2 ring-primary ring-offset-2' : ''
       }`}
     >
+      {/* Local upload previews are blob: object URLs (URL.createObjectURL),
+          which next/image can't optimize — keep a plain <img> here. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.url}
         alt={`Photo ${index + 1}`}
@@ -264,6 +267,8 @@ function SortablePhoto({
 function PhotoOverlay({ photo }: { photo: PhotoItem }) {
   return (
     <div className="aspect-video overflow-hidden rounded-lg shadow-xl ring-2 ring-primary">
+      {/* Blob: object URL preview (see PhotoCard) — keep a plain <img>. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.url} alt="Dragging" className="h-full w-full object-cover" />
     </div>
   );
@@ -321,6 +326,8 @@ function CreateListingForm() {
 
   useEffect(() => {
     if (!editId) return;
+    // Fetch the listing to edit on mount (external data source).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoadingEdit(true);
     fetch(`/api/listings/${editId}`)
       .then((res) => {
@@ -2007,6 +2014,8 @@ function CreateListingForm() {
                     <CardContent>
                       {photos.length > 0 && (
                         <div className="mb-6 aspect-video overflow-hidden rounded-lg">
+                          {/* Cover preview can be a blob: object URL — keep a plain <img>. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={photos[0].url}
                             alt="Cover"

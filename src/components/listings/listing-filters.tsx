@@ -51,6 +51,9 @@ function PriceRangeSlider({
   const [localValues, setLocalValues] = useState<[number, number]>([currentMin, currentMax]);
 
   useEffect(() => {
+    // Mirror the committed filter props into the local (debounced) slider state
+    // when they change externally, e.g. on reset or URL-driven updates.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalValues([filters.priceMin ?? range.min, filters.priceMax ?? range.max]);
   }, [filters.priceMin, filters.priceMax, range.min, range.max]);
 

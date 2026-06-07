@@ -54,6 +54,9 @@ export function CookieConsent() {
   const locale = detectLocale(pathname);
   const t = translations[locale];
 
+  // Reads the persisted consent (client-only localStorage) after mount and
+  // shows the banner accordingly. Default-hidden render keeps SSR/CSR in sync.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const consent = localStorage.getItem(CONSENT_KEY);
     if (!consent) {
@@ -65,6 +68,7 @@ export function CookieConsent() {
       }
     }
   }, [posthog]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleAccept = () => {
     setConsent('accepted');

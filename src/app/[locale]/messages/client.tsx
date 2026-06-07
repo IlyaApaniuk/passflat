@@ -59,6 +59,8 @@ export function MessagesClient({ userId }: MessagesClientProps) {
   // Auto-select first conversation on desktop if none selected
   useEffect(() => {
     if (!selectedId && conversations.length > 0 && window.innerWidth >= 768) {
+      // Runs after async conversations load and reads client-only window width.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedId(conversations[0].id);
     }
   }, [conversations, selectedId]);

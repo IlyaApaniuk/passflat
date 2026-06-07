@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
@@ -220,6 +221,8 @@ export function DashboardClient({
   }, [searchParams, t]);
 
   useEffect(() => {
+    // Load billing data on mount when arriving on the billing tab (external fetch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialTab === 'billing') loadPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -483,12 +486,12 @@ export function DashboardClient({
                               <div className="flex flex-col gap-4 sm:flex-row">
                                 <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg sm:aspect-square sm:w-32">
                                   {listing.image ? (
-                                    <img
+                                    <Image
                                       src={listing.image}
                                       alt={listing.title}
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                                      fill
+                                      sizes="(max-width: 640px) 100vw, 128px"
+                                      className="object-cover transition-transform duration-300 hover:scale-105"
                                     />
                                   ) : (
                                     <div className="flex h-full w-full items-center justify-center bg-muted">
@@ -745,12 +748,12 @@ export function DashboardClient({
                               <div className="flex flex-col gap-4 sm:flex-row">
                                 <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg sm:aspect-square sm:w-32">
                                   {saved.image ? (
-                                    <img
+                                    <Image
                                       src={saved.image}
                                       alt={saved.title}
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                                      fill
+                                      sizes="(max-width: 640px) 100vw, 128px"
+                                      className="object-cover transition-transform duration-300 hover:scale-105"
                                     />
                                   ) : (
                                     <div className="flex h-full w-full items-center justify-center bg-muted">

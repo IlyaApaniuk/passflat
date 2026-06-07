@@ -37,9 +37,7 @@ export function useChat(
     if (!conversationId) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/conversations/${conversationId}/messages?limit=50`,
-      );
+      const res = await fetch(`/api/conversations/${conversationId}/messages?limit=50`);
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages.reverse());
@@ -67,6 +65,8 @@ export function useChat(
   useEffect(() => {
     if (!conversationId || !currentUserId) return;
 
+    // Initial fetch + realtime subscription on mount (external data source).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMessages();
 
     const supabase = createClient();
@@ -123,21 +123,16 @@ export function useChat(
       setMessages((prev) => [...prev, optimisticMsg]);
 
       try {
-        const res = await fetch(
-          `/api/conversations/${conversationId}/messages`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: content.trim() }),
-          },
-        );
+        const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content.trim() }),
+        });
 
         if (res.ok) {
           const data = await res.json();
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === optimisticId ? { ...m, id: data.id } : m,
-            ),
+            prev.map((m) => (m.id === optimisticId ? { ...m, id: data.id } : m)),
           );
         } else {
           setMessages((prev) => prev.filter((m) => m.id !== optimisticId));

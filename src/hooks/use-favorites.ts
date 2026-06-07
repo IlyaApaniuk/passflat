@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-const LS_KEY = "passflat_favorites";
+const LS_KEY = 'passflat_favorites';
 
 function readLocalFavorites(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+    return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
   } catch {
     return [];
   }
@@ -26,9 +26,12 @@ export function useFavorites(isLoggedIn: boolean) {
   const [loading, setLoading] = useState(true);
   const synced = useRef(false);
 
+  // Loads favorites on mount from the server (logged in) or client-only
+  // localStorage (guest) — an external data source, not render-derivable.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isLoggedIn) {
-      fetch("/api/favorites")
+      fetch('/api/favorites')
         .then((r) => (r.ok ? r.json() : []))
         .then((ids: string[]) => {
           setFavorites(ids);
@@ -40,9 +43,9 @@ export function useFavorites(isLoggedIn: boolean) {
             if (local.length > 0) {
               const toSync = local.filter((id) => !ids.includes(id));
               if (toSync.length > 0) {
-                fetch("/api/favorites/sync", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                fetch('/api/favorites/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ listingIds: toSync }),
                 }).then(() => {
                   setFavorites((prev) => [...new Set([...prev, ...toSync])]);
@@ -58,18 +61,14 @@ export function useFavorites(isLoggedIn: boolean) {
       setLoading(false);
     }
   }, [isLoggedIn]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const isFavorite = useCallback(
-    (listingId: string) => favorites.includes(listingId),
-    [favorites],
-  );
+  const isFavorite = useCallback((listingId: string) => favorites.includes(listingId), [favorites]);
 
   const toggleFavorite = useCallback(
     async (listingId: string) => {
       const wasFav = favorites.includes(listingId);
-      const next = wasFav
-        ? favorites.filter((id) => id !== listingId)
-        : [...favorites, listingId];
+      const next = wasFav ? favorites.filter((id) => id !== listingId) : [...favorites, listingId];
 
       setFavorites(next);
 
@@ -79,9 +78,9 @@ export function useFavorites(isLoggedIn: boolean) {
       }
 
       try {
-        const res = await fetch("/api/favorites", {
-          method: wasFav ? "DELETE" : "POST",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/favorites', {
+          method: wasFav ? 'DELETE' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ listingId }),
         });
         if (!res.ok) throw new Error();

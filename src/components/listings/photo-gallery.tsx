@@ -228,12 +228,12 @@ export function PhotoGallery({ images, title }: PhotoGalleryProps) {
                       : 'opacity-50 hover:opacity-100 hover:scale-105'
                   }`}
                 >
-                  <img
+                  <Image
                     src={image}
                     alt={`Thumbnail ${index + 1}`}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
                   />
                 </button>
               ))}
