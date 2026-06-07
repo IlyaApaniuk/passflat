@@ -781,7 +781,9 @@ export function CostSubmitClient({
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="rent">{t('costs.submit.rent')} *</Label>
+                        <Label htmlFor="rent" className="min-h-[2.5rem] items-start leading-snug">
+                          {t('costs.submit.rent')}&nbsp;*
+                        </Label>
                         <Input
                           id="rent"
                           type="number"
@@ -793,7 +795,12 @@ export function CostSubmitClient({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="adminFee">{t('costs.submit.adminFeeCzynsz')} *</Label>
+                        <Label
+                          htmlFor="adminFee"
+                          className="min-h-[2.5rem] items-start leading-snug"
+                        >
+                          {t('costs.submit.adminFeeCzynsz')}&nbsp;*
+                        </Label>
                         <Input
                           id="adminFee"
                           type="number"

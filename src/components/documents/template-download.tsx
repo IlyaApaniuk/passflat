@@ -91,7 +91,7 @@ export function TemplateDownload({
         <span>{t('badge')}</span>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-4 flex flex-wrap gap-2">
         <a
           href={pdfHref}
           download
