@@ -8,12 +8,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Home, Loader2, Mail } from 'lucide-react';
 import { signup, signInWithGoogle } from '../actions';
@@ -41,7 +36,7 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-export function RegisterForm() {
+export function RegisterForm({ next }: { next?: string }) {
   const t = useTranslations('auth');
   const tc = useTranslations('common');
   const { locale } = useParams<{ locale: string }>();
@@ -54,8 +49,8 @@ export function RegisterForm() {
   useEffect(() => {
     posthog?.capture('auth_started', {
       method: 'register',
-      has_next_url: false,
-      trigger: 'voluntary',
+      has_next_url: !!next,
+      trigger: next ? 'required' : 'voluntary',
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -71,6 +66,7 @@ export function RegisterForm() {
     }
 
     formData.set('locale', locale);
+    if (next) formData.set('next', next);
 
     startTransition(async () => {
       const result = await signup(formData);
@@ -85,7 +81,7 @@ export function RegisterForm() {
   function handleGoogleSignIn() {
     setError(null);
     startTransition(async () => {
-      const result = await signInWithGoogle(locale);
+      const result = await signInWithGoogle(locale, next);
       if (result?.error) {
         setError(result.error);
       }
@@ -100,9 +96,7 @@ export function RegisterForm() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">
-              {tc('appName')}
-            </span>
+            <span className="text-xl font-semibold tracking-tight">{tc('appName')}</span>
           </Link>
 
           <Card>
@@ -125,9 +119,7 @@ export function RegisterForm() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Home className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold tracking-tight">
-            {tc('appName')}
-          </span>
+          <span className="text-xl font-semibold tracking-tight">{tc('appName')}</span>
         </Link>
 
         <Card>
@@ -161,13 +153,7 @@ export function RegisterForm() {
             <form action={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">{t('register.email')}</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                />
+                <Input id="email" name="email" type="email" autoComplete="email" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">{t('register.password')}</Label>
@@ -181,9 +167,7 @@ export function RegisterForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">
-                  {t('register.confirmPassword')}
-                </Label>
+                <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -194,18 +178,14 @@ export function RegisterForm() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  t('register.submit')
-                )}
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('register.submit')}
               </Button>
             </form>
 
             <p className="text-center text-sm text-muted-foreground">
               {t('register.hasAccount')}{' '}
               <Link
-                href="/auth/login"
+                href={next ? { pathname: '/auth/login', query: { next } } : '/auth/login'}
                 className="text-primary hover:underline"
               >
                 {t('register.logIn')}

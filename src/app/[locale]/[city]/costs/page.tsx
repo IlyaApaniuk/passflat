@@ -27,7 +27,9 @@ type BuildingData = {
   medianRent: number;
   medianAdminFee: number;
   medianRentPerM2: number | null;
+  medianTotalPerM2: number | null;
   medianAdminFeePerM2: number | null;
+  medianExpenses: number | null;
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
@@ -65,6 +67,8 @@ const getBuildingsData = unstable_cache(
             totalMonthlyAvg: true,
             areaM2: true,
             rentalType: true,
+            // FUTURE (paid utility analytics): add electricityAvg, gas, heating,
+            // water here, then compute per-building medians in the .map() below.
           },
         },
       },
@@ -98,9 +102,22 @@ const getBuildingsData = unstable_cache(
         medianTotal: median(reports.map((r) => num(r.totalMonthlyAvg))) ?? 0,
         medianRent: median(reports.map((r) => num(r.rent))) ?? 0,
         medianAdminFee: median(reports.map((r) => num(r.adminFee))) ?? 0,
+        // Per-report (total − rent) then median — the typical non-rent spend.
+        medianExpenses: median(
+          reports.map((r) => {
+            const tot = num(r.totalMonthlyAvg);
+            const rnt = num(r.rent);
+            return tot != null && rnt != null ? tot - rnt : null;
+          }),
+        ),
         // Per-report ratio, then median — never average-of-averages.
         medianRentPerM2: median(
           perAreaValues(reports.map((r) => ({ value: num(r.rent), areaM2: num(r.areaM2) }))),
+        ),
+        medianTotalPerM2: median(
+          perAreaValues(
+            reports.map((r) => ({ value: num(r.totalMonthlyAvg), areaM2: num(r.areaM2) })),
+          ),
         ),
         medianAdminFeePerM2: median(
           perAreaValues(reports.map((r) => ({ value: num(r.adminFee), areaM2: num(r.areaM2) }))),
@@ -233,6 +250,10 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
         medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
         medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
         medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
+        medianTotalPerM2: medianOf(dBuildings.map((b) => b.medianTotalPerM2 ?? 0)),
+        medianExpenses: medianOf(dBuildings.map((b) => b.medianExpenses ?? 0)),
+        // FUTURE (paid utility analytics): add medianElectricity/Gas/Heating/Water
+        // here (same medianOf pattern) and surface them in a gated "utilities" tab.
       };
     })
     .filter((d): d is NonNullable<typeof d> => d !== null)

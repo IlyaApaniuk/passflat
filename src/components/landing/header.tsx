@@ -18,14 +18,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Home, Globe, User, LogOut, LayoutDashboard, MessageSquare } from 'lucide-react';
 import { signOut } from '@/app/[locale]/auth/actions';
 import { useUnreadCount } from '@/hooks/use-unread-count';
+import { LANGUAGES as languages } from '@/i18n/languages';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-
-const languages = [
-  { code: 'pl' as const, label: 'Polski' },
-  { code: 'uk' as const, label: 'Українська' },
-  { code: 'en' as const, label: 'English' },
-  { code: 'ru' as const, label: 'Русский' },
-];
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -98,16 +92,14 @@ export function Header({ initialUser }: HeaderProps = {}) {
   const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
 
   const navLinks = [
-    { href: `/${DEFAULT_CITY}/replacement` as const, label: t('listings.titleReplacement') },
-    { href: `/${DEFAULT_CITY}/roommate` as const, label: t('listings.titleRoommate') },
-    { href: `/${DEFAULT_CITY}/sublet` as const, label: t('listings.titleSublet') },
+    { href: `/${DEFAULT_CITY}/replacement` as const, label: t('listings.navListings') },
     { href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') },
   ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/95 px-4 sm:px-6 py-3">
+        <div className="relative flex items-center justify-between rounded-full border border-border/50 bg-background/95 px-4 sm:px-6 py-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
@@ -117,8 +109,9 @@ export function Header({ initialUser }: HeaderProps = {}) {
             <span className="text-xl font-semibold tracking-tight">{t('common.appName')}</span>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Desktop Nav — absolutely centered so it stays in the middle
+              regardless of the logo / right-actions widths */}
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
             {navLinks.map((item) => (
               <Link
                 key={item.href}

@@ -59,7 +59,6 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
         rent: report.rent ? String(report.rent) : '',
         adminFee: report.adminFee ? String(report.adminFee) : '',
         deposit: report.depositAmount ? String(report.depositAmount) : '',
-        extraBills: '',
         electricity: report.electricityAvg ? String(report.electricityAvg) : '',
         electricityIncluded: report.electricityIncluded ?? false,
         electricityWinter: report.electricityWinter ? String(report.electricityWinter) : '',
@@ -75,6 +74,31 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
         internetProvider: report.internetProvider ?? '',
         other: report.otherCosts ? String(report.otherCosts) : '',
         otherCostsNote: report.otherCostsNote ?? '',
+        // Reconstruct the simple-mode utilities answer (ignored when a detailed
+        // breakdown re-opens). A lump lives in adminFee → "amount"; otherwise the
+        // completeness flag tells us "included" vs "don't know".
+        utilitiesAnswer: (report.adminFee != null && Number(report.adminFee) > 0
+          ? 'amount'
+          : report.utilitiesComplete === false
+            ? 'unknown'
+            : report.utilitiesComplete === true
+              ? 'included'
+              : '') as '' | 'amount' | 'included' | 'unknown',
+        isCurrentTenant: report.isCurrentTenant ?? true,
+        livedFrom: report.livedFrom ? report.livedFrom.toISOString().slice(0, 7) : '',
+        livedUntil: report.livedUntil ? report.livedUntil.toISOString().slice(0, 7) : '',
+        depositReturned: (report.depositReturned === false
+          ? 'no'
+          : report.depositReturned === true
+            ? report.depositReturnedAmount != null &&
+              report.depositAmount != null &&
+              Number(report.depositReturnedAmount) < Number(report.depositAmount)
+              ? 'partial'
+              : 'full'
+            : '') as '' | 'full' | 'partial' | 'no',
+        depositReturnedAmount:
+          report.depositReturnedAmount != null ? String(report.depositReturnedAmount) : '',
+        depositReturnDays: report.depositReturnDays ? String(report.depositReturnDays) : '',
         periodicCharges: report.periodicCharges.map((c) => ({
           category: c.category as 'water' | 'electricity' | 'gas' | 'heating' | 'other',
           amount: String(c.amount),

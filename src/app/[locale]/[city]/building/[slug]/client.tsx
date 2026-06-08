@@ -10,6 +10,7 @@ import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { LocationScore } from '@/components/listings/location-score';
+import { DistrictPositionBar } from '@/components/costs/district-position-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,6 @@ import {
   ArrowLeft,
   Building2,
   MapPin,
-  Users,
   TrendingUp,
   TrendingDown,
   Lock,
@@ -32,9 +32,7 @@ import {
   ShoppingCart,
   CalendarClock,
   RefreshCw,
-  Ruler,
   CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
 
 const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
@@ -48,12 +46,21 @@ const fadeUp = {
   }),
 };
 
+interface StatRange {
+  median: number;
+  p25: number;
+  p75: number;
+}
+
 interface Baseline {
   median: number;
   p25: number;
   p75: number;
   count: number;
-  rentPerM2: number | null;
+  rent: StatRange | null;
+  expenses: StatRange | null;
+  rentPerM2: StatRange | null;
+  totalPerM2: StatRange | null;
   percentile: number | null;
 }
 
@@ -91,16 +98,23 @@ interface BuildingCostsClientProps {
     periodic: CostStats | null;
     totalMonthlyAvg: CostStats | null;
     deposit: CostStats | null;
-  } | null;
-  perM2: {
-    rent: CostStats | null;
-    adminFee: CostStats | null;
-    heating: CostStats | null;
+    expenses: CostStats | null;
   } | null;
   includedCounts: IncludedCounts | null;
+  depositReturn: {
+    sampleSize: number;
+    returnedRate: number;
+    medianDays: number | null;
+  } | null;
+  tenure: {
+    sampleSize: number;
+    medianMonths: number | null;
+  } | null;
   comparison: {
     thisBuilding: number | null;
     thisBuildingRentPerM2: number | null;
+    thisBuildingTotalPerM2: number | null;
+    thisBuildingExpenses: number | null;
     district: Baseline | null;
     city: Baseline | null;
   };
@@ -123,8 +137,9 @@ export function BuildingCostsClient({
   reports,
   lastUpdated,
   costs,
-  perM2,
   includedCounts,
+  depositReturn,
+  tenure,
   comparison,
   hasContributedData,
   costAccessUntil,
@@ -135,10 +150,12 @@ export function BuildingCostsClient({
   const locale = useLocale();
   const posthog = usePostHog();
 
-  // Data-confidence (trust) signals derived from existing data only.
+  // Data-confidence (trust) signals derived from existing data only. Thin
+  // per-building data is the norm (long tail), so we don't flag "few reports" as
+  // a warning — we anchor trust on the district and reward dense buildings with a
+  // positive badge instead.
   const ageMonths = monthsSince(lastUpdated);
   const trust = {
-    lowData: reports > 0 && reports < TRUST_THRESHOLDS.lowDataMax,
     reliable: reports >= TRUST_THRESHOLDS.reliableMin,
     outdated: ageMonths !== null && ageMonths > TRUST_THRESHOLDS.staleMonths,
   };
@@ -164,44 +181,42 @@ export function BuildingCostsClient({
   const isOftenIncluded = (count: number) =>
     includedCounts && includedCounts.total > 0 && count / includedCounts.total >= 0.5;
 
+  const renderDeltaBadge = (pct: number) => {
+    if (pct === 0)
+      return (
+        <Badge className="gap-1 bg-muted text-muted-foreground">
+          <Equal className="h-3 w-3" />
+          {t('costs.building.matchesMedian')}
+        </Badge>
+      );
+    if (pct < 0)
+      return (
+        <Badge className="gap-1 bg-green-500/10 text-green-600">
+          <TrendingDown className="h-3 w-3" />
+          {t('costs.building.percentLower', { percent: Math.abs(pct) })}
+        </Badge>
+      );
+    return (
+      <Badge className="gap-1 bg-red-500/10 text-red-500">
+        <TrendingUp className="h-3 w-3" />
+        {t('costs.building.percentHigher', { percent: pct })}
+      </Badge>
+    );
+  };
+
   // A single median baseline card (district or city) with a p25–p75 range,
   // a directional delta badge and the sample size it is based on.
   const renderBaseline = (label: string, baseline: Baseline) => {
     const building = comparison.thisBuilding!;
     const pct = Math.round(((building - baseline.median) / baseline.median) * 100);
-    const borderColor =
-      pct === 0 ? 'border-muted-foreground' : pct < 0 ? 'border-green-500' : 'border-red-500';
     return (
-      <div className={`rounded-lg border-l-4 ${borderColor} bg-muted/50 p-4`}>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="mt-1 text-lg font-semibold">≈ {baseline.median.toLocaleString()} PLN</p>
-        {baseline.count > 1 && (
-          <p className="text-xs text-muted-foreground">
-            {t('costs.building.baselineRange', {
-              min: baseline.p25.toLocaleString(),
-              max: baseline.p75.toLocaleString(),
-            })}
-          </p>
-        )}
-        <div className="mt-2">
-          {pct === 0 ? (
-            <Badge className="gap-1 bg-muted text-muted-foreground">
-              <Equal className="h-3 w-3" />
-              {t('costs.building.matchesMedian')}
-            </Badge>
-          ) : pct < 0 ? (
-            <Badge className="gap-1 bg-green-500/10 text-green-600">
-              <TrendingDown className="h-3 w-3" />
-              {t('costs.building.percentLower', { percent: Math.abs(pct) })}
-            </Badge>
-          ) : (
-            <Badge className="gap-1 bg-red-500/10 text-red-600">
-              <TrendingUp className="h-3 w-3" />
-              {t('costs.building.percentHigher', { percent: pct })}
-            </Badge>
-          )}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          {renderDeltaBadge(pct)}
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 text-xl font-semibold">≈ {baseline.median.toLocaleString()} PLN</p>
+        <p className="mt-1 text-xs text-muted-foreground">
           {t('costs.building.baselineSampleSize', { count: baseline.count })}
         </p>
       </div>
@@ -323,10 +338,6 @@ export function BuildingCostsClient({
                     <MapPin className="h-4 w-4" />
                     {building.district}, {building.city}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {reports} {t('costs.overview.reports')}
-                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -334,12 +345,6 @@ export function BuildingCostsClient({
                   <Badge className="w-fit gap-1 bg-green-500/10 text-green-600">
                     <CheckCircle2 className="h-3 w-3" />
                     {t('costs.trust.reliable')}
-                  </Badge>
-                )}
-                {reports > 0 && trust.lowData && (
-                  <Badge variant="secondary" className="w-fit gap-1 text-amber-600">
-                    <AlertTriangle className="h-3 w-3" />
-                    {t('costs.trust.lowData')}
                   </Badge>
                 )}
                 {trust.outdated && (
@@ -494,29 +499,51 @@ export function BuildingCostsClient({
                       >
                         ≈ {costs.totalMonthlyAvg.median.toLocaleString()} PLN
                       </motion.p>
-                      {costs.totalMonthlyAvg.count > 1 && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t('costs.building.typicalRange', {
-                            min: costs.totalMonthlyAvg.p25.toLocaleString(),
-                            max: costs.totalMonthlyAvg.p75.toLocaleString(),
-                          })}
-                        </p>
-                      )}
-                      {perM2?.rent?.median ? (
-                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
-                          <span className="flex items-center gap-1.5 text-lg font-semibold">
-                            <Ruler className="h-4 w-4 text-muted-foreground" />≈{' '}
-                            {perM2.rent.median.toLocaleString()} {t('costs.building.perM2')}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {t('costs.building.rentPerM2Label')}
-                            {perM2.rent.count > 1 &&
-                              ` · ${perM2.rent.p25.toLocaleString()}–${perM2.rent.p75.toLocaleString()} ${t('costs.building.perM2')}`}
-                          </span>
+
+                      {/* Rent vs Expenses split — what makes up the total. */}
+                      {(costs.rent || costs.expenses) && (
+                        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t pt-4">
+                          {costs.rent && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                <Home className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">
+                                  {t('costs.building.rent')}
+                                </p>
+                                <p className="text-lg font-semibold">
+                                  ≈ {costs.rent.median.toLocaleString()} PLN
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {costs.expenses && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">
+                                  {t('costs.building.expenses')}
+                                </p>
+                                <p className="text-lg font-semibold">
+                                  ≈ {costs.expenses.median.toLocaleString()} PLN
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ) : null}
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {t('costs.building.estimateCaption', { count: reports })}
+                      )}
+
+                      <p className="mt-4 text-xs text-muted-foreground">
+                        {comparison.district
+                          ? t('costs.building.estimateCaptionDistrict', {
+                              count: reports,
+                              districtCount: comparison.district.count,
+                              district: building.district,
+                            })
+                          : t('costs.building.estimateCaption', { count: reports })}
                       </p>
                     </CardContent>
                   </Card>
@@ -565,11 +592,6 @@ export function BuildingCostsClient({
                               </div>
                               <div className="text-right">
                                 <p className="font-semibold">≈ {item.data!.median} PLN</p>
-                                {item.data!.count > 1 && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.data!.p25} - {item.data!.p75} PLN
-                                  </p>
-                                )}
                               </div>
                             </div>
                             {'winter' in item && item.winter && item.summer && (
@@ -590,29 +612,70 @@ export function BuildingCostsClient({
               {costs?.deposit && (
                 <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
-                    <CardContent className="flex items-center justify-between p-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                          <Shield className="h-5 w-5 text-primary" />
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                            <Shield className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{t('costs.building.deposit')}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.building.depositDesc')}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{t('costs.building.deposit')}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.building.depositDesc')}
+                        <div className="text-right">
+                          <p className="text-lg font-semibold">
+                            ≈ {costs.deposit.median.toLocaleString()} PLN
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-semibold">
-                          ≈ {costs.deposit.median.toLocaleString()} PLN
-                        </p>
-                        {costs.deposit.count > 1 && (
-                          <p className="text-xs text-muted-foreground">
-                            {costs.deposit.p25.toLocaleString()} -{' '}
-                            {costs.deposit.p75.toLocaleString()} PLN
-                          </p>
-                        )}
-                      </div>
+
+                      {/* Trust signals from move-out data: deposit-return rate + tenure. */}
+                      {(depositReturn || tenure?.medianMonths != null) && (
+                        <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-2">
+                          {depositReturn && (
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-500/10">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  {t('costs.building.depositReturnedRate', {
+                                    percent: depositReturn.returnedRate,
+                                  })}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {depositReturn.medianDays != null
+                                    ? t('costs.building.depositReturnedDays', {
+                                        days: depositReturn.medianDays,
+                                      })
+                                    : t('costs.building.basedOnReports', {
+                                        count: depositReturn.sampleSize,
+                                      })}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {tenure?.medianMonths != null && (
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                <CalendarClock className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  ≈ {Math.round(tenure.medianMonths)}{' '}
+                                  {t('costs.building.monthsShort')}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t('costs.building.tenureLabel')}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -625,7 +688,7 @@ export function BuildingCostsClient({
                       <CardTitle>{t('costs.building.comparison')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="mb-5 text-center">
+                      <div className="mb-5 rounded-xl border border-primary/15 bg-primary/5 px-4 py-5 text-center">
                         <p className="text-sm text-muted-foreground">
                           {t('costs.building.thisBuilding')}
                         </p>
@@ -643,45 +706,87 @@ export function BuildingCostsClient({
                           renderBaseline(t('costs.building.cityMedian'), comparison.city)}
                       </div>
 
-                      {comparison.thisBuildingRentPerM2 &&
-                        comparison.district?.rentPerM2 &&
+                      {/* Where this building sits within the district's typical
+                          range, per metric — leans on the denser district sample. */}
+                      {comparison.district &&
                         (() => {
-                          const b = comparison.thisBuildingRentPerM2;
-                          const d = comparison.district.rentPerM2;
-                          const pct = Math.round(((b - d) / d) * 100);
+                          const d = comparison.district!;
+                          const unit = t('costs.building.perM2');
+                          const bars = [
+                            costs?.rent && d.rent
+                              ? {
+                                  key: 'rent',
+                                  label: t('costs.building.rent'),
+                                  value: costs.rent.median,
+                                  range: d.rent,
+                                  unit: 'PLN',
+                                }
+                              : null,
+                            comparison.thisBuildingExpenses != null && d.expenses
+                              ? {
+                                  key: 'expenses',
+                                  label: t('costs.building.expenses'),
+                                  value: comparison.thisBuildingExpenses,
+                                  range: d.expenses,
+                                  unit: 'PLN',
+                                }
+                              : null,
+                            comparison.thisBuildingTotalPerM2 && d.totalPerM2
+                              ? {
+                                  key: 'total-m2',
+                                  label: t('costs.building.totalPerM2Compare'),
+                                  value: comparison.thisBuildingTotalPerM2,
+                                  range: d.totalPerM2,
+                                  unit,
+                                }
+                              : null,
+                            comparison.thisBuildingRentPerM2 && d.rentPerM2
+                              ? {
+                                  key: 'rent-m2',
+                                  label: t('costs.building.rentPerM2Compare'),
+                                  value: comparison.thisBuildingRentPerM2,
+                                  range: d.rentPerM2,
+                                  unit,
+                                }
+                              : null,
+                          ].filter(Boolean) as Array<{
+                            key: string;
+                            label: string;
+                            value: number;
+                            range: StatRange;
+                            unit: string;
+                          }>;
+                          if (bars.length === 0) return null;
                           return (
-                            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t pt-4 text-sm">
-                              <Ruler className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">
-                                {t('costs.building.rentPerM2Compare')}
-                              </span>
-                              <span>
-                                ≈ {b.toLocaleString()} {t('costs.building.perM2')}
-                              </span>
-                              <span className="text-muted-foreground">
-                                ·{' '}
-                                {t('costs.building.districtPerM2', {
-                                  district: building.district,
-                                  value: d.toLocaleString(),
-                                  unit: t('costs.building.perM2'),
-                                })}
-                              </span>
-                              {pct === 0 ? (
-                                <Badge className="gap-1 bg-muted text-muted-foreground">
-                                  <Equal className="h-3 w-3" />
-                                  {t('costs.building.matchesMedian')}
-                                </Badge>
-                              ) : pct < 0 ? (
-                                <Badge className="gap-1 bg-green-500/10 text-green-600">
-                                  <TrendingDown className="h-3 w-3" />
-                                  {t('costs.building.percentLower', { percent: Math.abs(pct) })}
-                                </Badge>
-                              ) : (
-                                <Badge className="gap-1 bg-red-500/10 text-red-600">
-                                  <TrendingUp className="h-3 w-3" />
-                                  {t('costs.building.percentHigher', { percent: pct })}
-                                </Badge>
-                              )}
+                            <div className="mt-4 space-y-6 border-t pt-4">
+                              {/* Legend */}
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
+                                  {t('costs.building.legendBand')}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-3 w-px bg-muted-foreground/60" />
+                                  {t('costs.building.legendMedian')}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
+                                  {t('costs.building.legendBuilding')}
+                                </span>
+                              </div>
+                              {bars.map((bar) => (
+                                <DistrictPositionBar
+                                  key={bar.key}
+                                  label={bar.label}
+                                  value={bar.value}
+                                  median={bar.range.median}
+                                  p25={bar.range.p25}
+                                  p75={bar.range.p75}
+                                  unit={bar.unit}
+                                  district={building.district}
+                                  sampleSize={comparison.district!.count}
+                                />
+                              ))}
                             </div>
                           );
                         })()}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateProfile } from '@/lib/profile';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
@@ -84,12 +85,16 @@ export async function POST(request: NextRequest) {
       internetProvider,
       otherCosts,
       otherCostsNote,
+      utilitiesComplete,
       rooms,
       areaM2,
       floor,
       rentalType,
       leaseType,
       depositMonths,
+      depositReturned,
+      depositReturnedAmount,
+      depositReturnDays,
       isCurrentTenant,
       livedFrom,
       livedUntil,
@@ -154,23 +159,26 @@ export async function POST(request: NextRequest) {
 
     const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
 
+    // Core cost is rent + deposit (always required) plus utilities (collected via
+    // the form's utilities block, not a separate czynsz field). Area is required for
+    // whole apartments but optional for a room (often an all-in price, exact m²
+    // unknown). adminFee is no longer collected by the form — kept nullable for
+    // backward compatibility with existing data / admin imports.
+    const isRoom = rentalType === 'room';
+    const isEmpty = (v: unknown) => v == null || v === '';
     if (
       !street ||
       !buildingNumber ||
-      rent == null ||
-      rent === '' ||
+      isEmpty(rent) ||
       !rentalType ||
-      adminFee == null ||
-      adminFee === '' ||
-      deposit == null ||
-      deposit === '' ||
-      areaM2 == null ||
-      areaM2 === ''
+      isEmpty(deposit) ||
+      (!isRoom && isEmpty(areaM2))
     ) {
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: street, buildingNumber, rent, rentalType, adminFee, deposit, areaM2',
+          error: isRoom
+            ? 'Missing required fields: street, buildingNumber, rent, rentalType, deposit'
+            : 'Missing required fields: street, buildingNumber, rent, rentalType, deposit, areaM2',
         },
         { status: 400 },
       );
@@ -200,9 +208,13 @@ export async function POST(request: NextRequest) {
 
     const wasFlagged = validation.shouldFlag;
 
+    if (typeof citySlug !== 'string' || !citySlug.trim()) {
+      return NextResponse.json({ error: 'Missing city' }, { status: 400 });
+    }
+
     const city = await prisma.city.findUnique({
-      where: { slug: citySlug || 'warsaw' },
-      include: { districts: true },
+      where: { slug: citySlug },
+      include: { districts: true, country: true },
     });
 
     if (!city) {
@@ -215,6 +227,14 @@ export async function POST(request: NextRequest) {
     const cityBounds = (city.bounds ?? null) as CityBoundsShape | null;
     const latNum = lat != null && lat !== '' ? Number(lat) : null;
     const lngNum = lng != null && lng !== '' ? Number(lng) : null;
+
+    // Bounds are the authoritative location check and every active city must have
+    // them. Surface the misconfiguration loudly so a new city can't ship without.
+    if (city.isActive && !cityBounds) {
+      console.error(
+        `[cost-reports] active city "${city.slug}" has no bounds — cannot validate address`,
+      );
+    }
 
     if (
       cityBounds &&
@@ -235,13 +255,18 @@ export async function POST(request: NextRequest) {
         );
       }
     } else if (typeof placeCity === 'string' && placeCity.trim()) {
+      // Bounds/coords unavailable: compare the Places city against the city's own
+      // names — its localized name (in the country's default locale, e.g.
+      // "Warszawa") and its slug — never the slug alone (which would reject
+      // "Warszawa" != "warsaw").
       const norm = (s: string) =>
         transliterate(s)
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '');
+      const tCity = await getTranslations({ locale: city.country.defaultLocale });
+      const candidates = [city.slug, tCity(city.nameKey)].map(norm).filter(Boolean);
       const placeCityNorm = norm(placeCity);
-      const slugNorm = norm(citySlug || 'warsaw');
-      if (placeCityNorm && slugNorm && placeCityNorm !== slugNorm) {
+      if (placeCityNorm && candidates.length && !candidates.includes(placeCityNorm)) {
         return NextResponse.json(
           { error: 'ADDRESS_OUTSIDE_CITY', message: 'The selected address is outside this city.' },
           { status: 400 },
@@ -396,6 +421,7 @@ export async function POST(request: NextRequest) {
         internetProvider: internetProvider || null,
         otherCosts: otherCosts ? parseFloat(otherCosts) : null,
         otherCostsNote: otherCostsNote || null,
+        utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
         totalMonthlyAvg: totalMonthlyAvg || null,
         rooms: rooms ? parseInt(rooms, 10) : null,
         areaM2: areaM2 ? parseFloat(areaM2) : null,
@@ -403,6 +429,9 @@ export async function POST(request: NextRequest) {
         rentalType: rentalType || null,
         leaseType: leaseType || null,
         depositMonths: depositMonths ? parseFloat(depositMonths) : null,
+        depositReturned: typeof depositReturned === 'boolean' ? depositReturned : null,
+        depositReturnedAmount: depositReturnedAmount ? parseFloat(depositReturnedAmount) : null,
+        depositReturnDays: depositReturnDays ? parseInt(depositReturnDays, 10) : null,
         isCurrentTenant: isCurrentTenant ?? null,
         livedFrom: livedFrom ? new Date(livedFrom) : null,
         livedUntil: livedUntil ? new Date(livedUntil) : null,
@@ -424,7 +453,7 @@ export async function POST(request: NextRequest) {
 
     trackServerEvent(user.id, 'cost_report_submitted', {
       building_id: building.id,
-      city: citySlug || 'warsaw',
+      city: citySlug,
       was_flagged: wasFlagged,
       fill_on_behalf: fillOnBehalf,
       scraped_import: scrapedImport,

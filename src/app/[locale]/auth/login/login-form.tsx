@@ -146,7 +146,10 @@ export function LoginForm({ next, error: initialError }: { next?: string; error?
 
             <p className="text-center text-sm text-muted-foreground">
               {t('login.noAccount')}{' '}
-              <Link href="/auth/register" className="text-primary hover:underline">
+              <Link
+                href={next ? { pathname: '/auth/register', query: { next } } : '/auth/register'}
+                className="text-primary hover:underline"
+              >
                 {t('login.signUp')}
               </Link>
             </p>
