@@ -7,7 +7,7 @@ import { unstable_cache } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
-import { computeStats, median, perAreaValues, type CostStats } from '@/lib/cost-stats';
+import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
 
@@ -83,6 +83,12 @@ const costReportSelect = {
   otherCosts: true,
   totalMonthlyAvg: true,
   depositAmount: true,
+  depositReturned: true,
+  depositReturnedAmount: true,
+  depositReturnDays: true,
+  isCurrentTenant: true,
+  livedFrom: true,
+  livedUntil: true,
   areaM2: true,
   createdAt: true,
   periodicCharges: { select: { amount: true, frequency: true } },
@@ -149,12 +155,23 @@ async function resolveUserId(): Promise<string | null> {
 
 const DISTRIBUTION_LIMIT = 5000;
 
+// Median + the typical p25–p75 band, for the district position bars.
+type StatRange = { median: number; p25: number; p75: number };
+
+const toRange = (values: Array<number | null | undefined>): StatRange | null => {
+  const s = computeStats(values);
+  return s ? { median: s.median, p25: s.p25, p75: s.p75 } : null;
+};
+
 type CachedDistrictBaseline = {
   median: number;
   p25: number;
   p75: number;
   count: number;
-  rentPerM2: number | null;
+  rent: StatRange | null;
+  expenses: StatRange | null;
+  rentPerM2: StatRange | null;
+  totalPerM2: StatRange | null;
   totals: number[];
 };
 
@@ -190,10 +207,27 @@ const getDistrictBaseline = unstable_cache(
       p25: stats.p25,
       p75: stats.p75,
       count: stats.count,
-      rentPerM2: median(
+      rent: toRange(reports.map((r) => (r.rent == null ? null : Number(r.rent)))),
+      expenses: toRange(
+        reports.map((r) => {
+          const total = r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg);
+          const rentVal = r.rent == null ? null : Number(r.rent);
+          if (total == null || rentVal == null) return null;
+          return Math.max(0, total - rentVal);
+        }),
+      ),
+      rentPerM2: toRange(
         perAreaValues(
           reports.map((r) => ({
             value: r.rent == null ? null : Number(r.rent),
+            areaM2: r.areaM2 == null ? null : Number(r.areaM2),
+          })),
+        ),
+      ),
+      totalPerM2: toRange(
+        perAreaValues(
+          reports.map((r) => ({
+            value: r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg),
             areaM2: r.areaM2 == null ? null : Number(r.areaM2),
           })),
         ),
@@ -249,7 +283,10 @@ type Baseline = {
   p25: number;
   p75: number;
   count: number;
-  rentPerM2: number | null;
+  rent: StatRange | null;
+  expenses: StatRange | null;
+  rentPerM2: StatRange | null;
+  totalPerM2: StatRange | null;
   percentile: number | null;
 };
 
@@ -328,6 +365,16 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           ),
           totalMonthlyAvg: statsForField(recs, 'totalMonthlyAvg'),
           deposit: statsForField(recs, 'depositAmount'),
+          // Expenses = everything on top of rent (czynsz/komunalka + utilities +
+          // periodic). Computed per report, then median — never median-of-medians.
+          expenses: computeStats(
+            reports.map((r) => {
+              const total = r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg);
+              const rentVal = r.rent == null ? null : Number(r.rent);
+              if (total == null || rentVal == null) return null;
+              return Math.max(0, total - rentVal);
+            }),
+          ),
         }
       : null;
 
@@ -335,6 +382,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     reportCount > 0
       ? {
           rent: statsPerM2(recs, 'rent'),
+          total: statsPerM2(recs, 'totalMonthlyAvg'),
           adminFee: statsPerM2(recs, 'adminFee'),
           heating: statsPerM2(recs, 'heating'),
         }
@@ -349,6 +397,48 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           total: reportCount,
         }
       : null;
+
+  // Deposit-return reliability — a unique trust signal. Only past tenants who
+  // answered "did you get your deposit back?" count toward the rate.
+  const depositReturn = (() => {
+    const answered = reports.filter(
+      (r) => r.isCurrentTenant === false && r.depositReturned != null,
+    );
+    if (answered.length === 0) return null;
+    const returnedCount = answered.filter((r) => r.depositReturned === true).length;
+    const medianDays = median(
+      answered.map((r) => (r.depositReturnDays == null ? null : Number(r.depositReturnDays))),
+    );
+    return {
+      sampleSize: answered.length,
+      returnedRate: Math.round((returnedCount / answered.length) * 100),
+      medianDays,
+    };
+  })();
+
+  // Typical tenure — median months lived (move-in → move-out, or → now for
+  // current tenants). Built from livedFrom; reports without it are skipped.
+  const tenure = (() => {
+    const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+    const months = reports
+      .map((r) => {
+        if (!r.livedFrom) return null;
+        // Past tenant: move-in → move-out. Current tenant (no livedUntil):
+        // move-in → now, via monthsSince (keeps Date.now out of render).
+        if (r.livedUntil) {
+          const fromMs = new Date(r.livedFrom).getTime();
+          const toMs = new Date(r.livedUntil).getTime();
+          if (Number.isNaN(fromMs) || Number.isNaN(toMs)) return null;
+          const m = (toMs - fromMs) / MS_PER_MONTH;
+          return m > 0 ? m : null;
+        }
+        const m = monthsSince(r.livedFrom);
+        return m != null && m > 0 ? m : null;
+      })
+      .filter((v): v is number => v != null);
+    if (months.length === 0) return null;
+    return { sampleSize: months.length, medianMonths: median(months) };
+  })();
 
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
 
@@ -365,7 +455,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         p25: cachedDistrict.p25,
         p75: cachedDistrict.p75,
         count: cachedDistrict.count,
+        rent: cachedDistrict.rent,
+        expenses: cachedDistrict.expenses,
         rentPerM2: cachedDistrict.rentPerM2,
+        totalPerM2: cachedDistrict.totalPerM2,
         percentile: cheaperThanPercentile(cachedDistrict.totals, buildingMedianTotal),
       }
     : null;
@@ -376,7 +469,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         p25: cachedCity.p25,
         p75: cachedCity.p75,
         count: cachedCity.count,
+        rent: null,
+        expenses: null,
         rentPerM2: null,
+        totalPerM2: null,
         percentile: cheaperThanPercentile(cachedCity.totals, buildingMedianTotal),
       }
     : null;
@@ -428,14 +524,17 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       reports={reportCount}
       lastUpdated={lastUpdated}
       costs={costs}
-      perM2={perM2}
       comparison={{
         thisBuilding: buildingMedianTotal,
         thisBuildingRentPerM2: perM2?.rent?.median ?? null,
+        thisBuildingTotalPerM2: perM2?.total?.median ?? null,
+        thisBuildingExpenses: costs?.expenses?.median ?? null,
         district: districtBaseline,
         city: cityBaseline,
       }}
       includedCounts={includedCounts}
+      depositReturn={depositReturn}
+      tenure={tenure}
       hasContributedData={hasContributedData}
       costAccessUntil={costAccessUntil}
       citySlug={citySlug}

@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { trackServerEvent } from '@/lib/posthog-server';
+import { routing } from '@/i18n/routing';
 
 export async function DELETE() {
   const cookieStore = await cookies();
@@ -92,18 +93,38 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+  const data: { displayName?: string; locale?: string } = {};
 
-  if (!displayName || displayName.length > 100) {
-    return NextResponse.json({ error: 'displayName must be 1-100 characters' }, { status: 400 });
+  if (body.displayName !== undefined) {
+    const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+    if (!displayName || displayName.length > 100) {
+      return NextResponse.json({ error: 'displayName must be 1-100 characters' }, { status: 400 });
+    }
+    data.displayName = displayName;
   }
 
-  await prisma.profile.update({
+  if (body.locale !== undefined) {
+    const locales = routing.locales as readonly string[];
+    if (typeof body.locale !== 'string' || !locales.includes(body.locale)) {
+      return NextResponse.json({ error: 'Invalid locale' }, { status: 400 });
+    }
+    data.locale = body.locale;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+  }
+
+  const updated = await prisma.profile.update({
     where: { id: user.id },
-    data: { displayName },
+    data,
   });
 
-  return NextResponse.json({ success: true, displayName });
+  return NextResponse.json({
+    success: true,
+    displayName: updated.displayName,
+    locale: updated.locale,
+  });
 }
 
 export async function GET() {

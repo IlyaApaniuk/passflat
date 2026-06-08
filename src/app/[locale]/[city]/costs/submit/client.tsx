@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useTranslations } from 'next-intl';
+import { useState, useRef, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,13 @@ import {
   RefreshCw,
   Plus,
   X,
+  CalendarClock,
+  Save,
 } from 'lucide-react';
 import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import { MonthYearPicker } from '@/components/costs/month-year-picker';
 import type { CityBounds } from '@/lib/listings-data';
+import { FIELD_RANGES } from '@/lib/cost-validation';
 import {
   PERIODIC_CATEGORIES,
   PERIODIC_FREQUENCIES,
@@ -81,7 +85,6 @@ interface ExistingReport {
   rent: string;
   adminFee: string;
   deposit: string;
-  extraBills: string;
   electricity: string;
   electricityIncluded: boolean;
   electricityWinter: string;
@@ -97,6 +100,13 @@ interface ExistingReport {
   internetProvider: string;
   other: string;
   otherCostsNote: string;
+  utilitiesAnswer: '' | 'amount' | 'included' | 'unknown';
+  isCurrentTenant: boolean;
+  livedFrom: string;
+  livedUntil: string;
+  depositReturned: '' | 'full' | 'partial' | 'no';
+  depositReturnedAmount: string;
+  depositReturnDays: string;
   periodicCharges: PeriodicChargeRow[];
 }
 
@@ -139,6 +149,48 @@ function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
   return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
 }
 
+// Blank form — used for a fresh submission and to reset when discarding a draft.
+function makeEmptyForm() {
+  return {
+    rentalType: '' as '' | 'apartment' | 'room',
+    street: '',
+    buildingNumber: '',
+    district: '',
+    placeId: '',
+    lat: 0,
+    lng: 0,
+    areaM2: '',
+    rooms: '',
+    floor: '',
+    rent: '',
+    adminFee: '',
+    deposit: '',
+    electricity: '',
+    electricityIncluded: false,
+    electricityWinter: '',
+    electricitySummer: '',
+    gas: '',
+    heating: '',
+    heatingIncluded: false,
+    heatingWinter: '',
+    heatingSummer: '',
+    water: '',
+    waterIncluded: false,
+    internet: '',
+    internetProvider: '',
+    other: '',
+    otherCostsNote: '',
+    utilitiesAnswer: '' as '' | 'amount' | 'included' | 'unknown',
+    isCurrentTenant: true,
+    livedFrom: '',
+    livedUntil: '',
+    depositReturned: '' as '' | 'full' | 'partial' | 'no',
+    depositReturnedAmount: '',
+    depositReturnDays: '',
+    periodicCharges: [] as PeriodicChargeRow[],
+  };
+}
+
 export function CostSubmitClient({
   citySlug,
   cityName,
@@ -149,6 +201,22 @@ export function CostSubmitClient({
   adminImportMode = 'fill_on_behalf',
 }: CostSubmitClientProps) {
   const t = useTranslations();
+  const locale = useLocale();
+  // Current month ("YYYY-MM") — tenancy dates can't be in the future.
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Soft, pre-submit warning when a value is outside the accepted range.
+  const rangeWarning = (field: string, value: string): string | null => {
+    if (!value) return null;
+    const n = parseFloat(value);
+    if (isNaN(n)) return null;
+    const r = FIELD_RANGES[field];
+    if (!r) return null;
+    if (r.min != null && n < r.min) return t('costs.submit.warnMin', { min: r.min });
+    if (n > r.max) return t('costs.submit.warnMax', { max: r.max });
+    return null;
+  };
   const placeCityRef = useRef('');
   // Admin-only import controls, available only for new submissions (never edits).
   // ADMIN_IMPORT_MODE (server) decides which one is shown:
@@ -170,43 +238,13 @@ export function CostSubmitClient({
   const [error, setError] = useState<string | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
   const rentalTypeRef = useRef<HTMLDivElement>(null);
+  const [utilitiesError, setUtilitiesError] = useState(false);
+  const utilitiesRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState(
-    existingReport
-      ? { ...existingReport }
-      : {
-          rentalType: '' as '' | 'apartment' | 'room',
-          street: '',
-          buildingNumber: '',
-          district: '',
-          placeId: '',
-          lat: 0,
-          lng: 0,
-          areaM2: '',
-          rooms: '',
-          floor: '',
-          rent: '',
-          adminFee: '',
-          deposit: '',
-          extraBills: '',
-          electricity: '',
-          electricityIncluded: false,
-          electricityWinter: '',
-          electricitySummer: '',
-          gas: '',
-          heating: '',
-          heatingIncluded: false,
-          heatingWinter: '',
-          heatingSummer: '',
-          water: '',
-          waterIncluded: false,
-          internet: '',
-          internetProvider: '',
-          other: '',
-          otherCostsNote: '',
-          periodicCharges: [] as PeriodicChargeRow[],
-        },
+    existingReport ? { ...existingReport } : makeEmptyForm(),
   );
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const [showDetailedUtilities, setShowDetailedUtilities] = useState(
     () => !!(existingReport && hasDetailedUtilities(existingReport)),
@@ -221,6 +259,54 @@ export function CostSubmitClient({
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  // Draft autosave (new submissions only) — the whole form is saved, including
+  // the address, so an interrupted submission is fully recoverable. A restored
+  // draft is surfaced explicitly via a banner (draftRestored) so it's never a
+  // surprise, with a one-tap "start fresh" reset.
+  const draftKey = `costs-draft:${citySlug}`;
+  const draftLoadedRef = useRef(false);
+  useEffect(() => {
+    if (editMode || existingReport || draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        // One-time hydration from a saved draft (external store → state).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFormData((prev) => ({ ...prev, ...JSON.parse(raw) }));
+        setDraftRestored(true);
+      }
+    } catch {
+      /* ignore malformed draft */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (editMode) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [formData, editMode, draftKey]);
+
+  const discardDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+    setFormData(makeEmptyForm());
+    setShowDetailedUtilities(false);
+    setShowElectricitySeasonal(false);
+    setShowHeatingSeasonal(false);
+    setShowPeriodic(false);
+    setDraftRestored(false);
+    setUtilitiesError(false);
+    setRentalTypeError(false);
+    placeCityRef.current = '';
   };
 
   const addPeriodicRow = () => {
@@ -275,6 +361,15 @@ export function CostSubmitClient({
       return;
     }
     setRentalTypeError(false);
+    // Utilities must be explicitly answered (amount / included / don't-know) in
+    // simple mode — a detailed breakdown already counts as answered. This is what
+    // makes an empty utilities value meaningful for the headline "Total".
+    if (!showDetailedUtilities && !formData.utilitiesAnswer) {
+      setUtilitiesError(true);
+      utilitiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setUtilitiesError(false);
     setSubmitting(true);
     setError(null);
 
@@ -315,19 +410,49 @@ export function CostSubmitClient({
             otherCosts: formData.other || undefined,
             otherCostsNote: formData.otherCostsNote || undefined,
           }
-        : {
-            otherCosts: formData.extraBills || undefined,
-          };
+        : // Simple mode: the whole utilities lump lives in adminFee (sent via
+          // sharedFields). No detailed/other lines.
+          {};
 
       const sharedFields = {
         rent: formData.rent || undefined,
         adminFee: formData.adminFee || undefined,
         deposit: formData.deposit || undefined,
         ...utilityFields,
+        // Completeness of the utilities portion of the total (see schema comment).
+        utilitiesComplete: showDetailedUtilities
+          ? true
+          : formData.utilitiesAnswer === 'included'
+            ? true
+            : formData.utilitiesAnswer === 'amount'
+              ? !!formData.adminFee
+              : formData.utilitiesAnswer === 'unknown'
+                ? false
+                : undefined,
         rooms: formData.rooms || undefined,
         areaM2: formData.areaM2 || undefined,
         floor: formData.floor || undefined,
         rentalType: formData.rentalType || undefined,
+        isCurrentTenant: formData.isCurrentTenant,
+        livedFrom: formData.livedFrom || undefined,
+        livedUntil: formData.isCurrentTenant ? undefined : formData.livedUntil || undefined,
+        depositReturned:
+          formData.isCurrentTenant || formData.depositReturned === ''
+            ? undefined
+            : formData.depositReturned !== 'no',
+        depositReturnedAmount:
+          formData.isCurrentTenant || formData.depositReturned === ''
+            ? undefined
+            : formData.depositReturned === 'full'
+              ? formData.deposit || undefined
+              : formData.depositReturned === 'partial'
+                ? formData.depositReturnedAmount || undefined
+                : '0',
+        depositReturnDays:
+          !formData.isCurrentTenant &&
+          (formData.depositReturned === 'full' || formData.depositReturned === 'partial')
+            ? formData.depositReturnDays || undefined
+            : undefined,
         periodicCharges: formData.periodicCharges
           .map((c) => ({
             category: c.category,
@@ -349,7 +474,6 @@ export function CostSubmitClient({
             lng: formData.lng || undefined,
             citySlug,
             placeCity: placeCityRef.current || undefined,
-            isCurrentTenant: true,
             ...(showFillOnBehalf && fillOnBehalf
               ? {
                   fillOnBehalf: true,
@@ -385,6 +509,13 @@ export function CostSubmitClient({
       setSubmittedReportId(costReport?.id ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
+      if (!editMode) {
+        try {
+          localStorage.removeItem(draftKey);
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -420,9 +551,9 @@ export function CostSubmitClient({
     (parseInt(formData.internet) || 0) +
     (parseInt(formData.other) || 0);
 
-  const totalUtilities = showDetailedUtilities
-    ? detailedUtilities
-    : parseInt(formData.extraBills) || 0;
+  // In simple mode the lump is counted via the adminFee term in totalMonthly, so
+  // the "utilities" line here is only the detailed breakdown.
+  const totalUtilities = showDetailedUtilities ? detailedUtilities : 0;
 
   const periodicMonthly = Math.round(
     formData.periodicCharges.reduce((sum, c) => {
@@ -437,6 +568,38 @@ export function CostSubmitClient({
     (parseInt(formData.adminFee) || 0) +
     totalUtilities +
     periodicMonthly;
+
+  // For a rented room, area is optional (often unknown / all-in price).
+  const isRoom = formData.rentalType === 'room';
+
+  // Required-to-submit fields, for the sticky bar's progress hint.
+  const utilitiesAnswered =
+    showDetailedUtilities || (!!formData.utilitiesAnswer && formData.utilitiesAnswer !== 'unknown');
+  const coreFields = [
+    formData.rentalType,
+    formData.street,
+    formData.buildingNumber,
+    formData.rent,
+    formData.deposit,
+    ...(isRoom ? [] : [formData.areaM2]),
+  ];
+  const coreFilled = coreFields.filter(Boolean).length;
+  const coreComplete = coreFilled === coreFields.length;
+
+  // Report "completeness" — the value-priming meter shown once the core is ready.
+  // Weighs the signals that make a report genuinely useful to other tenants.
+  const qualitySignals = [
+    !!formData.rentalType,
+    !!formData.rent,
+    !!formData.deposit,
+    isRoom || !!formData.areaM2,
+    utilitiesAnswered,
+    !!formData.livedFrom,
+    formData.isCurrentTenant || formData.depositReturned !== '',
+  ];
+  const completeness = Math.round(
+    (qualitySignals.filter(Boolean).length / qualitySignals.length) * 100,
+  );
 
   if (submitted && wasFlagged) {
     return (
@@ -555,6 +718,15 @@ export function CostSubmitClient({
               <p className="mt-2 text-muted-foreground">
                 {editMode ? t('costs.submit.editPageSubtitle') : t('costs.submit.pageSubtitle')}
               </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('costs.submit.requiredLegend')} · {t('costs.submit.completenessNudge')}
+              </p>
+              {!editMode && (
+                <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Save className="h-3.5 w-3.5" />
+                  {t('costs.submit.draftAutosave')}
+                </p>
+              )}
             </motion.div>
 
             <AnimatePresence>
@@ -567,6 +739,35 @@ export function CostSubmitClient({
                 >
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {draftRestored && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-6 flex flex-col gap-3 rounded-md border border-primary/30 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-start gap-2 text-sm">
+                    <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="font-medium">{t('costs.submit.draftRestored')}</p>
+                      <p className="text-muted-foreground">{t('costs.submit.draftRestoredDesc')}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-2"
+                    onClick={discardDraft}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    {t('costs.submit.draftDiscard')}
+                  </Button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -732,16 +933,24 @@ export function CostSubmitClient({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="areaM2">{t('costs.submit.size')} *</Label>
+                        <Label htmlFor="areaM2">
+                          {t('costs.submit.size')}
+                          {!isRoom && ' *'}
+                        </Label>
                         <Input
                           id="areaM2"
                           type="number"
                           min="0"
-                          required
+                          required={!isRoom}
                           placeholder="e.g., 45"
                           value={formData.areaM2}
                           onChange={(e) => updateFormData({ areaM2: e.target.value })}
                         />
+                        {isRoom && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('costs.submit.optionalIfKnown')}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="rooms">{t('costs.submit.rooms')}</Label>
@@ -780,36 +989,23 @@ export function CostSubmitClient({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="rent" className="min-h-[2.5rem] items-start leading-snug">
-                          {t('costs.submit.rent')}&nbsp;*
-                        </Label>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="rent">{t('costs.submit.rent')} *</Label>
                         <Input
                           id="rent"
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           required
                           placeholder="e.g., 3200"
                           value={formData.rent}
                           onChange={(e) => updateFormData({ rent: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="adminFee"
-                          className="min-h-[2.5rem] items-start leading-snug"
-                        >
-                          {t('costs.submit.adminFeeCzynsz')}&nbsp;*
-                        </Label>
-                        <Input
-                          id="adminFee"
-                          type="number"
-                          min="0"
-                          required
-                          placeholder="e.g., 350"
-                          value={formData.adminFee}
-                          onChange={(e) => updateFormData({ adminFee: e.target.value })}
-                        />
+                        {rangeWarning('rent', formData.rent) && (
+                          <p className="text-xs text-amber-600">
+                            {rangeWarning('rent', formData.rent)}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="deposit" className="flex items-center gap-2">
@@ -819,39 +1015,102 @@ export function CostSubmitClient({
                         <Input
                           id="deposit"
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           required
                           placeholder="e.g., 5000"
                           value={formData.deposit}
                           onChange={(e) => updateFormData({ deposit: e.target.value })}
                         />
+                        {rangeWarning('deposit', formData.deposit) && (
+                          <p className="text-xs text-amber-600">
+                            {rangeWarning('deposit', formData.deposit)}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {t('costs.submit.depositOneTime')}
+                        </p>
                       </div>
                     </div>
 
                     {!showDetailedUtilities && (
-                      <div className="space-y-2 border-t pt-4">
-                        <Label htmlFor="extraBills">{t('costs.submit.extraBills')}</Label>
-                        <Input
-                          id="extraBills"
-                          type="number"
-                          min="0"
-                          placeholder="e.g., 300"
-                          value={formData.extraBills}
-                          onChange={(e) => updateFormData({ extraBills: e.target.value })}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {t('costs.submit.extraBillsHint')}
-                        </p>
-                        <button
-                          type="button"
-                          className="text-xs text-primary underline-offset-2 hover:underline"
-                          onClick={() => {
-                            setShowDetailedUtilities(true);
-                            updateFormData({ extraBills: '' });
-                          }}
-                        >
-                          {t('costs.submit.breakItDown')}
-                        </button>
+                      <div ref={utilitiesRef} className="space-y-3 border-t pt-4">
+                        <Label>{t('costs.submit.utilitiesQuestion')} *</Label>
+                        <div className="flex gap-2">
+                          {(['amount', 'included', 'unknown'] as const).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                setUtilitiesError(false);
+                                updateFormData({
+                                  utilitiesAnswer: opt,
+                                  ...(opt !== 'amount' ? { adminFee: '' } : {}),
+                                });
+                              }}
+                              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                                formData.utilitiesAnswer === opt
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : utilitiesError
+                                    ? 'border-destructive/50 bg-background text-muted-foreground hover:bg-muted/50'
+                                    : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              {opt === 'amount'
+                                ? t('costs.submit.utilitiesAmount')
+                                : opt === 'included'
+                                  ? t('costs.submit.utilitiesIncludedOpt')
+                                  : t('costs.submit.utilitiesUnknown')}
+                            </button>
+                          ))}
+                        </div>
+                        {utilitiesError && (
+                          <p className="text-xs text-destructive">
+                            {t('costs.submit.utilitiesRequired')}
+                          </p>
+                        )}
+
+                        {formData.utilitiesAnswer === 'amount' && (
+                          <div className="space-y-2">
+                            <Input
+                              id="adminFee"
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              placeholder="e.g., 600"
+                              value={formData.adminFee}
+                              onChange={(e) => updateFormData({ adminFee: e.target.value })}
+                            />
+                            {rangeWarning('adminFee', formData.adminFee) && (
+                              <p className="text-xs text-amber-600">
+                                {rangeWarning('adminFee', formData.adminFee)}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.submit.extraBillsHint')}
+                            </p>
+                            <button
+                              type="button"
+                              className="text-xs text-primary underline-offset-2 hover:underline"
+                              onClick={() => {
+                                setShowDetailedUtilities(true);
+                                updateFormData({ adminFee: '' });
+                              }}
+                            >
+                              {t('costs.submit.breakItDown')}
+                            </button>
+                          </div>
+                        )}
+                        {formData.utilitiesAnswer === 'included' && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('costs.submit.utilitiesIncludedNote')}
+                          </p>
+                        )}
+                        {formData.utilitiesAnswer === 'unknown' && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('costs.submit.utilitiesUnknownNote')}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -870,7 +1129,8 @@ export function CostSubmitClient({
                               setShowElectricitySeasonal(false);
                               setShowHeatingSeasonal(false);
                               updateFormData({
-                                extraBills: sum > 0 ? String(sum) : '',
+                                utilitiesAnswer: 'amount',
+                                adminFee: sum > 0 ? String(sum) : '',
                                 electricity: '',
                                 electricityIncluded: false,
                                 electricityWinter: '',
@@ -1276,6 +1536,171 @@ export function CostSubmitClient({
                 </Card>
               </motion.div>
 
+              <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <CalendarClock className="h-5 w-5" />
+                      {t('costs.submit.tenancyTitle')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">{t('costs.submit.tenancyHint')}</p>
+
+                    <div className="flex gap-2">
+                      {([true, false] as const).map((current) => (
+                        <button
+                          key={String(current)}
+                          type="button"
+                          onClick={() =>
+                            updateFormData(
+                              current
+                                ? {
+                                    isCurrentTenant: true,
+                                    livedUntil: '',
+                                    depositReturned: '',
+                                    depositReturnDays: '',
+                                  }
+                                : { isCurrentTenant: false },
+                            )
+                          }
+                          className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                            formData.isCurrentTenant === current
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                          }`}
+                        >
+                          {current ? t('costs.submit.currentTenant') : t('costs.submit.pastTenant')}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="livedFrom" className="flex items-center gap-2">
+                          {t('costs.submit.livedFrom')}
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            {t('costs.submit.recommended')}
+                          </span>
+                        </Label>
+                        <MonthYearPicker
+                          id="livedFrom"
+                          value={formData.livedFrom}
+                          onChange={(v) =>
+                            updateFormData({
+                              livedFrom: v,
+                              // Keep move-out on/after move-in.
+                              ...(formData.livedUntil && v && formData.livedUntil < v
+                                ? { livedUntil: '' }
+                                : {}),
+                            })
+                          }
+                          locale={locale}
+                          placeholder={t('costs.submit.livedFrom')}
+                          max={
+                            formData.isCurrentTenant
+                              ? currentMonth
+                              : formData.livedUntil || currentMonth
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t('costs.submit.livedFromHint')}
+                        </p>
+                      </div>
+                      {!formData.isCurrentTenant && (
+                        <div className="space-y-2">
+                          <Label htmlFor="livedUntil">{t('costs.submit.livedUntil')}</Label>
+                          <MonthYearPicker
+                            id="livedUntil"
+                            value={formData.livedUntil}
+                            onChange={(v) => updateFormData({ livedUntil: v })}
+                            locale={locale}
+                            placeholder={t('costs.submit.livedUntil')}
+                            min={formData.livedFrom || undefined}
+                            max={currentMonth}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {!formData.isCurrentTenant && (
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-primary" />
+                          {t('costs.submit.depositReturnedQuestion')}
+                        </Label>
+                        <div className="flex gap-2">
+                          {(['full', 'partial', 'no'] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() =>
+                                updateFormData({
+                                  depositReturned: formData.depositReturned === v ? '' : v,
+                                  ...(v !== 'partial' ? { depositReturnedAmount: '' } : {}),
+                                  ...(v === 'no' ? { depositReturnDays: '' } : {}),
+                                })
+                              }
+                              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                                formData.depositReturned === v
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              {v === 'full'
+                                ? t('costs.submit.depositFull')
+                                : v === 'partial'
+                                  ? t('costs.submit.depositPartial')
+                                  : t('common.no')}
+                            </button>
+                          ))}
+                        </div>
+                        {formData.depositReturned === 'partial' && (
+                          <div className="space-y-2 pt-2">
+                            <Label htmlFor="depositReturnedAmount">
+                              {t('costs.submit.depositReturnedAmount')}
+                            </Label>
+                            <Input
+                              id="depositReturnedAmount"
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              placeholder="e.g., 1000"
+                              value={formData.depositReturnedAmount}
+                              onChange={(e) =>
+                                updateFormData({ depositReturnedAmount: e.target.value })
+                              }
+                            />
+                          </div>
+                        )}
+                        {(formData.depositReturned === 'full' ||
+                          formData.depositReturned === 'partial') && (
+                          <div className="space-y-2 pt-2">
+                            <Label htmlFor="depositReturnDays">
+                              {t('costs.submit.depositReturnDays')}
+                            </Label>
+                            <Input
+                              id="depositReturnDays"
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              placeholder="e.g., 14"
+                              value={formData.depositReturnDays}
+                              onChange={(e) =>
+                                updateFormData({ depositReturnDays: e.target.value })
+                              }
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.submit.depositReturnDaysHint')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
               <AnimatePresence>
                 {totalMonthly > 0 && (
                   <motion.div
@@ -1288,30 +1713,21 @@ export function CostSubmitClient({
                       <CardContent className="pt-6">
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{t('costs.submit.rent')}</span>
+                            <span>{(parseInt(formData.rent) || 0).toLocaleString()} PLN</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">
-                              {t('costs.submit.baseRentAdmin')}
+                              {t('costs.submit.expensesLabel')}
                             </span>
                             <span>
-                              {(
-                                (parseInt(formData.rent) || 0) + (parseInt(formData.adminFee) || 0)
+                              {Math.max(
+                                0,
+                                totalMonthly - (parseInt(formData.rent) || 0),
                               ).toLocaleString()}{' '}
                               PLN
                             </span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {t('costs.submit.utilitiesLabel')}
-                            </span>
-                            <span>{totalUtilities.toLocaleString()} PLN</span>
-                          </div>
-                          {periodicMonthly > 0 && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                {t('costs.submit.periodicSummaryLabel')}
-                              </span>
-                              <span>{periodicMonthly.toLocaleString()} PLN</span>
-                            </div>
-                          )}
                           <div className="flex justify-between border-t pt-2">
                             <span className="font-semibold">{t('common.totalMonthly')}</span>
                             <span className="text-xl font-bold text-primary">
@@ -1337,29 +1753,40 @@ export function CostSubmitClient({
                 </Card>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]"
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t('common.loading')}
-                    </>
-                  ) : editMode ? (
-                    t('costs.submit.saveChanges')
-                  ) : (
-                    t('costs.submit.submitButton')
-                  )}
-                </Button>
-              </motion.div>
+              <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">{t('common.totalMonthly')}</p>
+                    <p className="truncate text-lg font-bold text-primary">
+                      {totalMonthly > 0 ? `≈ ${totalMonthly.toLocaleString()} PLN` : '—'}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                      {!coreComplete
+                        ? t('costs.submit.coreProgress', {
+                            filled: coreFilled,
+                            total: coreFields.length,
+                          })
+                        : completeness >= 100
+                          ? t('costs.submit.completenessFull')
+                          : t('costs.submit.completenessMeter', { percent: completeness })}
+                    </span>
+                    <Button type="submit" size="lg" disabled={submitting}>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('common.loading')}
+                        </>
+                      ) : editMode ? (
+                        t('costs.submit.saveChanges')
+                      ) : (
+                        t('costs.submit.submitButton')
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </form>
           </div>
         </div>

@@ -283,25 +283,31 @@ model CostReport {
   internetProvider    String?  @map("internet_provider")
   otherCosts          Decimal? @map("other_costs")
   otherCostsNote      String?  @map("other_costs_note")
+  // Whether utilities are accounted for in totalMonthlyAvg:
+  //   true  = amount given, "included in rent", or a detailed breakdown → total is complete
+  //   false = tenant didn't know → total understates real cost
+  //   null  = legacy / not answered
+  utilitiesComplete   Boolean? @map("utilities_complete")
   totalMonthlyAvg     Decimal? @map("total_monthly_avg")
 
   rooms  Int?
   areaM2 Decimal? @map("area_m2")
   floor  Int?
 
-  rentalType        String?  @map("rental_type")
-  leaseType         String?  @map("lease_type")
-  depositMonths     Decimal? @map("deposit_months")
-  depositAmount     Decimal? @map("deposit_amount")
-  depositReturned   Boolean? @map("deposit_returned")
-  depositReturnDays Int?     @map("deposit_return_days")
+  rentalType            String?  @map("rental_type")
+  leaseType             String?  @map("lease_type")
+  depositMonths         Decimal? @map("deposit_months")
+  depositAmount         Decimal? @map("deposit_amount")
+  depositReturned       Boolean? @map("deposit_returned")
+  depositReturnDays     Int?     @map("deposit_return_days")
+  depositReturnedAmount Decimal? @map("deposit_returned_amount")
 
   livedFrom       DateTime? @map("lived_from") @db.Date
   livedUntil      DateTime? @map("lived_until") @db.Date
   isCurrentTenant Boolean?  @map("is_current_tenant")
 
-  verificationStatus String   @default("unverified") @map("verification_status")
-  isVisible          Boolean  @default(true) @map("is_visible")
+  verificationStatus String  @default("unverified") @map("verification_status")
+  isVisible          Boolean @default(true) @map("is_visible")
 
   // Source & email-claim (for imported submissions, e.g. Google Form)
   source        String    @default("user") // 'user' | 'import'

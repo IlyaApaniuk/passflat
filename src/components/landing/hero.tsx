@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { Plus, Sparkles } from 'lucide-react';
+import { useHasContributed } from '@/hooks/use-has-contributed';
+import { Plus, Receipt, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -24,6 +25,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
   const isTouch = useIsTouch();
+  const hasContributed = useHasContributed();
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -79,7 +81,24 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            {/* Primary CTA — costs are the current product focus. Stable label,
+                only the destination changes with contribution status (no text
+                flicker once useHasContributed resolves). */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
+              <Link
+                href={hasContributed ? `/${DEFAULT_CITY}/costs` : `/${DEFAULT_CITY}/costs/submit`}
+              >
+                <Receipt className="mr-2 h-4 w-4" />
+                {t('costsCta')}
+              </Link>
+            </Button>
+            {/* Secondary CTA — post a listing. */}
+            <Button
+              size="lg"
+              variant="outline"
+              className="group h-12 rounded-full px-8 text-base"
+              asChild
+            >
               <Link href="/create-listing">
                 <Plus className="mr-2 h-4 w-4" />
                 {t('addCta')}

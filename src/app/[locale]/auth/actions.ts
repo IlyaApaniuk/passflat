@@ -41,6 +41,7 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = (formData.get('locale') as string) || 'pl';
+  const next = formData.get('next') as string | null;
   const emailLocale = resolveEmailLocale(locale);
 
   try {
@@ -61,9 +62,14 @@ export async function signup(formData: FormData) {
     const hashedToken = data?.properties?.hashed_token;
 
     if (hashedToken) {
+      // Carry `next` through the email-confirmation link so a user who started
+      // from "submit costs" lands on the submit page after confirming (the
+      // callback route honours `next`), instead of always on /dashboard.
       const confirmUrl = localeUrl(
         emailLocale,
-        `/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=signup`,
+        `/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=signup${
+          next ? `&next=${encodeURIComponent(next)}` : ''
+        }`,
       );
 
       await sendEmail({

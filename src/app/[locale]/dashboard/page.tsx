@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { DashboardClient } from './client';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const currentLocale = await getLocale();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -42,7 +44,12 @@ export default async function DashboardPage() {
     }),
     prisma.profile.findUnique({
       where: { id: user.id },
-      select: { displayName: true },
+      select: {
+        displayName: true,
+        locale: true,
+        hasContributedCost: true,
+        costAccessUntil: true,
+      },
     }),
   ]);
 
@@ -104,6 +111,9 @@ export default async function DashboardPage() {
       userEmail={user.email ?? ''}
       freeListingsUsed={freeListingsUsed}
       displayName={profile?.displayName ?? null}
+      userLocale={profile?.locale ?? currentLocale}
+      hasContributedCost={profile?.hasContributedCost ?? false}
+      costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
     />
   );
 }
