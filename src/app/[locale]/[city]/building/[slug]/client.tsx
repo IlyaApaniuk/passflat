@@ -532,20 +532,21 @@ export function BuildingCostsClient({
                         ≈ {costs.totalMonthlyAvg.median.toLocaleString()} PLN
                       </motion.p>
 
-                      {/* Data-quality: does this total actually account for utilities? */}
+                      {/* Context for reading the total: does it include utilities or
+                          just rent? Informational — not a quality/trust score. */}
                       {utilitiesCompleteness && utilitiesCompleteness.known > 0 && (
                         <div className="mt-2">
-                          {utilitiesCompleteness.complete === utilitiesCompleteness.known ? (
-                            <Badge className="gap-1 bg-green-500/10 text-green-600">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {t('costs.building.utilitiesComplete')}
-                            </Badge>
-                          ) : (
-                            <Badge className="gap-1 bg-amber-500/10 text-amber-600">
-                              <Info className="h-3 w-3" />
-                              {t('costs.building.utilitiesMaybeIncomplete')}
-                            </Badge>
-                          )}
+                          <Badge className="gap-1 bg-primary/10 text-primary">
+                            <Info className="h-3 w-3" />
+                            {utilitiesCompleteness.complete === utilitiesCompleteness.known
+                              ? t('costs.building.utilitiesComplete')
+                              : utilitiesCompleteness.complete === 0
+                                ? t('costs.building.utilitiesNone')
+                                : t('costs.building.utilitiesPartial', {
+                                    complete: utilitiesCompleteness.complete,
+                                    known: utilitiesCompleteness.known,
+                                  })}
+                          </Badge>
                         </div>
                       )}
 
