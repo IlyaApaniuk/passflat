@@ -8,7 +8,7 @@ import { getTranslations } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
-import { periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
+import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -86,12 +86,14 @@ const costReportSelect = {
   depositReturned: true,
   depositReturnedAmount: true,
   depositReturnDays: true,
+  utilitiesComplete: true,
+  leaseType: true,
   isCurrentTenant: true,
   livedFrom: true,
   livedUntil: true,
   areaM2: true,
   createdAt: true,
-  periodicCharges: { select: { amount: true, frequency: true } },
+  periodicCharges: { select: { amount: true, frequency: true, category: true } },
 } as const;
 
 const buildingQuery = {
@@ -409,10 +411,23 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     const medianDays = median(
       answered.map((r) => (r.depositReturnDays == null ? null : Number(r.depositReturnDays))),
     );
+    // Average fraction of the deposit actually returned — captures partial
+    // withholds the binary rate hides. depositReturnedAmount holds the returned
+    // sum (full → deposit, partial → entered, none → 0); null on legacy reports
+    // (pre-migration), which then drop out → null when no report carries one.
+    const medianReturnedPct = median(
+      answered.map((r) => {
+        const dep = r.depositAmount == null ? null : Number(r.depositAmount);
+        const ret = r.depositReturnedAmount == null ? null : Number(r.depositReturnedAmount);
+        if (dep == null || ret == null || dep <= 0) return null;
+        return Math.min(100, Math.max(0, (ret / dep) * 100));
+      }),
+    );
     return {
       sampleSize: answered.length,
       returnedRate: Math.round((returnedCount / answered.length) * 100),
       medianDays,
+      medianReturnedPct,
     };
   })();
 
@@ -438,6 +453,61 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       .filter((v): v is number => v != null);
     if (months.length === 0) return null;
     return { sampleSize: months.length, medianMonths: median(months) };
+  })();
+
+  // Deposit expressed in months of rent (typical deposit ÷ typical rent) — more
+  // comparable across price levels than an absolute zł figure. Kept off median()
+  // here so the ratio doesn't get rounded to a whole number.
+  const depositMonths =
+    costs?.deposit?.median != null && costs?.rent?.median != null && costs.rent.median > 0
+      ? costs.deposit.median / costs.rent.median
+      : null;
+
+  // Per-category breakdown of periodic charges (e.g. water billed quarterly):
+  // typical amount + most common frequency, across all reports' charges.
+  const periodicBreakdown = (() => {
+    const all = reports.flatMap((r) => r.periodicCharges);
+    if (all.length === 0) return null;
+    const rows: Array<{
+      category: string;
+      amount: number;
+      frequency: string | null;
+      count: number;
+    }> = [];
+    for (const category of PERIODIC_CATEGORIES) {
+      const ofCat = all.filter((c) => c.category === category);
+      if (ofCat.length === 0) continue;
+      const amount = median(ofCat.map((c) => Number(c.amount)));
+      if (amount == null) continue;
+      const freqCounts: Record<string, number> = {};
+      for (const c of ofCat) {
+        if (c.frequency) freqCounts[c.frequency] = (freqCounts[c.frequency] ?? 0) + 1;
+      }
+      const frequency = Object.entries(freqCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      rows.push({ category, amount, frequency, count: ofCat.length });
+    }
+    return rows.length ? rows.sort((a, b) => b.count - a.count) : null;
+  })();
+
+  // How many reports actually account for utilities in their total (vs "didn't
+  // know") — drives a data-quality badge on the headline total.
+  const utilitiesCompleteness = (() => {
+    const known = reports.filter((r) => r.utilitiesComplete != null).length;
+    if (known === 0) return null;
+    const complete = reports.filter((r) => r.utilitiesComplete === true).length;
+    return { complete, known, total: reportCount };
+  })();
+
+  // Most common meaningful lease type (excludes "unknown"). null → no badge.
+  const leaseTypeAgg = (() => {
+    const present = reports
+      .map((r) => r.leaseType)
+      .filter((v): v is string => v != null && v !== '' && v !== 'unknown');
+    if (present.length === 0) return null;
+    const counts: Record<string, number> = {};
+    for (const v of present) counts[v] = (counts[v] ?? 0) + 1;
+    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    return { dominant, count: counts[dominant], total: reportCount };
   })();
 
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
@@ -535,6 +605,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       includedCounts={includedCounts}
       depositReturn={depositReturn}
       tenure={tenure}
+      depositMonths={depositMonths}
+      periodicBreakdown={periodicBreakdown}
+      utilitiesCompleteness={utilitiesCompleteness}
+      leaseType={leaseTypeAgg}
       hasContributedData={hasContributedData}
       costAccessUntil={costAccessUntil}
       citySlug={citySlug}

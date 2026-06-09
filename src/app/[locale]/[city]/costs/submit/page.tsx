@@ -53,6 +53,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
         lat: report.building.lat ? Number(report.building.lat) : 0,
         lng: report.building.lng ? Number(report.building.lng) : 0,
         rentalType: (report.rentalType ?? '') as '' | 'apartment' | 'room',
+        leaseType: (report.leaseType ?? '') as '' | 'standard' | 'okazjonalny' | 'unknown',
         areaM2: report.areaM2 ? String(report.areaM2) : '',
         rooms: report.rooms ? String(report.rooms) : '',
         floor: report.floor ? String(report.floor) : '',

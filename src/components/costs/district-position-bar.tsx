@@ -14,9 +14,6 @@ interface DistrictPositionBarProps {
   p75: number;
   /** Unit suffix, e.g. "PLN" or "zł/m²". */
   unit: string;
-  /** District name + sample size, for the caption. */
-  district: string;
-  sampleSize: number;
 }
 
 /**
@@ -32,8 +29,6 @@ export function DistrictPositionBar({
   p25,
   p75,
   unit,
-  district,
-  sampleSize,
 }: DistrictPositionBarProps) {
   const t = useTranslations();
 
@@ -130,10 +125,6 @@ export function DistrictPositionBar({
           style={{ left: at(value) }}
         />
       </div>
-
-      <p className="text-[11px] text-muted-foreground">
-        {district} · {sampleSize} {t('costs.overview.reports')}
-      </p>
     </div>
   );
 }
