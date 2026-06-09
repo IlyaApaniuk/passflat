@@ -3,12 +3,11 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { Building2, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -43,17 +42,10 @@ type SortDir = 'asc' | 'desc';
 
 interface DistrictComparisonProps {
   stats: DistrictStatsData[];
-  accessGranted: boolean;
-  accessPending: boolean;
   citySlug: string;
 }
 
-export function DistrictComparison({
-  stats,
-  accessGranted,
-  accessPending,
-  citySlug,
-}: DistrictComparisonProps) {
+export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps) {
   const t = useTranslations();
   const [sortKey, setSortKey] = useState<SortKey>('medianTotal');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -127,20 +119,6 @@ export function DistrictComparison({
               {t('costs.compare.metricExpenses')}
             </span>
           </div>
-
-          {/* Unlock prompt — the cost numbers stay locked until the visitor
-              contributes a report of their own. */}
-          {!accessGranted && !accessPending && (
-            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-center sm:flex-row sm:justify-between sm:text-left">
-              <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Lock className="h-4 w-4" />
-                {t('costs.compare.lockedCta')}
-              </span>
-              <Button asChild size="sm" className="shrink-0">
-                <Link href={`/${citySlug}/costs/submit`}>{t('costs.overview.submitMyCosts')}</Link>
-              </Button>
-            </div>
-          )}
 
           <div className="overflow-x-auto">
             <Table>
@@ -216,34 +194,13 @@ export function DistrictComparison({
                     className="border-b transition-colors last:border-0 hover:bg-muted/50"
                   >
                     <TableCell className="font-medium">{s.name}</TableCell>
-                    <TotalBarCell
-                      total={s.medianTotal}
-                      rent={s.medianRent}
-                      maxTotal={maxTotal}
-                      accessGranted={accessGranted}
-                      accessPending={accessPending}
-                    />
-                    <MoneyCell
-                      value={s.medianRent}
-                      accessGranted={accessGranted}
-                      accessPending={accessPending}
-                    />
-                    <MoneyCell
-                      value={s.medianExpenses}
-                      accessGranted={accessGranted}
-                      accessPending={accessPending}
-                    />
-                    <MoneyCell
-                      value={s.medianRentPerM2}
-                      suffix={` ${t('costs.overview.perM2')}`}
-                      accessGranted={accessGranted}
-                      accessPending={accessPending}
-                    />
+                    <TotalBarCell total={s.medianTotal} rent={s.medianRent} maxTotal={maxTotal} />
+                    <MoneyCell value={s.medianRent} />
+                    <MoneyCell value={s.medianExpenses} />
+                    <MoneyCell value={s.medianRentPerM2} suffix={` ${t('costs.overview.perM2')}`} />
                     <MoneyCell
                       value={s.medianTotalPerM2}
                       suffix={` ${t('costs.overview.perM2')}`}
-                      accessGranted={accessGranted}
-                      accessPending={accessPending}
                     />
                     <TableCell className="text-right tabular-nums">{s.reportCount}</TableCell>
                   </motion.tr>
@@ -300,29 +257,11 @@ function TotalBarCell({
   total,
   rent,
   maxTotal,
-  accessGranted,
-  accessPending,
 }: {
   total: number;
   rent: number;
   maxTotal: number;
-  accessGranted: boolean;
-  accessPending: boolean;
 }) {
-  if (accessPending) {
-    return (
-      <TableCell className="text-right">
-        <Skeleton className="ml-auto h-4 w-24" />
-      </TableCell>
-    );
-  }
-  if (!accessGranted) {
-    return (
-      <TableCell className="text-right">
-        <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
-      </TableCell>
-    );
-  }
   if (!total || total <= 0) {
     return (
       <TableCell className="text-right">
@@ -359,22 +298,14 @@ function MoneyCell({
   value,
   suffix = '',
   bold = false,
-  accessGranted,
-  accessPending,
 }: {
   value: number;
   suffix?: string;
   bold?: boolean;
-  accessGranted: boolean;
-  accessPending: boolean;
 }) {
   return (
     <TableCell className="text-right tabular-nums">
-      {accessPending ? (
-        <Skeleton className="ml-auto h-4 w-16" />
-      ) : !accessGranted ? (
-        <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
-      ) : value > 0 ? (
+      {value > 0 ? (
         <span className={bold ? 'font-bold text-primary' : ''}>
           ≈ {value.toLocaleString()}
           {suffix}

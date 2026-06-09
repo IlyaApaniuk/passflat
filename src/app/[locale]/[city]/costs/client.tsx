@@ -1,8 +1,7 @@
 'use client';
 
-import { use, useCallback, useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { use, useCallback, useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
-import { usePostHog } from 'posthog-js/react';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -14,11 +13,9 @@ import type { CostAccess } from '@/components/costs/cost-access-card';
 import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 import { median } from '@/lib/cost-stats';
-import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -30,7 +27,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2,
   Search,
-  Lock,
   TrendingUp,
   MapPin,
   Users,
@@ -96,14 +92,6 @@ interface CostsOverviewClientProps {
 }
 
 /**
- * Tri-state access status. `pending` is the initial state before the streamed
- * auth promise resolves — used to render neutral skeletons instead of
- * defaulting to the `locked` (Buy/Submit) UI, which would flash for users who
- * already have access.
- */
-type AccessStatus = 'pending' | 'locked' | 'unlocked';
-
-/**
  * Unwraps the streamed access promise inside a Suspense boundary and lifts the
  * result into the parent's state, so the (cached) cost table renders
  * immediately while auth resolves in the background. The access-dependent CTA
@@ -153,44 +141,20 @@ export function CostsOverviewClient({
   initialDistrict,
 }: CostsOverviewClientProps) {
   const t = useTranslations();
-  const posthog = usePostHog();
   const searchParams = useSearchParams();
 
-  // `null` = pending (auth not yet resolved, logged-in users only). For
-  // anonymous visitors the server passes a pre-resolved `initialAccess` so the
-  // locked gate renders immediately with no skeleton flash.
+  // `null` while the streamed auth promise resolves; once resolved it drives the
+  // CostAccessCard's contribution nudge / "your access" status. The cost table
+  // never waits on it — the summary ("база") is public, so the numbers render
+  // immediately for everyone. The deeper per-utility detail is gated, but that
+  // lives on the building page (useHasContributed), not here.
   const [access, setAccess] = useState<CostAccess | null>(initialAccess);
-  const accessResolved = access !== null;
-  const { hasContributedData, costAccessUntil } = access ?? {
-    hasContributedData: false,
-    costAccessUntil: null,
-  };
   const handleAccessResolved = useCallback((next: CostAccess) => setAccess(next), []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [mainTab, setMainTab] = useState<'buildings' | 'compare'>('buildings');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [rentalTypeFilter, setRentalTypeFilter] = useState<'all' | 'apartment' | 'room'>('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  const accessGranted = useMemo(
-    () =>
-      isCostDataOpenToAll() ||
-      hasContributedData ||
-      (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
-    [hasContributedData, costAccessUntil],
-  );
-  // Tri-state derived from the resolved promise: `pending` until auth resolves,
-  // then `unlocked`/`locked`. Drives skeleton-vs-CTA rendering in the access region.
-  // When data is fully open, short-circuit to `unlocked` so logged-in users never
-  // see the auth skeleton flash for data that isn't gated.
-  const accessStatus: AccessStatus = isCostDataOpenToAll()
-    ? 'unlocked'
-    : !accessResolved
-      ? 'pending'
-      : accessGranted
-        ? 'unlocked'
-        : 'locked';
-  const accessPending = accessStatus === 'pending';
 
   useEffect(() => {
     const param = searchParams.get('cost_access');
@@ -204,15 +168,6 @@ export function CostsOverviewClient({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fire once, only after auth resolves to a genuinely locked state — not while
-  // pending (which would mis-attribute every already-unlocked user as prompted).
-  const promptedRef = useRef(false);
-  useEffect(() => {
-    if (accessStatus === 'locked' && !promptedRef.current) {
-      promptedRef.current = true;
-      posthog?.capture('cost_unlock_prompted', { city: citySlug });
-    }
-  }, [accessStatus, posthog, citySlug]);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
   const searchAndTypeFiltered = useMemo(
@@ -527,7 +482,7 @@ export function CostsOverviewClient({
                               district: b.district,
                               reports: b.reports,
                               avgTotal: b.medianTotal,
-                              hasContributed: accessGranted,
+                              hasContributed: true,
                             }))}
                           citySlug={citySlug}
                           bounds={cityBounds}
@@ -585,46 +540,31 @@ export function CostsOverviewClient({
                                     </div>
 
                                     <div className="flex items-center justify-between gap-6 sm:justify-end">
-                                      {accessPending ? (
-                                        <div className="text-left sm:text-right" aria-hidden="true">
-                                          <Skeleton className="h-4 w-28 sm:ml-auto" />
-                                          <Skeleton className="mt-1 h-7 w-32 sm:ml-auto" />
-                                          <Skeleton className="mt-1 h-4 w-20 sm:ml-auto" />
-                                        </div>
-                                      ) : accessGranted ? (
-                                        <div className="text-left sm:text-right">
+                                      <div className="text-left sm:text-right">
+                                        <p className="text-xs text-muted-foreground">
+                                          {t('costs.overview.medianMonthlyTotal')}
+                                        </p>
+                                        <p className="text-lg font-bold text-primary">
+                                          ≈ {building.medianTotal.toLocaleString()} PLN
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {t('costs.overview.rent')} ≈{' '}
+                                          {building.medianRent.toLocaleString()}
+                                          {building.medianExpenses != null && (
+                                            <>
+                                              {' · '}
+                                              {t('costs.overview.expenses')} ≈{' '}
+                                              {building.medianExpenses.toLocaleString()}
+                                            </>
+                                          )}
+                                        </p>
+                                        {building.medianTotalPerM2 ? (
                                           <p className="text-xs text-muted-foreground">
-                                            {t('costs.overview.medianMonthlyTotal')}
+                                            ≈ {building.medianTotalPerM2.toLocaleString()}{' '}
+                                            {t('costs.overview.perM2')}
                                           </p>
-                                          <p className="text-lg font-bold text-primary">
-                                            ≈ {building.medianTotal.toLocaleString()} PLN
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {t('costs.overview.rent')} ≈{' '}
-                                            {building.medianRent.toLocaleString()}
-                                            {building.medianExpenses != null && (
-                                              <>
-                                                {' · '}
-                                                {t('costs.overview.expenses')} ≈{' '}
-                                                {building.medianExpenses.toLocaleString()}
-                                              </>
-                                            )}
-                                          </p>
-                                          {building.medianTotalPerM2 ? (
-                                            <p className="text-xs text-muted-foreground">
-                                              ≈ {building.medianTotalPerM2.toLocaleString()}{' '}
-                                              {t('costs.overview.perM2')}
-                                            </p>
-                                          ) : null}
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                          <Lock className="h-4 w-4" />
-                                          <span className="text-sm">
-                                            {t('costs.overview.submitToUnlock')}
-                                          </span>
-                                        </div>
-                                      )}
+                                        ) : null}
+                                      </div>
                                       <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                                     </div>
                                   </div>
@@ -685,12 +625,7 @@ export function CostsOverviewClient({
                 </TabsContent>
 
                 <TabsContent value="compare">
-                  <DistrictComparison
-                    stats={computedDistrictStats}
-                    accessGranted={accessGranted}
-                    accessPending={accessPending}
-                    citySlug={citySlug}
-                  />
+                  <DistrictComparison stats={computedDistrictStats} citySlug={citySlug} />
                 </TabsContent>
               </Tabs>
             </div>
