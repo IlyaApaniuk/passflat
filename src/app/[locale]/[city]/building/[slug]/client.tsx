@@ -181,8 +181,6 @@ interface BuildingCostsClientProps {
     district: Baseline | null;
     city: Baseline | null;
   };
-  hasContributedData: boolean;
-  costAccessUntil: string | null;
   citySlug: string;
   initialLocationScore: {
     overall: number;
@@ -597,30 +595,8 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
-              <motion.div custom={0.5} initial="hidden" animate="visible" variants={fadeUp}>
-                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
-              </motion.div>
-
-              <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{t('costs.building.costBreakdown')}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {basicItems.length > 0 && (
-                      <div className="space-y-4">{basicItems.map(renderCostRow)}</div>
-                    )}
-                    {detailItems.length > 0 && (
-                      <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
-                        <div className="space-y-4">{detailItems.map(renderCostRow)}</div>
-                      </GatedSection>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
               {costs?.deposit && (
-                <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -739,8 +715,30 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
+              <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
+              </motion.div>
+
+              <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('costs.building.costBreakdown')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {basicItems.length > 0 && (
+                      <div className="space-y-4">{basicItems.map(renderCostRow)}</div>
+                    )}
+                    {detailItems.length > 0 && (
+                      <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                        <div className="space-y-4">{detailItems.map(renderCostRow)}</div>
+                      </GatedSection>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
               {(comparison.district || comparison.city) && comparison.thisBuilding && (
-                <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('costs.building.comparison')}</CardTitle>
@@ -880,7 +878,7 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
-              <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
+              <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
                   <CardContent className="flex flex-col items-center py-8 text-center">
                     <h3 className="text-lg font-semibold">

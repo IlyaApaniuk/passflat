@@ -1,7 +1,5 @@
 import { cache } from 'react';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -9,15 +7,15 @@ import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
-import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ISR: when cost data is open the page reads no per-request auth (see the
-// resolveUserId guard below), so it renders statically and revalidates hourly
-// for crawlers. When the gate is on, the auth read opts it back into dynamic.
+// ISR: the page reads no per-request auth — the summary ("база") is public for
+// everyone and crawlers, and the deeper per-utility detail is gated client-side
+// (useHasContributed). So it renders statically and revalidates hourly. A hard
+// server-side withhold (Phase 2 monetization) would opt it back into dynamic.
 export const revalidate = 3600;
 
 interface PageProps {
@@ -141,24 +139,6 @@ const getBuilding = cache(async (citySlug: string, slug: string) => {
     ...buildingQuery,
   });
 });
-
-// ---------------------------------------------------------------------------
-// Auth: cookie short-circuit — skip network call for anonymous visitors
-// ---------------------------------------------------------------------------
-
-async function resolveUserId(): Promise<string | null> {
-  const store = await cookies();
-  const hasAuthCookie = store
-    .getAll()
-    .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
-  if (!hasAuthCookie) return null;
-
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.user?.id ?? null;
-}
 
 // ---------------------------------------------------------------------------
 // unstable_cache: baseline distributions (revalidate every 10 min)
@@ -523,14 +503,11 @@ export default async function BuildingCostsPage({ params }: PageProps) {
 
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
 
-  // Parallel: baselines + auth (all independent of each other)
-  const [cachedDistrict, cachedCity, userId] = await Promise.all([
+  // Parallel: district + city baselines (independent of each other). No auth
+  // read — the page is fully public; the detail gate is resolved on the client.
+  const [cachedDistrict, cachedCity] = await Promise.all([
     building.districtId ? getDistrictBaseline(building.districtId) : Promise.resolve(null),
     getCityBaseline(building.cityId),
-    // Skip the per-request auth read when cost data is open: it only feeds the
-    // (now cosmetic) access banner, and reading cookies would force the page out
-    // of static/ISR rendering. The gated path still resolves it for Phase 2.
-    isCostDataOpenToAll() ? Promise.resolve(null) : resolveUserId(),
   ]);
 
   const districtBaseline: Baseline | null = cachedDistrict
@@ -562,26 +539,6 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     : null;
 
   const lastUpdated = reports[0]?.createdAt.toISOString() ?? null;
-
-  let hasContributedData = false;
-  let costAccessUntil: string | null = null;
-
-  if (userId) {
-    const [existingReport, profile] = await Promise.all([
-      prisma.costReport.findFirst({
-        where: { authorId: userId },
-        select: { id: true },
-      }),
-      prisma.profile.findUnique({
-        where: { id: userId },
-        select: { costAccessUntil: true },
-      }),
-    ]);
-    hasContributedData = !!existingReport;
-    if (profile?.costAccessUntil) {
-      costAccessUntil = profile.costAccessUntil.toISOString();
-    }
-  }
 
   const initialLocationScore = building.locationScore
     ? {
@@ -638,8 +595,6 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         periodicBreakdown={periodicBreakdown}
         utilitiesCompleteness={utilitiesCompleteness}
         leaseType={leaseTypeAgg}
-        hasContributedData={hasContributedData}
-        costAccessUntil={costAccessUntil}
         citySlug={citySlug}
         initialLocationScore={initialLocationScore}
       />
