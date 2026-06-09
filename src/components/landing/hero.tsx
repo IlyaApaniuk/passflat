@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Plus, Receipt, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -25,7 +24,6 @@ export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
   const isTouch = useIsTouch();
-  const hasContributed = useHasContributed();
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -73,7 +71,10 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
           <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl">
             <span className="block">{t('title')}</span>
-            <span className="gradient-text block">{t('titleHighlight')}</span>
+            {/* pb keeps descenders (y, g) from being clipped: -webkit-background-clip:text
+                paints the gradient only inside the box, so the box must extend below the
+                baseline for the tight leading-[1.05] line. */}
+            <span className="gradient-text block pb-[0.18em]">{t('titleHighlight')}</span>
           </h1>
 
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
@@ -81,13 +82,10 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            {/* Primary CTA — costs are the current product focus. Stable label,
-                only the destination changes with contribution status (no text
-                flicker once useHasContributed resolves). */}
+            {/* Primary CTA — cost data is the product wedge. Data is open to all,
+                so this always lands on the cost map (no contribution gate). */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
-              <Link
-                href={hasContributed ? `/${DEFAULT_CITY}/costs` : `/${DEFAULT_CITY}/costs/submit`}
-              >
+              <Link href={`/${DEFAULT_CITY}/costs`}>
                 <Receipt className="mr-2 h-4 w-4" />
                 {t('costsCta')}
               </Link>

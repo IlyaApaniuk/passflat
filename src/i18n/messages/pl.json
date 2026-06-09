@@ -75,9 +75,9 @@
   "landing": {
     "hero": {
       "badge": "Już dostępne w Warszawie",
-      "title": "Znajdź swoje nowe",
-      "titleHighlight": "mieszkanie, uczciwie.",
-      "subtitle": "Cesje najmu, szukanie współlokatora i krótki podnajem — z przejrzystymi kosztami. Zobacz, ile naprawdę płacą najemcy.",
+      "title": "Poznaj prawdziwe koszty najmu",
+      "titleHighlight": "zanim podpiszesz.",
+      "subtitle": "Prawdziwe czynsze, opłaty i kaucje — od najemców, budynek po budynku w Warszawie. Dodaj swoje w 2 minuty i odblokuj całą mapę.",
       "browseCta": "Przeglądaj oferty",
       "addCta": "Dodaj ogłoszenie",
       "trustLeaseTakeovers": "Cesje najmu",
@@ -88,7 +88,7 @@
       "trustSublet": "Podnajem",
       "trustVerified": "Zweryfikowane oferty",
       "trustVerifiedDesc": "Zaufana społeczność z przejrzystymi cenami i opiniami",
-      "costsCta": "Odblokuj dane o kosztach",
+      "costsCta": "Zobacz koszty wg dzielnic",
       "statsListings": "Oferty",
       "statsCostReports": "Raporty kosztów",
       "statsDistricts": "Dzielnice",
@@ -762,7 +762,9 @@
       "expiredOn": "Twój dostęp wygasł {date}",
       "expiredCta": "Kup ponownie lub dodaj swoje dane, aby odblokować",
       "unlockedTitle": "Raporty kosztów odblokowane",
-      "unlockedDesc": "Raporty są zapisane w panelu"
+      "unlockedDesc": "Raporty są zapisane w panelu",
+      "openTitle": "Wszystkie dane o kosztach są otwarte",
+      "openDesc": "Dodaj swój raport, aby dane były aktualne dla kolejnych najemców"
     },
     "submit": {
       "title": "Zgłoś swoje koszty",
@@ -967,7 +969,8 @@
     },
     "trust": {
       "reliable": "Popularny budynek",
-      "outdated": "Dane mogą być nieaktualne"
+      "outdated": "Dane mogą być nieaktualne",
+      "earlyData": "{count, plural, one {Dane wstępne · # raport} few {Dane wstępne · # raporty} many {Dane wstępne · # raportów} other {Dane wstępne · # raportu}}"
     },
     "locked": {
       "title": "Dodaj dane, aby odblokować",

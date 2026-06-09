@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type CostStats, monthsSince, TRUST_THRESHOLDS } from '@/lib/cost-stats';
+import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import {
   ArrowLeft,
   Building2,
@@ -192,7 +193,10 @@ export function BuildingCostsClient({
   };
 
   const accessGranted = useMemo(
-    () => hasContributedData || (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
+    () =>
+      isCostDataOpenToAll() ||
+      hasContributedData ||
+      (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
     [hasContributedData, costAccessUntil],
   );
   const paidActive =
@@ -377,6 +381,12 @@ export function BuildingCostsClient({
                   <Badge className="w-fit gap-1 bg-green-500/10 text-green-600">
                     <CheckCircle2 className="h-3 w-3" />
                     {t('costs.trust.reliable')}
+                  </Badge>
+                )}
+                {reports > 0 && !trust.reliable && (
+                  <Badge variant="secondary" className="w-fit gap-1 text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                    {t('costs.trust.earlyData', { count: reports })}
                   </Badge>
                 )}
                 {trust.outdated && (
@@ -818,8 +828,11 @@ export function BuildingCostsClient({
                       </div>
 
                       {/* Where this building sits within the district's typical
-                          range, per metric — leans on the denser district sample. */}
+                          range, per metric — leans on the denser district sample.
+                          Hidden until the district has enough reports for the
+                          percentile position to mean something. */}
                       {comparison.district &&
+                        comparison.district.count >= TRUST_THRESHOLDS.reliableMin &&
                         (() => {
                           const d = comparison.district!;
                           const unit = t('costs.building.perM2');

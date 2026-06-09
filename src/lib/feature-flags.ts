@@ -40,3 +40,21 @@ function isEnabledByDefault(value: string | undefined): boolean {
 export function isDocumentTemplatesEnabled(): boolean {
   return isEnabledByDefault(process.env.NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES);
 }
+
+/**
+ * Master switch that OPENS all crowdsourced cost data to everyone — anonymous
+ * visitors and search-engine crawlers — bypassing the contribute-/pay-to-unlock
+ * gate. Phase 1 of the growth plan runs fully open to power SEO, social sharing
+ * and proof-of-value; the gate is reinstated later for monetization.
+ *
+ * Controlled by `NEXT_PUBLIC_FEATURE_COST_DATA_OPEN`:
+ *   - unset / "true" (anything other than "false") → OPEN (default)
+ *   - "false" → gated (contribute a report or buy access to see the numbers)
+ *
+ * NOT a security boundary: the cost figures are already shipped to the client,
+ * so this only flips the client-side blur/CTA. Truly sensitive depth can be
+ * withheld server-side later if monetization needs it.
+ */
+export function isCostDataOpenToAll(): boolean {
+  return isEnabledByDefault(process.env.NEXT_PUBLIC_FEATURE_COST_DATA_OPEN);
+}
