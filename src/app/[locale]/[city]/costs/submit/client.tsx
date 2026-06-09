@@ -264,6 +264,18 @@ export function CostSubmitClient({
     () => !!(existingReport?.heatingWinter || existingReport?.heatingSummer),
   );
   const [showPeriodic, setShowPeriodic] = useState(() => !!existingReport?.periodicCharges?.length);
+  // Tenancy (length-of-stay + deposit return) is optional, so it lives behind a
+  // disclosure to keep the default form short. Auto-open when editing a report
+  // that already carries any tenancy data.
+  const [showTenancy, setShowTenancy] = useState(
+    () =>
+      !!(
+        existingReport &&
+        (existingReport.livedFrom ||
+          existingReport.isCurrentTenant === false ||
+          existingReport.depositReturned)
+      ),
+  );
 
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -319,6 +331,7 @@ export function CostSubmitClient({
     setShowElectricitySeasonal(false);
     setShowHeatingSeasonal(false);
     setShowPeriodic(false);
+    setShowTenancy(false);
     setDraftRestored(false);
     setUtilitiesError(false);
     setRentalTypeError(false);
@@ -1641,155 +1654,170 @@ export function CostSubmitClient({
                   <CardContent className="space-y-4">
                     <p className="text-sm text-muted-foreground">{t('costs.submit.tenancyHint')}</p>
 
-                    <div className="flex gap-2">
-                      {([true, false] as const).map((current) => (
-                        <button
-                          key={String(current)}
-                          type="button"
-                          onClick={() =>
-                            updateFormData(
-                              current
-                                ? {
-                                    isCurrentTenant: true,
-                                    livedUntil: '',
-                                    depositReturned: '',
-                                    depositReturnDays: '',
-                                  }
-                                : { isCurrentTenant: false },
-                            )
-                          }
-                          className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
-                            formData.isCurrentTenant === current
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
-                          }`}
-                        >
-                          {current ? t('costs.submit.currentTenant') : t('costs.submit.pastTenant')}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="livedFrom" className="flex items-center gap-2">
-                          {t('costs.submit.livedFrom')}
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            {t('costs.submit.recommended')}
-                          </span>
-                        </Label>
-                        <MonthYearPicker
-                          id="livedFrom"
-                          value={formData.livedFrom}
-                          onChange={(v) =>
-                            updateFormData({
-                              livedFrom: v,
-                              // Keep move-out on/after move-in.
-                              ...(formData.livedUntil && v && formData.livedUntil < v
-                                ? { livedUntil: '' }
-                                : {}),
-                            })
-                          }
-                          locale={locale}
-                          placeholder={t('costs.submit.livedFrom')}
-                          max={
-                            formData.isCurrentTenant
-                              ? currentMonth
-                              : formData.livedUntil || currentMonth
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {t('costs.submit.livedFromHint')}
-                        </p>
-                      </div>
-                      {!formData.isCurrentTenant && (
-                        <div className="space-y-2">
-                          <Label htmlFor="livedUntil">{t('costs.submit.livedUntil')}</Label>
-                          <MonthYearPicker
-                            id="livedUntil"
-                            value={formData.livedUntil}
-                            onChange={(v) => updateFormData({ livedUntil: v })}
-                            locale={locale}
-                            placeholder={t('costs.submit.livedUntil')}
-                            min={formData.livedFrom || undefined}
-                            max={currentMonth}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {!formData.isCurrentTenant && (
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-primary" />
-                          {t('costs.submit.depositReturnedQuestion')}
-                        </Label>
+                    {!showTenancy ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowTenancy(true)}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t('costs.submit.addTenancyDetails')}
+                      </button>
+                    ) : (
+                      <>
                         <div className="flex gap-2">
-                          {(['full', 'partial', 'no'] as const).map((v) => (
+                          {([true, false] as const).map((current) => (
                             <button
-                              key={v}
+                              key={String(current)}
                               type="button"
                               onClick={() =>
-                                updateFormData({
-                                  depositReturned: formData.depositReturned === v ? '' : v,
-                                  ...(v !== 'partial' ? { depositReturnedAmount: '' } : {}),
-                                  ...(v === 'no' ? { depositReturnDays: '' } : {}),
-                                })
+                                updateFormData(
+                                  current
+                                    ? {
+                                        isCurrentTenant: true,
+                                        livedUntil: '',
+                                        depositReturned: '',
+                                        depositReturnDays: '',
+                                      }
+                                    : { isCurrentTenant: false },
+                                )
                               }
-                              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-                                formData.depositReturned === v
+                              className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                                formData.isCurrentTenant === current
                                   ? 'border-primary bg-primary/10 text-primary'
                                   : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
                               }`}
                             >
-                              {v === 'full'
-                                ? t('costs.submit.depositFull')
-                                : v === 'partial'
-                                  ? t('costs.submit.depositPartial')
-                                  : t('common.no')}
+                              {current
+                                ? t('costs.submit.currentTenant')
+                                : t('costs.submit.pastTenant')}
                             </button>
                           ))}
                         </div>
-                        {formData.depositReturned === 'partial' && (
-                          <div className="space-y-2 pt-2">
-                            <Label htmlFor="depositReturnedAmount">
-                              {t('costs.submit.depositReturnedAmount')}
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="livedFrom" className="flex items-center gap-2">
+                              {t('costs.submit.livedFrom')}
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                {t('costs.submit.recommended')}
+                              </span>
                             </Label>
-                            <Input
-                              id="depositReturnedAmount"
-                              type="number"
-                              inputMode="decimal"
-                              min="0"
-                              placeholder="e.g., 1000"
-                              value={formData.depositReturnedAmount}
-                              onChange={(e) =>
-                                updateFormData({ depositReturnedAmount: e.target.value })
+                            <MonthYearPicker
+                              id="livedFrom"
+                              value={formData.livedFrom}
+                              onChange={(v) =>
+                                updateFormData({
+                                  livedFrom: v,
+                                  // Keep move-out on/after move-in.
+                                  ...(formData.livedUntil && v && formData.livedUntil < v
+                                    ? { livedUntil: '' }
+                                    : {}),
+                                })
                               }
-                            />
-                          </div>
-                        )}
-                        {(formData.depositReturned === 'full' ||
-                          formData.depositReturned === 'partial') && (
-                          <div className="space-y-2 pt-2">
-                            <Label htmlFor="depositReturnDays">
-                              {t('costs.submit.depositReturnDays')}
-                            </Label>
-                            <Input
-                              id="depositReturnDays"
-                              type="number"
-                              inputMode="numeric"
-                              min="0"
-                              placeholder="e.g., 14"
-                              value={formData.depositReturnDays}
-                              onChange={(e) =>
-                                updateFormData({ depositReturnDays: e.target.value })
+                              locale={locale}
+                              placeholder={t('costs.submit.livedFrom')}
+                              max={
+                                formData.isCurrentTenant
+                                  ? currentMonth
+                                  : formData.livedUntil || currentMonth
                               }
                             />
                             <p className="text-xs text-muted-foreground">
-                              {t('costs.submit.depositReturnDaysHint')}
+                              {t('costs.submit.livedFromHint')}
                             </p>
                           </div>
+                          {!formData.isCurrentTenant && (
+                            <div className="space-y-2">
+                              <Label htmlFor="livedUntil">{t('costs.submit.livedUntil')}</Label>
+                              <MonthYearPicker
+                                id="livedUntil"
+                                value={formData.livedUntil}
+                                onChange={(v) => updateFormData({ livedUntil: v })}
+                                locale={locale}
+                                placeholder={t('costs.submit.livedUntil')}
+                                min={formData.livedFrom || undefined}
+                                max={currentMonth}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {!formData.isCurrentTenant && (
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-primary" />
+                              {t('costs.submit.depositReturnedQuestion')}
+                            </Label>
+                            <div className="flex gap-2">
+                              {(['full', 'partial', 'no'] as const).map((v) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() =>
+                                    updateFormData({
+                                      depositReturned: formData.depositReturned === v ? '' : v,
+                                      ...(v !== 'partial' ? { depositReturnedAmount: '' } : {}),
+                                      ...(v === 'no' ? { depositReturnDays: '' } : {}),
+                                    })
+                                  }
+                                  className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                                    formData.depositReturned === v
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                                  }`}
+                                >
+                                  {v === 'full'
+                                    ? t('costs.submit.depositFull')
+                                    : v === 'partial'
+                                      ? t('costs.submit.depositPartial')
+                                      : t('common.no')}
+                                </button>
+                              ))}
+                            </div>
+                            {formData.depositReturned === 'partial' && (
+                              <div className="space-y-2 pt-2">
+                                <Label htmlFor="depositReturnedAmount">
+                                  {t('costs.submit.depositReturnedAmount')}
+                                </Label>
+                                <Input
+                                  id="depositReturnedAmount"
+                                  type="number"
+                                  inputMode="decimal"
+                                  min="0"
+                                  placeholder="e.g., 1000"
+                                  value={formData.depositReturnedAmount}
+                                  onChange={(e) =>
+                                    updateFormData({ depositReturnedAmount: e.target.value })
+                                  }
+                                />
+                              </div>
+                            )}
+                            {(formData.depositReturned === 'full' ||
+                              formData.depositReturned === 'partial') && (
+                              <div className="space-y-2 pt-2">
+                                <Label htmlFor="depositReturnDays">
+                                  {t('costs.submit.depositReturnDays')}
+                                </Label>
+                                <Input
+                                  id="depositReturnDays"
+                                  type="number"
+                                  inputMode="numeric"
+                                  min="0"
+                                  placeholder="e.g., 14"
+                                  value={formData.depositReturnDays}
+                                  onChange={(e) =>
+                                    updateFormData({ depositReturnDays: e.target.value })
+                                  }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  {t('costs.submit.depositReturnDaysHint')}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
-                      </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>

@@ -852,6 +852,7 @@
       "deposit": "Kaucja",
       "tenancyTitle": "Twój najem",
       "tenancyHint": "Opcjonalnie — pomaga innym najemcom wiedzieć, jak długo się mieszka i czy kaucja wraca.",
+      "addTenancyDetails": "Dodaj szczegóły najmu i zwrotu kaucji",
       "currentTenant": "Mieszkam teraz",
       "pastTenant": "Wyprowadziłem się",
       "livedFrom": "Wprowadzenie",

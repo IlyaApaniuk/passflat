@@ -852,6 +852,7 @@
       "deposit": "Deposit (kaucja)",
       "tenancyTitle": "Your tenancy",
       "tenancyHint": "Optional — helps other renters know how long people stay and whether deposits come back.",
+      "addTenancyDetails": "Add tenancy & deposit-return details",
       "currentTenant": "I live here now",
       "pastTenant": "I've moved out",
       "livedFrom": "Move-in",
