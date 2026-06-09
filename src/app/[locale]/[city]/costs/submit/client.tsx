@@ -79,6 +79,7 @@ interface ExistingReport {
   lat: number;
   lng: number;
   rentalType: '' | 'apartment' | 'room';
+  leaseType: '' | 'standard' | 'okazjonalny' | 'unknown';
   areaM2: string;
   rooms: string;
   floor: string;
@@ -153,6 +154,7 @@ function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
 function makeEmptyForm() {
   return {
     rentalType: '' as '' | 'apartment' | 'room',
+    leaseType: '' as '' | 'standard' | 'okazjonalny' | 'unknown',
     street: '',
     buildingNumber: '',
     district: '',
@@ -238,6 +240,8 @@ export function CostSubmitClient({
   const [error, setError] = useState<string | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
   const rentalTypeRef = useRef<HTMLDivElement>(null);
+  const [leaseTypeError, setLeaseTypeError] = useState(false);
+  const leaseTypeRef = useRef<HTMLDivElement>(null);
   const [utilitiesError, setUtilitiesError] = useState(false);
   const utilitiesRef = useRef<HTMLDivElement>(null);
 
@@ -361,6 +365,12 @@ export function CostSubmitClient({
       return;
     }
     setRentalTypeError(false);
+    if (!formData.leaseType) {
+      setLeaseTypeError(true);
+      leaseTypeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setLeaseTypeError(false);
     // Utilities must be explicitly answered (amount / included / don't-know) in
     // simple mode — a detailed breakdown already counts as answered. This is what
     // makes an empty utilities value meaningful for the headline "Total".
@@ -433,6 +443,7 @@ export function CostSubmitClient({
         areaM2: formData.areaM2 || undefined,
         floor: formData.floor || undefined,
         rentalType: formData.rentalType || undefined,
+        leaseType: formData.leaseType || undefined,
         isCurrentTenant: formData.isCurrentTenant,
         livedFrom: formData.livedFrom || undefined,
         livedUntil: formData.isCurrentTenant ? undefined : formData.livedUntil || undefined,
@@ -810,6 +821,40 @@ export function CostSubmitClient({
                       {rentalTypeError && (
                         <p className="text-xs text-destructive">
                           {t('costs.submit.rentalTypeRequired')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div ref={leaseTypeRef} className="space-y-2">
+                      <Label>{t('costs.submit.leaseType')} *</Label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        {(['standard', 'okazjonalny', 'unknown'] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => {
+                              updateFormData({ leaseType: type });
+                              setLeaseTypeError(false);
+                            }}
+                            className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors sm:flex-1 ${
+                              formData.leaseType === type
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : leaseTypeError
+                                  ? 'border-destructive/50 bg-background text-muted-foreground hover:bg-muted/50'
+                                  : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                            }`}
+                          >
+                            {type === 'standard'
+                              ? t('costs.submit.leaseStandard')
+                              : type === 'okazjonalny'
+                                ? t('costs.submit.leaseOccasional')
+                                : t('costs.submit.leaseUnknown')}
+                          </button>
+                        ))}
+                      </div>
+                      {leaseTypeError && (
+                        <p className="text-xs text-destructive">
+                          {t('costs.submit.leaseTypeRequired')}
                         </p>
                       )}
                     </div>

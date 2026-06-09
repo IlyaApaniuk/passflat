@@ -57,3 +57,7 @@ coverage/
 
 # husky internals (managed by `npx husky`)
 .husky/_/
+
+# local data dumps (otodom scrape / import staging — not source)
+/dataset_otodom-*.json
+/importable-otodom-*.json

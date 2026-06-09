@@ -162,8 +162,9 @@ export async function POST(request: NextRequest) {
     // Core cost is rent + deposit (always required) plus utilities (collected via
     // the form's utilities block, not a separate czynsz field). Area is required for
     // whole apartments but optional for a room (often an all-in price, exact m²
-    // unknown). adminFee is no longer collected by the form — kept nullable for
-    // backward compatibility with existing data / admin imports.
+    // unknown). adminFee carries the lump-sum utilities ("komunalka") amount from
+    // the utilities block's "enter amount" path; it stays nullable for the other
+    // utilities answers and for legacy / admin-imported data.
     const isRoom = rentalType === 'room';
     const isEmpty = (v: unknown) => v == null || v === '';
     if (
