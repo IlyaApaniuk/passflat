@@ -657,6 +657,22 @@
     "emptyDesc": "Try adjusting your filters to see more results",
     "navListings": "Listings"
   },
+  "costsSeo": {
+    "cityMetaTitle": "Rent in {city}: real costs by district",
+    "cityMetaDescription": "What tenants actually pay to rent in {city} — rent, utilities and deposits, by district. Crowdsourced, open data.",
+    "cityH1": "What renting in {city} really costs",
+    "cityIntro": "Median real costs reported by tenants — rent, utilities (komunalka) and deposits — across the districts of {city}. Pick a district to see the buildings.",
+    "districtsHeading": "Costs by district",
+    "exploreAll": "All buildings & filters",
+    "emptyCity": "No data yet — be the first to add your costs.",
+    "districtMetaTitle": "Rent in {district}, {city} — real tenant costs",
+    "districtMetaDescription": "Real rental costs in {district}, {city}: rent, utilities and deposits, building by building. Crowdsourced from tenants.",
+    "districtH1": "Rent in {district}",
+    "districtIntro": "What tenants actually pay in {district}, {city} — rent, utilities and deposits, building by building.",
+    "buildingsHeading": "Buildings in {district}",
+    "backToCity": "All {city} districts",
+    "emptyDistrict": "No reports here yet — be the first to add yours."
+  },
   "costs": {
     "title": "Cost Transparency",
     "subtitle": "Real rental costs reported by tenants",
