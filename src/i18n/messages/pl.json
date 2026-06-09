@@ -800,6 +800,8 @@
       "expensesLabel": "Wydatki",
       "requiredLegend": "* wymagane do wysłania",
       "depositOneTime": "Jednorazowa — nie wlicza się do sumy miesięcznej",
+      "optionalLabel": "(opcjonalnie)",
+      "addressNotFoundHint": "Nie możesz znaleźć adresu? Wybierz najbliższy — szczegóły poprawisz później.",
       "utilitiesOptional": "Opcjonalnie — pomiń, jeśli nie masz pewności",
       "completenessNudge": "Im pełniejszy raport, tym bardziej przydatny dla innych.",
       "typicalHint": "zwykle ~{value}",
