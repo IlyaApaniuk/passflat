@@ -7,6 +7,7 @@ import { unstable_cache } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
+import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import type { Metadata } from 'next';
@@ -584,37 +585,53 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     : null;
 
   return (
-    <BuildingCostsClient
-      building={{
-        id: building.id,
-        slug: building.slug,
-        address: building.addressFull,
-        district: building.district?.nameKey ?? '',
-        districtSlug: building.district?.slug ?? '',
-        city: t(building.city.nameKey),
-      }}
-      reports={reportCount}
-      lastUpdated={lastUpdated}
-      costs={costs}
-      comparison={{
-        thisBuilding: buildingMedianTotal,
-        thisBuildingRentPerM2: perM2?.rent?.median ?? null,
-        thisBuildingTotalPerM2: perM2?.total?.median ?? null,
-        thisBuildingExpenses: costs?.expenses?.median ?? null,
-        district: districtBaseline,
-        city: cityBaseline,
-      }}
-      includedCounts={includedCounts}
-      depositReturn={depositReturn}
-      tenure={tenure}
-      depositMonths={depositMonths}
-      periodicBreakdown={periodicBreakdown}
-      utilitiesCompleteness={utilitiesCompleteness}
-      leaseType={leaseTypeAgg}
-      hasContributedData={hasContributedData}
-      costAccessUntil={costAccessUntil}
-      citySlug={citySlug}
-      initialLocationScore={initialLocationScore}
-    />
+    <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: t(building.city.nameKey), path: `/${citySlug}` },
+          ...(building.district
+            ? [
+                {
+                  name: building.district.nameKey,
+                  path: `/${citySlug}/${building.district.slug}`,
+                },
+              ]
+            : []),
+          { name: building.addressFull, path: `/${citySlug}/building/${building.slug}` },
+        ])}
+      />
+      <BuildingCostsClient
+        building={{
+          id: building.id,
+          slug: building.slug,
+          address: building.addressFull,
+          district: building.district?.nameKey ?? '',
+          districtSlug: building.district?.slug ?? '',
+          city: t(building.city.nameKey),
+        }}
+        reports={reportCount}
+        lastUpdated={lastUpdated}
+        costs={costs}
+        comparison={{
+          thisBuilding: buildingMedianTotal,
+          thisBuildingRentPerM2: perM2?.rent?.median ?? null,
+          thisBuildingTotalPerM2: perM2?.total?.median ?? null,
+          thisBuildingExpenses: costs?.expenses?.median ?? null,
+          district: districtBaseline,
+          city: cityBaseline,
+        }}
+        includedCounts={includedCounts}
+        depositReturn={depositReturn}
+        tenure={tenure}
+        depositMonths={depositMonths}
+        periodicBreakdown={periodicBreakdown}
+        utilitiesCompleteness={utilitiesCompleteness}
+        leaseType={leaseTypeAgg}
+        hasContributedData={hasContributedData}
+        costAccessUntil={costAccessUntil}
+        citySlug={citySlug}
+        initialLocationScore={initialLocationScore}
+      />
+    </>
   );
 }

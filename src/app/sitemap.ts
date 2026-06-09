@@ -50,14 +50,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const cities = await prisma.city.findMany({
       where: { isActive: true },
-      select: { slug: true },
+      select: {
+        slug: true,
+        // Only districts that actually have cost data — keeps thin/empty
+        // district pages out of the sitemap.
+        districts: {
+          where: { buildings: { some: { costReports: { some: { isVisible: true } } } } },
+          select: { slug: true },
+        },
+      },
     });
 
     cityPages = cities.flatMap((c) => [
+      entry(`/${c.slug}`, 'weekly', 0.8),
       entry(`/${c.slug}/costs`, 'weekly', 0.8),
       entry(`/${c.slug}/replacement`, 'weekly', 0.7),
       entry(`/${c.slug}/sublet`, 'weekly', 0.5),
       entry(`/${c.slug}/roommate`, 'weekly', 0.5),
+      ...c.districts.map((d) => entry(`/${c.slug}/${d.slug}`, 'weekly', 0.6)),
     ]);
 
     const listings = await prisma.listing.findMany({

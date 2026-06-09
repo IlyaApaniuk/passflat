@@ -657,6 +657,22 @@
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
     "navListings": "Ogłoszenia"
   },
+  "costsSeo": {
+    "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
+    "cityMetaDescription": "Ile naprawdę płacą najemcy w {city} — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
+    "cityH1": "Ile naprawdę kosztuje wynajem w {city}",
+    "cityIntro": "Mediany realnych kosztów od najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
+    "districtsHeading": "Koszty według dzielnic",
+    "exploreAll": "Wszystkie budynki i filtry",
+    "emptyCity": "Brak danych — dodaj swoje koszty jako pierwszy.",
+    "districtMetaTitle": "Wynajem w {district}, {city} — realne koszty najemców",
+    "districtMetaDescription": "Realne koszty wynajmu w {district}, {city}: czynsz, opłaty i kaucje, budynek po budynku. Dane od najemców.",
+    "districtH1": "Wynajem w {district}",
+    "districtIntro": "Ile naprawdę płacą najemcy w {district}, {city} — czynsz, opłaty i kaucje, budynek po budynku.",
+    "buildingsHeading": "Budynki w {district}",
+    "backToCity": "Wszystkie dzielnice {city}",
+    "emptyDistrict": "Brak raportów — dodaj swój jako pierwszy."
+  },
   "costs": {
     "title": "Przejrzystość kosztów",
     "subtitle": "Realne koszty najmu zgłoszone przez najemców",
