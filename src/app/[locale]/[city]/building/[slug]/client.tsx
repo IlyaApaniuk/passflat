@@ -9,6 +9,7 @@ import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
+import { ShareButton } from '@/components/costs/share-button';
 import { LocationScore } from '@/components/listings/location-score';
 import { DistrictPositionBar } from '@/components/costs/district-position-bar';
 import { Button } from '@/components/ui/button';
@@ -377,6 +378,7 @@ export function BuildingCostsClient({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <ShareButton path={`/${citySlug}/building/${building.slug}`} source="building" />
                 {reports > 0 && trust.reliable && (
                   <Badge className="w-fit gap-1 bg-green-500/10 text-green-600">
                     <CheckCircle2 className="h-3 w-3" />

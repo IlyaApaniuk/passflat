@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { ShareButton } from '@/components/costs/share-button';
 import { ArrowRight, MapPin, Building2, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
@@ -88,6 +89,7 @@ export default async function CityCostsHub({ params }: PageProps) {
                   {t('costs.overview.submitMyCosts')}
                 </Link>
               </Button>
+              <ShareButton path={`/${city}`} source="city" size="default" />
             </div>
 
             <h2 className="mt-10 text-xl font-semibold">{t('costsSeo.districtsHeading')}</h2>
