@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
@@ -204,6 +205,7 @@ export function CostSubmitClient({
 }: CostSubmitClientProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const posthog = usePostHog();
   // Current month ("YYYY-MM") — tenancy dates can't be in the future.
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -296,6 +298,14 @@ export function CostSubmitClient({
     }
   }, [formData, editMode, draftKey]);
 
+  // Funnel: form opened (new submissions only). Pairs with the client submit
+  // events below so we can see the landing → start → submit drop-off.
+  useEffect(() => {
+    if (editMode) return;
+    posthog?.capture('cost_form_started', { city: citySlug });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const discardDraft = () => {
     try {
       localStorage.removeItem(draftKey);
@@ -355,18 +365,21 @@ export function CostSubmitClient({
       lat: place.lat,
       lng: place.lng,
     });
+    posthog?.capture('cost_form_address_selected', { city: citySlug });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.rentalType) {
       setRentalTypeError(true);
+      posthog?.capture('cost_form_validation_error', { city: citySlug, field: 'rentalType' });
       rentalTypeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setRentalTypeError(false);
     if (!formData.leaseType) {
       setLeaseTypeError(true);
+      posthog?.capture('cost_form_validation_error', { city: citySlug, field: 'leaseType' });
       leaseTypeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -376,6 +389,7 @@ export function CostSubmitClient({
     // makes an empty utilities value meaningful for the headline "Total".
     if (!showDetailedUtilities && !formData.utilitiesAnswer) {
       setUtilitiesError(true);
+      posthog?.capture('cost_form_validation_error', { city: citySlug, field: 'utilities' });
       utilitiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -495,6 +509,7 @@ export function CostSubmitClient({
             ...sharedFields,
           };
 
+      posthog?.capture('cost_form_submit_attempt', { city: citySlug, edit: editMode });
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -520,6 +535,11 @@ export function CostSubmitClient({
       setSubmittedReportId(costReport?.id ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
+      posthog?.capture('cost_form_submit_success', {
+        city: citySlug,
+        was_flagged: (data.wasFlagged as boolean) ?? false,
+        edit: editMode,
+      });
       if (!editMode) {
         try {
           localStorage.removeItem(draftKey);
@@ -528,6 +548,7 @@ export function CostSubmitClient({
         }
       }
     } catch (err) {
+      posthog?.capture('cost_form_submit_error', { city: citySlug });
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setSubmitting(false);
@@ -870,6 +891,9 @@ export function CostSubmitClient({
                         <p className="text-xs text-muted-foreground">
                           {t('listings.create.addressHint')}
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('costs.submit.addressNotFoundHint')}
+                        </p>
                       </div>
                     )}
 
@@ -1055,14 +1079,16 @@ export function CostSubmitClient({
                       <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="deposit" className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-primary" />
-                          {t('costs.submit.deposit')} *
+                          {t('costs.submit.deposit')}
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {t('costs.submit.optionalLabel')}
+                          </span>
                         </Label>
                         <Input
                           id="deposit"
                           type="number"
                           inputMode="decimal"
                           min="0"
-                          required
                           placeholder="e.g., 5000"
                           value={formData.deposit}
                           onChange={(e) => updateFormData({ deposit: e.target.value })}
@@ -1138,6 +1164,9 @@ export function CostSubmitClient({
                               type="button"
                               className="text-xs text-primary underline-offset-2 hover:underline"
                               onClick={() => {
+                                posthog?.capture('cost_form_utilities_detailed', {
+                                  city: citySlug,
+                                });
                                 setShowDetailedUtilities(true);
                                 updateFormData({ adminFee: '' });
                               }}
