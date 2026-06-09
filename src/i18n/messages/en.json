@@ -916,6 +916,10 @@
       "catOther": "Other"
     },
     "building": {
+      "follow": "Follow",
+      "following": "Following",
+      "followToast": "Following this building — we will email you when new reports land.",
+      "followError": "Could not update follow. Please try again.",
       "avgRent": "Avg Rent",
       "avgUtilities": "Avg Utilities",
       "reports": "Reports",
@@ -1914,6 +1918,22 @@
       "body": "Once it expires, it will no longer be visible to people searching on Passflat. Open your listing to renew or repost it and keep it active.",
       "cta": "View listing",
       "footer": "You received this email because you have an active listing on Passflat."
+    },
+    "buildingActivity": {
+      "subject": "{count, plural, one {# new cost report} other {# new cost reports}} in {address}",
+      "heading": "New cost data in a building you follow",
+      "intro": "{count, plural, one {# new tenant report was} other {# new tenant reports were}} just added for {address}.",
+      "body": "That makes {total, plural, one {# report} other {# reports}} in total — see how the rent, komunalka and deposit picture looks now.",
+      "cta": "See the building",
+      "footer": "You received this because you follow this building on Passflat."
+    },
+    "costReportRefresh": {
+      "subject": "Has your rent changed? Help the next tenant",
+      "heading": "Your cost report is a year old",
+      "intro": "About {months} months ago you shared the costs for {address}. A lot can change in a year — rent, komunalka, your deposit.",
+      "body": "If anything is different now, take a minute to update your report. Fresh numbers help the next person renting in Warsaw avoid surprises — just like your first report did.",
+      "cta": "Update my report",
+      "footer": "You received this because you contributed cost data on Passflat."
     }
   }
 }

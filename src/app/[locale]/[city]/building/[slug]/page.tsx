@@ -100,6 +100,7 @@ const costReportSelect = {
   livedUntil: true,
   areaM2: true,
   createdAt: true,
+  confirmedAt: true,
   periodicCharges: { select: { amount: true, frequency: true, category: true } },
 } as const;
 
@@ -538,7 +539,14 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       }
     : null;
 
-  const lastUpdated = reports[0]?.createdAt.toISOString() ?? null;
+  // Freshness = the most recent confirmation across reports. A re-submit bumps
+  // confirmedAt (even with no value change), so re-confirming clears the
+  // "outdated" badge; legacy reports without confirmedAt fall back to createdAt.
+  const lastUpdated = reports.length
+    ? new Date(
+        Math.max(...reports.map((r) => (r.confirmedAt ?? r.createdAt).getTime())),
+      ).toISOString()
+    : null;
 
   const initialLocationScore = building.locationScore
     ? {

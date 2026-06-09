@@ -916,6 +916,10 @@
       "catOther": "Inne"
     },
     "building": {
+      "follow": "Obserwuj",
+      "following": "Obserwujesz",
+      "followToast": "Obserwujesz ten budynek — wyślemy e-mail, gdy pojawią się nowe raporty.",
+      "followError": "Nie udało się zmienić obserwacji. Spróbuj ponownie.",
       "avgRent": "Średni czynsz",
       "avgUtilities": "Średnie media",
       "reports": "Raporty",
@@ -1914,6 +1918,22 @@
       "body": "Po wygaśnięciu nie będzie już widoczne dla osób szukających na Passflat. Otwórz ogłoszenie, aby je odnowić lub opublikować ponownie i utrzymać aktywność.",
       "cta": "Zobacz ogłoszenie",
       "footer": "Otrzymujesz tę wiadomość, ponieważ masz aktywne ogłoszenie na Passflat."
+    },
+    "buildingActivity": {
+      "subject": "{count, plural, one {# nowy raport o kosztach} few {# nowe raporty o kosztach} many {# nowych raportów o kosztach} other {# raportów o kosztach}} — {address}",
+      "heading": "Nowe dane w budynku, który obserwujesz",
+      "intro": "Pod adresem {address} pojawiły się świeże dane: {count, plural, one {# nowy raport} few {# nowe raporty} many {# nowych raportów} other {# raportów}}.",
+      "body": "Łącznie jest teraz {total, plural, one {# raport} few {# raporty} many {# raportów} other {# raportów}} — zobacz, jak zmienił się obraz czynszu, komunalki i kaucji.",
+      "cta": "Zobacz budynek",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ obserwujesz ten budynek w Passflat."
+    },
+    "costReportRefresh": {
+      "subject": "Czynsz się zmienił? Pomóż kolejnemu najemcy",
+      "heading": "Twój raport o kosztach ma już rok",
+      "intro": "Około {months} miesięcy temu podałeś koszty dla {address}. W rok wiele może się zmienić — czynsz, komunalka, kaucja.",
+      "body": "Jeśli coś jest teraz inne, poświęć chwilę i zaktualizuj raport. Świeże dane pomogą kolejnej osobie wynajmującej w Warszawie uniknąć niespodzianek — tak jak pomógł Twój pierwszy raport.",
+      "cta": "Zaktualizuj raport",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ udostępniłeś dane o kosztach w Passflat."
     }
   }
 }

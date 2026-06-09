@@ -190,6 +190,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       depositReturnDays: depositReturnDays ? parseInt(depositReturnDays, 10) : null,
       isVisible: !wasFlagged,
       verificationStatus: wasFlagged ? 'flagged' : 'unverified',
+      // Editing the report (even with no value change) re-confirms it as current
+      // — refreshes the building "updated" badge and clears the re-engage nudge.
+      confirmedAt: new Date(),
       periodicCharges: {
         deleteMany: {},
         ...(periodicCharges.length ? { create: periodicCharges } : {}),
