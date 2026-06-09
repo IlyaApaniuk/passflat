@@ -657,6 +657,10 @@
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
     "navListings": "Ogłoszenia"
   },
+  "share": {
+    "share": "Udostępnij",
+    "copied": "Skopiowano link"
+  },
   "costsSeo": {
     "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
     "cityMetaDescription": "Ile naprawdę płacą najemcy w {city} — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
@@ -818,6 +822,8 @@
       "depositOneTime": "Jednorazowa — nie wlicza się do sumy miesięcznej",
       "optionalLabel": "(opcjonalnie)",
       "addressNotFoundHint": "Nie możesz znaleźć adresu? Wybierz najbliższy — szczegóły poprawisz później.",
+      "completeBuildingTitle": "Pomóż uzupełnić dane budynku",
+      "completeBuildingDesc": "Znasz sąsiadów? Udostępnij, aby koszty tego budynku były dokładne dla wszystkich.",
       "utilitiesOptional": "Opcjonalnie — pomiń, jeśli nie masz pewności",
       "completenessNudge": "Im pełniejszy raport, tym bardziej przydatny dla innych.",
       "typicalHint": "zwykle ~{value}",

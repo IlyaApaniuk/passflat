@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { ShareButton } from '@/components/costs/share-button';
 import { ArrowLeft, ArrowRight, Building2, Plus, Users } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
@@ -131,6 +132,7 @@ export default async function DistrictCostsPage({ params }: PageProps) {
               <Button variant="outline" asChild>
                 <Link href={`/${city}/costs`}>{t('costsSeo.exploreAll')}</Link>
               </Button>
+              <ShareButton path={`/${city}/${district}`} source="district" size="default" />
             </div>
 
             <h2 className="mt-10 text-xl font-semibold">

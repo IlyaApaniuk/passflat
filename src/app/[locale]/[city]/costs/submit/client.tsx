@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
 import { MonthYearPicker } from '@/components/costs/month-year-picker';
+import { ShareButton } from '@/components/costs/share-button';
 import type { CityBounds } from '@/lib/listings-data';
 import { FIELD_RANGES } from '@/lib/cost-validation';
 import {
@@ -238,6 +239,7 @@ export function CostSubmitClient({
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
+  const [submittedBuildingSlug, setSubmittedBuildingSlug] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
@@ -531,8 +533,11 @@ export function CostSubmitClient({
         throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
-      const costReport = data.costReport as { id?: string } | undefined;
+      const costReport = data.costReport as
+        | { id?: string; building?: { slug?: string } }
+        | undefined;
       setSubmittedReportId(costReport?.id ?? null);
+      setSubmittedBuildingSlug(costReport?.building?.slug ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
       posthog?.capture('cost_form_submit_success', {
@@ -701,6 +706,21 @@ export function CostSubmitClient({
                 </motion.div>
                 <h1 className="text-2xl font-bold">{t('costs.submit.thankYou')}</h1>
                 <p className="mt-2 text-muted-foreground">{t('costs.submit.thankYouDesc')}</p>
+                {submittedBuildingSlug && (
+                  <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-left">
+                    <p className="font-semibold">{t('costs.submit.completeBuildingTitle')}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('costs.submit.completeBuildingDesc')}
+                    </p>
+                    <div className="mt-3">
+                      <ShareButton
+                        path={`/${citySlug}/building/${submittedBuildingSlug}`}
+                        source="submit"
+                        variant="default"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="mt-6 flex flex-col gap-3">
                   <Button asChild>
                     <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
