@@ -923,6 +923,8 @@
       "reports": "Reports",
       "updated": "Updated {date}",
       "unlockTitle": "Unlock Building Cost Data",
+      "gateTitle": "See the full breakdown",
+      "gateDesc": "Register and add your own costs (2 min) to unlock the per-utility breakdown and how this building compares.",
       "unlockDesc": "Submit your cost report to access detailed data for this and all other buildings",
       "avgMonthlyTotal": "Average Monthly Total",
       "medianMonthlyTotal": "Typical Monthly Total",

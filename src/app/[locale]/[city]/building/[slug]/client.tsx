@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { motion } from 'framer-motion';
@@ -8,7 +8,6 @@ import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
-import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { ShareButton } from '@/components/costs/share-button';
 import { LocationScore } from '@/components/listings/location-score';
 import { DistrictPositionBar } from '@/components/costs/district-position-bar';
@@ -16,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type CostStats, monthsSince, TRUST_THRESHOLDS } from '@/lib/cost-stats';
-import { isCostDataOpenToAll } from '@/lib/feature-flags';
+import { useHasContributed } from '@/hooks/use-has-contributed';
 import {
   ArrowLeft,
   Building2,
@@ -31,7 +30,6 @@ import {
   Home,
   Shield,
   Equal,
-  ShoppingCart,
   CalendarClock,
   RefreshCw,
   CheckCircle2,
@@ -64,6 +62,42 @@ const fadeUp = {
     transition: { duration: 0.4, delay: i * 0.1, ease: 'easeOut' as const },
   }),
 };
+
+/**
+ * Wraps a "deep" sub-section. When `show` is false the content renders blurred
+ * behind a register/submit prompt on top — the contribution hook. The data is
+ * still in the HTML (soft gate, keeps the page static); a hard paywall would
+ * withhold it server-side instead.
+ */
+function GatedSection({
+  show,
+  submitHref,
+  children,
+}: {
+  show: boolean;
+  submitHref: string;
+  children: ReactNode;
+}) {
+  const t = useTranslations();
+  if (show) return <>{children}</>;
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="pointer-events-none select-none blur-[6px]" aria-hidden>
+        {children}
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 p-6 text-center backdrop-blur-sm">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <Lock className="h-6 w-6 text-primary" />
+        </div>
+        <p className="font-semibold">{t('costs.building.gateTitle')}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{t('costs.building.gateDesc')}</p>
+        <Button asChild className="mt-1">
+          <Link href={submitHref}>{t('costs.overview.submitMyCosts')}</Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface StatRange {
   median: number;
@@ -174,8 +208,6 @@ export function BuildingCostsClient({
   utilitiesCompleteness,
   leaseType,
   comparison,
-  hasContributedData,
-  costAccessUntil,
   citySlug,
   initialLocationScore,
 }: BuildingCostsClientProps) {
@@ -193,17 +225,12 @@ export function BuildingCostsClient({
     outdated: ageMonths !== null && ageMonths > TRUST_THRESHOLDS.staleMonths,
   };
 
-  const accessGranted = useMemo(
-    () =>
-      isCostDataOpenToAll() ||
-      hasContributedData ||
-      (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
-    [hasContributedData, costAccessUntil],
-  );
-  const paidActive =
-    !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) > new Date();
-  const paidExpired =
-    !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) <= new Date();
+  // Public (SEO + teaser): the summary (total, split, deposit/return/tenure),
+  // rent + komunalka in the breakdown, and the location score. Gated behind a
+  // contribution (soft blur overlay + CTA on top): the detailed per-utility
+  // figures and the district position-bar graphs. Access is resolved on the
+  // client (useHasContributed) so the page stays static/ISR — not a hard paywall.
+  const showDetails = useHasContributed();
   const dateFmtLocale = DATE_LOCALE_MAP[locale] ?? enUS;
 
   useEffect(() => {
@@ -343,6 +370,58 @@ export function BuildingCostsClient({
       ]
     : [];
 
+  const renderCostRow = (item: (typeof costItems)[number], i: number) => (
+    <motion.div
+      key={item.label}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.3 + i * 0.05 }}
+      className="border-b pb-4 last:border-0 last:pb-0"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.bgColor}`}>
+            <item.icon className={`h-5 w-5 ${item.color}`} />
+          </div>
+          <div>
+            <span className="font-medium">{item.label}</span>
+            {'oftenIncluded' in item && item.oftenIncluded && (
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">
+                {t('costs.building.oftenIncluded')}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-semibold">≈ {item.data!.median} PLN</p>
+        </div>
+      </div>
+      {'winter' in item && item.winter && item.summer && (
+        <p className="mt-1 pl-[52px] text-xs text-muted-foreground">
+          {t('costs.building.winterSummer', {
+            winter: `${item.winter.median} PLN`,
+            summer: `${item.summer.median} PLN`,
+          })}
+        </p>
+      )}
+      {'periodicBreakdown' in item && item.periodicBreakdown && (
+        <div className="mt-1 space-y-0.5 pl-[52px]">
+          {item.periodicBreakdown.map((p) => (
+            <p key={p.category} className="text-xs text-muted-foreground">
+              {t(PERIODIC_CAT_LABEL[p.category] ?? 'costs.building.otherCosts')}
+              {p.frequency ? ` — ${t(FREQ_LABEL[p.frequency] ?? '')}` : ''} ≈{' '}
+              {p.amount.toLocaleString()} zł
+            </p>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+
+  // Rent + komunalka (admin fee) stay public; the per-utility detail is gated.
+  const basicItems = costItems.slice(0, 2).filter((item) => item.data !== null);
+  const detailItems = costItems.slice(2).filter((item) => item.data !== null);
+
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 bg-muted/30 pt-24">
@@ -431,102 +510,8 @@ export function BuildingCostsClient({
                 </CardContent>
               </Card>
             </motion.div>
-          ) : !accessGranted ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="relative overflow-hidden">
-                <CardContent className="p-8">
-                  <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                    {costItems.slice(0, 6).map((item) => (
-                      <div key={item.label} className="rounded-lg bg-muted/50 p-4">
-                        <div className="flex items-center gap-2">
-                          <item.icon className={`h-4 w-4 ${item.color}`} />
-                          <span className="text-sm text-muted-foreground">{item.label}</span>
-                        </div>
-                        <div className="mt-2 h-6 w-24 animate-pulse rounded bg-muted" />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.3, type: 'spring' }}
-                      className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"
-                    >
-                      <Lock className="h-8 w-8 text-primary" />
-                    </motion.div>
-                    {paidExpired ? (
-                      <>
-                        <h3 className="mt-4 text-xl font-semibold">
-                          {t('costs.access.expiredOn', {
-                            date: format(new Date(costAccessUntil!), 'PP', {
-                              locale: dateFmtLocale,
-                            }),
-                          })}
-                        </h3>
-                        <p className="mt-2 max-w-sm text-center text-muted-foreground">
-                          {t('costs.access.expiredCta')}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="mt-4 text-xl font-semibold">
-                          {t('costs.building.unlockTitle')}
-                        </h3>
-                        <p className="mt-2 max-w-sm text-center text-muted-foreground">
-                          {t('costs.building.unlockDesc')}
-                        </p>
-                      </>
-                    )}
-                    <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row">
-                      <Button asChild>
-                        <Link href={`/${citySlug}/costs/submit`}>
-                          {t('costs.overview.submitMyCosts')}
-                        </Link>
-                      </Button>
-                      <BuyAccessDialog citySlug={citySlug}>
-                        <Button variant="outline" className="gap-2">
-                          <ShoppingCart className="h-4 w-4" />
-                          {t('costs.overview.buyAccessBtn')}
-                        </Button>
-                      </BuyAccessDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           ) : (
             <div className="space-y-8">
-              {paidActive && (
-                <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
-                  <Card className="border-accent/50 bg-accent/5">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <CalendarClock className="h-5 w-5 text-accent" />
-                        <p className="font-medium">
-                          {t('costs.access.activeUntil', {
-                            date: format(new Date(costAccessUntil!), 'PP', {
-                              locale: dateFmtLocale,
-                            }),
-                          })}
-                        </p>
-                      </div>
-                      <BuyAccessDialog citySlug={citySlug}>
-                        <Button size="sm" variant="outline" className="gap-2">
-                          <RefreshCw className="h-3.5 w-3.5" />
-                          {t('costs.access.renew')}
-                        </Button>
-                      </BuyAccessDialog>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
               {costs?.totalMonthlyAvg && (
                 <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card className="overflow-hidden">
@@ -621,65 +606,15 @@ export function BuildingCostsClient({
                   <CardHeader>
                     <CardTitle>{t('costs.building.costBreakdown')}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {costItems
-                        .filter((item) => item.data !== null)
-                        .map((item, i) => (
-                          <motion.div
-                            key={item.label}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.3 + i * 0.05 }}
-                            className="border-b pb-4 last:border-0 last:pb-0"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.bgColor}`}
-                                >
-                                  <item.icon className={`h-5 w-5 ${item.color}`} />
-                                </div>
-                                <div>
-                                  <span className="font-medium">{item.label}</span>
-                                  {'oftenIncluded' in item && item.oftenIncluded && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="ml-2 text-[10px] px-1.5 py-0"
-                                    >
-                                      {t('costs.building.oftenIncluded')}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold">≈ {item.data!.median} PLN</p>
-                              </div>
-                            </div>
-                            {'winter' in item && item.winter && item.summer && (
-                              <p className="mt-1 pl-[52px] text-xs text-muted-foreground">
-                                {t('costs.building.winterSummer', {
-                                  winter: `${item.winter.median} PLN`,
-                                  summer: `${item.summer.median} PLN`,
-                                })}
-                              </p>
-                            )}
-                            {'periodicBreakdown' in item && item.periodicBreakdown && (
-                              <div className="mt-1 space-y-0.5 pl-[52px]">
-                                {item.periodicBreakdown.map((p) => (
-                                  <p key={p.category} className="text-xs text-muted-foreground">
-                                    {t(
-                                      PERIODIC_CAT_LABEL[p.category] ?? 'costs.building.otherCosts',
-                                    )}
-                                    {p.frequency ? ` — ${t(FREQ_LABEL[p.frequency] ?? '')}` : ''} ≈{' '}
-                                    {p.amount.toLocaleString()} zł
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                          </motion.div>
-                        ))}
-                    </div>
+                  <CardContent className="space-y-4">
+                    {basicItems.length > 0 && (
+                      <div className="space-y-4">{basicItems.map(renderCostRow)}</div>
+                    )}
+                    {detailItems.length > 0 && (
+                      <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                        <div className="space-y-4">{detailItems.map(renderCostRow)}</div>
+                      </GatedSection>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -834,106 +769,108 @@ export function BuildingCostsClient({
                           Hidden until the district has enough reports for the
                           percentile position to mean something. */}
                       {comparison.district &&
-                        comparison.district.count >= TRUST_THRESHOLDS.reliableMin &&
-                        (() => {
-                          const d = comparison.district!;
-                          const unit = t('costs.building.perM2');
-                          const bars = [
-                            costs?.rent && d.rent
-                              ? {
-                                  key: 'rent',
-                                  label: t('costs.building.rent'),
-                                  value: costs.rent.median,
-                                  range: d.rent,
-                                  unit: 'PLN',
-                                }
-                              : null,
-                            comparison.thisBuildingExpenses != null && d.expenses
-                              ? {
-                                  key: 'expenses',
-                                  label: t('costs.building.expenses'),
-                                  value: comparison.thisBuildingExpenses,
-                                  range: d.expenses,
-                                  unit: 'PLN',
-                                }
-                              : null,
-                            comparison.thisBuildingTotalPerM2 && d.totalPerM2
-                              ? {
-                                  key: 'total-m2',
-                                  label: t('costs.building.totalPerM2Compare'),
-                                  value: comparison.thisBuildingTotalPerM2,
-                                  range: d.totalPerM2,
-                                  unit,
-                                }
-                              : null,
-                            comparison.thisBuildingRentPerM2 && d.rentPerM2
-                              ? {
-                                  key: 'rent-m2',
-                                  label: t('costs.building.rentPerM2Compare'),
-                                  value: comparison.thisBuildingRentPerM2,
-                                  range: d.rentPerM2,
-                                  unit,
-                                }
-                              : null,
-                          ].filter(Boolean) as Array<{
-                            key: string;
-                            label: string;
-                            value: number;
-                            range: StatRange;
-                            unit: string;
-                          }>;
-                          if (bars.length === 0) return null;
-                          return (
-                            <div className="mt-4 space-y-6 border-t pt-4">
-                              {/* Legend */}
-                              <div className="space-y-1.5">
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
-                                    {t('costs.building.legendBand')}
-                                  </span>
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="h-3 w-px bg-muted-foreground/60" />
-                                    {t('costs.building.legendMedian')}
-                                  </span>
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
-                                    {t('costs.building.legendBuilding')}
-                                  </span>
+                        comparison.district.count >= TRUST_THRESHOLDS.reliableMin && (
+                          <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                            {(() => {
+                              const d = comparison.district!;
+                              const unit = t('costs.building.perM2');
+                              const bars = [
+                                costs?.rent && d.rent
+                                  ? {
+                                      key: 'rent',
+                                      label: t('costs.building.rent'),
+                                      value: costs.rent.median,
+                                      range: d.rent,
+                                      unit: 'PLN',
+                                    }
+                                  : null,
+                                comparison.thisBuildingExpenses != null && d.expenses
+                                  ? {
+                                      key: 'expenses',
+                                      label: t('costs.building.expenses'),
+                                      value: comparison.thisBuildingExpenses,
+                                      range: d.expenses,
+                                      unit: 'PLN',
+                                    }
+                                  : null,
+                                comparison.thisBuildingTotalPerM2 && d.totalPerM2
+                                  ? {
+                                      key: 'total-m2',
+                                      label: t('costs.building.totalPerM2Compare'),
+                                      value: comparison.thisBuildingTotalPerM2,
+                                      range: d.totalPerM2,
+                                      unit,
+                                    }
+                                  : null,
+                                comparison.thisBuildingRentPerM2 && d.rentPerM2
+                                  ? {
+                                      key: 'rent-m2',
+                                      label: t('costs.building.rentPerM2Compare'),
+                                      value: comparison.thisBuildingRentPerM2,
+                                      range: d.rentPerM2,
+                                      unit,
+                                    }
+                                  : null,
+                              ].filter(Boolean) as Array<{
+                                key: string;
+                                label: string;
+                                value: number;
+                                range: StatRange;
+                                unit: string;
+                              }>;
+                              if (bars.length === 0) return null;
+                              return (
+                                <div className="mt-4 space-y-6 border-t pt-4">
+                                  {/* Legend */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
+                                        {t('costs.building.legendBand')}
+                                      </span>
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="h-3 w-px bg-muted-foreground/60" />
+                                        {t('costs.building.legendMedian')}
+                                      </span>
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
+                                        {t('costs.building.legendBuilding')}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {building.district} · {comparison.district!.count}{' '}
+                                      {t('costs.overview.reports')}
+                                    </p>
+                                  </div>
+                                  {bars.map((bar) => (
+                                    <DistrictPositionBar
+                                      key={bar.key}
+                                      label={bar.label}
+                                      value={bar.value}
+                                      median={bar.range.median}
+                                      p25={bar.range.p25}
+                                      p75={bar.range.p75}
+                                      unit={bar.unit}
+                                    />
+                                  ))}
                                 </div>
-                                <p className="text-[11px] text-muted-foreground">
-                                  {building.district} · {comparison.district!.count}{' '}
-                                  {t('costs.overview.reports')}
-                                </p>
-                              </div>
-                              {bars.map((bar) => (
-                                <DistrictPositionBar
-                                  key={bar.key}
-                                  label={bar.label}
-                                  value={bar.value}
-                                  median={bar.range.median}
-                                  p25={bar.range.p25}
-                                  p75={bar.range.p75}
-                                  unit={bar.unit}
-                                />
-                              ))}
-                            </div>
-                          );
-                        })()}
-
-                      {comparison.district?.percentile != null && (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          {comparison.district.percentile >= 50
-                            ? t('costs.building.cheaperThanPct', {
-                                percent: comparison.district.percentile,
-                                district: building.district,
-                              })
-                            : t('costs.building.pricierThanPct', {
-                                percent: 100 - comparison.district.percentile,
-                                district: building.district,
-                              })}
-                        </p>
-                      )}
+                              );
+                            })()}
+                            {comparison.district?.percentile != null && (
+                              <p className="mt-3 text-sm text-muted-foreground">
+                                {comparison.district.percentile >= 50
+                                  ? t('costs.building.cheaperThanPct', {
+                                      percent: comparison.district.percentile,
+                                      district: building.district,
+                                    })
+                                  : t('costs.building.pricierThanPct', {
+                                      percent: 100 - comparison.district.percentile,
+                                      district: building.district,
+                                    })}
+                              </p>
+                            )}
+                          </GatedSection>
+                        )}
 
                       <p className="mt-4 text-xs text-muted-foreground">
                         {t('costs.building.comparisonCaption')}

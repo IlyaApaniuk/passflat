@@ -923,6 +923,8 @@
       "reports": "Raporty",
       "updated": "Zaktualizowano {date}",
       "unlockTitle": "Odblokuj dane o kosztach budynku",
+      "gateTitle": "Zobacz pełną rozpiskę",
+      "gateDesc": "Zarejestruj się i dodaj swoje koszty (2 min), aby odblokować rozbicie opłat i porównanie tego budynku.",
       "unlockDesc": "Wyślij swój raport kosztów, aby uzyskać dostęp do szczegółowych danych tego i wszystkich innych budynków",
       "avgMonthlyTotal": "Średnia miesięczna suma",
       "medianMonthlyTotal": "Typowa miesięczna suma",
