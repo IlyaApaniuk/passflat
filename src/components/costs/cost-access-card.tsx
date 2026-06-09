@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Link } from '@/i18n/navigation';
+import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -178,6 +179,26 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
           <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
             <List className="h-4 w-4" />
             {t('costs.overview.myReports')}
+          </Link>
+        </Button>
+      </Shell>
+    );
+  }
+
+  // Data is fully open (Phase 1): no lock/buy CTA — instead nudge a contribution
+  // so the dataset keeps growing and stays fresh for the next tenant.
+  if (isCostDataOpenToAll()) {
+    return (
+      <Shell
+        tone="accent"
+        icon={<CheckCircle2 className="h-4 w-4" />}
+        title={t('costs.access.openTitle')}
+        desc={t('costs.access.openDesc')}
+      >
+        <Button asChild>
+          <Link href={`/${citySlug}/costs/submit`}>
+            <Pencil className="mr-1.5 h-4 w-4" />
+            {t('costs.overview.submitMyCosts')}
           </Link>
         </Button>
       </Shell>

@@ -119,3 +119,18 @@ export const TRUST_THRESHOLDS = {
   /** Reports older than this many months are flagged as potentially outdated. */
   staleMonths: 12,
 } as const;
+
+export type ConfidenceTier = 'low' | 'medium' | 'high';
+
+/**
+ * Bucket a report count into a display-confidence tier so the UI never presents
+ * a single report as if it were a robust statistic:
+ *   - `low`    — a single report (label it "1 report", hide percentiles/ranges)
+ *   - `medium` — early data (2…reliableMin-1 reports)
+ *   - `high`   — reliable (>= reliableMin reports)
+ */
+export function confidenceTier(count: number): ConfidenceTier {
+  if (count >= TRUST_THRESHOLDS.reliableMin) return 'high';
+  if (count >= 2) return 'medium';
+  return 'low';
+}

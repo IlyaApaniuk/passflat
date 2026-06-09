@@ -75,9 +75,9 @@
   "landing": {
     "hero": {
       "badge": "Now live in Warsaw",
-      "title": "Find your next",
-      "titleHighlight": "home, honestly.",
-      "subtitle": "Lease takeovers, roommate search, and sublets — all with transparent costs. See what tenants actually pay.",
+      "title": "Know the real cost",
+      "titleHighlight": "before you sign.",
+      "subtitle": "Real rents, utilities and deposits — reported by tenants, building by building across Warsaw. Add yours in 2 minutes and the whole map opens up.",
       "browseCta": "Browse Listings",
       "addCta": "Post a Listing",
       "trustLeaseTakeovers": "Lease Takeovers",
@@ -88,7 +88,7 @@
       "trustSublet": "Temporary Sublets",
       "trustVerified": "Verified Listings",
       "trustVerifiedDesc": "Trusted community with transparent pricing and reviews",
-      "costsCta": "Unlock cost data",
+      "costsCta": "See costs by district",
       "statsListings": "Listings",
       "statsCostReports": "Cost Reports",
       "statsDistricts": "Districts",
@@ -762,7 +762,9 @@
       "expiredOn": "Your access expired on {date}",
       "expiredCta": "Buy again or contribute your data to unlock",
       "unlockedTitle": "Cost reports unlocked",
-      "unlockedDesc": "Your reports are saved in your dashboard"
+      "unlockedDesc": "Your reports are saved in your dashboard",
+      "openTitle": "All cost data is open",
+      "openDesc": "Add your report to keep the data fresh for the next tenant"
     },
     "submit": {
       "title": "Submit Your Costs",
@@ -967,7 +969,8 @@
     },
     "trust": {
       "reliable": "Popular building",
-      "outdated": "Data may be outdated"
+      "outdated": "Data may be outdated",
+      "earlyData": "{count, plural, one {Early data · # report} other {Early data · # reports}}"
     },
     "locked": {
       "title": "Contribute to unlock",

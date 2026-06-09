@@ -44,6 +44,7 @@ function statsForField(
       const v = r[field];
       return v == null ? null : Number(v);
     }),
+    { trimOutliers: true },
   );
 }
 
@@ -58,6 +59,7 @@ function statsPerM2(
         areaM2: r.areaM2 as number | null,
       })),
     ),
+    { trimOutliers: true },
   );
 }
 

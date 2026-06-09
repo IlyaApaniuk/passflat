@@ -14,6 +14,7 @@ import type { CostAccess } from '@/components/costs/cost-access-card';
 import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 import { median } from '@/lib/cost-stats';
+import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -172,16 +173,23 @@ export function CostsOverviewClient({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const accessGranted = useMemo(
-    () => hasContributedData || (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
+    () =>
+      isCostDataOpenToAll() ||
+      hasContributedData ||
+      (!!costAccessUntil && new Date(costAccessUntil) > new Date()),
     [hasContributedData, costAccessUntil],
   );
   // Tri-state derived from the resolved promise: `pending` until auth resolves,
   // then `unlocked`/`locked`. Drives skeleton-vs-CTA rendering in the access region.
-  const accessStatus: AccessStatus = !accessResolved
-    ? 'pending'
-    : accessGranted
-      ? 'unlocked'
-      : 'locked';
+  // When data is fully open, short-circuit to `unlocked` so logged-in users never
+  // see the auth skeleton flash for data that isn't gated.
+  const accessStatus: AccessStatus = isCostDataOpenToAll()
+    ? 'unlocked'
+    : !accessResolved
+      ? 'pending'
+      : accessGranted
+        ? 'unlocked'
+        : 'locked';
   const accessPending = accessStatus === 'pending';
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeStats, median, perAreaValues } from './cost-stats';
+import { computeStats, confidenceTier, median, perAreaValues } from './cost-stats';
 
 describe('median', () => {
   it('returns null for empty / all-invalid input', () => {
@@ -45,6 +45,23 @@ describe('computeStats', () => {
     expect(trimmed).not.toBeNull();
     expect(trimmed!.count).toBeLessThan(5);
     expect(trimmed!.max).toBeLessThan(100000);
+  });
+});
+
+describe('confidenceTier', () => {
+  it('treats a single report as low confidence', () => {
+    expect(confidenceTier(0)).toBe('low');
+    expect(confidenceTier(1)).toBe('low');
+  });
+
+  it('treats 2..4 reports as early/medium data', () => {
+    expect(confidenceTier(2)).toBe('medium');
+    expect(confidenceTier(4)).toBe('medium');
+  });
+
+  it('treats reliableMin+ reports as high confidence', () => {
+    expect(confidenceTier(5)).toBe('high');
+    expect(confidenceTier(20)).toBe('high');
   });
 });
 
