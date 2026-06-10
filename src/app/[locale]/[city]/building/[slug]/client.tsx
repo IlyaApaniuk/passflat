@@ -86,7 +86,12 @@ function GatedSection({
       <div className="pointer-events-none select-none blur-[6px]" aria-hidden>
         {children}
       </div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 p-6 text-center backdrop-blur-sm">
+      {/* Plain opaque scrim — deliberately NO backdrop-blur here. A
+          backdrop-filter forces the fixed header and this overlay to
+          re-rasterize on scroll, which flickers on desktop (Chrome/Safari).
+          The content underneath is already blurred (blur-[6px] above), so the
+          scrim alone gives the same frosted look without the compositing cost. */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/75 p-6 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Lock className="h-6 w-6 text-primary" />
         </div>
