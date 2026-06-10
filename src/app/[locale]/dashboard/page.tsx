@@ -61,14 +61,18 @@ export default async function DashboardPage() {
 
   const freeListingsUsed = listings.filter((l) => l.status === 'active' && !l.isPaid).length;
 
-  // Light impact gamification: how many distinct buildings/districts this user's
-  // visible reports help. Intrinsic-motivation framing (data is open, no reward)
-  // — "your reports help renters in N buildings, M districts".
-  const visibleReports = costReports.filter((r) => r.isVisible);
-  const contributedBuildings = new Set(visibleReports.map((r) => r.buildingId)).size;
-  const contributedDistricts = new Set(
-    visibleReports.map((r) => r.building.district?.id).filter(Boolean),
-  ).size;
+  // District-fill share nudge: the dashboard's only share entry point, aimed at
+  // the realistic viral unit (district, not building — neighbours are
+  // unreachable). Use the contributor's most recent district so the share link
+  // is concrete. carrying `?ref=` for peer attribution. Null → no nudge.
+  const shareReport = costReports.find((r) => r.isVisible && r.building.district);
+  const shareDistrict = shareReport
+    ? {
+        slug: shareReport.building.district!.slug,
+        name: shareReport.building.district!.nameKey,
+        citySlug: shareReport.building.city.slug,
+      }
+    : null;
 
   const serializedListings = listings.map((l) => ({
     id: l.id,
@@ -141,8 +145,8 @@ export default async function DashboardPage() {
       hasContributedCost={profile?.hasContributedCost ?? false}
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
       emailsOptOut={profile?.emailsOptOut ?? false}
-      contributedBuildings={contributedBuildings}
-      contributedDistricts={contributedDistricts}
+      userId={user.id}
+      shareDistrict={shareDistrict}
     />
   );
 }

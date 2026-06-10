@@ -62,6 +62,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { DeleteAccountDialog } from '@/components/account/delete-account-dialog';
+import { ShareButton } from '@/components/costs/share-button';
 import { LANGUAGES } from '@/i18n/languages';
 
 type ListingType = 'replacement' | 'roommate' | 'sublet';
@@ -129,8 +130,8 @@ interface Props {
   hasContributedCost: boolean;
   costAccessUntil: string | null;
   emailsOptOut: boolean;
-  contributedBuildings: number;
-  contributedDistricts: number;
+  userId: string;
+  shareDistrict: { slug: string; name: string; citySlug: string } | null;
 }
 
 const statCardVariants = {
@@ -166,8 +167,8 @@ export function DashboardClient({
   hasContributedCost,
   costAccessUntil,
   emailsOptOut,
-  contributedBuildings,
-  contributedDistricts,
+  userId,
+  shareDistrict,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -531,17 +532,24 @@ export function DashboardClient({
               </div>
             )}
 
-            {contributedBuildings > 0 && (
-              <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Sparkles className="h-5 w-5 text-primary" />
+            {shareDistrict && (
+              <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="text-sm">
+                    {t('dashboard.shareDistrictDesc', { district: shareDistrict.name })}
+                  </p>
                 </div>
-                <p className="text-sm">
-                  {t('dashboard.impactLine', {
-                    buildings: contributedBuildings,
-                    districts: contributedDistricts,
-                  })}
-                </p>
+                <ShareButton
+                  path={`/${shareDistrict.citySlug}/${shareDistrict.slug}`}
+                  source="dashboard-district"
+                  refToken={userId}
+                  label={t('dashboard.shareDistrictCta', { district: shareDistrict.name })}
+                  variant="default"
+                  className="shrink-0"
+                />
               </div>
             )}
 
