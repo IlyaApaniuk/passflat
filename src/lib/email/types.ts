@@ -86,6 +86,19 @@ export interface ListingExpiringEmailData {
   expiresAt: Date;
 }
 
+export interface BuildingActivityEmailData {
+  buildingAddress: string;
+  newReports: number;
+  totalReports: number;
+  buildingUrl: string;
+}
+
+export interface CostReportRefreshEmailData {
+  buildingAddress: string;
+  monthsAgo: number;
+  submitUrl: string;
+}
+
 export type EmailTemplate =
   | { template: 'contact'; data: ContactEmailData }
   | { template: 'newMessage'; data: NewMessageEmailData }
@@ -99,4 +112,6 @@ export type EmailTemplate =
     }
   | { template: 'cityLaunch'; data: CityLaunchEmailData }
   | { template: 'signupConfirmation'; data: SignupConfirmationEmailData }
-  | { template: 'listingExpiring'; data: ListingExpiringEmailData };
+  | { template: 'listingExpiring'; data: ListingExpiringEmailData }
+  | { template: 'buildingActivity'; data: BuildingActivityEmailData }
+  | { template: 'costReportRefresh'; data: CostReportRefreshEmailData };

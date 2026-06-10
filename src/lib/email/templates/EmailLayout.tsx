@@ -13,13 +13,24 @@ import * as React from 'react';
 
 const fontStack = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
 
+// Brand palette as email-safe hex (clients don't support the app's oklch tokens).
+// Mirrors src/app/globals.css: --primary oklch(0.5 0.3 264) and
+// --accent oklch(0.82 0.19 135). The indigo carries the brand; the green accent
+// is the signature top stripe (matches the gradient bar on the building cards).
+const palette = {
+  primary: '#0036ff',
+  primaryTint: '#e4efff',
+  accent: '#8bde54',
+  ink: '#18181b',
+};
+
 const styles = {
   body: {
     margin: 0,
     padding: 0,
     fontFamily: fontStack,
     background: '#f4f4f5',
-    color: '#18181b',
+    color: palette.ink,
   } as React.CSSProperties,
   container: {
     maxWidth: '560px',
@@ -29,8 +40,14 @@ const styles = {
     overflow: 'hidden',
     border: '1px solid #e4e4e7',
   } as React.CSSProperties,
+  accentBar: {
+    height: '4px',
+    background: palette.accent,
+    fontSize: 0,
+    lineHeight: '4px',
+  } as React.CSSProperties,
   header: {
-    background: '#18181b',
+    background: palette.primary,
     padding: '24px 32px',
   } as React.CSSProperties,
   brand: {
@@ -58,7 +75,7 @@ const styles = {
 export const buttonStyles = {
   primary: {
     display: 'inline-block',
-    background: '#18181b',
+    background: palette.primary,
     color: '#fff',
     textDecoration: 'none',
     padding: '12px 24px',
@@ -68,8 +85,8 @@ export const buttonStyles = {
   } as React.CSSProperties,
   secondary: {
     display: 'inline-block',
-    background: '#f4f4f5',
-    color: '#18181b',
+    background: palette.primaryTint,
+    color: palette.primary,
     textDecoration: 'none',
     padding: '12px 24px',
     borderRadius: '8px',
@@ -113,6 +130,7 @@ export function EmailLayout({
       {preview ? <Preview>{preview}</Preview> : null}
       <Body style={styles.body}>
         <Container style={styles.container}>
+          <Section style={styles.accentBar} />
           <Section style={styles.header}>
             <Heading style={styles.brand}>{brand}</Heading>
           </Section>
@@ -158,7 +176,7 @@ export const contentStyles = {
     whiteSpace: 'pre-wrap',
   } as React.CSSProperties,
   link: {
-    color: '#2563eb',
+    color: palette.primary,
   } as React.CSSProperties,
   actions: {
     textAlign: 'center',

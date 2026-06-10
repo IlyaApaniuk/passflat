@@ -83,11 +83,32 @@ model Building {
   listings      Listing[]
   costReports   CostReport[]
   locationScore BuildingLocationScore?
+  follows       BuildingFollow[]
 
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
   @@index([districtId])
   @@map("buildings")
+}
+
+// A tenant "following" a building to get re-engagement emails when new cost
+// reports land. The notify/freshness loop that turns a one-off contribution
+// into a returning user (see /api/cron/re-engage).
+model BuildingFollow {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  buildingId     String    @map("building_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  // Last time we emailed this follower about new reports in the building; the
+  // re-engage cron compares it against the building's newest visible report.
+  lastNotifiedAt DateTime? @map("last_notified_at")
+
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, buildingId])
+  @@index([buildingId])
+  @@map("building_follows")
 }
 
 model BuildingLocationScore {
@@ -316,6 +337,11 @@ model CostReport {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  // Last time the tenant reviewed & re-submitted this report via the edit form,
+  // even with no value change ("still current"). The freshness signal for the
+  // building "updated" badge and the re-engage cron. Null on legacy reports →
+  // falls back to createdAt.
+  confirmedAt DateTime? @map("confirmed_at")
 
   building        Building                   @relation(fields: [buildingId], references: [id])
   author          Profile                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -369,6 +395,9 @@ model Profile {
   costAccessUntil    DateTime? @map("cost_access_until")
   isVerified         Boolean   @default(false) @map("is_verified")
   deletedAt          DateTime? @map("deleted_at")
+  // Last time a re-engagement email (e.g. "refresh your year-old report") was
+  // sent to this user; throttles the re-engage cron so we don't re-spam.
+  lastReengagementAt DateTime? @map("last_reengagement_at")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   city                     City?                     @relation(fields: [cityId], references: [id])
@@ -381,6 +410,7 @@ model Profile {
   savedListings            SavedListing[]
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
+  buildingFollows          BuildingFollow[]
 
   @@map("profiles")
 }

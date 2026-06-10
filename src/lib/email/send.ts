@@ -5,7 +5,9 @@ import { captureServerException, flushPostHog } from '@/lib/posthog-server';
 import { resend } from './client';
 import { CityLaunchEmail } from './templates/CityLaunchEmail';
 import { CityNotifyConfirmationEmail } from './templates/CityNotifyConfirmationEmail';
+import { BuildingActivityEmail } from './templates/BuildingActivityEmail';
 import { ContactEmail } from './templates/ContactEmail';
+import { CostReportRefreshEmail } from './templates/CostReportRefreshEmail';
 import { ListingExpiringEmail } from './templates/ListingExpiringEmail';
 import { NewInquiryEmail } from './templates/NewInquiryEmail';
 import { NewMessageEmail } from './templates/NewMessageEmail';
@@ -83,6 +85,25 @@ function buildEmail(
       return {
         subject: t('listingExpiring.subject', { title: spec.data.title }),
         element: React.createElement(ListingExpiringEmail, {
+          t,
+          data: spec.data,
+        }),
+      };
+    case 'buildingActivity':
+      return {
+        subject: t('buildingActivity.subject', {
+          count: spec.data.newReports,
+          address: spec.data.buildingAddress,
+        }),
+        element: React.createElement(BuildingActivityEmail, {
+          t,
+          data: spec.data,
+        }),
+      };
+    case 'costReportRefresh':
+      return {
+        subject: t('costReportRefresh.subject'),
+        element: React.createElement(CostReportRefreshEmail, {
           t,
           data: spec.data,
         }),
