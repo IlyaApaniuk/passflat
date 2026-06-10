@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { DeleteAccountDialog } from '@/components/account/delete-account-dialog';
 import { LANGUAGES } from '@/i18n/languages';
 
@@ -127,6 +128,7 @@ interface Props {
   userLocale: string;
   hasContributedCost: boolean;
   costAccessUntil: string | null;
+  emailsOptOut: boolean;
 }
 
 const statCardVariants = {
@@ -161,6 +163,7 @@ export function DashboardClient({
   userLocale,
   hasContributedCost,
   costAccessUntil,
+  emailsOptOut,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -176,6 +179,8 @@ export function DashboardClient({
   const [myListings, setMyListings] = useState(listings);
   const [follows, setFollows] = useState(followedBuildings);
   const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
+  const [emailsOptedOut, setEmailsOptedOut] = useState(emailsOptOut);
+  const [savingEmailPref, setSavingEmailPref] = useState(false);
   const [promoteListingId, setPromoteListingId] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -289,6 +294,28 @@ export function DashboardClient({
       toast.error(t('dashboard.account.saveError'));
     }
     setSavingLang(false);
+  };
+
+  // Re-subscribe / unsubscribe from re-engagement emails (the same global flag
+  // the email unsubscribe link sets). Switch on = receive; off = opted out.
+  const handleEmailNotifsToggle = async (receive: boolean) => {
+    const optOut = !receive;
+    setEmailsOptedOut(optOut);
+    setSavingEmailPref(true);
+    try {
+      const res = await fetch('/api/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailsOptOut: optOut }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      toast.success(receive ? t('dashboard.emailNotifsOn') : t('dashboard.emailNotifsOff'));
+    } catch {
+      setEmailsOptedOut(!optOut); // rollback
+      toast.error(t('dashboard.account.saveError'));
+    } finally {
+      setSavingEmailPref(false);
+    }
   };
 
   const handleRemoveFavorite = async (listingId: string) => {
@@ -597,7 +624,17 @@ export function DashboardClient({
             transition={{ delay: 0.12 }}
             className="mb-12 scroll-mt-24"
           >
-            <h2 className="mb-4 text-xl font-semibold">{t('dashboard.followsSectionTitle')}</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold">{t('dashboard.followsSectionTitle')}</h2>
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                <Switch
+                  checked={!emailsOptedOut}
+                  onCheckedChange={handleEmailNotifsToggle}
+                  disabled={savingEmailPref}
+                />
+                <span className="text-muted-foreground">{t('dashboard.emailNotifsLabel')}</span>
+              </label>
+            </div>
             {follows.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center py-10 text-center">

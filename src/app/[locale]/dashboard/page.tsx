@@ -54,6 +54,7 @@ export default async function DashboardPage() {
         locale: true,
         hasContributedCost: true,
         costAccessUntil: true,
+        emailsOptOut: true,
       },
     }),
   ]);
@@ -130,6 +131,7 @@ export default async function DashboardPage() {
       userLocale={profile?.locale ?? currentLocale}
       hasContributedCost={profile?.hasContributedCost ?? false}
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
+      emailsOptOut={profile?.emailsOptOut ?? false}
     />
   );
 }
