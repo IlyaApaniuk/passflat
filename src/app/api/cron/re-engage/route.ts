@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
 import { localeUrl } from '@/lib/email/url';
+import { makeUnsubscribeToken } from '@/lib/email/unsubscribe';
 import { resolveEmailLocale } from '@/lib/email/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
   // Low-volume loop (one count per follow); fine at current scale, mirrors the
   // per-row style of the expiring-listings cron.
   const follows = await prisma.buildingFollow.findMany({
+    where: { user: { emailsOptOut: false } },
     select: {
       id: true,
       userId: true,
@@ -82,6 +84,10 @@ export async function GET(request: NextRequest) {
         newReports,
         totalReports,
         buildingUrl: localeUrl(locale, `/${citySlug}/building/${follow.building.slug}`),
+        unsubscribeUrl: localeUrl(
+          locale,
+          `/email/unsubscribe?token=${makeUnsubscribeToken(follow.userId)}`,
+        ),
       },
     });
 
@@ -104,6 +110,7 @@ export async function GET(request: NextRequest) {
     where: {
       email: { not: null },
       deletedAt: null,
+      emailsOptOut: false,
       OR: [{ lastReengagementAt: null }, { lastReengagementAt: { lt: cooldownCutoff } }],
       // Has a visible report, but none is still fresh → their newest has gone
       // stale. Freshness = confirmedAt ?? createdAt (a re-confirm bumps it).
@@ -162,6 +169,10 @@ export async function GET(request: NextRequest) {
         // Deep-link into edit mode for *this* report so the form prefills and
         // submits a PATCH (update) instead of creating a duplicate.
         submitUrl: localeUrl(locale, `/${citySlug}/costs/submit?edit=true&id=${report.id}`),
+        unsubscribeUrl: localeUrl(
+          locale,
+          `/email/unsubscribe?token=${makeUnsubscribeToken(author.id)}`,
+        ),
       },
     });
 

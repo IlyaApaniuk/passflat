@@ -50,6 +50,8 @@ import {
   Receipt,
   LifeBuoy,
   Loader2,
+  Bell,
+  BellOff,
   Pencil,
   Check,
   X,
@@ -104,10 +106,21 @@ interface DashboardCostReport {
   createdAt: string;
 }
 
+interface DashboardFollow {
+  id: string;
+  buildingId: string;
+  address: string;
+  citySlug: string;
+  slug: string;
+  district: string;
+  createdAt: string;
+}
+
 interface Props {
   listings: DashboardListing[];
   savedListings: DashboardSavedListing[];
   costReports: DashboardCostReport[];
+  followedBuildings: DashboardFollow[];
   userEmail: string;
   freeListingsUsed: number;
   displayName: string | null;
@@ -141,6 +154,7 @@ export function DashboardClient({
   listings,
   savedListings,
   costReports,
+  followedBuildings,
   userEmail,
   freeListingsUsed,
   displayName: initialDisplayName,
@@ -160,6 +174,8 @@ export function DashboardClient({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState(listings);
+  const [follows, setFollows] = useState(followedBuildings);
+  const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
   const [promoteListingId, setPromoteListingId] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -358,6 +374,21 @@ export function DashboardClient({
   const hasDataAccess = hasContributedCost || paidAccessActive;
   const accessCitySlug = costReports[0]?.citySlug ?? 'warsaw';
 
+  const handleUnfollow = async (buildingId: string) => {
+    setUnfollowingId(buildingId);
+    const prev = follows;
+    setFollows((list) => list.filter((f) => f.buildingId !== buildingId));
+    try {
+      const res = await fetch(`/api/buildings/${buildingId}/follow`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('unfollow failed');
+    } catch {
+      setFollows(prev); // rollback
+      toast.error(t('costs.building.followError'));
+    } finally {
+      setUnfollowingId(null);
+    }
+  };
+
   const stats = [
     {
       icon: Home,
@@ -401,6 +432,7 @@ export function DashboardClient({
             {(
               [
                 { id: 'section-costs', label: t('dashboard.costsSectionTitle') },
+                { id: 'section-follows', label: t('dashboard.followsSectionTitle') },
                 { id: 'section-listings', label: t('dashboard.listingsSectionTitle') },
                 { id: 'section-billing', label: t('dashboard.paymentsSectionTitle') },
                 { id: 'section-account', label: t('dashboard.account.sectionTitle') },
@@ -551,6 +583,72 @@ export function DashboardClient({
                         </CardContent>
                       </Card>
                     </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.section>
+
+          {/* SECTION: Followed buildings — the retention loop (email on new reports). */}
+          <motion.section
+            id="section-follows"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="mb-12 scroll-mt-24"
+          >
+            <h2 className="mb-4 text-xl font-semibold">{t('dashboard.followsSectionTitle')}</h2>
+            {follows.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center py-10 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+                    <Bell className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">{t('dashboard.noFollows')}</h3>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    {t('dashboard.noFollowsDesc')}
+                  </p>
+                  <Button variant="outline" className="mt-5" asChild>
+                    <Link href={`/${accessCitySlug}/costs`}>{t('dashboard.accessBrowse')}</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {follows.map((f, i) => (
+                  <motion.div
+                    key={f.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <Card className="transition-all duration-200 hover:border-primary/20 hover:shadow-md">
+                      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <Link href={`/${f.citySlug}/building/${f.slug}`} className="min-w-0">
+                          <p className="flex items-center gap-1 font-medium">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            {f.address}
+                          </p>
+                          {f.district && (
+                            <p className="mt-1 text-sm text-muted-foreground">{f.district}</p>
+                          )}
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-1.5"
+                          disabled={unfollowingId === f.buildingId}
+                          onClick={() => handleUnfollow(f.buildingId)}
+                        >
+                          {unfollowingId === f.buildingId ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <BellOff className="h-3.5 w-3.5" />
+                          )}
+                          {t('dashboard.unfollow')}
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 ))}
               </div>

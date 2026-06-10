@@ -14,6 +14,8 @@ export function CostReportRefreshEmail({
     <EmailLayout
       brand={t('common.brand')}
       footer={t('costReportRefresh.footer')}
+      unsubscribeUrl={data.unsubscribeUrl}
+      unsubscribeLabel={t('unsubscribe')}
       preview={t('costReportRefresh.intro', {
         address: data.buildingAddress,
         months: data.monthsAgo,

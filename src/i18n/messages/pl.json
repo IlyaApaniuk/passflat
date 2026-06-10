@@ -1300,6 +1300,10 @@
       "languageLabel": "Język"
     },
     "costsSectionTitle": "Moje koszty",
+    "followsSectionTitle": "Obserwowane budynki",
+    "noFollows": "Nie obserwujesz jeszcze żadnego budynku",
+    "noFollowsDesc": "Obserwuj budynek, aby dostać e-mail, gdy pojawią się nowe raporty.",
+    "unfollow": "Przestań obserwować",
     "listingsSectionTitle": "Ogłoszenia",
     "paymentsSectionTitle": "Płatności",
     "accessOpenTitle": "Dostęp do danych odblokowany",
@@ -1814,10 +1818,18 @@
       "cta": "Pobierz wzór"
     }
   },
+  "unsubscribe": {
+    "successTitle": "Wypisano",
+    "successDesc": "Nie będziesz już otrzymywać e-maili o aktywności w budynkach ani przypomnień o raportach od Passflat.",
+    "errorTitle": "Link nieprawidłowy",
+    "errorDesc": "Ten link rezygnacji jest nieprawidłowy lub wygasł. E-mailami możesz zarządzać w panelu.",
+    "home": "Strona główna"
+  },
   "emails": {
     "common": {
       "brand": "Passflat"
     },
+    "unsubscribe": "Zrezygnuj z tych e-maili",
     "contact": {
       "subject": "[Kontakt] {subject}",
       "intro": "Nowa wiadomość z formularza kontaktowego",

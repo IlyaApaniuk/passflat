@@ -398,6 +398,9 @@ model Profile {
   // Last time a re-engagement email (e.g. "refresh your year-old report") was
   // sent to this user; throttles the re-engage cron so we don't re-spam.
   lastReengagementAt DateTime? @map("last_reengagement_at")
+  // One-click unsubscribe flag for re-engagement / notification emails (set via
+  // the signed unsubscribe link). Transactional emails are unaffected.
+  emailsOptOut       Boolean   @default(false) @map("emails_opt_out")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   city                     City?                     @relation(fields: [cityId], references: [id])
