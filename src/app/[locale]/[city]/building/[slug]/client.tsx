@@ -456,7 +456,22 @@ export function BuildingCostsClient({
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {building.district}, {building.city}
+                    <span>
+                      {building.districtSlug ? (
+                        <Link
+                          href={`/${citySlug}/${building.districtSlug}`}
+                          className="transition-colors hover:text-primary"
+                        >
+                          {building.district}
+                        </Link>
+                      ) : (
+                        building.district
+                      )}
+                      {', '}
+                      <Link href={`/${citySlug}`} className="transition-colors hover:text-primary">
+                        {building.city}
+                      </Link>
+                    </span>
                   </span>
                 </div>
               </div>
