@@ -538,7 +538,12 @@ export function DashboardClient({
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Sparkles className="h-5 w-5 text-primary" />
                   </div>
-                  <p className="text-sm">{t('dashboard.inviteCostsDesc')}</p>
+                  <div>
+                    <p className="text-sm font-medium">{t('dashboard.inviteCostsTitle')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboard.inviteCostsDesc')}
+                    </p>
+                  </div>
                 </div>
                 <ShareButton
                   path={`/${accessCitySlug}/costs`}
@@ -751,7 +756,12 @@ export function DashboardClient({
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <UserPlus className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-sm">{t('dashboard.inviteListingDesc')}</p>
+                <div>
+                  <p className="text-sm font-medium">{t('dashboard.inviteListingTitle')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('dashboard.inviteListingDesc')}
+                  </p>
+                </div>
               </div>
               <ShareButton
                 path={`/${listingsCitySlug}/replacement`}

@@ -781,8 +781,8 @@
       "expiredCta": "Buy again or contribute your data to unlock",
       "unlockedTitle": "Cost reports unlocked",
       "unlockedDesc": "Your reports are saved in your dashboard",
-      "openTitle": "All cost data is open",
-      "openDesc": "Add your report to keep the data fresh for the next tenant"
+      "openTitle": "Base data is open",
+      "openDesc": "Full building data unlocks after your report — and you help keep it fresh for others."
     },
     "submit": {
       "title": "Submit Your Costs",
@@ -1248,9 +1248,11 @@
     "noCostReports": "No cost reports yet",
     "noCostReportsDesc": "Share your rental costs to unlock all building data.",
     "addCostReport": "Add costs",
-    "inviteCostsDesc": "Invite friends to add their costs — more data means a sharper comparison for you and the whole community.",
+    "inviteCostsTitle": "Invite friends to add their costs",
+    "inviteCostsDesc": "More data means a sharper comparison for you and the whole community.",
     "inviteCostsCta": "Invite friends",
-    "inviteListingDesc": "A friend looking for a roommate, a lease takeover, or subletting? Invite them to post a listing.",
+    "inviteListingTitle": "Invite a friend to post a listing",
+    "inviteListingDesc": "A friend looking for a roommate, a lease takeover, or subletting? Let them add it.",
     "inviteListingCta": "Invite a friend",
     "costReportFlagged": "Hidden (flagged)",
     "noInquiries": "No inquiries yet",

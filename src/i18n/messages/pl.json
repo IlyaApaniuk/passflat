@@ -781,8 +781,8 @@
       "expiredCta": "Kup ponownie lub dodaj swoje dane, aby odblokować",
       "unlockedTitle": "Raporty kosztów odblokowane",
       "unlockedDesc": "Raporty są zapisane w panelu",
-      "openTitle": "Wszystkie dane o kosztach są otwarte",
-      "openDesc": "Dodaj swój raport, aby dane były aktualne dla kolejnych najemców"
+      "openTitle": "Podstawowe dane są otwarte",
+      "openDesc": "Pełne dane o budynku — po dodaniu Twojego zgłoszenia. Przy okazji pomożesz utrzymać je aktualnymi."
     },
     "submit": {
       "title": "Zgłoś swoje koszty",
@@ -1248,9 +1248,11 @@
     "noCostReports": "Brak raportów kosztów",
     "noCostReportsDesc": "Podziel się swoimi kosztami, aby odblokować wszystkie dane o budynkach.",
     "addCostReport": "Dodaj koszty",
-    "inviteCostsDesc": "Zaproś znajomych, żeby dodali swoje koszty — im więcej danych, tym dokładniejsze porównanie dla Ciebie i całej społeczności.",
+    "inviteCostsTitle": "Zaproś znajomych, by dodali swoje koszty",
+    "inviteCostsDesc": "Im więcej danych, tym dokładniejsze porównanie dla Ciebie i całej społeczności.",
     "inviteCostsCta": "Zaproś znajomych",
-    "inviteListingDesc": "Znajomy szuka współlokatora, przejęcia najmu albo podnajmuje na czas? Zaproś go, żeby dodał ogłoszenie.",
+    "inviteListingTitle": "Zaproś znajomego, by dodał ogłoszenie",
+    "inviteListingDesc": "Znajomy szuka współlokatora, przejęcia najmu albo podnajmuje na czas? Niech doda.",
     "inviteListingCta": "Zaproś znajomego",
     "costReportFlagged": "Ukryty (oznaczony)",
     "noInquiries": "Brak zapytań",
