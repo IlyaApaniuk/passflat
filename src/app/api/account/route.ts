@@ -93,7 +93,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const data: { displayName?: string; locale?: string } = {};
+  const data: { displayName?: string; locale?: string; emailsOptOut?: boolean } = {};
 
   if (body.displayName !== undefined) {
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
@@ -111,6 +111,12 @@ export async function PATCH(request: Request) {
     data.locale = body.locale;
   }
 
+  // Email notification preference (the re-subscribe / unsubscribe toggle). True
+  // = opted out of re-engagement emails. Same flag the email unsubscribe link sets.
+  if (typeof body.emailsOptOut === 'boolean') {
+    data.emailsOptOut = body.emailsOptOut;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
@@ -124,6 +130,7 @@ export async function PATCH(request: Request) {
     success: true,
     displayName: updated.displayName,
     locale: updated.locale,
+    emailsOptOut: updated.emailsOptOut,
   });
 }
 
