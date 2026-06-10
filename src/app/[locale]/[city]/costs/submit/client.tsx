@@ -240,6 +240,10 @@ export function CostSubmitClient({
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
   const [submittedBuildingSlug, setSubmittedBuildingSlug] = useState<string | null>(null);
+  const [submittedBuildingStats, setSubmittedBuildingStats] = useState<{
+    reports: number;
+    totalApprox: number | null;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
@@ -547,10 +551,14 @@ export function CostSubmitClient({
       }
 
       const costReport = data.costReport as
-        | { id?: string; building?: { slug?: string } }
+        | { id?: string; building?: { slug?: string; totalApartmentsApprox?: number | null } }
         | undefined;
       setSubmittedReportId(costReport?.id ?? null);
       setSubmittedBuildingSlug(costReport?.building?.slug ?? null);
+      setSubmittedBuildingStats({
+        reports: (data.buildingReportCount as number) ?? 0,
+        totalApprox: costReport?.building?.totalApartmentsApprox ?? null,
+      });
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
       posthog?.capture('cost_form_submit_success', {
@@ -723,7 +731,13 @@ export function CostSubmitClient({
                   <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-left">
                     <p className="font-semibold">{t('costs.submit.completeBuildingTitle')}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {t('costs.submit.completeBuildingDesc')}
+                      {submittedBuildingStats?.totalApprox &&
+                      submittedBuildingStats.totalApprox >= submittedBuildingStats.reports
+                        ? t('costs.submit.fillBuildingStat', {
+                            count: submittedBuildingStats.reports,
+                            total: submittedBuildingStats.totalApprox,
+                          })
+                        : t('costs.submit.completeBuildingDesc')}
                     </p>
                     <div className="mt-3">
                       <ShareButton

@@ -461,7 +461,13 @@ export async function POST(request: NextRequest) {
       scraped_import: scrapedImport,
     });
 
-    return NextResponse.json({ costReport, wasFlagged }, { status: 201 });
+    // How many tenants are now on record for this building — drives the
+    // "N of ~M apartments are here, invite your neighbors" nudge on success.
+    const buildingReportCount = await prisma.costReport.count({
+      where: { buildingId: building.id, isVisible: true },
+    });
+
+    return NextResponse.json({ costReport, wasFlagged, buildingReportCount }, { status: 201 });
   } catch (err: unknown) {
     console.error('[cost-reports POST]', err);
     captureServerException(err, {

@@ -822,6 +822,7 @@
       "addressNotFoundHint": "Nie możesz znaleźć adresu? Wybierz najbliższy — szczegóły poprawisz później.",
       "completeBuildingTitle": "Pomóż uzupełnić dane budynku",
       "completeBuildingDesc": "Znasz sąsiadów? Udostępnij, aby koszty tego budynku były dokładne dla wszystkich.",
+      "fillBuildingStat": "{count} z ~{total} mieszkań w tym budynku już tu jest — zaproś sąsiadów.",
       "utilitiesOptional": "Opcjonalnie — pomiń, jeśli nie masz pewności",
       "completenessNudge": "Im pełniejszy raport, tym bardziej przydatny dla innych.",
       "typicalHint": "zwykle ~{value}",

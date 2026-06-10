@@ -822,6 +822,7 @@
       "addressNotFoundHint": "Can't find your address? Pick the closest match — you can fix details later.",
       "completeBuildingTitle": "Help complete this building",
       "completeBuildingDesc": "Know neighbours here? Share it so the costs for this building stay accurate for everyone.",
+      "fillBuildingStat": "{count} of ~{total} apartments here are already on record — invite your neighbours.",
       "utilitiesOptional": "Optional — skip if you're not sure",
       "completenessNudge": "The more you fill in, the more useful your report is for others.",
       "typicalHint": "typically ~{value}",
