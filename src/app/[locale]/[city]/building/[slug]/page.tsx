@@ -8,6 +8,7 @@ import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
+import { SCORE_VERSION } from '@/lib/location-score';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,7 +114,7 @@ const buildingQuery = {
     districtId: true,
     district: { select: { nameKey: true, slug: true } },
     city: { select: { nameKey: true } },
-    locationScore: { select: { overall: true, categories: true } },
+    locationScore: { select: { overall: true, categories: true, version: true } },
     costReports: {
       where: { isVisible: true },
       orderBy: { createdAt: 'desc' as const },
@@ -579,17 +580,22 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       ).toISOString()
     : null;
 
-  const initialLocationScore = building.locationScore
-    ? {
-        overall: building.locationScore.overall,
-        categories: building.locationScore.categories as Array<{
-          key: string;
-          score: number;
-          nearestM: number | null;
-          name: string | null;
-        }>,
-      }
-    : null;
+  // Only seed from the stored score when it's the current version. A stale one
+  // (older algorithm — e.g. renamed category keys) would render raw i18n keys,
+  // so we pass null instead and let the component fetch a fresh, recomputed
+  // score from the API (which recomputes when version < SCORE_VERSION).
+  const initialLocationScore =
+    building.locationScore && building.locationScore.version >= SCORE_VERSION
+      ? {
+          overall: building.locationScore.overall,
+          categories: building.locationScore.categories as Array<{
+            key: string;
+            score: number;
+            nearestM: number | null;
+            name: string | null;
+          }>,
+        }
+      : null;
 
   return (
     <>

@@ -542,7 +542,7 @@ export function CostsOverviewClient({
                                     </div>
 
                                     <div className="flex items-center justify-between gap-6 sm:justify-end">
-                                      <div className="text-left sm:text-right">
+                                      <div className="text-left tabular-nums sm:text-right">
                                         <p className="text-xs text-muted-foreground">
                                           {t('costs.overview.medianMonthlyTotal')}
                                         </p>
