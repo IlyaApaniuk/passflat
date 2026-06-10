@@ -115,6 +115,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
       citySlug={citySlug}
       cityName={cityName}
       cityBounds={cityBounds}
+      userId={user.id}
       editMode={isEditMode && existingReport != null}
       existingReport={existingReport}
       canFillOnBehalf={canFillOnBehalf}

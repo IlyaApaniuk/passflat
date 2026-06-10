@@ -142,6 +142,9 @@ interface CostSubmitClientProps {
   citySlug: string;
   cityName: string;
   cityBounds?: CityBounds;
+  /** The submitter's user id — appended as `?ref=` to the post-submit share so a
+   *  friend who signs up + contributes is attributed to them (peer virality). */
+  userId: string;
   editMode?: boolean;
   existingReport?: ExistingReport | null;
   canFillOnBehalf?: boolean;
@@ -199,6 +202,7 @@ export function CostSubmitClient({
   citySlug,
   cityName,
   cityBounds,
+  userId,
   editMode = false,
   existingReport = null,
   canFillOnBehalf = false,
@@ -812,6 +816,7 @@ export function CostSubmitClient({
                           <ShareButton
                             path={`/${citySlug}/${submittedComparison.districtSlug}`}
                             source="submit-district"
+                            refToken={userId}
                             label={t('costs.submit.shareDistrict')}
                             variant="default"
                           />
@@ -820,6 +825,7 @@ export function CostSubmitClient({
                           <ShareButton
                             path={`/${citySlug}/building/${submittedBuildingSlug}`}
                             source="submit-building"
+                            refToken={userId}
                             label={t('costs.submit.shareBuilding')}
                           />
                         )}

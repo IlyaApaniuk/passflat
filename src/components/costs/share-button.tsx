@@ -12,6 +12,10 @@ interface ShareButtonProps {
   path: string;
   /** Analytics label + utm_medium (e.g. 'building', 'district', 'city', 'submit'). */
   source: string;
+  /** First-touch referral token (the sharer's user id) appended as `?ref=` so a
+   *  friend who signs up + contributes is attributed to this sharer. Omitted on
+   *  anonymous/static pages where there is no logged-in sharer. */
+  refToken?: string;
   /** Override the button text (e.g. "Share district") — defaults to a generic "Share". */
   label?: string;
   variant?: 'default' | 'outline' | 'ghost';
@@ -30,6 +34,7 @@ interface ShareButtonProps {
 export function ShareButton({
   path,
   source,
+  refToken,
   label,
   variant = 'outline',
   size = 'sm',
@@ -41,7 +46,8 @@ export function ShareButton({
   const buildUrl = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const sep = path.includes('?') ? '&' : '?';
-    return `${origin}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}`;
+    const ref = refToken ? `&ref=${encodeURIComponent(refToken)}` : '';
+    return `${origin}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
   };
 
   const onCopy = async () => {

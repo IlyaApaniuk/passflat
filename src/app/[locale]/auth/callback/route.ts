@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateProfile } from '@/lib/profile';
 import { trackServerEvent, identifyUser } from '@/lib/posthog-server';
+import { classifyRef } from '@/lib/referral';
 
 export async function GET(
   request: NextRequest,
@@ -42,7 +43,7 @@ export async function GET(
 
       const isNewUser = !existingProfile;
 
-      await getOrCreateProfile(user, locale);
+      const profile = await getOrCreateProfile(user, locale);
 
       // Auto-link any cost reports imported with this user's email (e.g. early
       // Google Form submissions) to their account on first matching login.
@@ -68,6 +69,13 @@ export async function GET(
 
       const authMethod = user.app_metadata?.provider === 'google' ? 'google' : 'email';
 
+      // First-touch referral source (set once on create). Attach as set-once
+      // person properties so PostHog cohorts can split retention/contribution by
+      // the channel/influencer that acquired the user. No reward in Phase 1.
+      const referralProps = profile.referredBy
+        ? { referred_by: profile.referredBy, referral_type: classifyRef(profile.referredBy) }
+        : {};
+
       identifyUser(
         user.id,
         {
@@ -76,14 +84,18 @@ export async function GET(
           auth_method: authMethod,
           locale,
         },
-        { signup_date: new Date().toISOString() },
+        { signup_date: new Date().toISOString(), ...referralProps },
       );
 
       if (isNewUser) {
         trackServerEvent(user.id, 'user_signed_up', {
           method: authMethod,
           locale,
+          ...referralProps,
         });
+        if (profile.referredBy) {
+          trackServerEvent(user.id, 'referred_signup', referralProps);
+        }
       }
     }
 

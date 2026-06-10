@@ -129,6 +129,8 @@ interface Props {
   hasContributedCost: boolean;
   costAccessUntil: string | null;
   emailsOptOut: boolean;
+  contributedBuildings: number;
+  contributedDistricts: number;
 }
 
 const statCardVariants = {
@@ -164,6 +166,8 @@ export function DashboardClient({
   hasContributedCost,
   costAccessUntil,
   emailsOptOut,
+  contributedBuildings,
+  contributedDistricts,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -524,6 +528,20 @@ export function DashboardClient({
                 <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
                   <Link href={`/${accessCitySlug}/costs`}>{t('dashboard.accessBrowse')}</Link>
                 </Button>
+              </div>
+            )}
+
+            {contributedBuildings > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm">
+                  {t('dashboard.impactLine', {
+                    buildings: contributedBuildings,
+                    districts: contributedDistricts,
+                  })}
+                </p>
               </div>
             )}
 

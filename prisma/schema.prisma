@@ -401,6 +401,11 @@ model Profile {
   // One-click unsubscribe flag for re-engagement / notification emails (set via
   // the signed unsubscribe link). Transactional emails are unaffected.
   emailsOptOut       Boolean   @default(false) @map("emails_opt_out")
+  // First-touch referral source captured from `?ref=` on the visit that led to
+  // sign-up — either a referrer's user id (peer share) or a free-form campaign
+  // code (influencer/channel). Set once on profile creation; never overwritten.
+  // No functional reward in Phase 1; this is pure attribution for PostHog cohorts.
+  referredBy         String?   @map("referred_by")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   city                     City?                     @relation(fields: [cityId], references: [id])

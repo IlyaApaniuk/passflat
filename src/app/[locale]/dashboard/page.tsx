@@ -61,6 +61,15 @@ export default async function DashboardPage() {
 
   const freeListingsUsed = listings.filter((l) => l.status === 'active' && !l.isPaid).length;
 
+  // Light impact gamification: how many distinct buildings/districts this user's
+  // visible reports help. Intrinsic-motivation framing (data is open, no reward)
+  // — "your reports help renters in N buildings, M districts".
+  const visibleReports = costReports.filter((r) => r.isVisible);
+  const contributedBuildings = new Set(visibleReports.map((r) => r.buildingId)).size;
+  const contributedDistricts = new Set(
+    visibleReports.map((r) => r.building.district?.id).filter(Boolean),
+  ).size;
+
   const serializedListings = listings.map((l) => ({
     id: l.id,
     title: l.title,
@@ -132,6 +141,8 @@ export default async function DashboardPage() {
       hasContributedCost={profile?.hasContributedCost ?? false}
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
       emailsOptOut={profile?.emailsOptOut ?? false}
+      contributedBuildings={contributedBuildings}
+      contributedDistricts={contributedDistricts}
     />
   );
 }
