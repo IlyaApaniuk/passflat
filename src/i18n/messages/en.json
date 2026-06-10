@@ -782,7 +782,7 @@
       "unlockedTitle": "Cost reports unlocked",
       "unlockedDesc": "Your reports are saved in your dashboard",
       "openTitle": "Base data is open",
-      "openDesc": "Full building data unlocks after your report — and you help keep it fresh for others."
+      "openDesc": "Unlock the full data by adding your costs — and help the community."
     },
     "submit": {
       "title": "Submit Your Costs",
@@ -1251,9 +1251,9 @@
     "inviteCostsTitle": "Invite friends to add their costs",
     "inviteCostsDesc": "More data means a sharper comparison for you and the whole community.",
     "inviteCostsCta": "Invite friends",
-    "inviteListingTitle": "Invite a friend to post a listing",
-    "inviteListingDesc": "A friend looking for a roommate, a lease takeover, or subletting? Let them add it.",
-    "inviteListingCta": "Invite a friend",
+    "inviteListingTitle": "Invite someone you know to post a listing",
+    "inviteListingDesc": "Someone you know looking for a roommate, a lease takeover, or subletting? Let them add it.",
+    "inviteListingCta": "Invite them",
     "costReportFlagged": "Hidden (flagged)",
     "noInquiries": "No inquiries yet",
     "noInquiriesDesc": "When someone is interested in your listing, their message will appear here",
