@@ -12,6 +12,8 @@ interface ShareButtonProps {
   path: string;
   /** Analytics label + utm_medium (e.g. 'building', 'district', 'city', 'submit'). */
   source: string;
+  /** Override the button text (e.g. "Share district") — defaults to a generic "Share". */
+  label?: string;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
@@ -28,6 +30,7 @@ interface ShareButtonProps {
 export function ShareButton({
   path,
   source,
+  label,
   variant = 'outline',
   size = 'sm',
   className,
@@ -55,7 +58,7 @@ export function ShareButton({
   return (
     <Button type="button" variant={variant} size={size} className={className} onClick={onCopy}>
       <Share2 className="mr-1.5 h-4 w-4" />
-      {t('share')}
+      {label ?? t('share')}
     </Button>
   );
 }

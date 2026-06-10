@@ -51,3 +51,28 @@ export function getOgImage(title: string, subtitle?: string) {
     type: 'image/png',
   };
 }
+
+/**
+ * Rich cost share-card OG image (building / district / city). The caller passes
+ * already-localized, already-formatted strings — `stat` is the headline median
+ * (e.g. "≈ 4 200 zł"), `split` the rent/expenses breakdown — so the edge OG
+ * route does no formatting. This is the viral artifact people drop into chats.
+ */
+export function getCostOgImage(opts: {
+  title: string;
+  subtitle?: string;
+  stat: string;
+  statLabel?: string;
+  split?: string;
+}) {
+  const params = new URLSearchParams({ title: opts.title, stat: opts.stat });
+  if (opts.subtitle) params.set('subtitle', opts.subtitle);
+  if (opts.statLabel) params.set('statLabel', opts.statLabel);
+  if (opts.split) params.set('split', opts.split);
+  return {
+    url: `${baseUrl}/api/og?${params.toString()}`,
+    width: 1200,
+    height: 630,
+    type: 'image/png',
+  };
+}

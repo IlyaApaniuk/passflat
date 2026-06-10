@@ -193,7 +193,14 @@ export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps)
                     }}
                     className="border-b transition-colors last:border-0 hover:bg-muted/50"
                   >
-                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/${citySlug}/${s.slug}`}
+                        className="transition-colors hover:text-primary hover:underline"
+                      >
+                        {s.name}
+                      </Link>
+                    </TableCell>
                     <TotalBarCell total={s.medianTotal} rent={s.medianRent} maxTotal={maxTotal} />
                     <MoneyCell value={s.medianRent} />
                     <MoneyCell value={s.medianExpenses} />

@@ -7,9 +7,10 @@ import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { median } from '@/lib/cost-stats';
 import { ShareButton } from '@/components/costs/share-button';
 import { ArrowRight, MapPin, Building2, Plus } from 'lucide-react';
 
@@ -44,11 +45,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = t('costsSeo.cityMetaTitle', { city: cityName });
   const description = t('costsSeo.cityMetaDescription', { city: cityName });
 
+  // Rich cost share-card from the city-wide roll-up (median of district medians);
+  // generic OG when there's no data yet.
+  const buildings = await getBuildingsData(cityRec.id, null, null);
+  const districts = rollUpDistricts(buildings, cityRec.districts);
+  const pos = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
+  const cityTotal = pos(districts.map((d) => d.medianTotal));
+  const cityRent = pos(districts.map((d) => d.medianRent));
+  const cityExpenses = pos(districts.map((d) => d.medianExpenses));
+  const reportCount = districts.reduce((s, d) => s + d.reportCount, 0);
+  const ogImage =
+    cityTotal > 0
+      ? getCostOgImage({
+          title: cityName,
+          subtitle: t('costs.overview.nReports', { count: reportCount }),
+          stat: `≈ ${cityTotal.toLocaleString()} zł`,
+          statLabel: t('costs.building.medianMonthlyTotal'),
+          split:
+            cityRent > 0 && cityExpenses > 0
+              ? `${t('costs.building.rent')} ≈ ${cityRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${cityExpenses.toLocaleString()}`
+              : undefined,
+        })
+      : getOgImage(title, description);
+
   return {
     title,
     description,
     alternates: getAlternates(`/${city}`),
-    openGraph: { title, description, images: [getOgImage(title, description)] },
+    openGraph: { title, description, images: [ogImage] },
   };
 }
 
@@ -107,33 +131,37 @@ export default async function CityCostsHub({ params }: PageProps) {
                   <Link key={d.slug} href={`/${city}/${d.slug}`} className="block">
                     <Card className="group transition-all duration-200 hover:border-primary/30 hover:shadow-md">
                       <CardContent className="flex items-center justify-between gap-4 p-4">
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="flex items-center gap-1.5 font-semibold transition-colors group-hover:text-primary">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             {d.name}
                           </h3>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {d.buildingCount} · {d.reportCount} {t('costs.overview.reports')}
+                            {d.buildingCount} ·{' '}
+                            {t('costs.overview.nReports', { count: d.reportCount })}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.medianMonthlyTotal')}
-                          </p>
-                          <p className="text-lg font-bold text-primary">
-                            ≈ {d.medianTotal.toLocaleString()} PLN
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
-                            {d.medianExpenses > 0 && (
-                              <>
-                                {' · '}
-                                {t('costs.overview.expenses')} ≈ {d.medianExpenses.toLocaleString()}
-                              </>
-                            )}
-                          </p>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="text-right tabular-nums">
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.medianMonthlyTotal')}
+                            </p>
+                            <p className="text-lg font-bold text-primary">
+                              ≈ {d.medianTotal.toLocaleString()} PLN
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
+                              {d.medianExpenses > 0 && (
+                                <>
+                                  {' · '}
+                                  {t('costs.overview.expenses')} ≈{' '}
+                                  {d.medianExpenses.toLocaleString()}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
-                        <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                       </CardContent>
                     </Card>
                   </Link>

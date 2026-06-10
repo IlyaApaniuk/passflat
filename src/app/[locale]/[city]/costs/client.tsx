@@ -521,7 +521,9 @@ export function CostsOverviewClient({
                                           </span>
                                           <span className="flex items-center gap-1">
                                             <Users className="h-3.5 w-3.5" />
-                                            {building.reports} {t('costs.overview.reports')}
+                                            {t('costs.overview.nReports', {
+                                              count: building.reports,
+                                            })}
                                           </span>
                                           {building.rentalType && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
@@ -540,7 +542,7 @@ export function CostsOverviewClient({
                                     </div>
 
                                     <div className="flex items-center justify-between gap-6 sm:justify-end">
-                                      <div className="text-left sm:text-right">
+                                      <div className="text-left tabular-nums sm:text-right">
                                         <p className="text-xs text-muted-foreground">
                                           {t('costs.overview.medianMonthlyTotal')}
                                         </p>

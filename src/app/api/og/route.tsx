@@ -8,6 +8,12 @@ export async function GET(request: NextRequest) {
   const title = searchParams.get('title') ?? 'Passflat';
   const subtitle =
     searchParams.get('subtitle') ?? 'European rental marketplace with transparent costs';
+  // Optional rich cost card (building / district / city share). Callers pass
+  // already-localized, already-formatted strings so this route stays
+  // language-agnostic and does no number/locale formatting itself.
+  const stat = searchParams.get('stat');
+  const statLabel = searchParams.get('statLabel');
+  const split = searchParams.get('split');
 
   return new ImageResponse(
     <div
@@ -61,13 +67,14 @@ export async function GET(request: NextRequest) {
 
       <div
         style={{
-          fontSize: '64px',
+          display: 'flex',
+          fontSize: stat ? '52px' : '64px',
           fontWeight: 800,
           color: 'white',
           lineHeight: 1.15,
           letterSpacing: '-0.03em',
-          maxWidth: '900px',
-          marginBottom: '24px',
+          maxWidth: '1000px',
+          marginBottom: '16px',
         }}
       >
         {title}
@@ -75,15 +82,59 @@ export async function GET(request: NextRequest) {
 
       <div
         style={{
-          fontSize: '28px',
+          display: 'flex',
+          fontSize: '26px',
           fontWeight: 400,
           color: '#94a3b8',
           lineHeight: 1.4,
-          maxWidth: '800px',
+          maxWidth: '900px',
         }}
       >
         {subtitle}
       </div>
+
+      {stat ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            marginTop: '36px',
+            padding: '28px 36px',
+            borderRadius: '20px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          {statLabel ? (
+            <div
+              style={{
+                display: 'flex',
+                fontSize: '24px',
+                color: '#94a3b8',
+                marginBottom: '8px',
+              }}
+            >
+              {statLabel}
+            </div>
+          ) : null}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: '76px',
+              fontWeight: 800,
+              color: '#8bde54',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {stat}
+          </div>
+          {split ? (
+            <div style={{ display: 'flex', fontSize: '26px', color: '#e2e8f0', marginTop: '10px' }}>
+              {split}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>,
     {
       width: 1200,

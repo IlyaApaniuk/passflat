@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { ShareButton } from '@/components/costs/share-button';
@@ -46,11 +46,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     city: cityName,
   });
 
+  // Rich cost share-card from the district roll-up; generic OG when no data.
+  const buildings = await getBuildingsData(cityRec.id, district, null);
+  const [rollup] = rollUpDistricts(buildings, [districtRec]);
+  const ogImage =
+    rollup && rollup.medianTotal > 0
+      ? getCostOgImage({
+          title: districtRec.nameKey,
+          subtitle: `${cityName} · ${t('costs.overview.nReports', { count: rollup.reportCount })}`,
+          stat: `≈ ${rollup.medianTotal.toLocaleString()} zł`,
+          statLabel: t('costs.building.medianMonthlyTotal'),
+          split:
+            rollup.medianRent > 0 && (rollup.medianExpenses ?? 0) > 0
+              ? `${t('costs.building.rent')} ≈ ${rollup.medianRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${(rollup.medianExpenses ?? 0).toLocaleString()}`
+              : undefined,
+        })
+      : getOgImage(title, description);
+
   return {
     title,
     description,
     alternates: getAlternates(`/${city}/${district}`),
-    openGraph: { title, description, images: [getOgImage(title, description)] },
+    openGraph: { title, description, images: [ogImage] },
   };
 }
 
@@ -116,7 +133,8 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {rollup.buildingCount} · {rollup.reportCount} {t('costs.overview.reports')}
+                    {rollup.buildingCount} ·{' '}
+                    {t('costs.overview.nReports', { count: rollup.reportCount })}
                   </p>
                 </CardContent>
               </Card>
@@ -152,24 +170,26 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                   <Link key={b.id} href={`/${city}/building/${b.slug}`} className="block">
                     <Card className="group transition-all duration-200 hover:border-primary/30 hover:shadow-md">
                       <CardContent className="flex items-center justify-between gap-4 p-4">
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="font-semibold transition-colors group-hover:text-primary">
                             {b.address}
                           </h3>
                           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
                             <Users className="h-3.5 w-3.5" />
-                            {b.reports} {t('costs.overview.reports')}
+                            {t('costs.overview.nReports', { count: b.reports })}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.medianMonthlyTotal')}
-                          </p>
-                          <p className="text-lg font-bold text-primary">
-                            ≈ {b.medianTotal.toLocaleString()} PLN
-                          </p>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="text-right tabular-nums">
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.medianMonthlyTotal')}
+                            </p>
+                            <p className="text-lg font-bold text-primary">
+                              ≈ {b.medianTotal.toLocaleString()} PLN
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
-                        <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                       </CardContent>
                     </Card>
                   </Link>

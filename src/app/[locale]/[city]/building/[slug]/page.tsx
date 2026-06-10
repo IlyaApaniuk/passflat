@@ -4,10 +4,11 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
+import { SCORE_VERSION } from '@/lib/location-score';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,7 +114,7 @@ const buildingQuery = {
     districtId: true,
     district: { select: { nameKey: true, slug: true } },
     city: { select: { nameKey: true } },
-    locationScore: { select: { overall: true, categories: true } },
+    locationScore: { select: { overall: true, categories: true, version: true } },
     costReports: {
       where: { isVisible: true },
       orderBy: { createdAt: 'desc' as const },
@@ -294,9 +295,40 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const t = await getTranslations();
   const cityName = t(building.city.nameKey);
+  // District `nameKey` holds a plain display name (e.g. "Mokotów"), unlike city
+  // nameKey which is a translation key — so it's used as-is, not through t().
+  const districtName = building.district?.nameKey ?? cityName;
 
   const title = `${building.addressFull} — Cost Reports | Passflat`;
-  const description = `Real rental costs for ${building.addressFull}, ${building.district?.nameKey ?? cityName}. Crowdsourced from actual tenants.`;
+  const description = `Real rental costs for ${building.addressFull}, ${districtName}. Crowdsourced from actual tenants.`;
+
+  // Rich cost share-card when the building has data (the viral artifact people
+  // drop into chats); generic title/subtitle OG otherwise.
+  const reports = building.costReports;
+  const num = (v: unknown) => (v == null ? null : Number(v));
+  const totalMedian = median(reports.map((r) => num(r.totalMonthlyAvg)));
+  const rentMedian = median(reports.map((r) => num(r.rent)));
+  const expensesMedian = median(
+    reports.map((r) => {
+      const tot = num(r.totalMonthlyAvg);
+      const rnt = num(r.rent);
+      return tot != null && rnt != null ? Math.max(0, tot - rnt) : null;
+    }),
+  );
+
+  const ogImage =
+    totalMedian != null
+      ? getCostOgImage({
+          title: building.addressFull,
+          subtitle: `${districtName}, ${cityName} · ${t('costs.overview.nReports', { count: reports.length })}`,
+          stat: `≈ ${totalMedian.toLocaleString()} zł`,
+          statLabel: t('costs.building.medianMonthlyTotal'),
+          split:
+            rentMedian != null && expensesMedian != null
+              ? `${t('costs.building.rent')} ≈ ${rentMedian.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${expensesMedian.toLocaleString()}`
+              : undefined,
+        })
+      : getOgImage(building.addressFull, cityName);
 
   return {
     title,
@@ -305,7 +337,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      images: [getOgImage(building.addressFull, cityName)],
+      images: [ogImage],
     },
   };
 }
@@ -548,17 +580,22 @@ export default async function BuildingCostsPage({ params }: PageProps) {
       ).toISOString()
     : null;
 
-  const initialLocationScore = building.locationScore
-    ? {
-        overall: building.locationScore.overall,
-        categories: building.locationScore.categories as Array<{
-          key: string;
-          score: number;
-          nearestM: number | null;
-          name: string | null;
-        }>,
-      }
-    : null;
+  // Only seed from the stored score when it's the current version. A stale one
+  // (older algorithm — e.g. renamed category keys) would render raw i18n keys,
+  // so we pass null instead and let the component fetch a fresh, recomputed
+  // score from the API (which recomputes when version < SCORE_VERSION).
+  const initialLocationScore =
+    building.locationScore && building.locationScore.version >= SCORE_VERSION
+      ? {
+          overall: building.locationScore.overall,
+          categories: building.locationScore.categories as Array<{
+            key: string;
+            score: number;
+            nearestM: number | null;
+            name: string | null;
+          }>,
+        }
+      : null;
 
   return (
     <>
