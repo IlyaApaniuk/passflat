@@ -240,9 +240,13 @@ export function CostSubmitClient({
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
   const [submittedBuildingSlug, setSubmittedBuildingSlug] = useState<string | null>(null);
-  const [submittedBuildingStats, setSubmittedBuildingStats] = useState<{
-    reports: number;
-    totalApprox: number | null;
+  const [submittedComparison, setSubmittedComparison] = useState<{
+    userTotal: number | null;
+    buildingReportCount: number;
+    districtName: string | null;
+    districtSlug: string | null;
+    districtMedian: number | null;
+    districtReportCount: number;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -551,14 +555,11 @@ export function CostSubmitClient({
       }
 
       const costReport = data.costReport as
-        | { id?: string; building?: { slug?: string; totalApartmentsApprox?: number | null } }
+        | { id?: string; building?: { slug?: string } }
         | undefined;
       setSubmittedReportId(costReport?.id ?? null);
       setSubmittedBuildingSlug(costReport?.building?.slug ?? null);
-      setSubmittedBuildingStats({
-        reports: (data.buildingReportCount as number) ?? 0,
-        totalApprox: costReport?.building?.totalApartmentsApprox ?? null,
-      });
+      setSubmittedComparison((data.comparison as typeof submittedComparison) ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
       posthog?.capture('cost_form_submit_success', {
@@ -727,24 +728,100 @@ export function CostSubmitClient({
                 </motion.div>
                 <h1 className="text-2xl font-bold">{t('costs.submit.thankYou')}</h1>
                 <p className="mt-2 text-muted-foreground">{t('costs.submit.thankYouDesc')}</p>
-                {submittedBuildingSlug && (
-                  <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-left">
-                    <p className="font-semibold">{t('costs.submit.completeBuildingTitle')}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {submittedBuildingStats?.totalApprox &&
-                      submittedBuildingStats.totalApprox >= submittedBuildingStats.reports
-                        ? t('costs.submit.fillBuildingStat', {
-                            count: submittedBuildingStats.reports,
-                            total: submittedBuildingStats.totalApprox,
-                          })
-                        : t('costs.submit.completeBuildingDesc')}
-                    </p>
-                    <div className="mt-3">
-                      <ShareButton
-                        path={`/${citySlug}/building/${submittedBuildingSlug}`}
-                        source="submit"
-                        variant="default"
-                      />
+                {submittedComparison && (
+                  <div className="mt-5 space-y-4 text-left">
+                    {/* You vs your district — the personal hook that makes the
+                        result worth sharing ("am I overpaying?"). Neutral framing. */}
+                    {submittedComparison.userTotal != null &&
+                      submittedComparison.districtMedian != null &&
+                      submittedComparison.districtName && (
+                        <div className="rounded-lg border bg-muted/40 p-4">
+                          <p className="text-sm font-semibold">
+                            {t('costs.submit.comparisonHeading')}
+                          </p>
+                          <div className="mt-2 flex items-end justify-between gap-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                {t('costs.submit.yourCosts')}
+                              </p>
+                              <p className="text-lg font-bold text-primary">
+                                ≈ {submittedComparison.userTotal.toLocaleString()} PLN
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">
+                                {t('costs.building.districtMedian', {
+                                  district: submittedComparison.districtName,
+                                })}
+                              </p>
+                              <p className="text-lg font-semibold">
+                                ≈ {submittedComparison.districtMedian.toLocaleString()} PLN
+                              </p>
+                            </div>
+                          </div>
+                          {(() => {
+                            const u = submittedComparison.userTotal!;
+                            const m = submittedComparison.districtMedian!;
+                            const pct = Math.round(((u - m) / m) * 100);
+                            const label =
+                              pct === 0
+                                ? t('costs.building.matchesMedian')
+                                : pct > 0
+                                  ? t('costs.building.percentHigher', { percent: pct })
+                                  : t('costs.building.percentLower', { percent: Math.abs(pct) });
+                            const cls =
+                              pct === 0
+                                ? 'bg-muted text-muted-foreground'
+                                : pct > 0
+                                  ? 'bg-red-500/10 text-red-600'
+                                  : 'bg-green-500/10 text-green-600';
+                            return (
+                              <span
+                                className={`mt-3 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}
+                              >
+                                {label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                    {/* Fill the district — the realistic viral unit (reachable via
+                        area chats, no fragile apartment-count denominator). */}
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <p className="font-semibold">
+                        {submittedComparison.districtName
+                          ? t('costs.submit.fillDistrictTitle', {
+                              district: submittedComparison.districtName,
+                            })
+                          : t('costs.submit.completeBuildingTitle')}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t('costs.submit.fillDistrictDesc')}
+                      </p>
+                      {submittedComparison.districtName && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {submittedComparison.districtName} ·{' '}
+                          {t('costs.overview.nReports', {
+                            count: submittedComparison.districtReportCount,
+                          })}
+                        </p>
+                      )}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {submittedComparison.districtSlug && (
+                          <ShareButton
+                            path={`/${citySlug}/${submittedComparison.districtSlug}`}
+                            source="submit-district"
+                            variant="default"
+                          />
+                        )}
+                        {submittedBuildingSlug && (
+                          <ShareButton
+                            path={`/${citySlug}/building/${submittedBuildingSlug}`}
+                            source="submit-building"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

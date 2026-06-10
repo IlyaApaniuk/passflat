@@ -6,6 +6,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport } from '@/lib/cost-validation';
+import { median } from '@/lib/cost-stats';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
@@ -461,13 +462,41 @@ export async function POST(request: NextRequest) {
       scraped_import: scrapedImport,
     });
 
-    // How many tenants are now on record for this building — drives the
-    // "N of ~M apartments are here, invite your neighbors" nudge on success.
-    const buildingReportCount = await prisma.costReport.count({
-      where: { buildingId: building.id, isVisible: true },
-    });
+    // Post-submit payload for the "you vs your district" comparison + the
+    // district-fill share nudge (the share trigger). The just-created report is
+    // included in the district median. District filling is the realistic viral
+    // unit — reachable via area chats, no fragile apartment-count denominator.
+    const [buildingReportCount, bldgDistrict, districtReports] = await Promise.all([
+      prisma.costReport.count({ where: { buildingId: building.id, isVisible: true } }),
+      building.districtId
+        ? prisma.district.findUnique({
+            where: { id: building.districtId },
+            select: { nameKey: true, slug: true },
+          })
+        : Promise.resolve(null),
+      building.districtId
+        ? prisma.costReport.findMany({
+            where: {
+              building: { districtId: building.districtId },
+              isVisible: true,
+              totalMonthlyAvg: { not: null },
+            },
+            select: { totalMonthlyAvg: true },
+            take: 5000,
+          })
+        : Promise.resolve([]),
+    ]);
 
-    return NextResponse.json({ costReport, wasFlagged, buildingReportCount }, { status: 201 });
+    const comparison = {
+      userTotal: totalMonthlyAvg || null,
+      buildingReportCount,
+      districtName: bldgDistrict?.nameKey ?? null,
+      districtSlug: bldgDistrict?.slug ?? null,
+      districtMedian: median(districtReports.map((r) => Number(r.totalMonthlyAvg))),
+      districtReportCount: districtReports.length,
+    };
+
+    return NextResponse.json({ costReport, wasFlagged, comparison }, { status: 201 });
   } catch (err: unknown) {
     console.error('[cost-reports POST]', err);
     captureServerException(err, {
