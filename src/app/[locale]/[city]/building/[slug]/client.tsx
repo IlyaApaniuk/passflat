@@ -843,8 +843,10 @@ export function BuildingCostsClient({
                                       </span>
                                     </div>
                                     <p className="text-[11px] text-muted-foreground">
-                                      {building.district} · {comparison.district!.count}{' '}
-                                      {t('costs.overview.reports')}
+                                      {building.district} ·{' '}
+                                      {t('costs.overview.nReports', {
+                                        count: comparison.district!.count,
+                                      })}
                                     </p>
                                   </div>
                                   {bars.map((bar) => (

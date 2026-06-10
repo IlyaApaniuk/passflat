@@ -319,7 +319,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     totalMedian != null
       ? getCostOgImage({
           title: building.addressFull,
-          subtitle: `${districtName}, ${cityName} · ${reports.length} ${t('costs.overview.reports')}`,
+          subtitle: `${districtName}, ${cityName} · ${t('costs.overview.nReports', { count: reports.length })}`,
           stat: `≈ ${totalMedian.toLocaleString()} zł`,
           statLabel: t('costs.building.medianMonthlyTotal'),
           split:

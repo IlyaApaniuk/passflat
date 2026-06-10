@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     rollup && rollup.medianTotal > 0
       ? getCostOgImage({
           title: districtRec.nameKey,
-          subtitle: `${cityName} · ${rollup.reportCount} ${t('costs.overview.reports')}`,
+          subtitle: `${cityName} · ${t('costs.overview.nReports', { count: rollup.reportCount })}`,
           stat: `≈ ${rollup.medianTotal.toLocaleString()} zł`,
           statLabel: t('costs.building.medianMonthlyTotal'),
           split:
@@ -133,7 +133,8 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {rollup.buildingCount} · {rollup.reportCount} {t('costs.overview.reports')}
+                    {rollup.buildingCount} ·{' '}
+                    {t('costs.overview.nReports', { count: rollup.reportCount })}
                   </p>
                 </CardContent>
               </Card>
@@ -175,7 +176,7 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                           </h3>
                           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
                             <Users className="h-3.5 w-3.5" />
-                            {b.reports} {t('costs.overview.reports')}
+                            {t('costs.overview.nReports', { count: b.reports })}
                           </p>
                         </div>
                         <div className="text-right">

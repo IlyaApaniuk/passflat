@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     cityTotal > 0
       ? getCostOgImage({
           title: cityName,
-          subtitle: `${reportCount} ${t('costs.overview.reports')}`,
+          subtitle: t('costs.overview.nReports', { count: reportCount }),
           stat: `≈ ${cityTotal.toLocaleString()} zł`,
           statLabel: t('costs.building.medianMonthlyTotal'),
           split:
@@ -137,7 +137,8 @@ export default async function CityCostsHub({ params }: PageProps) {
                             {d.name}
                           </h3>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {d.buildingCount} · {d.reportCount} {t('costs.overview.reports')}
+                            {d.buildingCount} ·{' '}
+                            {t('costs.overview.nReports', { count: d.reportCount })}
                           </p>
                         </div>
                         <div className="text-right">
