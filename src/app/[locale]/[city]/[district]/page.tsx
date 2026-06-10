@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { ShareButton } from '@/components/costs/share-button';
@@ -46,11 +46,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     city: cityName,
   });
 
+  // Rich cost share-card from the district roll-up; generic OG when no data.
+  const buildings = await getBuildingsData(cityRec.id, district, null);
+  const [rollup] = rollUpDistricts(buildings, [districtRec]);
+  const ogImage =
+    rollup && rollup.medianTotal > 0
+      ? getCostOgImage({
+          title: districtRec.nameKey,
+          subtitle: `${cityName} · ${rollup.reportCount} ${t('costs.overview.reports')}`,
+          stat: `≈ ${rollup.medianTotal.toLocaleString()} zł`,
+          statLabel: t('costs.building.medianMonthlyTotal'),
+          split:
+            rollup.medianRent > 0 && (rollup.medianExpenses ?? 0) > 0
+              ? `${t('costs.building.rent')} ≈ ${rollup.medianRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${(rollup.medianExpenses ?? 0).toLocaleString()}`
+              : undefined,
+        })
+      : getOgImage(title, description);
+
   return {
     title,
     description,
     alternates: getAlternates(`/${city}/${district}`),
-    openGraph: { title, description, images: [getOgImage(title, description)] },
+    openGraph: { title, description, images: [ogImage] },
   };
 }
 

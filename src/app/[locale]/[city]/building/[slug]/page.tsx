@@ -294,7 +294,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const t = await getTranslations();
   const cityName = t(building.city.nameKey);
-  const districtName = building.district?.nameKey ? t(building.district.nameKey) : cityName;
+  // District `nameKey` holds a plain display name (e.g. "Mokotów"), unlike city
+  // nameKey which is a translation key — so it's used as-is, not through t().
+  const districtName = building.district?.nameKey ?? cityName;
 
   const title = `${building.addressFull} — Cost Reports | Passflat`;
   const description = `Real rental costs for ${building.addressFull}, ${districtName}. Crowdsourced from actual tenants.`;

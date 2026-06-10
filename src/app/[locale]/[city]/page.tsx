@@ -7,9 +7,10 @@ import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { median } from '@/lib/cost-stats';
 import { ShareButton } from '@/components/costs/share-button';
 import { ArrowRight, MapPin, Building2, Plus } from 'lucide-react';
 
@@ -44,11 +45,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = t('costsSeo.cityMetaTitle', { city: cityName });
   const description = t('costsSeo.cityMetaDescription', { city: cityName });
 
+  // Rich cost share-card from the city-wide roll-up (median of district medians);
+  // generic OG when there's no data yet.
+  const buildings = await getBuildingsData(cityRec.id, null, null);
+  const districts = rollUpDistricts(buildings, cityRec.districts);
+  const pos = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
+  const cityTotal = pos(districts.map((d) => d.medianTotal));
+  const cityRent = pos(districts.map((d) => d.medianRent));
+  const cityExpenses = pos(districts.map((d) => d.medianExpenses));
+  const reportCount = districts.reduce((s, d) => s + d.reportCount, 0);
+  const ogImage =
+    cityTotal > 0
+      ? getCostOgImage({
+          title: cityName,
+          subtitle: `${reportCount} ${t('costs.overview.reports')}`,
+          stat: `≈ ${cityTotal.toLocaleString()} zł`,
+          statLabel: t('costs.building.medianMonthlyTotal'),
+          split:
+            cityRent > 0 && cityExpenses > 0
+              ? `${t('costs.building.rent')} ≈ ${cityRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${cityExpenses.toLocaleString()}`
+              : undefined,
+        })
+      : getOgImage(title, description);
+
   return {
     title,
     description,
     alternates: getAlternates(`/${city}`),
-    openGraph: { title, description, images: [getOgImage(title, description)] },
+    openGraph: { title, description, images: [ogImage] },
   };
 }
 
