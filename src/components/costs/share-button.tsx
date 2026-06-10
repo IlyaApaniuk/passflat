@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Share2, Check } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 
 interface ShareButtonProps {
   /** Locale-relative path to share, e.g. `/warsaw/building/x`. The absolute URL
@@ -22,7 +22,8 @@ interface ShareButtonProps {
  * share sheet. Every copied URL carries `utm_source=share` so share-driven visits
  * show up in the PostHog acquisition cohorts. This is the core viral artifact —
  * the whole strategy leans on people dropping a building's real costs into a flat
- * chat / Telegram / FB group.
+ * chat / Telegram / FB group. Feedback is a toast (snackbar) so the button label
+ * stays stable and doesn't reflow.
  */
 export function ShareButton({
   path,
@@ -33,7 +34,6 @@ export function ShareButton({
 }: ShareButtonProps) {
   const t = useTranslations('share');
   const posthog = usePostHog();
-  const [copied, setCopied] = useState(false);
 
   const buildUrl = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -46,8 +46,7 @@ export function ShareButton({
     posthog?.capture('share_clicked', { source, path });
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success(t('copied'));
     } catch {
       // Clipboard blocked — nothing else to do.
     }
@@ -55,8 +54,8 @@ export function ShareButton({
 
   return (
     <Button type="button" variant={variant} size={size} className={className} onClick={onCopy}>
-      {copied ? <Check className="mr-1.5 h-4 w-4" /> : <Share2 className="mr-1.5 h-4 w-4" />}
-      {copied ? t('copied') : t('share')}
+      <Share2 className="mr-1.5 h-4 w-4" />
+      {t('share')}
     </Button>
   );
 }
