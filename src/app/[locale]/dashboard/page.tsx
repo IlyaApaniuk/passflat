@@ -59,21 +59,6 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const freeListingsUsed = listings.filter((l) => l.status === 'active' && !l.isPaid).length;
-
-  // District-fill share nudge: the dashboard's only share entry point, aimed at
-  // the realistic viral unit (district, not building — neighbours are
-  // unreachable). Use the contributor's most recent district so the share link
-  // is concrete. carrying `?ref=` for peer attribution. Null → no nudge.
-  const shareReport = costReports.find((r) => r.isVisible && r.building.district);
-  const shareDistrict = shareReport
-    ? {
-        slug: shareReport.building.district!.slug,
-        name: shareReport.building.district!.nameKey,
-        citySlug: shareReport.building.city.slug,
-      }
-    : null;
-
   const serializedListings = listings.map((l) => ({
     id: l.id,
     title: l.title,
@@ -139,14 +124,12 @@ export default async function DashboardPage() {
       costReports={serializedCostReports}
       followedBuildings={serializedFollows}
       userEmail={user.email ?? ''}
-      freeListingsUsed={freeListingsUsed}
       displayName={profile?.displayName ?? null}
       userLocale={profile?.locale ?? currentLocale}
       hasContributedCost={profile?.hasContributedCost ?? false}
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
       emailsOptOut={profile?.emailsOptOut ?? false}
       userId={user.id}
-      shareDistrict={shareDistrict}
     />
   );
 }

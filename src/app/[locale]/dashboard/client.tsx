@@ -124,14 +124,12 @@ interface Props {
   costReports: DashboardCostReport[];
   followedBuildings: DashboardFollow[];
   userEmail: string;
-  freeListingsUsed: number;
   displayName: string | null;
   userLocale: string;
   hasContributedCost: boolean;
   costAccessUntil: string | null;
   emailsOptOut: boolean;
   userId: string;
-  shareDistrict: { slug: string; name: string; citySlug: string } | null;
 }
 
 const statCardVariants = {
@@ -161,14 +159,12 @@ export function DashboardClient({
   costReports,
   followedBuildings,
   userEmail,
-  freeListingsUsed,
   displayName: initialDisplayName,
   userLocale,
   hasContributedCost,
   costAccessUntil,
   emailsOptOut,
   userId,
-  shareDistrict,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -400,6 +396,10 @@ export function DashboardClient({
 
   const totalViews = myListings.reduce((sum, l) => sum + l.views, 0);
   const activeListings = myListings.filter((l) => l.status === 'active').length;
+  // Derive the free-listings count from live state so it updates the moment a
+  // listing is deleted/closed client-side (the server-passed value went stale).
+  const freeListingsUsed = myListings.filter((l) => l.status === 'active' && !l.isPaid).length;
+  const listingsCitySlug = myListings[0]?.citySlug ?? 'warsaw';
 
   // Data-access state — the value loop: contributing costs unlocks the data.
   const paidAccessActive = !!costAccessUntil && new Date(costAccessUntil) > new Date();
@@ -532,21 +532,19 @@ export function DashboardClient({
               </div>
             )}
 
-            {shareDistrict && (
+            {costReports.length > 0 && (
               <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Sparkles className="h-5 w-5 text-primary" />
                   </div>
-                  <p className="text-sm">
-                    {t('dashboard.shareDistrictDesc', { district: shareDistrict.name })}
-                  </p>
+                  <p className="text-sm">{t('dashboard.inviteCostsDesc')}</p>
                 </div>
                 <ShareButton
-                  path={`/${shareDistrict.citySlug}/${shareDistrict.slug}`}
-                  source="dashboard-district"
+                  path={`/${accessCitySlug}/costs`}
+                  source="dashboard-costs"
                   refToken={userId}
-                  label={t('dashboard.shareDistrictCta', { district: shareDistrict.name })}
+                  label={t('dashboard.inviteCostsCta')}
                   variant="default"
                   className="shrink-0"
                 />
@@ -732,13 +730,37 @@ export function DashboardClient({
                 <p className="text-sm text-muted-foreground">
                   {t('dashboard.freeListingsUsed', { used: freeListingsUsed, limit: 2 })}
                 </p>
-                <Button variant="outline" className="gap-2" asChild>
-                  <Link href="/create-listing">
-                    <Plus className="h-4 w-4" />
-                    {t('dashboard.addListing')}
-                  </Link>
-                </Button>
+                {/* When there are no listings yet, the empty-state card below is the
+                    single add CTA — avoid a duplicate button in the header. */}
+                {myListings.length > 0 && (
+                  <Button variant="outline" className="gap-2" asChild>
+                    <Link href="/create-listing">
+                      <Plus className="h-4 w-4" />
+                      {t('dashboard.addListing')}
+                    </Link>
+                  </Button>
+                )}
               </div>
+            </div>
+
+            {/* Supply-side virality: a friend looking for a roommate / lease
+                takeover / sublet is the most natural listing author. Broad invite
+                landing on the public listings page, carrying ?ref=. */}
+            <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm">{t('dashboard.inviteListingDesc')}</p>
+              </div>
+              <ShareButton
+                path={`/${listingsCitySlug}/replacement`}
+                source="dashboard-listing"
+                refToken={userId}
+                label={t('dashboard.inviteListingCta')}
+                variant="default"
+                className="shrink-0"
+              />
             </div>
 
             {myListings.length > 0 && (
