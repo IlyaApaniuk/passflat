@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { routing } from './i18n/routing';
+import { captureReferralFromRequest } from './lib/referral';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -24,6 +25,11 @@ function isAccountDeletedPath(pathWithoutLocale: string): boolean {
 
 export default async function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
+
+  // First-touch referral capture: persist any `?ref=` before the early returns
+  // below so it works on every matched path (public landing/cost pages included,
+  // which never reach the auth branch). Cheap cookie write, no network.
+  captureReferralFromRequest(request, response);
 
   // If next-intl issued a locale redirect, return it as-is — no auth needed.
   if (response.status >= 300 && response.status < 400) {

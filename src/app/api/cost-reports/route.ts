@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport } from '@/lib/cost-validation';
 import { median } from '@/lib/cost-stats';
+import { classifyRef } from '@/lib/referral';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
@@ -56,7 +57,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Guarantee a profile exists before any write that FKs to author_id.
-    await getOrCreateProfile(user);
+    // Snapshot is taken BEFORE this submission flips hasContributedCost, so we
+    // can tell a first contribution from a repeat one for referral attribution.
+    const profileBefore = await getOrCreateProfile(user);
 
     const body = await request.json();
     const {
@@ -452,6 +455,18 @@ export async function POST(request: NextRequest) {
         where: { id: user.id },
         data: { hasContributedCost: true },
       });
+
+      // The conversion that actually matters for attribution: a referred user
+      // making their FIRST real contribution. Fires once (only when this flips
+      // false→true), letting PostHog measure which channel drives contributors,
+      // not just sign-ups.
+      if (!profileBefore.hasContributedCost && profileBefore.referredBy) {
+        trackServerEvent(user.id, 'referred_contribution', {
+          referred_by: profileBefore.referredBy,
+          referral_type: classifyRef(profileBefore.referredBy),
+          building_id: building.id,
+        });
+      }
     }
 
     trackServerEvent(user.id, 'cost_report_submitted', {
