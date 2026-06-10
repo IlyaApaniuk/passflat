@@ -873,6 +873,7 @@
       "leaseUnknown": "Nie wiem",
       "leaseTypeRequired": "Wybierz rodzaj najmu",
       "addressOutsideCity": "Wybierz adres w granicach miasta {city}.",
+      "rateLimited": "Zbyt wiele zgłoszeń w krótkim czasie. Spróbuj później.",
       "ownerEmail": "E-mail właściciela (opcjonalnie)",
       "ownerEmailHint": "Powiąże ten wpis z kontem właściciela, gdy się zaloguje. Pozostaw puste, aby wpis pozostał nieprzypisany.",
       "submitButton": "Wyślij raport kosztów",

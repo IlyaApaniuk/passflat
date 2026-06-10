@@ -555,6 +555,9 @@ export function CostSubmitClient({
         if (data.error === 'ADDRESS_OUTSIDE_CITY') {
           throw new Error(t('costs.submit.addressOutsideCity', { city: cityName }));
         }
+        if (response.status === 429 || data.error === 'rate_limited') {
+          throw new Error(t('costs.submit.rateLimited'));
+        }
         throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
