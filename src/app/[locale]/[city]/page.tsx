@@ -131,7 +131,7 @@ export default async function CityCostsHub({ params }: PageProps) {
                   <Link key={d.slug} href={`/${city}/${d.slug}`} className="block">
                     <Card className="group transition-all duration-200 hover:border-primary/30 hover:shadow-md">
                       <CardContent className="flex items-center justify-between gap-4 p-4">
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="flex items-center gap-1.5 font-semibold transition-colors group-hover:text-primary">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             {d.name}
@@ -141,24 +141,27 @@ export default async function CityCostsHub({ params }: PageProps) {
                             {t('costs.overview.nReports', { count: d.reportCount })}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.medianMonthlyTotal')}
-                          </p>
-                          <p className="text-lg font-bold text-primary">
-                            ≈ {d.medianTotal.toLocaleString()} PLN
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
-                            {d.medianExpenses > 0 && (
-                              <>
-                                {' · '}
-                                {t('costs.overview.expenses')} ≈ {d.medianExpenses.toLocaleString()}
-                              </>
-                            )}
-                          </p>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="text-right tabular-nums">
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.medianMonthlyTotal')}
+                            </p>
+                            <p className="text-lg font-bold text-primary">
+                              ≈ {d.medianTotal.toLocaleString()} PLN
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
+                              {d.medianExpenses > 0 && (
+                                <>
+                                  {' · '}
+                                  {t('costs.overview.expenses')} ≈{' '}
+                                  {d.medianExpenses.toLocaleString()}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
-                        <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                       </CardContent>
                     </Card>
                   </Link>

@@ -170,7 +170,7 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                   <Link key={b.id} href={`/${city}/building/${b.slug}`} className="block">
                     <Card className="group transition-all duration-200 hover:border-primary/30 hover:shadow-md">
                       <CardContent className="flex items-center justify-between gap-4 p-4">
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="font-semibold transition-colors group-hover:text-primary">
                             {b.address}
                           </h3>
@@ -179,15 +179,17 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                             {t('costs.overview.nReports', { count: b.reports })}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            {t('costs.overview.medianMonthlyTotal')}
-                          </p>
-                          <p className="text-lg font-bold text-primary">
-                            ≈ {b.medianTotal.toLocaleString()} PLN
-                          </p>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="text-right tabular-nums">
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.overview.medianMonthlyTotal')}
+                            </p>
+                            <p className="text-lg font-bold text-primary">
+                              ≈ {b.medianTotal.toLocaleString()} PLN
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
-                        <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                       </CardContent>
                     </Card>
                   </Link>
