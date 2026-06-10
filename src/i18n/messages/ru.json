@@ -824,6 +824,8 @@
       "comparisonHeading": "Как ты на фоне района",
       "yourCosts": "Ты платишь",
       "fillDistrictTitle": "Помоги заполнить {district}",
+      "shareDistrict": "Поделиться районом",
+      "shareBuilding": "Поделиться домом",
       "fillDistrictDesc": "Поделись в чате района — больше отчётов, точнее сравнения для всех, кто здесь снимает.",
       "utilitiesOptional": "Необязательно — пропустите, если не уверены",
       "completenessNudge": "Чем полнее отчёт, тем полезнее он для других.",

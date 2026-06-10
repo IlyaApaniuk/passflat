@@ -824,6 +824,8 @@
       "comparisonHeading": "How your costs compare",
       "yourCosts": "You pay",
       "fillDistrictTitle": "Help fill {district}",
+      "shareDistrict": "Share district",
+      "shareBuilding": "Share building",
       "fillDistrictDesc": "Share it in your area chat — more reports mean more accurate comparisons for everyone renting here.",
       "utilitiesOptional": "Optional — skip if you're not sure",
       "completenessNudge": "The more you fill in, the more useful your report is for others.",

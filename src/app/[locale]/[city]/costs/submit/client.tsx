@@ -812,6 +812,7 @@ export function CostSubmitClient({
                           <ShareButton
                             path={`/${citySlug}/${submittedComparison.districtSlug}`}
                             source="submit-district"
+                            label={t('costs.submit.shareDistrict')}
                             variant="default"
                           />
                         )}
@@ -819,6 +820,7 @@ export function CostSubmitClient({
                           <ShareButton
                             path={`/${citySlug}/building/${submittedBuildingSlug}`}
                             source="submit-building"
+                            label={t('costs.submit.shareBuilding')}
                           />
                         )}
                       </div>
