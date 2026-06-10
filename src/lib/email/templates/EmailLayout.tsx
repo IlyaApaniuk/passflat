@@ -5,6 +5,7 @@ import {
   Head,
   Heading,
   Html,
+  Link,
   Preview,
   Section,
   Text,
@@ -70,6 +71,13 @@ const styles = {
     fontSize: '12px',
     color: '#a1a1aa',
   } as React.CSSProperties,
+  footerLink: {
+    display: 'inline-block',
+    margin: '8px 0 0',
+    fontSize: '12px',
+    color: '#a1a1aa',
+    textDecoration: 'underline',
+  } as React.CSSProperties,
 };
 
 export const buttonStyles = {
@@ -118,11 +126,17 @@ export function EmailLayout({
   footer,
   preview,
   children,
+  unsubscribeUrl,
+  unsubscribeLabel,
 }: {
   brand: string;
   footer: string;
   preview?: string;
   children: React.ReactNode;
+  // Optional one-click unsubscribe — only the re-engagement/notification emails
+  // pass it; transactional emails (payment, password reset…) leave it unset.
+  unsubscribeUrl?: string;
+  unsubscribeLabel?: string;
 }) {
   return (
     <Html>
@@ -137,6 +151,11 @@ export function EmailLayout({
           <Section style={styles.content}>{children}</Section>
           <Section style={styles.footer}>
             <Text style={styles.footerText}>{footer}</Text>
+            {unsubscribeUrl && unsubscribeLabel ? (
+              <Link href={unsubscribeUrl} style={styles.footerLink}>
+                {unsubscribeLabel}
+              </Link>
+            ) : null}
           </Section>
         </Container>
       </Body>

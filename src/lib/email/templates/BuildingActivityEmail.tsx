@@ -14,6 +14,8 @@ export function BuildingActivityEmail({
     <EmailLayout
       brand={t('common.brand')}
       footer={t('buildingActivity.footer')}
+      unsubscribeUrl={data.unsubscribeUrl}
+      unsubscribeLabel={t('unsubscribe')}
       preview={t('buildingActivity.intro', {
         count: data.newReports,
         address: data.buildingAddress,

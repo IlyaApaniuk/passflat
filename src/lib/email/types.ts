@@ -91,12 +91,14 @@ export interface BuildingActivityEmailData {
   newReports: number;
   totalReports: number;
   buildingUrl: string;
+  unsubscribeUrl: string;
 }
 
 export interface CostReportRefreshEmailData {
   buildingAddress: string;
   monthsAgo: number;
   submitUrl: string;
+  unsubscribeUrl: string;
 }
 
 export type EmailTemplate =

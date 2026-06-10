@@ -1300,6 +1300,10 @@
       "languageLabel": "Language"
     },
     "costsSectionTitle": "My costs",
+    "followsSectionTitle": "Followed buildings",
+    "noFollows": "Not following any buildings yet",
+    "noFollowsDesc": "Follow a building to get an email when new cost reports are added.",
+    "unfollow": "Unfollow",
     "listingsSectionTitle": "Listings",
     "paymentsSectionTitle": "Payments",
     "accessOpenTitle": "Cost data unlocked",
@@ -1814,10 +1818,18 @@
       "cta": "Get the template"
     }
   },
+  "unsubscribe": {
+    "successTitle": "Unsubscribed",
+    "successDesc": "You will no longer receive building-activity or report-reminder emails from Passflat.",
+    "errorTitle": "Link expired or invalid",
+    "errorDesc": "This unsubscribe link is not valid. You can manage your emails from your dashboard.",
+    "home": "Go to homepage"
+  },
   "emails": {
     "common": {
       "brand": "Passflat"
     },
+    "unsubscribe": "Unsubscribe from these emails",
     "contact": {
       "subject": "[Contact] {subject}",
       "intro": "New message from the contact form",
