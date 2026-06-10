@@ -638,12 +638,14 @@ export function CostSubmitClient({
   // Required-to-submit fields, for the sticky bar's progress hint.
   const utilitiesAnswered =
     showDetailedUtilities || (!!formData.utilitiesAnswer && formData.utilitiesAnswer !== 'unknown');
+  // Deposit is intentionally NOT a core (required) field — many tenants don't
+  // recall the exact kaucja and requiring it cost real submissions. The server
+  // already treats it as optional; it stays a quality signal below, not a gate.
   const coreFields = [
     formData.rentalType,
     formData.street,
     formData.buildingNumber,
     formData.rent,
-    formData.deposit,
     ...(isRoom ? [] : [formData.areaM2]),
   ];
   const coreFilled = coreFields.filter(Boolean).length;
@@ -1212,9 +1214,6 @@ export function CostSubmitClient({
                         <Label htmlFor="deposit" className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-primary" />
                           {t('costs.submit.deposit')}
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {t('costs.submit.optionalLabel')}
-                          </span>
                         </Label>
                         <Input
                           id="deposit"
@@ -1974,7 +1973,10 @@ export function CostSubmitClient({
                 </Card>
               </motion.div>
 
-              <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6">
+              {/* Solid (opaque) background — NO backdrop-blur. backdrop-filter on a
+                  sticky element re-rasterizes the blurred backdrop on every scroll
+                  frame, which flickers (esp. Chrome/Safari). An opaque bar is stable. */}
+              <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background px-4 py-3 sm:-mx-6 sm:px-6">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">{t('common.totalMonthly')}</p>
