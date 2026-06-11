@@ -80,6 +80,7 @@ function GatedSection({
   children: ReactNode;
 }) {
   const t = useTranslations();
+  const posthog = usePostHog();
   if (show) return <>{children}</>;
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -98,7 +99,12 @@ function GatedSection({
         <p className="font-semibold">{t('costs.building.gateTitle')}</p>
         <p className="max-w-sm text-sm text-muted-foreground">{t('costs.building.gateDesc')}</p>
         <Button asChild className="mt-1">
-          <Link href={submitHref}>{t('costs.overview.submitMyCosts')}</Link>
+          <Link
+            href={submitHref}
+            onClick={() => posthog?.capture('cost_submit_cta_clicked', { source: 'building_gate' })}
+          >
+            {t('costs.overview.submitMyCosts')}
+          </Link>
         </Button>
       </div>
     </div>
