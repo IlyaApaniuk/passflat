@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import { format, type Locale } from 'date-fns';
 import { enUS, pl, ru, uk } from 'date-fns/locale';
 import {
@@ -92,6 +93,7 @@ function Shell({
  */
 export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
   const t = useTranslations();
+  const posthog = usePostHog();
   const locale = useLocale();
   const dateFmtLocale = DATE_LOCALE_MAP[locale] ?? enUS;
 
@@ -196,7 +198,12 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
         desc={t('costs.access.openDesc')}
       >
         <Button asChild>
-          <Link href={`/${citySlug}/costs/submit`}>
+          <Link
+            href={`/${citySlug}/costs/submit`}
+            onClick={() =>
+              posthog?.capture('cost_submit_cta_clicked', { source: 'access_card', state: 'open' })
+            }
+          >
             <Pencil className="mr-1.5 h-4 w-4" />
             {t('costs.overview.submitMyCosts')}
           </Link>
@@ -218,7 +225,12 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
       desc={paidExpired ? t('costs.access.expiredCta') : t('costs.overview.unlockDesc')}
     >
       <Button asChild>
-        <Link href={`/${citySlug}/costs/submit`}>
+        <Link
+          href={`/${citySlug}/costs/submit`}
+          onClick={() =>
+            posthog?.capture('cost_submit_cta_clicked', { source: 'access_card', state: 'locked' })
+          }
+        >
           <Pencil className="mr-1.5 h-4 w-4" />
           {t('costs.overview.submitMyCosts')}
         </Link>
