@@ -18,7 +18,6 @@ export function Footer() {
       { label: t('landing.footer.temporarySublets'), href: `/${DEFAULT_CITY}/sublet` },
       { label: t('landing.footer.costReports'), href: `/${DEFAULT_CITY}/costs` },
       { label: t('landing.footer.addListing'), href: '/create-listing' },
-      { label: t('landing.footer.pricing'), href: '/pricing' },
       ...(isDocumentTemplatesEnabled()
         ? [{ label: t('landing.footer.resources'), href: '/resources' }]
         : []),

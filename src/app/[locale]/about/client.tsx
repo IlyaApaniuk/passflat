@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
-import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
@@ -11,7 +10,6 @@ import {
   EyeOff,
   Users,
   Unlock,
-  ArrowRight,
   Repeat,
   BarChart3,
   CalendarRange,
@@ -26,17 +24,9 @@ interface AboutStats {
   costReports: number;
 }
 
-export function AboutClient({
-  hasContributed: hasContributedInitial = false,
-  stats,
-}: {
-  hasContributed?: boolean;
-  stats?: AboutStats;
-}) {
+export function AboutClient({ stats }: { stats?: AboutStats }) {
   const t = useTranslations('about');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
-  // Display-only CTA toggle resolved on the client so this page stays static.
-  const hasContributed = useHasContributed(hasContributedInitial);
 
   return (
     <>
@@ -68,6 +58,7 @@ export function AboutClient({
               </p>
               <p>{t('problem.p2')}</p>
               <p>{t('problem.p3')}</p>
+              <p>{t('problem.p4')}</p>
             </div>
           </div>
         </div>
@@ -229,32 +220,11 @@ export function AboutClient({
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="gap-2" asChild>
-              <Link href={`/${DEFAULT_CITY}/roommate`}>
-                <Users className="h-4 w-4" />
-                {t('ctaRoommate')}
+              <Link href={`/${DEFAULT_CITY}/costs`}>
+                <BarChart3 className="h-4 w-4" />
+                {t('ctaCostsExplore')}
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="gap-2" asChild>
-              <Link href={`/${DEFAULT_CITY}/sublet`}>
-                <CalendarRange className="h-4 w-4" />
-                {t('ctaSublet')}
-              </Link>
-            </Button>
-            {hasContributed ? (
-              <Button size="lg" variant="outline" className="gap-2" asChild>
-                <Link href={`/${DEFAULT_CITY}/costs`}>
-                  <BarChart3 className="h-4 w-4" />
-                  {t('ctaCostsExplore')}
-                </Link>
-              </Button>
-            ) : (
-              <Button size="lg" variant="outline" className="gap-2" asChild>
-                <Link href={`/${DEFAULT_CITY}/costs/submit`}>
-                  <ArrowRight className="h-4 w-4" />
-                  {t('ctaCosts')}
-                </Link>
-              </Button>
-            )}
           </div>
         </div>
       </section>

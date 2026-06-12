@@ -95,6 +95,7 @@ const costReportSelect = {
   depositReturnedAmount: true,
   depositReturnDays: true,
   utilitiesComplete: true,
+  source: true,
   leaseType: true,
   isCurrentTenant: true,
   livedFrom: true,
@@ -513,14 +514,14 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     return rows.length ? rows.sort((a, b) => b.count - a.count) : null;
   })();
 
-  // How many reports actually account for utilities in their total (vs "didn't
-  // know") — drives a data-quality badge on the headline total.
-  const utilitiesCompleteness = (() => {
-    const known = reports.filter((r) => r.utilitiesComplete != null).length;
-    if (known === 0) return null;
-    const complete = reports.filter((r) => r.utilitiesComplete === true).length;
-    return { complete, known, total: reportCount };
-  })();
+  // "Total may understate utilities" chip — counts ONLY genuine tenant «не знаю»
+  // answers (source 'user'). Scraped imports carry utilitiesComplete=false as a
+  // provenance marker (rent+czynsz known, meters not captured), not a tenant
+  // answer, so they're excluded — otherwise an imported listing trips the chip
+  // even though no tenant ever said «не знаю».
+  const utilitiesUnknown = reports.filter(
+    (r) => r.source === 'user' && r.utilitiesComplete === false,
+  ).length;
 
   // Most common meaningful lease type (excludes "unknown"). null → no badge.
   const leaseTypeAgg = (() => {
@@ -638,7 +639,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         tenure={tenure}
         depositMonths={depositMonths}
         periodicBreakdown={periodicBreakdown}
-        utilitiesCompleteness={utilitiesCompleteness}
+        utilitiesUnknown={utilitiesUnknown}
         leaseType={leaseTypeAgg}
         citySlug={citySlug}
         initialLocationScore={initialLocationScore}

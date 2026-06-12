@@ -1,32 +1,9 @@
-import { getTranslations } from 'next-intl/server';
-import type { Metadata } from 'next';
-import { Footer } from '@/components/landing/footer';
-import { PricingClient } from './client';
-import { getAlternates, getOgImage } from '@/lib/seo';
-import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('pricing');
-  const m = await getTranslations('meta');
-  return {
-    title: t('title'),
-    description: m('pricingDescription'),
-    alternates: getAlternates('/pricing'),
-    openGraph: {
-      title: t('title'),
-      description: m('pricingDescription'),
-      images: [getOgImage(t('title'), t('subtitle'))],
-    },
-  };
-}
+import { notFound } from 'next/navigation';
 
+// /pricing is disabled while monetization is dormant — nothing on the site
+// points to purchases. The full page (this file + ./client.tsx with the tier
+// cards) is preserved in git history; restore it, and re-add the sitemap +
+// footer entries, when paid features are switched back on.
 export default function PricingPage() {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <JsonLd data={breadcrumbJsonLd([{ name: 'Pricing', path: '/pricing' }])} />
-      <main className="flex-1 pt-24">
-        <PricingClient />
-      </main>
-      <Footer />
-    </div>
-  );
+  notFound();
 }

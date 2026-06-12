@@ -7,8 +7,6 @@ import { useHasContributed } from '@/hooks/use-has-contributed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
-import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
-import { TemplateDownload } from '@/components/documents/template-download';
 import { FEATURE_FLAGS, isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 import {
   Accordion,
@@ -31,10 +29,10 @@ import {
   Unlock,
   BarChart3,
   ArrowRight,
+  FileText,
   Plus,
   Quote,
   Shield,
-  ShoppingCart,
   BellOff,
 } from 'lucide-react';
 
@@ -205,12 +203,23 @@ export function HowItWorksClient({
                 ))}
               </div>
 
-              {activeTab === 'seekers' && isDocumentTemplatesEnabled() && (
+              {isDocumentTemplatesEnabled() && (
                 <div className="mx-auto mt-10 max-w-md">
-                  <p className="mb-3 text-center text-sm font-medium">
-                    {tDocs('howItWorks.title')}
-                  </p>
-                  <TemplateDownload documentKey="cesja" source="how_it_works" showDescription />
+                  <Link
+                    href="/resources"
+                    className="group flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{tDocs('howItWorks.title')}</span>
+                      <span className="block text-sm text-muted-foreground">
+                        {tDocs('resources.subtitle')}
+                      </span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </Link>
                 </div>
               )}
 
@@ -241,20 +250,12 @@ export function HowItWorksClient({
                       </Link>
                     </Button>
                   ) : (
-                    <div className="flex flex-col items-center gap-3 sm:flex-row">
-                      <Button size="lg" className="gap-2" asChild>
-                        <Link href="/warsaw/costs/submit">
-                          <ArrowRight className="h-4 w-4" />
-                          {t('costs.cta')}
-                        </Link>
-                      </Button>
-                      <BuyAccessDialog citySlug={DEFAULT_CITY}>
-                        <Button size="lg" variant="outline" className="gap-2">
-                          <ShoppingCart className="h-4 w-4" />
-                          {t('costs.ctaBuy')}
-                        </Button>
-                      </BuyAccessDialog>
-                    </div>
+                    <Button size="lg" className="gap-2" asChild>
+                      <Link href="/warsaw/costs/submit">
+                        <ArrowRight className="h-4 w-4" />
+                        {t('costs.cta')}
+                      </Link>
+                    </Button>
                   ))}
               </div>
             </motion.div>
