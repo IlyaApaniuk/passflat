@@ -924,7 +924,8 @@
     "building": {
       "follow": "Follow",
       "following": "Following",
-      "followToast": "Following this building — we will email you when new reports land.",
+      "followToast": "Following — we'll email you when new reports arrive.",
+      "followManage": "Manage",
       "followError": "Could not update follow. Please try again.",
       "avgRent": "Avg Rent",
       "avgUtilities": "Avg Utilities",

@@ -265,7 +265,9 @@ export function DashboardClient({
           ? 'section-billing'
           : tabParam === 'listings' || tabParam === 'saved'
             ? 'section-listings'
-            : 'section-costs';
+            : tabParam === 'follows'
+              ? 'section-follows'
+              : 'section-costs';
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
