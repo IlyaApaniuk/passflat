@@ -10,6 +10,11 @@ export const FEATURE_FLAGS = {
   SHOW_TESTIMONIALS: 'show_testimonials',
   PROMOTED_LISTINGS_ENABLED: 'promoted-listings-enabled',
   SESSION_RECORDING_SAMPLE: 'session-recording-sample',
+  // Hero headline A/B — DORMANT. The live headline is the loss-aversion framing;
+  // this flag is parked (declared, not consumed) until there's enough traffic to
+  // reach significance. To run it: render an alternate headline behind this flag +
+  // create a PostHog experiment (goal = hero_cta_clicked / cost_form_started).
+  HERO_VARIANT_B: 'hero-variant-b',
 } as const;
 
 /**

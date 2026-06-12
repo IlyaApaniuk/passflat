@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useFeatureFlagEnabled, usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
@@ -23,7 +23,14 @@ interface HeroProps {
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
   const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
+  const posthog = usePostHog();
   const isTouch = useIsTouch();
+
+  // Top-of-funnel instrumentation: which hero CTA gets clicked. (The hero headline
+  // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
+  // there's enough traffic to reach significance; wire variant rendering back in
+  // then. The current headline is the loss-aversion framing.)
+  const onCtaClick = (cta: 'costs' | 'listing') => posthog?.capture('hero_cta_clicked', { cta });
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -70,7 +77,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </div>
 
           <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl">
-            <span className="block">{t('title')}</span>
+            <span className="block whitespace-pre-line">{t('title')}</span>
             {/* pb keeps descenders (y, g) from being clipped: -webkit-background-clip:text
                 paints the gradient only inside the box, so the box must extend below the
                 baseline for the tight leading-[1.05] line. */}
@@ -85,7 +92,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
             {/* Primary CTA — cost data is the product wedge. Data is open to all,
                 so this always lands on the cost map (no contribution gate). */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
-              <Link href={`/${DEFAULT_CITY}/costs`}>
+              <Link href={`/${DEFAULT_CITY}/costs`} onClick={() => onCtaClick('costs')}>
                 <Receipt className="mr-2 h-4 w-4" />
                 {t('costsCta')}
               </Link>
@@ -97,7 +104,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
               className="group h-12 rounded-full px-8 text-base"
               asChild
             >
-              <Link href="/create-listing">
+              <Link href="/create-listing" onClick={() => onCtaClick('listing')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('addCta')}
               </Link>
