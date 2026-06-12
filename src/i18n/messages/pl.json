@@ -924,7 +924,8 @@
     "building": {
       "follow": "Obserwuj",
       "following": "Obserwujesz",
-      "followToast": "Obserwujesz ten budynek — wyślemy e-mail, gdy pojawią się nowe raporty.",
+      "followToast": "Obserwujesz — wyślemy e-mail przy nowych raportach.",
+      "followManage": "Zarządzaj",
       "followError": "Nie udało się zmienić obserwacji. Spróbuj ponownie.",
       "avgRent": "Średni czynsz",
       "avgUtilities": "Średnie media",
