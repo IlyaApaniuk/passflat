@@ -10,15 +10,12 @@ import {
   CalendarClock,
   CheckCircle2,
   List,
-  Lock,
   Mail,
   Pencil,
   RefreshCw,
-  ShoppingCart,
 } from 'lucide-react';
 
 import { Link } from '@/i18n/navigation';
-import { isCostDataOpenToAll } from '@/lib/feature-flags';
 import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -123,7 +120,6 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
   const now = new Date();
   const paidValid = !!costAccessUntil && new Date(costAccessUntil) > now;
   const paidActive = !hasContributedData && paidValid;
-  const paidExpired = !hasContributedData && !!costAccessUntil && new Date(costAccessUntil) <= now;
 
   // Flagged report — pending moderation.
   if (isFlagged) {
@@ -187,60 +183,27 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
     );
   }
 
-  // Data is fully open (Phase 1): no lock/buy CTA — instead nudge a contribution
-  // so the dataset keeps growing and stays fresh for the next tenant.
-  if (isCostDataOpenToAll()) {
-    return (
-      <Shell
-        tone="accent"
-        icon={<CheckCircle2 className="h-4 w-4" />}
-        title={t('costs.access.openTitle')}
-        desc={t('costs.access.openDesc')}
-      >
-        <Button asChild>
-          <Link
-            href={`/${citySlug}/costs/submit`}
-            onClick={() =>
-              posthog?.capture('cost_submit_cta_clicked', { source: 'access_card', state: 'open' })
-            }
-          >
-            <Pencil className="mr-1.5 h-4 w-4" />
-            {t('costs.overview.submitMyCosts')}
-          </Link>
-        </Button>
-      </Shell>
-    );
-  }
-
-  // Locked — either never had access, or paid access expired.
+  // Cost data is open to everyone — no lock/buy CTA. Nudge a contribution so the
+  // dataset keeps growing and stays fresh for the next tenant. Payments are
+  // dormant; a buy/unlock path can be reinstated later.
   return (
     <Shell
-      tone="primary"
-      icon={<Lock className="h-4 w-4" />}
-      title={
-        paidExpired
-          ? t('costs.access.expiredOn', { date: fmtDate(costAccessUntil!) })
-          : t('costs.overview.unlockFullData')
-      }
-      desc={paidExpired ? t('costs.access.expiredCta') : t('costs.overview.unlockDesc')}
+      tone="accent"
+      icon={<CheckCircle2 className="h-4 w-4" />}
+      title={t('costs.access.openTitle')}
+      desc={t('costs.access.openDesc')}
     >
       <Button asChild>
         <Link
           href={`/${citySlug}/costs/submit`}
           onClick={() =>
-            posthog?.capture('cost_submit_cta_clicked', { source: 'access_card', state: 'locked' })
+            posthog?.capture('cost_submit_cta_clicked', { source: 'access_card', state: 'open' })
           }
         >
           <Pencil className="mr-1.5 h-4 w-4" />
           {t('costs.overview.submitMyCosts')}
         </Link>
       </Button>
-      <BuyAccessDialog citySlug={citySlug}>
-        <Button variant="outline" className="gap-2">
-          <ShoppingCart className="h-4 w-4" />
-          {t('costs.overview.buyAccessBtn')}
-        </Button>
-      </BuyAccessDialog>
     </Shell>
   );
 }

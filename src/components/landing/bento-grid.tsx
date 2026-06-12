@@ -75,7 +75,14 @@ export async function BentoGrid() {
             <Reveal
               key={item.titleKey}
               delay={index * 0.1}
-              className={`group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm ${item.className}`}
+              // No backdrop-blur here: each tile is a <Reveal> that keeps
+              // `will-change: transform` promoted for its lifetime, and a
+              // permanently-promoted backdrop-filter layer sampling the
+              // high-frequency .dot-pattern behind it shimmers/flickers on
+              // desktop repaints. The blur over that faint pattern is barely
+              // visible (it's already dropped on touch via the pointer:coarse
+              // rule in globals.css), so we drop it on every pointer here.
+              className={`group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 ${item.className}`}
             >
               <div
                 className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 transition-opacity duration-500 group-hover:opacity-100`}

@@ -23,15 +23,15 @@
     "learnMore": "Learn more"
   },
   "meta": {
-    "homeTitle": "Passflat — Find Your Next Flat in Poland",
-    "homeDescription": "European rental marketplace with transparent costs. Find lease takeovers, compare real utility expenses, and discover your perfect apartment in Warsaw.",
-    "aboutDescription": "Learn about Passflat — a European rental marketplace making renting in Poland transparent and community-driven. Lease takeovers, cost reports, and more.",
-    "howItWorksDescription": "Step-by-step guide to using Passflat for lease takeovers, roommate search, and cost transparency. Find or pass on your apartment in Warsaw easily.",
-    "contactDescription": "Get in touch with the Passflat team. Ask questions, report issues, propose partnerships, or share feedback about our rental marketplace in Warsaw.",
-    "helpDescription": "Find answers to common questions about Passflat — lease takeovers, cost reports, listings, and account management. Browse our comprehensive FAQ section.",
-    "blogDescription": "Guides and insights about renting in Warsaw — lease takeovers, hidden rental costs, tips for foreigners, and everything you need to know about the market.",
-    "termsDescription": "Terms of Service for Passflat — rules for listings, cost reports, payments, consumer rights, and platform usage. Read before using our rental marketplace.",
-    "privacyDescription": "Passflat Privacy Policy — how we collect, use, and protect your personal data under GDPR. Data processors, your rights, cookies, and contact information.",
+    "homeTitle": "Passflat — Warsaw rentals: costs, listings, documents",
+    "homeDescription": "Real rental costs in Warsaw from tenants themselves, listings (lease takeover, roommate, sublet) and free document templates. Know the real price before you sign.",
+    "aboutDescription": "Passflat — a Warsaw rental service: real costs from tenants (rent, utilities, deposits), lease-takeover and sublet listings, and free document templates. Everything visible before you sign.",
+    "howItWorksDescription": "How Passflat works: see real costs by building and district in Warsaw, take over a lease, find a roommate or sublet, and download free document templates. Step by step, transparently.",
+    "contactDescription": "Get in touch with the Passflat team — a question, an issue, a partnership idea, or feedback about our transparent rental-cost service.",
+    "helpDescription": "Answers to common Passflat questions: lease takeovers, cost reports, listings, and accounts. Browse the FAQ section.",
+    "blogDescription": "Guides and tips on renting in Warsaw: lease takeovers, hidden costs, utilities, and advice for foreigners — everything about the real rental market.",
+    "termsDescription": "Passflat Terms of Service: rules for listings, cost reports, user rights, and how the platform works.",
+    "privacyDescription": "Passflat Privacy Policy: how we collect, use, and protect your personal data under GDPR. Processors, your rights, cookies, and contact.",
     "pricingDescription": "Passflat pricing — free listings, cost reports, and favorites. Optional promoted listings for more visibility starting at 39 PLN."
   },
   "common": {
@@ -220,7 +220,7 @@
       "q2": "Is it legal?",
       "a2": "Yes, absolutely. Lease assignment (cesja najmu) is governed by the Polish Civil Code. It requires written consent from all three parties: the current tenant, the new tenant, and the landlord.",
       "q3": "How much does Passflat cost?",
-      "a3": "Browsing listings and posting are free (up to 2 active listings). Cost reports are free when you contribute your own data, or you can buy time-limited access. Promoted listings start at 39 PLN for 7 days.",
+      "a3": "Passflat is free: browsing and posting listings (up to 2 active), cost reports, and document templates — no charge.",
       "q4": "Do I need the landlord's approval?",
       "a4": "Yes, the landlord must consent to the transfer. Most landlords agree because they get a vetted replacement tenant and avoid vacancy — it's a win for everyone.",
       "q5": "How does cost transparency work?",
@@ -271,10 +271,10 @@
       "subtitle": "Lease takeovers, roommate search, or a sublet — find the right option with transparent pricing.",
       "browseCta": "Browse Listings",
       "listCta": "Post a Listing",
-      "freeNote": "Posting is free — promote from 39 PLN"
+      "freeNote": "Posting listings is free"
     },
     "footer": {
-      "tagline": "European rental marketplace with transparent pricing. Find your next home with real cost data.",
+      "tagline": "Renting in Warsaw without surprises: real costs from tenants, listings, and free document templates.",
       "expanding": "Starting in Warsaw, expanding across Europe.",
       "product": "Product",
       "browseListings": "Lease Takeovers",
@@ -854,7 +854,7 @@
       "privacyDesc": "We only show aggregated data. Exact costs are never publicly displayed.",
       "deposit": "Deposit (kaucja)",
       "tenancyTitle": "Your tenancy",
-      "tenancyHint": "Optional — helps other renters know how long people stay and whether deposits come back.",
+      "tenancyHint": "Helps other renters know how long people stay and whether deposits come back.",
       "addTenancyDetails": "Add tenancy & deposit-return details",
       "currentTenant": "I live here now",
       "pastTenant": "I've moved out",
@@ -873,6 +873,7 @@
       "leaseUnknown": "Not sure",
       "leaseTypeRequired": "Please select the lease type",
       "addressOutsideCity": "Please choose an address within {city}.",
+      "rateLimited": "Too many reports in a short time. Please try again later.",
       "ownerEmail": "Owner email (optional)",
       "ownerEmailHint": "Links this report to that account when they log in. Leave empty to keep it unattributed.",
       "submitButton": "Submit Cost Report",
@@ -923,7 +924,8 @@
     "building": {
       "follow": "Follow",
       "following": "Following",
-      "followToast": "Following this building — we will email you when new reports land.",
+      "followToast": "Following — we'll email you when new reports arrive.",
+      "followManage": "Manage",
       "followError": "Could not update follow. Please try again.",
       "avgRent": "Avg Rent",
       "avgUtilities": "Avg Utilities",
@@ -951,6 +953,12 @@
       "seasonalHeating": "Seasonal Heating Costs",
       "seasonalHeatingDesc": "Average heating costs by month. Winter months (Nov-Feb) typically have the highest costs.",
       "comparison": "Cost comparison",
+      "emptyCompareTitle": "Compare this building to the district",
+      "emptyCompareDesc": "Not enough data yet to show how this building stacks up against the district. Add your costs — you'll help yourself and others.",
+      "emptyBreakdownTitle": "Show the full breakdown",
+      "emptyBreakdownDesc": "No per-utility breakdown yet (electricity, gas, water) — add your costs in 2 minutes.",
+      "emptyDistrictTitle": "This building's position in the district",
+      "emptyDistrictDesc": "Too few reports in the district yet to show where this building sits in the price range. Add your costs and invite neighbors.",
       "thisBuilding": "This Building",
       "districtAvg": "{district} Average",
       "warsawAvg": "Warsaw Average",
@@ -981,9 +989,7 @@
       "depositReturnedRate": "{percent}% got their deposit back",
       "depositReturnedAvgPct": "≈ {percent}% of the deposit returned",
       "depositMonths": "≈ {months} months' rent",
-      "utilitiesComplete": "Utilities included in the total",
-      "utilitiesPartial": "Utilities counted in {complete} of {known} reports",
-      "utilitiesNone": "Utilities not counted — total understated",
+      "utilitiesIncomplete": "Not everyone listed utilities — the real total may be higher",
       "leaseTypeLabel": "Lease type",
       "leaseStandardShort": "Standard",
       "leaseOccasionalShort": "Occasional",
@@ -1096,9 +1102,9 @@
       "label": "For current tenants",
       "title": "Pass on your lease — keep your deposit",
       "step1Title": "Create a listing",
-      "step1Desc": "Add your apartment with address, photos, and full cost breakdown. Your first 2 listings are free — additional listings require a small one-time payment.",
+      "step1Desc": "Add your apartment with address, photos, and full cost breakdown. It's free — up to 2 active listings.",
       "step2Title": "Appear on the map",
-      "step2Desc": "Your listing appears on the map and in search results. Optional promotion boosts visibility for 7, 14, or 30 days.",
+      "step2Desc": "Your listing appears on the map and in search results — renters looking for a place will see it.",
       "step3Title": "Receive interest",
       "step3Desc": "Get email notifications when someone is interested. Review messages in your dashboard.",
       "step4Title": "Choose a replacement",
@@ -1112,8 +1118,8 @@
       "title": "Know real costs before you sign",
       "step1Title": "Submit an anonymous cost report",
       "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet — including bills that come less often (e.g. a water recalculation every 6 months), which we show as a monthly equivalent.",
-      "step2Title": "Unlock the full database",
-      "step2Desc": "After submitting your report, you get full access to cost data for all buildings. Alternatively, you can buy time-limited access (7, 30, or 90 days) if you don't have data to share yet.",
+      "step2Title": "Browse the full cost database",
+      "step2Desc": "Cost data is open — see the numbers for every building. Add your report to keep the database growing and current.",
       "step3Title": "Compare before signing",
       "step3Desc": "See typical (median), min, and max costs per building. <compareLink>Compare costs</compareLink> across districts — before you sign a lease.",
       "cta": "Submit Your Costs",
@@ -1146,7 +1152,7 @@
       "q3": "Do I need the landlord's consent?",
       "a3": "Yes. The landlord must agree to the lease transfer. Most landlords agree because they gain a reliable tenant and avoid vacancy. It's in everyone's interest.",
       "q4": "How much does Passflat cost?",
-      "a4": "You get 2 free active listings. Additional listings require a one-time payment. Optional promoted listings (for better visibility) start at 39 PLN. Cost reports are free if you contribute your own data, or you can buy time-limited access.",
+      "a4": "Passflat is free: listings (up to 2 active), cost reports, and document templates — no charge.",
       "q5": "Is Passflat available outside Warsaw?",
       "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap.",
       "q6": "Can I submit cost reports for more than one building?",
@@ -1165,7 +1171,8 @@
       "title": "Renting in Poland is broken",
       "p1": "Tenants lose deposits when they need to move before the lease ends. There's <howItWorksLink>no easy way to find a replacement</howItWorksLink> — so you either pay a penalty or lose months of rent.",
       "p2": "Utility costs are hidden until you sign the lease. You find out about real monthly expenses after moving in — and by then it's too late.",
-      "p3": "Agency fees are steep, and foreigners face an even bigger information gap when searching for apartments."
+      "p3": "Agency fees are steep, and foreigners face an even bigger information gap when searching for apartments.",
+      "p4": "And once a replacement is found, the paperwork begins: a lease takeover, a sublet, a roommate agreement. There are no ready-made templates, lawyers are expensive, and getting the contract wrong is scary."
     },
     "solution": {
       "label": "Our Solution",
@@ -1182,8 +1189,8 @@
     "team": {
       "label": "Who We Are",
       "title": "Built by renters, for renters",
-      "description": "We're a small team of engineers and designers based in Warsaw. We rent here ourselves and know the pain firsthand — lost deposits, surprise utility bills, and a frustratingly opaque rental market. We built Passflat in 2024 because we needed it ourselves.",
-      "description2": "Between us we've moved apartments 10+ times across Warsaw, dealt with agencies on both sides, and navigated the cesja process as both tenants and landlords. That experience shapes every feature we build."
+      "description": "We rent in Warsaw ourselves and we've been through all of it — lost deposits, utility bills no one warned us about, a price you only learn after moving in. Passflat grew out of that pain.",
+      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Right now that's real costs by building, listings (lease takeover, roommate, sublet), and free document templates."
     },
     "values": {
       "label": "Our Principles",
@@ -1191,16 +1198,16 @@
       "principle1": "No hidden information",
       "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
       "principle2": "Your data belongs to you",
-      "principle2Desc": "Every cost report stays anonymous, and we never sell it to third parties. Cost data isn't hidden behind a hard paywall — contributing one report of your own unlocks the whole database for free.",
+      "principle2Desc": "Every cost report is anonymous — it can't be tied to you, and we never sell data to third parties.",
       "principle3": "Open by default",
-      "principle3Desc": "Listings are fully open — no registration, no premium tiers. Community cost data is unlocked by contributing one report of your own (or optional time-limited access), so the database keeps growing for everyone.",
+      "principle3Desc": "Listings and cost data are open to everyone — no registration, no paywall. Add your report to keep the database growing and up to date.",
       "principle4": "Tenants first",
       "principle4Desc": "We don't work with agencies and we don't sell your data. Every product decision is made from the tenant's perspective."
     },
     "vision": {
       "label": "Where We're Headed",
       "title": "Starting in Warsaw. Expanding across Europe.",
-      "description": "Warsaw is our first market, but the architecture supports multiple cities and countries from day one. Kraków, Wrocław, and other European cities are on our roadmap."
+      "description": "Right now — Warsaw. Next we're planning Kraków, Wrocław, and other cities."
     },
     "stats": {
       "listings": "Active listings",
@@ -1251,9 +1258,9 @@
     "inviteCostsTitle": "Invite friends to add their costs",
     "inviteCostsDesc": "More data means a sharper comparison for you and the whole community.",
     "inviteCostsCta": "Help the community",
-    "inviteListingTitle": "Invite friends to post a listing",
-    "inviteListingDesc": "Looking for a roommate, a lease takeover, or subletting?",
-    "inviteListingCta": "Invite friends",
+    "inviteListingTitle": "Someone looking for a roommate or subletting?",
+    "inviteListingDesc": "Share Passflat with whoever needs it right now.",
+    "inviteListingCta": "Share",
     "costReportFlagged": "Hidden (flagged)",
     "noInquiries": "No inquiries yet",
     "noInquiriesDesc": "When someone is interested in your listing, their message will appear here",
@@ -1287,7 +1294,7 @@
     "billing": {
       "title": "Billing",
       "empty": "No payments yet",
-      "emptyDesc": "Your payments for extra listings, promotions, and cost-data access will appear here.",
+      "emptyDesc": "Your payment history will appear here.",
       "viewReceipt": "View receipt",
       "receiptError": "Receipt is not available yet. Please try again shortly.",
       "support": "Get help",
@@ -1376,9 +1383,9 @@
     "general": {
       "title": "General",
       "q1": "What is Passflat?",
-      "a1": "Passflat is a rental marketplace specializing in lease takeovers in Warsaw. It also features a cost transparency database so you can see real utility costs before signing a lease.",
+      "a1": "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of real costs from tenants (rent, utilities, deposits), and free document templates for the deal.",
       "q2": "Is Passflat free?",
-      "a2": "Yes. Browsing listings, cost reports, and posting listings are free. We offer optional promoted listings for better visibility, starting at 39 PLN.",
+      "a2": "Yes. Browsing listings, cost reports, posting listings, and document templates — all free.",
       "q3": "What cities does Passflat operate in?",
       "a3": "Currently we operate in Warsaw. Expansion to Kraków, Wrocław, and other European cities is on our roadmap.",
       "q4": "What languages does Passflat support?",
@@ -1404,7 +1411,7 @@
       "q1": "How does the cost database work?",
       "a1": "Tenants submit anonymous cost reports for their buildings — including rent, admin fee, electricity, gas, heating, water, and internet. Data is aggregated and displayed per building so future tenants can see what they'll actually pay.",
       "q2": "How do I unlock cost data?",
-      "a2": "You can unlock full access by contributing your own cost report (free, permanent) or by purchasing time-limited access (7, 30, or 90 days). The database is community-powered — contributing helps everyone and keeps it growing.",
+      "a2": "Cost data is open to everyone. Add your report — free and forever — to see the detailed breakdown and help the database grow for the whole community.",
       "q3": "Is my data anonymous?",
       "a3": "Yes. Cost data is shown in aggregated form (averages, min/max per building), so individual submissions cannot be identified.",
       "q4": "What costs should I report?",
@@ -1453,7 +1460,7 @@
     "lastUpdated": "Last updated: June 1, 2026",
     "intro": {
       "title": "Introduction",
-      "p1": "Passflat (\"we\", \"us\", \"our\") is a rental marketplace platform operated from Warsaw, Poland. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our website and services at passflat.com.",
+      "p1": "Passflat (\"we\", \"us\", \"our\") is a rental platform (a marketplace of listings, real-cost data from users, and document templates) operated from Warsaw, Poland. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our website and services at passflat.com.",
       "p2": "We are committed to protecting your privacy in compliance with the General Data Protection Regulation (GDPR) and applicable Polish data protection laws. By using Passflat, you acknowledge that you have read and understood this policy."
     },
     "dataCollected": {
@@ -1650,7 +1657,7 @@
     },
     "liability": {
       "title": "7. Limitation of Liability",
-      "item1": "Passflat is a marketplace platform. We do not verify apartments, conduct property inspections, or guarantee the accuracy of user-submitted information.",
+      "item1": "Passflat is a platform with listings, user-submitted cost data, and document templates. We do not verify apartments, conduct property inspections, or guarantee the accuracy of user-submitted information (including cost reports). Document templates are basic samples and do not constitute legal advice.",
       "item2": "Users are solely responsible for verifying listing information, conducting viewings, and entering into legal agreements (amendments, lease assignments) with landlords and other tenants.",
       "item3": "Passflat is not liable for any disputes, losses, or damages arising from transactions or interactions between users or between users and landlords."
     },

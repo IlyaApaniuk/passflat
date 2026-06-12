@@ -189,9 +189,9 @@ export function LocationScore({
               <Skeleton className="h-4 w-28" />
             </div>
             {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between px-6 py-3">
+              <div key={i} className="flex items-center justify-between px-6 py-3.5">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-7 w-7 rounded-md" />
+                  <Skeleton className="h-9 w-9 rounded-lg" />
                   <Skeleton className="h-3.5 w-24" />
                 </div>
                 <Skeleton className="h-3.5 w-12" />
@@ -228,12 +228,12 @@ export function LocationScore({
             const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
             const catTier = tierStyles(category.score);
             return (
-              <div key={category.key} className="flex items-center justify-between px-6 py-3">
+              <div key={category.key} className="flex items-center justify-between px-6 py-3.5">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-md ${catTier.bg}`}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${catTier.bg}`}
                   >
-                    <Icon className={`h-3.5 w-3.5 ${catTier.text}`} />
+                    <Icon className={`h-[18px] w-[18px] ${catTier.text}`} />
                   </div>
                   <span className="text-sm font-medium">{t(`categories.${category.key}`)}</span>
                 </div>

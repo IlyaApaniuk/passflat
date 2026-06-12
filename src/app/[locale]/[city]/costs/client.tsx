@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
-import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
 import { CostAccessCard } from '@/components/costs/cost-access-card';
 import type { CostAccess } from '@/components/costs/cost-access-card';
 import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
@@ -36,7 +35,6 @@ import {
   Home,
   DoorOpen,
   BarChart3,
-  ShoppingCart,
 } from 'lucide-react';
 
 export type { CostAccess };
@@ -611,12 +609,6 @@ export function CostsOverviewClient({
                                     {t('costs.overview.submitCostReport')}
                                   </Link>
                                 </Button>
-                                <BuyAccessDialog citySlug={citySlug}>
-                                  <Button variant="outline" className="gap-2">
-                                    <ShoppingCart className="h-4 w-4" />
-                                    {t('costs.overview.buyAccessBtn')}
-                                  </Button>
-                                </BuyAccessDialog>
                               </div>
                             </CardContent>
                           </Card>

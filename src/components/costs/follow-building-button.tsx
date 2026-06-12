@@ -68,7 +68,13 @@ export function FollowBuildingButton({
       if (!res.ok) throw new Error('follow request failed');
       if (next) {
         posthog?.capture('building_followed', { building_id: buildingId, city: citySlug });
-        toast.success(t('costs.building.followToast'));
+        toast.success(t('costs.building.followToast'), {
+          classNames: { title: 'text-xs' },
+          action: {
+            label: t('costs.building.followManage'),
+            onClick: () => router.push('/dashboard?tab=follows' as never),
+          },
+        });
       }
     } catch {
       setFollowing(!next); // rollback

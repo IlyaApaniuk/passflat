@@ -21,6 +21,12 @@ import {
   getAdminImportMode,
 } from '@/lib/import-constants';
 
+// Submit rate limit (anti-spam): at most N reports per rolling window per user.
+// Generous enough for someone genuinely filling several flats in one sitting,
+// low enough to stop a flood.
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_LIMIT_MAX_PER_WINDOW = 10;
+
 async function getUser() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -54,6 +60,22 @@ export async function POST(request: NextRequest) {
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Anti-spam rate limit: cap how many reports one account can submit per hour
+    // so a single user can't flood (and poison) the medians — the only asset.
+    // Counts the user's own recent reports (no extra store needed); admins doing
+    // bulk imports are exempt.
+    if (!isCostImportAdmin(user.email)) {
+      const recentCount = await prisma.costReport.count({
+        where: {
+          authorId: user.id,
+          createdAt: { gt: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
+        },
+      });
+      if (recentCount >= RATE_LIMIT_MAX_PER_WINDOW) {
+        return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+      }
     }
 
     // Guarantee a profile exists before any write that FKs to author_id.

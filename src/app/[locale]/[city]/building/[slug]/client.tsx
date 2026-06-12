@@ -36,6 +36,8 @@ import {
   CheckCircle2,
   Info,
   FileText,
+  BarChart3,
+  type LucideIcon,
 } from 'lucide-react';
 
 const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
@@ -83,8 +85,14 @@ function GatedSection({
   const posthog = usePostHog();
   if (show) return <>{children}</>;
   return (
+    // The prompt is the in-flow layer — it defines the wrapper's height, so it is
+    // never clipped even when the gated rows are short (the bug that prompted
+    // this). The blurred teaser sits behind it as `absolute inset-0`. An earlier
+    // pass used `grid` to stack the two, but stretching the `filter: blur()`
+    // layer to the grid cell re-rasterized it during the card's fade-in and
+    // shimmered on desktop; a plain absolute (static-size) blur layer doesn't.
     <div className="relative overflow-hidden rounded-xl">
-      <div className="pointer-events-none select-none blur-[6px]" aria-hidden>
+      <div className="pointer-events-none absolute inset-0 select-none blur-[6px]" aria-hidden>
         {children}
       </div>
       {/* Plain opaque scrim — deliberately NO backdrop-blur here. A
@@ -92,7 +100,7 @@ function GatedSection({
           re-rasterize on scroll, which flickers on desktop (Chrome/Safari).
           The content underneath is already blurred (blur-[6px] above), so the
           scrim alone gives the same frosted look without the compositing cost. */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/75 p-6 text-center">
+      <div className="relative flex flex-col items-center justify-center gap-2 bg-background/75 p-6 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Lock className="h-6 w-6 text-primary" />
         </div>
@@ -107,6 +115,48 @@ function GatedSection({
           </Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Empty-state contribution nudge for "thin" buildings. The blur teaser
+ * (GatedSection) only fires when there IS hidden data to tease; on a building
+ * with no per-utility breakdown — or too little data to compare against the
+ * district — that left the strongest contribution moment (a near-empty
+ * building) with no call to action at all. This fills those gaps. Shown to
+ * everyone: it's a data-coverage prompt, not an access gate.
+ */
+function ContributePrompt({
+  icon: Icon,
+  title,
+  desc,
+  submitHref,
+  source,
+}: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  submitHref: string;
+  source: string;
+}) {
+  const t = useTranslations();
+  const posthog = usePostHog();
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <Icon className="h-6 w-6 text-primary" />
+      </div>
+      <p className="font-semibold">{title}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{desc}</p>
+      <Button asChild className="mt-1">
+        <Link
+          href={submitHref}
+          onClick={() => posthog?.capture('cost_submit_cta_clicked', { source })}
+        >
+          {t('costs.overview.submitMyCosts')}
+        </Link>
+      </Button>
     </div>
   );
 }
@@ -183,7 +233,7 @@ interface BuildingCostsClientProps {
     frequency: string | null;
     count: number;
   }> | null;
-  utilitiesCompleteness: { complete: number; known: number; total: number } | null;
+  utilitiesUnknown: number;
   leaseType: { dominant: string; count: number; total: number } | null;
   comparison: {
     thisBuilding: number | null;
@@ -215,7 +265,7 @@ export function BuildingCostsClient({
   tenure,
   depositMonths,
   periodicBreakdown,
-  utilitiesCompleteness,
+  utilitiesUnknown,
   leaseType,
   comparison,
   citySlug,
@@ -386,12 +436,12 @@ export function BuildingCostsClient({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.3 + i * 0.05 }}
-      className="border-b pb-4 last:border-0 last:pb-0"
+      className="border-b pb-3 last:border-0 last:pb-0"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.bgColor}`}>
-            <item.icon className={`h-5 w-5 ${item.color}`} />
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${item.bgColor}`}>
+            <item.icon className={`h-[18px] w-[18px] ${item.color}`} />
           </div>
           <div>
             <span className="font-medium">{item.label}</span>
@@ -407,7 +457,7 @@ export function BuildingCostsClient({
         </div>
       </div>
       {'winter' in item && item.winter && item.summer && (
-        <p className="mt-1 pl-[52px] text-xs text-muted-foreground">
+        <p className="mt-1 pl-[48px] text-xs text-muted-foreground">
           {t('costs.building.winterSummer', {
             winter: `${item.winter.median} PLN`,
             summer: `${item.summer.median} PLN`,
@@ -415,7 +465,7 @@ export function BuildingCostsClient({
         </p>
       )}
       {'periodicBreakdown' in item && item.periodicBreakdown && (
-        <div className="mt-1 space-y-0.5 pl-[52px]">
+        <div className="mt-1 space-y-0.5 pl-[48px]">
           {item.periodicBreakdown.map((p) => (
             <p key={p.category} className="text-xs text-muted-foreground">
               {t(PERIODIC_CAT_LABEL[p.category] ?? 'costs.building.otherCosts')}
@@ -555,20 +605,17 @@ export function BuildingCostsClient({
                         ≈ {costs.totalMonthlyAvg.median.toLocaleString()} PLN
                       </motion.p>
 
-                      {/* Context for reading the total: does it include utilities or
-                          just rent? Informational — not a quality/trust score. */}
-                      {utilitiesCompleteness && utilitiesCompleteness.known > 0 && (
+                      {/* Flag only genuine tenant «не знаю» answers: utilitiesUnknown
+                          counts reports where a real tenant (source 'user') said they
+                          didn't know utilities, so the median total may understate the
+                          real cost. Scraped imports are excluded (their
+                          utilitiesComplete=false is a provenance marker, not a tenant
+                          answer), so this never trips on imported-only buildings. */}
+                      {utilitiesUnknown > 0 && (
                         <div className="mt-2">
                           <Badge className="gap-1 bg-primary/10 text-primary">
                             <Info className="h-3 w-3" />
-                            {utilitiesCompleteness.complete === utilitiesCompleteness.known
-                              ? t('costs.building.utilitiesComplete')
-                              : utilitiesCompleteness.complete === 0
-                                ? t('costs.building.utilitiesNone')
-                                : t('costs.building.utilitiesPartial', {
-                                    complete: utilitiesCompleteness.complete,
-                                    known: utilitiesCompleteness.known,
-                                  })}
+                            {t('costs.building.utilitiesIncomplete')}
                           </Badge>
                         </div>
                       )}
@@ -754,18 +801,26 @@ export function BuildingCostsClient({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {basicItems.length > 0 && (
-                      <div className="space-y-4">{basicItems.map(renderCostRow)}</div>
+                      <div className="space-y-3">{basicItems.map(renderCostRow)}</div>
                     )}
-                    {detailItems.length > 0 && (
+                    {detailItems.length > 0 ? (
                       <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
-                        <div className="space-y-4">{detailItems.map(renderCostRow)}</div>
+                        <div className="space-y-3">{detailItems.map(renderCostRow)}</div>
                       </GatedSection>
+                    ) : (
+                      <ContributePrompt
+                        icon={FileText}
+                        title={t('costs.building.emptyBreakdownTitle')}
+                        desc={t('costs.building.emptyBreakdownDesc')}
+                        submitHref={`/${citySlug}/costs/submit`}
+                        source="building_breakdown_empty"
+                      />
                     )}
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {(comparison.district || comparison.city) && comparison.thisBuilding && (
+              {(comparison.district || comparison.city) && comparison.thisBuilding != null ? (
                 <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardHeader>
@@ -795,114 +850,144 @@ export function BuildingCostsClient({
                           Hidden until the district has enough reports for the
                           percentile position to mean something. */}
                       {comparison.district &&
-                        comparison.district.count >= TRUST_THRESHOLDS.reliableMin && (
-                          <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
-                            {(() => {
-                              const d = comparison.district!;
-                              const unit = t('costs.building.perM2');
-                              const bars = [
-                                costs?.rent && d.rent
-                                  ? {
-                                      key: 'rent',
-                                      label: t('costs.building.rent'),
-                                      value: costs.rent.median,
-                                      range: d.rent,
-                                      unit: 'PLN',
-                                    }
-                                  : null,
-                                comparison.thisBuildingExpenses != null && d.expenses
-                                  ? {
-                                      key: 'expenses',
-                                      label: t('costs.building.expenses'),
-                                      value: comparison.thisBuildingExpenses,
-                                      range: d.expenses,
-                                      unit: 'PLN',
-                                    }
-                                  : null,
-                                comparison.thisBuildingTotalPerM2 && d.totalPerM2
-                                  ? {
-                                      key: 'total-m2',
-                                      label: t('costs.building.totalPerM2Compare'),
-                                      value: comparison.thisBuildingTotalPerM2,
-                                      range: d.totalPerM2,
-                                      unit,
-                                    }
-                                  : null,
-                                comparison.thisBuildingRentPerM2 && d.rentPerM2
-                                  ? {
-                                      key: 'rent-m2',
-                                      label: t('costs.building.rentPerM2Compare'),
-                                      value: comparison.thisBuildingRentPerM2,
-                                      range: d.rentPerM2,
-                                      unit,
-                                    }
-                                  : null,
-                              ].filter(Boolean) as Array<{
-                                key: string;
-                                label: string;
-                                value: number;
-                                range: StatRange;
-                                unit: string;
-                              }>;
-                              if (bars.length === 0) return null;
-                              return (
-                                <div className="mt-4 space-y-6 border-t pt-4">
-                                  {/* Legend */}
-                                  <div className="space-y-1.5">
-                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
-                                        {t('costs.building.legendBand')}
-                                      </span>
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="h-3 w-px bg-muted-foreground/60" />
-                                        {t('costs.building.legendMedian')}
-                                      </span>
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
-                                        {t('costs.building.legendBuilding')}
-                                      </span>
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      {building.district} ·{' '}
-                                      {t('costs.overview.nReports', {
-                                        count: comparison.district!.count,
-                                      })}
-                                    </p>
+                      comparison.district.count >= TRUST_THRESHOLDS.reliableMin ? (
+                        <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                          {(() => {
+                            const d = comparison.district!;
+                            const unit = t('costs.building.perM2');
+                            const bars = [
+                              costs?.rent && d.rent
+                                ? {
+                                    key: 'rent',
+                                    label: t('costs.building.rent'),
+                                    value: costs.rent.median,
+                                    range: d.rent,
+                                    unit: 'PLN',
+                                  }
+                                : null,
+                              comparison.thisBuildingExpenses != null && d.expenses
+                                ? {
+                                    key: 'expenses',
+                                    label: t('costs.building.expenses'),
+                                    value: comparison.thisBuildingExpenses,
+                                    range: d.expenses,
+                                    unit: 'PLN',
+                                  }
+                                : null,
+                              comparison.thisBuildingTotalPerM2 && d.totalPerM2
+                                ? {
+                                    key: 'total-m2',
+                                    label: t('costs.building.totalPerM2Compare'),
+                                    value: comparison.thisBuildingTotalPerM2,
+                                    range: d.totalPerM2,
+                                    unit,
+                                  }
+                                : null,
+                              comparison.thisBuildingRentPerM2 && d.rentPerM2
+                                ? {
+                                    key: 'rent-m2',
+                                    label: t('costs.building.rentPerM2Compare'),
+                                    value: comparison.thisBuildingRentPerM2,
+                                    range: d.rentPerM2,
+                                    unit,
+                                  }
+                                : null,
+                            ].filter(Boolean) as Array<{
+                              key: string;
+                              label: string;
+                              value: number;
+                              range: StatRange;
+                              unit: string;
+                            }>;
+                            if (bars.length === 0) return null;
+                            return (
+                              <div className="mt-4 space-y-6 border-t pt-4">
+                                {/* Legend */}
+                                <div className="space-y-1.5">
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
+                                      {t('costs.building.legendBand')}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="h-3 w-px bg-muted-foreground/60" />
+                                      {t('costs.building.legendMedian')}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
+                                      {t('costs.building.legendBuilding')}
+                                    </span>
                                   </div>
-                                  {bars.map((bar) => (
-                                    <DistrictPositionBar
-                                      key={bar.key}
-                                      label={bar.label}
-                                      value={bar.value}
-                                      median={bar.range.median}
-                                      p25={bar.range.p25}
-                                      p75={bar.range.p75}
-                                      unit={bar.unit}
-                                    />
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                            {comparison.district?.percentile != null && (
-                              <p className="mt-3 text-sm text-muted-foreground">
-                                {comparison.district.percentile >= 50
-                                  ? t('costs.building.cheaperThanPct', {
-                                      percent: comparison.district.percentile,
-                                      district: building.district,
-                                    })
-                                  : t('costs.building.pricierThanPct', {
-                                      percent: 100 - comparison.district.percentile,
-                                      district: building.district,
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {building.district} ·{' '}
+                                    {t('costs.overview.nReports', {
+                                      count: comparison.district!.count,
                                     })}
-                              </p>
-                            )}
-                          </GatedSection>
-                        )}
+                                  </p>
+                                </div>
+                                {bars.map((bar) => (
+                                  <DistrictPositionBar
+                                    key={bar.key}
+                                    label={bar.label}
+                                    value={bar.value}
+                                    median={bar.range.median}
+                                    p25={bar.range.p25}
+                                    p75={bar.range.p75}
+                                    unit={bar.unit}
+                                  />
+                                ))}
+                              </div>
+                            );
+                          })()}
+                          {comparison.district?.percentile != null && (
+                            <p className="mt-3 text-sm text-muted-foreground">
+                              {comparison.district.percentile >= 50
+                                ? t('costs.building.cheaperThanPct', {
+                                    percent: comparison.district.percentile,
+                                    district: building.district,
+                                  })
+                                : t('costs.building.pricierThanPct', {
+                                    percent: 100 - comparison.district.percentile,
+                                    district: building.district,
+                                  })}
+                            </p>
+                          )}
+                        </GatedSection>
+                      ) : (
+                        // District too thin for position bars (< reliableMin
+                        // reports): nudge to fill the district + invite neighbors
+                        // instead of silently hiding the comparison.
+                        <div className="mt-4">
+                          <ContributePrompt
+                            icon={BarChart3}
+                            title={t('costs.building.emptyDistrictTitle')}
+                            desc={t('costs.building.emptyDistrictDesc')}
+                            submitHref={`/${citySlug}/costs/submit`}
+                            source="building_district_thin"
+                          />
+                        </div>
+                      )}
 
                       <p className="mt-4 text-xs text-muted-foreground">
                         {t('costs.building.comparisonCaption')}
                       </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t('costs.building.comparison')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ContributePrompt
+                        icon={BarChart3}
+                        title={t('costs.building.emptyCompareTitle')}
+                        desc={t('costs.building.emptyCompareDesc')}
+                        submitHref={`/${citySlug}/costs/submit`}
+                        source="building_comparison_empty"
+                      />
                     </CardContent>
                   </Card>
                 </motion.div>
