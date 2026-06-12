@@ -41,7 +41,6 @@ export default async function HelpPage({ params }: PageProps) {
     { question: t('leaseTakeovers.q3'), answer: t('leaseTakeovers.a3') },
     { question: t('leaseTakeovers.q4'), answer: t('leaseTakeovers.a4') },
     { question: t('leaseTakeovers.q5'), answer: t('leaseTakeovers.a5') },
-    { question: t('leaseTakeovers.q6'), answer: t('leaseTakeovers.a6') },
     { question: t('costTransparency.q1'), answer: t('costTransparency.a1') },
     { question: t('costTransparency.q2'), answer: t('costTransparency.a2') },
     { question: t('costTransparency.q3'), answer: t('costTransparency.a3') },

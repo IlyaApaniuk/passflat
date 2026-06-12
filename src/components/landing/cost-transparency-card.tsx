@@ -5,8 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Reveal } from '@/components/ui/reveal';
 import { Button } from '@/components/ui/button';
-import { BuyAccessDialog } from '@/components/costs/buy-access-dialog';
-import { Lock, CheckCircle2, ShoppingCart } from 'lucide-react';
+import { Lock, CheckCircle2 } from 'lucide-react';
 
 export interface CostBuildingData {
   address: string;
@@ -153,15 +152,6 @@ export function CostTransparencyCard({
               >
                 {t('landing.costTransparency.submitCosts')}
               </Link>
-              <span className="text-xs text-muted-foreground">
-                {t('landing.costTransparency.orBuyAccess')}{' '}
-                <BuyAccessDialog citySlug={citySlug}>
-                  <button className="inline font-medium text-accent hover:underline">
-                    <ShoppingCart className="mr-0.5 inline h-3 w-3" />
-                    {t('costs.overview.buyAccessBtn')}
-                  </button>
-                </BuyAccessDialog>
-              </span>
             </div>
           </div>
         )}

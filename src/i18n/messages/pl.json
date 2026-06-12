@@ -23,15 +23,15 @@
     "learnMore": "Dowiedz się więcej"
   },
   "meta": {
-    "homeTitle": "Passflat — Znajdź swoje następne mieszkanie w Polsce",
-    "homeDescription": "Europejski marketplace wynajmu z transparentnymi kosztami. Cesje najmu, porównanie rzeczywistych rachunków za media i idealne mieszkanie w Warszawie.",
-    "aboutDescription": "Poznaj Passflat — europejski marketplace wynajmu, który czyni wynajem w Polsce transparentnym i społecznościowym. Cesje najmu, raporty kosztów i więcej.",
-    "howItWorksDescription": "Jak korzystać z Passflat krok po kroku — cesje najmu, szukanie współlokatorów i transparentność kosztów. Znajdź lub przekaż mieszkanie w Warszawie.",
-    "contactDescription": "Skontaktuj się z zespołem Passflat. Zadaj pytanie, zgłoś problem, zaproponuj współpracę lub podziel się opinią o naszym marketplace wynajmu w Warszawie.",
-    "helpDescription": "Odpowiedzi na najczęściej zadawane pytania o Passflat — cesje najmu, raporty kosztów, ogłoszenia i zarządzanie kontem. Przeglądaj nasz FAQ.",
-    "blogDescription": "Poradniki i porady dotyczące wynajmu w Warszawie — cesje najmu, ukryte koszty, wskazówki dla obcokrajowców i wszystko co musisz wiedzieć o rynku.",
-    "termsDescription": "Regulamin Passflat — zasady ogłoszeń, raportów kosztów, płatności, praw konsumenta i korzystania z platformy. Przeczytaj przed skorzystaniem z serwisu.",
-    "privacyDescription": "Polityka prywatności Passflat — jak zbieramy, wykorzystujemy i chronimy Twoje dane osobowe zgodnie z RODO. Procesory danych, prawa, cookies i kontakt.",
+    "homeTitle": "Passflat — wynajem w Warszawie: koszty, ogłoszenia, dokumenty",
+    "homeDescription": "Realne koszty wynajmu w Warszawie od samych najemców, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów. Poznaj prawdziwą cenę przed podpisaniem.",
+    "aboutDescription": "Passflat — serwis najmu w Warszawie: realne koszty od najemców (czynsz, media, kaucje), ogłoszenia o cesji i podnajmie oraz darmowe wzory dokumentów. Wszystko widać przed podpisaniem.",
+    "howItWorksDescription": "Jak działa Passflat: zobacz realne koszty według budynków i dzielnic Warszawy, przekaż najem, znajdź współlokatora lub podnajem i pobierz darmowe wzory dokumentów. Krok po kroku i przejrzyście.",
+    "contactDescription": "Skontaktuj się z zespołem Passflat — pytanie, problem, pomysł na współpracę lub opinia o serwisie przejrzystych kosztów najmu.",
+    "helpDescription": "Odpowiedzi na najczęstsze pytania Passflat: cesja najmu, raporty kosztów, ogłoszenia i konto. Zajrzyj do sekcji FAQ.",
+    "blogDescription": "Poradniki i wskazówki o wynajmie w Warszawie: cesja, ukryte koszty, media i porady dla obcokrajowców — wszystko o realnym rynku najmu.",
+    "termsDescription": "Regulamin Passflat: zasady ogłoszeń, raportów kosztów, praw użytkowników i działania platformy.",
+    "privacyDescription": "Polityka prywatności Passflat: zbieranie, wykorzystanie i ochrona danych osobowych zgodnie z RODO. Procesory danych, Twoje prawa, cookies i kontakt.",
     "pricingDescription": "Cennik Passflat — darmowe ogłoszenia, raporty kosztów i ulubione. Opcjonalne promowane ogłoszenia dla większej widoczności od 39 PLN."
   },
   "common": {
@@ -220,7 +220,7 @@
       "q2": "Czy to legalne?",
       "a2": "Tak, jak najbardziej. Cesja najmu jest regulowana przez Kodeks cywilny. Wymaga pisemnej zgody trzech stron: obecnego najemcy, nowego najemcy i wynajmującego.",
       "q3": "Ile kosztuje Passflat?",
-      "a3": "Przeglądanie ofert i dodawanie ogłoszeń jest bezpłatne (do 2 aktywnych). Raporty kosztów są darmowe po dodaniu własnych danych — lub możesz kupić czasowy dostęp. Promowane ogłoszenia od 39 PLN za 7 dni.",
+      "a3": "Passflat jest darmowy: przeglądanie i dodawanie ogłoszeń (do 2 aktywnych), raporty kosztów i wzory dokumentów — bez opłat.",
       "q4": "Czy potrzebuję zgody wynajmującego?",
       "a4": "Tak, wynajmujący musi wyrazić zgodę na cesję. Większość właścicieli się zgadza, bo zyskują sprawdzonego najemcę i unikają pustostanu — to korzystne dla wszystkich.",
       "q5": "Jak działa przejrzystość kosztów?",
@@ -271,10 +271,10 @@
       "subtitle": "Cesja najmu, współlokator lub podnajem — znajdź odpowiednią opcję z przejrzystymi cenami.",
       "browseCta": "Przeglądaj oferty",
       "listCta": "Dodaj ogłoszenie",
-      "freeNote": "Dodawanie jest darmowe — promowanie od 39 PLN"
+      "freeNote": "Dodawanie ogłoszeń jest darmowe"
     },
     "footer": {
-      "tagline": "Europejski marketplace wynajmu z przejrzystymi cenami. Znajdź nowe mieszkanie z realnymi danymi o kosztach.",
+      "tagline": "Wynajem w Warszawie bez niespodzianek: realne koszty od najemców, ogłoszenia i darmowe wzory dokumentów.",
       "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
       "product": "Produkt",
       "browseListings": "Cesje najmu",
@@ -854,7 +854,7 @@
       "privacyDesc": "Pokazujemy tylko dane zagregowane. Dokładne koszty nigdy nie są publicznie wyświetlane.",
       "deposit": "Kaucja",
       "tenancyTitle": "Twój najem",
-      "tenancyHint": "Opcjonalnie — pomaga innym najemcom wiedzieć, jak długo się mieszka i czy kaucja wraca.",
+      "tenancyHint": "Pomaga innym najemcom wiedzieć, jak długo się mieszka i czy kaucja wraca.",
       "addTenancyDetails": "Dodaj szczegóły najmu i zwrotu kaucji",
       "currentTenant": "Mieszkam teraz",
       "pastTenant": "Wyprowadziłem się",
@@ -952,6 +952,12 @@
       "seasonalHeating": "Sezonowe koszty ogrzewania",
       "seasonalHeatingDesc": "Średnie koszty ogrzewania wg miesiąca. Miesiące zimowe (lis-lut) mają zwykle najwyższe koszty.",
       "comparison": "Porównanie kosztów",
+      "emptyCompareTitle": "Porównaj ten budynek z dzielnicą",
+      "emptyCompareDesc": "Na razie za mało danych, by pokazać, jak ten budynek wypada na tle dzielnicy. Dodaj swoje koszty — pomożesz sobie i innym.",
+      "emptyBreakdownTitle": "Pokaż pełny rozkład kosztów",
+      "emptyBreakdownDesc": "Brakuje jeszcze rozbicia na media (prąd, gaz, woda) — dodaj swoje koszty w 2 minuty.",
+      "emptyDistrictTitle": "Pozycja budynku w dzielnicy",
+      "emptyDistrictDesc": "W dzielnicy jest na razie za mało zgłoszeń, by pokazać, gdzie ten budynek mieści się w zakresie cen. Dodaj swoje koszty i zaproś sąsiadów.",
       "thisBuilding": "Ten budynek",
       "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
@@ -982,9 +988,7 @@
       "depositReturnedRate": "{percent}% odzyskało kaucję",
       "depositReturnedAvgPct": "≈ {percent}% kaucji odzyskane",
       "depositMonths": "≈ {months} × czynsz",
-      "utilitiesComplete": "Media wliczone w sumę",
-      "utilitiesPartial": "Media wliczone w {complete} z {known} zgłoszeń",
-      "utilitiesNone": "Media nie wliczone — suma zaniżona",
+      "utilitiesIncomplete": "Nie wszyscy podali media — realna kwota może być wyższa",
       "leaseTypeLabel": "Rodzaj najmu",
       "leaseStandardShort": "Standardowy",
       "leaseOccasionalShort": "Okazjonalny",
@@ -1097,9 +1101,9 @@
       "label": "Dla obecnych najemców",
       "title": "Przekaż najem — zachowaj kaucję",
       "step1Title": "Utwórz ogłoszenie",
-      "step1Desc": "Dodaj mieszkanie z adresem, zdjęciami i pełnym rozbiciem kosztów. Pierwsze 2 ogłoszenia są darmowe — kolejne wymagają jednorazowej opłaty.",
+      "step1Desc": "Dodaj mieszkanie z adresem, zdjęciami i pełnym rozbiciem kosztów. To darmowe — do 2 aktywnych ogłoszeń.",
       "step2Title": "Pojaw się na mapie",
-      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania. Opcjonalna promocja zwiększa widoczność na 7, 14 lub 30 dni.",
+      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania — zobaczą je najemcy szukający mieszkania.",
       "step3Title": "Otrzymuj zainteresowania",
       "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości na swoim koncie.",
       "step4Title": "Wybierz zastępcę",
@@ -1113,8 +1117,8 @@
       "title": "Poznaj realne koszty przed podpisaniem",
       "step1Title": "Zgłoś anonimowy raport kosztów",
       "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet — w tym rachunkami, które przychodzą rzadziej (np. rozliczenie wody co 6 miesięcy), które przeliczamy na równowartość miesięczną.",
-      "step2Title": "Odblokuj pełną bazę danych",
-      "step2Desc": "Po dodaniu raportu uzyskasz pełny dostęp do danych o kosztach wszystkich budynków. Alternatywnie możesz kupić czasowy dostęp (7, 30 lub 90 dni), jeśli nie masz jeszcze danych do udostępnienia.",
+      "step2Title": "Przeglądaj całą bazę kosztów",
+      "step2Desc": "Dane o kosztach są otwarte — zobacz liczby dla wszystkich budynków. Dodaj swój raport, by baza rosła i była aktualna.",
       "step3Title": "Porównaj przed podpisaniem",
       "step3Desc": "Zobacz typowe (mediana), minimalne i maksymalne koszty na budynek. <compareLink>Porównaj koszty</compareLink> dzielnic — zanim podpiszesz umowę.",
       "cta": "Dodaj swoje koszty",
@@ -1147,7 +1151,7 @@
       "q3": "Czy potrzebuję zgody wynajmującego?",
       "a3": "Tak. Wynajmujący musi wyrazić zgodę na przeniesienie najmu. Większość wynajmujących się zgadza, ponieważ zyskują solidnego najemcę i unikają pustostanu. To w interesie wszystkich.",
       "q4": "Ile kosztuje Passflat?",
-      "a4": "Masz 2 darmowe aktywne ogłoszenia. Kolejne wymagają jednorazowej opłaty. Opcjonalne promowane ogłoszenia (dla lepszej widoczności) zaczynają się od 39 PLN. Raporty kosztów są bezpłatne po dodaniu własnych danych — możesz też kupić czasowy dostęp.",
+      "a4": "Passflat jest darmowy: ogłoszenia (do 2 aktywnych), raporty kosztów i wzory dokumentów — bez opłat.",
       "q5": "Czy Passflat jest dostępny poza Warszawą?",
       "a5": "Zaczynamy od Warszawy, ale platforma jest zaprojektowana z myślą o ekspansji na wiele miast. Kraków, Wrocław i inne europejskie miasta są w naszym planie.",
       "q6": "Czy mogę dodać raporty kosztów dla więcej niż jednego budynku?",
@@ -1166,7 +1170,8 @@
       "title": "Wynajem w Polsce jest zepsuty",
       "p1": "Najemcy tracą kaucje, gdy muszą się wyprowadzić przed końcem umowy. <howItWorksLink>Nie ma łatwego sposobu na znalezienie zastępcy</howItWorksLink> — więc albo płacisz karę, albo tracisz miesięczne czynsze.",
       "p2": "Koszty mediów są ukryte do momentu podpisania umowy. Dowiadujesz się o realnych miesięcznych wydatkach dopiero po przeprowadzce — a wtedy jest już za późno.",
-      "p3": "Prowizje pośredników są wysokie, a obcokrajowcy mają jeszcze większą lukę informacyjną przy szukaniu mieszkania."
+      "p3": "Prowizje pośredników są wysokie, a obcokrajowcy mają jeszcze większą lukę informacyjną przy szukaniu mieszkania.",
+      "p4": "A gdy zastępca się znajdzie — zaczyna się papierkowa robota: cesja, podnajem, umowa współlokatorska. Gotowych wzorów brak, prawnik drogi, a pomyłka w umowie jest groźna."
     },
     "solution": {
       "label": "Nasze rozwiązanie",
@@ -1183,8 +1188,8 @@
     "team": {
       "label": "Kim jesteśmy",
       "title": "Stworzone przez najemców, dla najemców",
-      "description": "Jesteśmy małym zespołem inżynierów i projektantów z Warszawy. Sami tu wynajmujemy i znamy ten ból z pierwszej ręki — utracone kaucje, niespodziewane rachunki za media i frustracja związana z nieprzejrzystym rynkiem wynajmu. Stworzyliśmy Passflat w 2024 roku, bo sami tego potrzebowaliśmy.",
-      "description2": "Między nami mamy 10+ przeprowadzek po Warszawie, doświadczenie z agencjami po obu stronach i przejście procesu cesji zarówno jako najemcy, jak i wynajmujący. To doświadczenie kształtuje każdą funkcję, którą tworzymy."
+      "description": "Sami wynajmujemy w Warszawie i przeszliśmy to wszystko na własnej skórze — utracone kaucje, rachunki za media, o których nikt nie uprzedził, cenę, którą poznajesz dopiero po przeprowadzce. Z tego bólu wyrósł Passflat.",
+      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Obecnie to realne koszty według budynków, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów."
     },
     "values": {
       "label": "Nasze zasady",
@@ -1192,16 +1197,16 @@
       "principle1": "Żadnych ukrytych informacji",
       "principle1Desc": "Pokazujemy realne liczby — nawet gdy są niewygodne dla rynku. Każde ogłoszenie zawiera pełny podział kosztów, zanim się z kimkolwiek skontaktujesz.",
       "principle2": "Twoje dane należą do Ciebie",
-      "principle2Desc": "Każdy raport kosztów pozostaje anonimowy i nigdy nie sprzedajemy go stronom trzecim. Dane o kosztach nie są ukryte za sztywnym paywallem — dodanie jednego własnego raportu odblokowuje całą bazę za darmo.",
+      "principle2Desc": "Każdy raport kosztów jest anonimowy — nie da się go powiązać z Tobą, i nigdy nie sprzedajemy danych stronom trzecim.",
       "principle3": "Otwarte domyślnie",
-      "principle3Desc": "Ogłoszenia są w pełni otwarte — bez rejestracji, bez planów premium. Dane o kosztach od społeczności odblokowujesz, dodając jeden własny raport (lub kupując opcjonalny czasowy dostęp), dzięki czemu baza wciąż rośnie dla wszystkich.",
+      "principle3Desc": "Ogłoszenia i dane o kosztach są otwarte dla wszystkich — bez rejestracji i bez paywalla. Dodaj swój raport, by baza rosła i pozostawała aktualna.",
       "principle4": "Najemca na pierwszym miejscu",
       "principle4Desc": "Nie współpracujemy z agencjami i nie sprzedajemy Twoich danych. Każda decyzja produktowa podejmowana jest z perspektywy najemcy."
     },
     "vision": {
       "label": "Dokąd zmierzamy",
       "title": "Zaczynamy w Warszawie. Rozszerzamy się na Europę.",
-      "description": "Warszawa to nasz pierwszy rynek, ale architektura od początku wspiera wiele miast i krajów. Kraków, Wrocław i inne europejskie miasta są w naszym planie."
+      "description": "Teraz — Warszawa. Dalej planujemy Kraków, Wrocław i inne miasta."
     },
     "stats": {
       "listings": "Aktywnych ogłoszeń",
@@ -1288,7 +1293,7 @@
     "billing": {
       "title": "Płatności",
       "empty": "Brak płatności",
-      "emptyDesc": "Twoje płatności za dodatkowe ogłoszenia, promocje i dostęp do danych o kosztach pojawią się tutaj.",
+      "emptyDesc": "Tutaj pojawi się historia Twoich płatności.",
       "viewReceipt": "Zobacz potwierdzenie",
       "receiptError": "Potwierdzenie nie jest jeszcze dostępne. Spróbuj ponownie za chwilę.",
       "support": "Pomoc",
@@ -1377,9 +1382,9 @@
     "general": {
       "title": "Ogólne",
       "q1": "Czym jest Passflat?",
-      "a1": "Passflat to marketplace najmu specjalizujący się w cesji najmu w Warszawie. Zawiera również bazę przejrzystości kosztów, dzięki której możesz zobaczyć realne koszty mediów przed podpisaniem umowy.",
+      "a1": "Passflat to marketplace najmu w Warszawie: ogłoszenia (cesja najmu, szukanie współlokatora, podnajem), baza realnych kosztów od najemców (czynsz, media, kaucje) i darmowe wzory dokumentów do transakcji.",
       "q2": "Czy Passflat jest darmowy?",
-      "a2": "Tak. Przeglądanie ofert, raporty kosztów i dodawanie ogłoszeń są bezpłatne. Oferujemy opcjonalne promowane ogłoszenia dla lepszej widoczności, od 39 PLN.",
+      "a2": "Tak. Przeglądanie ofert, raporty kosztów, dodawanie ogłoszeń i wzory dokumentów — są bezpłatne.",
       "q3": "W jakich miastach działa Passflat?",
       "a3": "Obecnie działamy w Warszawie. Ekspansja do Krakowa, Wrocławia i innych europejskich miast jest w naszych planach.",
       "q4": "Jakie języki obsługuje Passflat?",
@@ -1405,7 +1410,7 @@
       "q1": "Jak działa baza kosztów?",
       "a1": "Najemcy przesyłają anonimowe raporty kosztów dla swoich budynków — w tym czynsz, opłatę administracyjną, prąd, gaz, ogrzewanie, wodę i internet. Dane są agregowane i wyświetlane per budynek, aby przyszli najemcy mogli zobaczyć, ile faktycznie zapłacą.",
       "q2": "Jak odblokować dane o kosztach?",
-      "a2": "Możesz odblokować pełny dostęp, dodając własny raport kosztów (bezpłatnie, na stałe) lub kupując czasowy dostęp (7, 30 lub 90 dni). Baza jest napędzana przez społeczność — dodanie danych pomaga wszystkim i wspiera jej rozwój.",
+      "a2": "Dane o kosztach są otwarte dla wszystkich. Dodaj swój raport — bezpłatnie i na stałe — by zobaczyć szczegółowy rozkład i pomóc bazie rosnąć dla całej społeczności.",
       "q3": "Czy moje dane są anonimowe?",
       "a3": "Tak. Dane kosztowe są pokazywane w formie zagregowanej (średnie, min/max na budynek), więc poszczególne zgłoszenia nie mogą być zidentyfikowane.",
       "q4": "Jakie koszty powinienem zgłosić?",
@@ -1454,7 +1459,7 @@
     "lastUpdated": "Ostatnia aktualizacja: 1 czerwca 2026",
     "intro": {
       "title": "Wprowadzenie",
-      "p1": "Passflat (\"my\", \"nas\", \"nasz\") to platforma marketplace wynajmu prowadzona z Warszawy, Polska. Niniejsza Polityka Prywatności wyjaśnia, w jaki sposób zbieramy, wykorzystujemy, przechowujemy i chronimy Twoje dane osobowe podczas korzystania z naszej strony internetowej i usług na passflat.com.",
+      "p1": "Passflat (\"my\", \"nas\", \"nasz\") to platforma najmu (marketplace ogłoszeń, dane o realnych kosztach od użytkowników i wzory dokumentów) prowadzona z Warszawy, Polska. Niniejsza Polityka Prywatności wyjaśnia, w jaki sposób zbieramy, wykorzystujemy, przechowujemy i chronimy Twoje dane osobowe podczas korzystania z naszej strony internetowej i usług na passflat.com.",
       "p2": "Jesteśmy zobowiązani do ochrony Twojej prywatności zgodnie z Ogólnym Rozporządzeniem o Ochronie Danych (RODO) oraz obowiązującym polskim prawem o ochronie danych. Korzystając z Passflat, potwierdzasz, że zapoznałeś się z niniejszą polityką i ją rozumiesz."
     },
     "dataCollected": {
@@ -1651,7 +1656,7 @@
     },
     "liability": {
       "title": "7. Ograniczenie odpowiedzialności",
-      "item1": "Passflat to platforma marketplace. Nie weryfikujemy mieszkań, nie przeprowadzamy inspekcji nieruchomości ani nie gwarantujemy dokładności informacji zamieszczonych przez użytkowników.",
+      "item1": "Passflat to platforma z ogłoszeniami, danymi o kosztach od użytkowników i wzorami dokumentów. Nie weryfikujemy mieszkań, nie przeprowadzamy inspekcji nieruchomości ani nie gwarantujemy dokładności informacji zamieszczonych przez użytkowników (w tym raportów kosztów). Wzory dokumentów to podstawowe szablony i nie stanowią porady prawnej.",
       "item2": "Użytkownicy ponoszą wyłączną odpowiedzialność za weryfikację informacji w ogłoszeniach, przeprowadzanie oględzin i zawieranie umów prawnych (aneksów, cesji najmu) z wynajmującymi i innymi najemcami.",
       "item3": "Passflat nie ponosi odpowiedzialności za jakiekolwiek spory, straty lub szkody wynikające z transakcji lub interakcji między użytkownikami lub między użytkownikami a wynajmującymi."
     },
