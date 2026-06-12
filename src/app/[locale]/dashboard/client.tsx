@@ -498,7 +498,7 @@ export function DashboardClient({
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold">{t('dashboard.costsSectionTitle')}</h2>
               {costReports.length > 0 && (
-                <Button className="gap-2" asChild>
+                <Button variant="outline" className="gap-2" asChild>
                   <Link href={`/${costReports[0]?.citySlug ?? 'warsaw'}/costs/submit`}>
                     <Plus className="h-4 w-4" />
                     {t('dashboard.addCostReport')}
@@ -528,7 +528,7 @@ export function DashboardClient({
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
+                <Button variant="ghost" size="sm" className="shrink-0 gap-2" asChild>
                   <Link href={`/${accessCitySlug}/costs`}>{t('dashboard.accessBrowse')}</Link>
                 </Button>
               </div>
