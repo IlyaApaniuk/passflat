@@ -11,7 +11,7 @@ import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { ShareButton } from '@/components/costs/share-button';
-import { ArrowLeft, ArrowRight, Building2, Plus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, Calculator, Plus, Users } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
 export const revalidate = 600;
@@ -145,6 +145,12 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                 <Link href={`/${city}/costs/submit`}>
                   <Plus className="mr-1.5 h-4 w-4" />
                   {t('costs.overview.submitMyCosts')}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/${city}/calculator?district=${district}`}>
+                  <Calculator className="mr-1.5 h-4 w-4" />
+                  {t('calculator.badge')}
                 </Link>
               </Button>
               <Button variant="outline" asChild>

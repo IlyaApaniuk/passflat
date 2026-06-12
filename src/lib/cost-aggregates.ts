@@ -128,6 +128,9 @@ export type DistrictRollup = {
   medianAdminFee: number;
   medianRentPerM2: number;
   medianTotalPerM2: number;
+  /** Real median czynsz/komunalka lump per m² — anchors the calculator's czynsz
+   *  estimate where a district has enough reports (else norms are used). */
+  medianAdminFeePerM2: number;
   medianExpenses: number;
 };
 
@@ -156,6 +159,7 @@ export function rollUpDistricts(
         medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
         medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
         medianTotalPerM2: medianOf(dBuildings.map((b) => b.medianTotalPerM2 ?? 0)),
+        medianAdminFeePerM2: medianOf(dBuildings.map((b) => b.medianAdminFeePerM2 ?? 0)),
         medianExpenses: medianOf(dBuildings.map((b) => b.medianExpenses ?? 0)),
       };
     })
