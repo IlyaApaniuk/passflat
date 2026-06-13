@@ -667,8 +667,8 @@
     "metaDescription": "Oszacuj realny miesięczny koszt wynajmu w {city}: czynsz najmu z mediany lokatorów plus media według stawek Warszawy — czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet.",
     "breadcrumb": "Kalkulator",
     "badge": "Kalkulator kosztów",
-    "h1": "Ile naprawdę kosztuje wynajem w {city}",
-    "intro": "Ile naprawdę kosztuje miesięcznie mieszkanie w Warszawie — czynsz najmu plus media. Czynsz najmu bierzemy z realnej mediany zgłoszeń lokatorów, media liczymy według aktualnych stawek Warszawy. To orientacja do planowania, nie dokładny rachunek.",
+    "h1": "Ile kosztuje wynajem w {city} z wszystkimi opłatami",
+    "intro": "Pełny miesięczny koszt mieszkania ze wszystkimi opłatami: czynsz najmu plus media (czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet). Czynsz najmu bierzemy z mediany zgłoszeń lokatorów, media liczymy według aktualnych stawek Warszawy. To orientacja do planowania, nie dokładny rachunek.",
     "controls": {
       "district": "Dzielnica",
       "allDistricts": "Wszystkie dzielnice",
@@ -696,11 +696,11 @@
       "czynszData": "według realnej mediany czynszu w tej dzielnicy",
       "breakdownToggle": "Co składa się na czynsz",
       "maintenance": "Utrzymanie budynku, fundusz remontowy",
-      "heating": "Ogrzewanie (w skali roku)",
+      "heating": "Ogrzewanie (średnio na miesiąc)",
       "water": "Woda i ścieki",
       "garbage": "Wywóz śmieci",
       "breakdownNote": "To składniki czynszu.",
-      "electricity": "Prąd (własny licznik)",
+      "electricity": "Prąd",
       "internet": "Internet",
       "gas": "Gaz"
     },
@@ -730,7 +730,7 @@
     "title": "Przejrzystość kosztów",
     "subtitle": "Realne koszty najmu zgłoszone przez najemców",
     "calculatorTeaser": {
-      "title": "Ile realnie wyjdzie miesięcznie?",
+      "title": "Ile wyjdzie miesięcznie z wszystkimi opłatami?",
       "desc": "Czynsz najmu plus media — szacunek w kilka kliknięć",
       "cta": "Otwórz kalkulator"
     },

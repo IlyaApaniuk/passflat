@@ -42,8 +42,8 @@ export const WARSAW_NORMS = {
   /** Apartment electricity use: a base load + per person, no electric heating. */
   electricityBaseKwh: 60,
   electricityPerPersonKwh: 55,
-  /** Home internet, flat monthly. */
-  internetFlat: [50, 70] as const,
+  /** Home internet, flat monthly (basic plan up to faster fibre). */
+  internetFlat: [50, 120] as const,
   /** Gas (cooking/water), only when the flat has a gas connection. */
   gasFlat: [30, 80] as const,
   /** ± band applied around a point estimate that has no natural low/high of its own

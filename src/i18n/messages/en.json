@@ -667,8 +667,8 @@
     "metaDescription": "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities based on Warsaw tariffs — admin fee (czynsz), heating, electricity, water, garbage, internet.",
     "breadcrumb": "Calculator",
     "badge": "Cost calculator",
-    "h1": "What you'll actually spend renting in {city}",
-    "intro": "Your monthly budget for an apartment — rent plus utilities. Rent comes from the median of tenant reports; utilities are calculated from current Warsaw tariffs. It is a planning estimate, not an exact bill.",
+    "h1": "What renting in {city} costs with all payments included",
+    "intro": "The full monthly cost of a flat with all payments included: rent plus utilities (czynsz, heating, electricity, water, garbage, internet). Rent comes from the median of tenant reports; utilities are calculated from current Warsaw tariffs. It is a planning estimate, not an exact bill.",
     "controls": {
       "district": "District",
       "allDistricts": "All districts",
@@ -696,11 +696,11 @@
       "czynszData": "from the czynsz median in this district",
       "breakdownToggle": "What is inside czynsz",
       "maintenance": "Building upkeep, repair fund",
-      "heating": "Heating (annualised)",
+      "heating": "Heating (monthly average)",
       "water": "Water and sewage",
       "garbage": "Garbage collection",
       "breakdownNote": "These are the parts that make up czynsz.",
-      "electricity": "Electricity (own meter)",
+      "electricity": "Electricity",
       "internet": "Internet",
       "gas": "Gas"
     },
@@ -730,7 +730,7 @@
     "title": "Cost Transparency",
     "subtitle": "What tenants actually pay to rent",
     "calculatorTeaser": {
-      "title": "What will it actually cost per month?",
+      "title": "How much per month with all payments included?",
       "desc": "Rent plus utilities — an estimate in a couple of clicks",
       "cta": "Open the calculator"
     },
