@@ -699,7 +699,7 @@
       "heating": "Heating (annualised)",
       "water": "Water and sewage",
       "garbage": "Garbage collection",
-      "breakdownNote": "These are the parts that make up czynsz. We do not add them to the total separately, to avoid double counting.",
+      "breakdownNote": "These are the parts that make up czynsz.",
       "electricity": "Electricity (own meter)",
       "internet": "Internet",
       "gas": "Gas"

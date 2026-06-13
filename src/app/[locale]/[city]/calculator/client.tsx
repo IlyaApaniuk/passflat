@@ -236,7 +236,7 @@ export function CalculatorClient({
                   max={300}
                   value={area}
                   onChange={(e) => setArea(Math.max(0, Number(e.target.value) || 0))}
-                  className="w-24 tabular-nums"
+                  className="min-w-0 flex-1 tabular-nums"
                 />
                 <span className="text-sm text-muted-foreground">
                   {t('calculator.controls.areaUnit')}

@@ -699,7 +699,7 @@
       "heating": "Ogrzewanie (w skali roku)",
       "water": "Woda i ścieki",
       "garbage": "Wywóz śmieci",
-      "breakdownNote": "To składniki czynszu. Nie dodajemy ich osobno do sumy, żeby nie policzyć dwa razy.",
+      "breakdownNote": "To składniki czynszu.",
       "electricity": "Prąd (własny licznik)",
       "internet": "Internet",
       "gas": "Gaz"
