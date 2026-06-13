@@ -317,6 +317,24 @@
     "terms": "Terms of Service"
   },
   "listings": {
+    "report": {
+      "button": "Report",
+      "title": "Report this listing",
+      "description": "Tell us what's wrong. We'll review the listing.",
+      "reasons": {
+        "scam": "Scam",
+        "inaccurate": "Inaccurate information",
+        "offensive": "Offensive or discriminatory content",
+        "spam": "Spam or duplicate",
+        "other": "Other"
+      },
+      "detailPlaceholder": "Details (optional)",
+      "loginRequired": "Sign in to report",
+      "success": "Thanks, your report was sent",
+      "error": "Could not send. Please try again.",
+      "cancel": "Cancel",
+      "submit": "Submit"
+    },
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
     "titleRoommate": "Roommate Search",
@@ -661,6 +679,28 @@
   "share": {
     "share": "Share",
     "copied": "Link copied"
+  },
+  "rentReport": {
+    "metaTitle": "How much rent costs in Warsaw in {year} — real tenant data",
+    "metaDescription": "Real rental costs in Warsaw in {year} by district: median rent and utilities. Updated automatically.",
+    "ogTitle": "Renting in Warsaw {year}: real data",
+    "badge": "Community data",
+    "h1": "How much rent costs in Warsaw in {year}",
+    "updated": "Updated: {date}",
+    "lead": "Real rental costs in Warsaw by district: the typical rent and utilities. The figures update as new reports come in.",
+    "perM2": "Per m²",
+    "tableHeading": "Costs by district",
+    "colDistrict": "District",
+    "colRent": "Rent",
+    "colExpenses": "Expenses",
+    "colTotal": "Total",
+    "colReports": "Reports",
+    "methodologyTitle": "How we calculate",
+    "methodologyBody": "Rent is the typical (median) price in the district. Expenses are utilities and charges on top of rent; the calculator estimates them for a specific flat. The more reports, the more accurate the data.",
+    "ctaCalculator": "Calculate your cost",
+    "ctaSubmit": "Add your costs",
+    "ctaDistricts": "Browse by district",
+    "backToBlog": "← Blog"
   },
   "calculator": {
     "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",

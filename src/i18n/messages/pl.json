@@ -317,6 +317,24 @@
     "terms": "Regulamin"
   },
   "listings": {
+    "report": {
+      "button": "Zgłoś",
+      "title": "Zgłoś ogłoszenie",
+      "description": "Napisz, co jest nie tak. Sprawdzimy ogłoszenie.",
+      "reasons": {
+        "scam": "Oszustwo",
+        "inaccurate": "Nieprawdziwe informacje",
+        "offensive": "Treści obraźliwe lub dyskryminujące",
+        "spam": "Spam lub duplikat",
+        "other": "Inne"
+      },
+      "detailPlaceholder": "Szczegóły (opcjonalnie)",
+      "loginRequired": "Zaloguj się, aby zgłosić",
+      "success": "Dziękujemy, zgłoszenie wysłane",
+      "error": "Nie udało się wysłać. Spróbuj ponownie.",
+      "cancel": "Anuluj",
+      "submit": "Wyślij"
+    },
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
     "titleRoommate": "Szukam współlokatora",
@@ -661,6 +679,28 @@
   "share": {
     "share": "Udostępnij",
     "copied": "Skopiowano link"
+  },
+  "rentReport": {
+    "metaTitle": "Ile kosztuje wynajem w Warszawie w {year} — realne dane lokatorów",
+    "metaDescription": "Realne koszty wynajmu w Warszawie w {year} według dzielnic: mediany czynszu i mediów. Aktualizowane automatycznie.",
+    "ogTitle": "Wynajem w Warszawie {year}: realne dane",
+    "badge": "Dane społeczności",
+    "h1": "Ile kosztuje wynajem w Warszawie w {year}",
+    "updated": "Zaktualizowano: {date}",
+    "lead": "Realne koszty wynajmu w Warszawie według dzielnic: ile średnio kosztuje czynsz najmu i media. Liczby aktualizują się wraz z napływem nowych zgłoszeń.",
+    "perM2": "Za m²",
+    "tableHeading": "Koszty według dzielnic",
+    "colDistrict": "Dzielnica",
+    "colRent": "Czynsz najmu",
+    "colExpenses": "Media",
+    "colTotal": "Razem",
+    "colReports": "Zgłoszeń",
+    "methodologyTitle": "Jak liczymy",
+    "methodologyBody": "Czynsz najmu to typowa (medianowa) kwota w dzielnicy. Media to opłaty ponad czynsz najmu; dla konkretnego mieszkania obliczy je kalkulator. Im więcej zgłoszeń, tym dokładniejsze dane.",
+    "ctaCalculator": "Oblicz swój koszt",
+    "ctaSubmit": "Dodaj swoje koszty",
+    "ctaDistricts": "Przeglądaj według dzielnic",
+    "backToBlog": "← Blog"
   },
   "calculator": {
     "metaTitle": "Kalkulator wynajmu w {city} — ile naprawdę kosztuje (czynsz najmu + media)",

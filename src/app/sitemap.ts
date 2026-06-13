@@ -34,6 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry('/', 'daily', 1.0),
     entry('/about', 'monthly', 0.5),
     entry('/blog', 'weekly', 0.6),
+    entry('/blog/warsaw-rent-prices', 'weekly', 0.7),
     entry('/contact', 'monthly', 0.4),
     entry('/help', 'monthly', 0.5),
     ...(isDocumentTemplatesEnabled() ? [entry('/resources', 'monthly', 0.6)] : []),

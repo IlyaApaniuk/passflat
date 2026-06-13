@@ -99,7 +99,12 @@ export function ModerationClient({ reports: initial }: { reports: AdminReport[] 
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-24">
-      <h1 className="text-2xl font-bold">Cost report moderation</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">Cost report moderation</h1>
+        <Link href="/admin/reports" className="text-sm text-primary hover:underline">
+          → Abuse reports
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         {reports.length} recent reports · {flaggedCount} flagged · {hiddenCount} hidden
       </p>
