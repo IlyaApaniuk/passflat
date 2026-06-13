@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     },
     select: {
       id: true,
+      slug: true,
       type: true,
       title: true,
       expiresAt: true,
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       template: 'listingExpiring',
       data: {
         title: listing.title,
-        listingUrl: localeUrl(locale, `/${citySlug}/${listing.type}/${listing.id}`),
+        listingUrl: localeUrl(locale, `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`),
         daysLeft,
         expiresAt: listing.expiresAt,
       },

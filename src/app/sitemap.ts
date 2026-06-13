@@ -75,6 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: { status: 'active' },
       select: {
         id: true,
+        slug: true,
         type: true,
         updatedAt: true,
         building: { select: { city: { select: { slug: true } } } },
@@ -83,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     listingPages = listings.map((listing) => {
       const citySlug = listing.building.city.slug;
-      const path = `/${citySlug}/${listing.type}/${listing.id}`;
+      const path = `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`;
       return {
         ...entry(path, 'weekly', 0.8),
         lastModified: listing.updatedAt,

@@ -1,10 +1,18 @@
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import type { ListingType } from '@/lib/listings-data';
 import { monthlyEquivalent, isPeriodicFrequency } from '@/lib/periodic-charges';
+import { getAlternates } from '@/lib/seo';
 
-export async function queryListingDetail(id: string) {
-  return prisma.listing.findUnique({
-    where: { id },
+// A listing is addressed by slug; old UUID links still resolve (the page then
+// 301s them to the canonical slug URL).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const listingWhere = (slugOrId: string) =>
+  UUID_RE.test(slugOrId) ? { OR: [{ slug: slugOrId }, { id: slugOrId }] } : { slug: slugOrId };
+
+export async function queryListingDetail(slugOrId: string) {
+  return prisma.listing.findFirst({
+    where: listingWhere(slugOrId),
     include: {
       building: { include: { district: true, city: true } },
       author: { select: { displayName: true, createdAt: true } },
@@ -21,6 +29,7 @@ export function serializeListingDetail(
 
   const base = {
     id: listing.id,
+    slug: listing.slug ?? listing.id,
     type,
     title: listing.title,
     address: listing.building.addressFull,
@@ -95,9 +104,12 @@ export function serializeListingDetail(
   return base;
 }
 
-export async function generateListingMetadata(id: string) {
-  const listing = await prisma.listing.findUnique({
-    where: { id },
+export async function generateListingMetadata(
+  slugOrId: string,
+  citySlug: string,
+): Promise<Metadata> {
+  const listing = await prisma.listing.findFirst({
+    where: listingWhere(slugOrId),
     include: { building: { include: { district: true } } },
   });
 
@@ -108,6 +120,7 @@ export async function generateListingMetadata(id: string) {
     description:
       listing.description?.slice(0, 160) ??
       `${listing.title} in ${listing.building.district?.nameKey ?? 'Warsaw'}`,
+    alternates: getAlternates(`/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`),
     openGraph: {
       title: listing.title,
       description: listing.description?.slice(0, 160) ?? undefined,

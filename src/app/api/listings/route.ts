@@ -12,7 +12,7 @@ import {
   type ListingType,
 } from '@/lib/listings-validation';
 import { trackServerEvent } from '@/lib/posthog-server';
-import { generateBuildingSlug } from '@/lib/slugify';
+import { generateBuildingSlug, generateListingSlug } from '@/lib/slugify';
 import { normalizeAddress } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { FREE_LISTING_LIMIT } from '@/lib/stripe';
@@ -287,6 +287,12 @@ export async function POST(request: NextRequest) {
       building: true,
     },
   });
+
+  // SEO slug from the title + the listing's own id (the suffix is unique, so no
+  // collision). Set post-create because the id is DB-generated.
+  const slug = generateListingSlug(title, listing.id);
+  await prisma.listing.update({ where: { id: listing.id }, data: { slug } });
+  listing.slug = slug;
 
   const parsedPromoteDays = parseInt(promoteDays, 10) || 0;
   const needCheckout = overLimit || parsedPromoteDays > 0;

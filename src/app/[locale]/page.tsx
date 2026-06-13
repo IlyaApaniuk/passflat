@@ -30,6 +30,7 @@ async function getFeaturedListings(): Promise<FeaturedListingData[]> {
 
   return promoted.map((listing) => ({
     id: listing.id,
+    slug: listing.slug ?? listing.id,
     type: (listing.type as ListingType) ?? 'replacement',
     title: listing.title,
     address: listing.building.addressFull,

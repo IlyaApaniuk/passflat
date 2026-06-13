@@ -119,6 +119,7 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
 
   const base: Listing = {
     id: l.id,
+    slug: l.slug ?? l.id,
     type,
     title: l.title,
     address: l.building.addressFull,
