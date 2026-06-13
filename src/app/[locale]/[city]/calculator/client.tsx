@@ -53,6 +53,7 @@ interface Props {
 
 const CITY_VALUE = '__city';
 const OCCUPANT_OPTIONS = [1, 2, 3, 4];
+const DEFAULT_AREA = 45;
 
 // Deterministic thousands grouping (plain space) — identical on server and client,
 // so the number never causes a hydration mismatch (unlike locale-dependent
@@ -98,8 +99,13 @@ export function CalculatorClient({
   const posthog = usePostHog();
 
   const [districtValue, setDistrictValue] = useState<string>(initialDistrict ?? CITY_VALUE);
-  const [area, setArea] = useState<number>(45);
-  const [occupants, setOccupants] = useState<number>(defaultOccupants(45));
+  const [area, setArea] = useState<number>(DEFAULT_AREA);
+  // Rooms is an independent choice: picking a preset prefills the area, but you
+  // can then edit the area (or change occupants) without losing it.
+  const [rooms, setRooms] = useState<number | null>(
+    ROOM_AREA_PRESETS.find((p) => p.areaM2 === DEFAULT_AREA)?.rooms ?? null,
+  );
+  const [occupants, setOccupants] = useState<number>(defaultOccupants(DEFAULT_AREA));
   const [hasGas, setHasGas] = useState<boolean>(false);
 
   useEffect(() => {
@@ -144,9 +150,9 @@ export function CalculatorClient({
     });
   };
 
-  const setRooms = (areaM2: number) => {
-    setArea(areaM2);
-    setOccupants(defaultOccupants(areaM2));
+  const selectRooms = (preset: (typeof ROOM_AREA_PRESETS)[number]) => {
+    setRooms(preset.rooms);
+    setArea(preset.areaM2); // prefill only — area stays editable, occupants untouched
   };
 
   const ctaClick = (cta: string) =>
@@ -217,7 +223,7 @@ export function CalculatorClient({
               <Label>{t('calculator.controls.roomsLabel')}</Label>
               <div className="flex gap-1.5">
                 {ROOM_AREA_PRESETS.map((p) => (
-                  <Seg key={p.rooms} active={area === p.areaM2} onClick={() => setRooms(p.areaM2)}>
+                  <Seg key={p.rooms} active={rooms === p.rooms} onClick={() => selectRooms(p)}>
                     {p.rooms === 4 ? '4+' : p.rooms}
                   </Seg>
                 ))}
