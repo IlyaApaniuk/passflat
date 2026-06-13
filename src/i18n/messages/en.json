@@ -322,7 +322,7 @@
       "title": "Report this listing",
       "description": "Tell us what's wrong. We'll review the listing.",
       "reasons": {
-        "scam": "Scam or fraud",
+        "scam": "Scam",
         "inaccurate": "Inaccurate information",
         "offensive": "Offensive or discriminatory content",
         "spam": "Spam or duplicate",

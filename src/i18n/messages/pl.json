@@ -322,7 +322,7 @@
       "title": "Zgłoś ogłoszenie",
       "description": "Napisz, co jest nie tak. Sprawdzimy ogłoszenie.",
       "reasons": {
-        "scam": "Oszustwo lub wyłudzenie",
+        "scam": "Oszustwo",
         "inaccurate": "Nieprawdziwe informacje",
         "offensive": "Treści obraźliwe lub dyskryminujące",
         "spam": "Spam lub duplikat",
