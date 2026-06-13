@@ -662,6 +662,28 @@
     "share": "Udostępnij",
     "copied": "Skopiowano link"
   },
+  "rentReport": {
+    "metaTitle": "Ile kosztuje wynajem w {city} w {year} — realne dane lokatorów",
+    "metaDescription": "Realne koszty wynajmu w {city} w {year} według dzielnic: mediany czynszu i mediów ze zgłoszeń lokatorów. Aktualizowane automatycznie.",
+    "ogTitle": "Wynajem w Warszawie {year}: realne dane",
+    "badge": "Dane społeczności",
+    "h1": "Ile kosztuje wynajem w {city} w {year}",
+    "updated": "Zaktualizowano: {date}",
+    "lead": "Zestawienie realnych kosztów wynajmu w {city} według dzielnic — ze zgłoszeń lokatorów i ogłoszeń. Czynsz najmu to mediana; koszty (media) to kwota płacona ponad czynsz. Liczby aktualizują się wraz z napływem nowych zgłoszeń.",
+    "perM2": "Za m²",
+    "tableHeading": "Koszty według dzielnic",
+    "colDistrict": "Dzielnica",
+    "colRent": "Czynsz najmu",
+    "colExpenses": "Media",
+    "colTotal": "Razem",
+    "colReports": "Zgłoszeń",
+    "methodologyTitle": "Jak liczymy",
+    "methodologyBody": "Czynsz najmu to mediana realnych zgłoszeń lokatorów i ogłoszeń w dzielnicy (odporna na wartości skrajne). Koszty to „razem minus czynsz najmu” dla każdego zgłoszenia. To nie szacunek według stawek: orientacyjne media dla konkretnego mieszkania poda kalkulator. Część wczesnych danych pochodzi z ogłoszeń Otodom (uczciwy seed); wraz ze wzrostem liczby zgłoszeń od lokatorów baza staje się dokładniejsza.",
+    "ctaCalculator": "Oszacuj swój koszt",
+    "ctaSubmit": "Dodaj swoje koszty",
+    "ctaDistricts": "Przeglądaj według dzielnic",
+    "backToBlog": "← Blog"
+  },
   "calculator": {
     "metaTitle": "Kalkulator wynajmu w {city} — ile naprawdę kosztuje (czynsz najmu + media)",
     "metaDescription": "Oszacuj realny miesięczny koszt wynajmu w {city}: czynsz najmu z mediany lokatorów plus media według stawek Warszawy — czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet.",

@@ -125,6 +125,25 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+export function datasetJsonLd(opts: {
+  name: string;
+  description: string;
+  url: string;
+  dateModified: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    dateModified: opts.dateModified,
+    isAccessibleForFree: true,
+    spatialCoverage: { '@type': 'Place', name: 'Warsaw, Poland' },
+    creator: { '@type': 'Organization', name: 'Passflat', url: BASE_URL },
+  };
+}
+
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
