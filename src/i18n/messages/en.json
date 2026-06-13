@@ -1241,7 +1241,7 @@
       "pillar3Title": "Temporary Sublet",
       "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
       "pillar4Title": "Cost Transparency",
-      "pillar4Desc": "Community-sourced utility costs, as they are. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
+      "pillar4Desc": "Community-sourced utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
     },
     "team": {
       "label": "Who We Are",
@@ -1253,7 +1253,7 @@
       "label": "Our Principles",
       "title": "Platform rules",
       "principle1": "No hidden information",
-      "principle1Desc": "We show the numbers as they are — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
+      "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
       "principle2": "Your data belongs to you",
       "principle2Desc": "Every cost report is anonymous — it can't be tied to you, and we never sell data to third parties.",
       "principle3": "Open by default",

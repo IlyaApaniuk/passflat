@@ -82,7 +82,7 @@
       "addCta": "Dodaj ogłoszenie",
       "trustLeaseTakeovers": "Cesje najmu",
       "trustLeaseTakeoversDesc": "Znajdź najemcę, który przejmie Twój najem i zachowaj kaucję",
-      "trustRealCost": "Realne koszty",
+      "trustRealCost": "Co ukrywają ogłoszenia",
       "trustRealCostDesc": "Dane o kosztach od społeczności — wiesz, ile naprawdę zapłacisz",
       "trustRoommate": "Współlokatorzy",
       "trustSublet": "Podnajem",
@@ -103,7 +103,7 @@
       "tabSublet": "Podnajem",
       "replacement": {
         "step1Title": "Przeglądaj oferty",
-        "step1Desc": "Szukaj mieszkań według lokalizacji, ceny i udogodnień. Realne koszty od razu.",
+        "step1Desc": "Szukaj mieszkań według lokalizacji, ceny i udogodnień. Wszystkie koszty od razu.",
         "step2Title": "Skontaktuj się",
         "step2Desc": "Napisz do obecnego najemcy. Zadaj pytania i umów się na oględziny.",
         "step3Title": "Przejmij najem",
@@ -137,8 +137,8 @@
       "titleHighlight": "Passflat",
       "titleAfter": "?",
       "subtitle": "Stworzone dla najemców, którzy mają dość ukrytych kosztów i złamanych obietnic.",
-      "realCostDataTitle": "Realne dane o kosztach",
-      "realCostDataDesc": "Zobacz, ile naprawdę płacą najemcy — czynsz, media, opłaty administracyjne. Dane od prawdziwych najemców z całej Warszawy.",
+      "realCostDataTitle": "Koszty bez upiększeń",
+      "realCostDataDesc": "Zobacz, ile naprawdę płacą najemcy — czynsz, media, opłaty administracyjne. Dane od samych najemców z całej Warszawy.",
       "saveDepositTitle": "Zachowaj kaucję",
       "saveDepositDesc": "Znajdź kogoś, kto przejmie Twój najem, zamiast tracić 1–3 miesięczne kaucje.",
       "directContactTitle": "Bezpośredni kontakt",
@@ -156,14 +156,14 @@
       "rentFees": "Czynsz + opłaty",
       "from": "Od {date}",
       "comingSoonTitle": "Oferty już wkrótce",
-      "comingSoonDesc": "Bądź pierwszy! Prawdziwe ogłoszenia pojawią się tutaj.",
+      "comingSoonDesc": "Bądź pierwszy! Ogłoszenia pojawią się tutaj.",
       "postCta": "Dodaj ogłoszenie"
     },
     "costTransparency": {
       "badge": "Przejrzystość kosztów",
       "title": "Poznaj",
-      "titleHighlight": "realne koszty przed podpisaniem",
-      "subtitle": "Dane o kosztach od prawdziwych najemców. Zobacz, ile naprawdę płacą za media i ukryte opłaty.",
+      "titleHighlight": "co ukrywają przed podpisaniem",
+      "subtitle": "Dane o kosztach od samych najemców. Zobacz, ile naprawdę płacą za media i ukryte opłaty.",
       "contributeUnlockDesc": "Dodaj dane o kosztach, aby odblokować pełne raporty",
       "orBuyAccess": "lub kup czasowy dostęp",
       "alreadyContributedDesc": "Masz dostęp do pełnych raportów o kosztach",
@@ -225,7 +225,7 @@
       "q4": "Czy potrzebuję zgody wynajmującego?",
       "a4": "Tak, wynajmujący musi wyrazić zgodę na cesję. Większość właścicieli się zgadza, bo zyskują sprawdzonego najemcę i unikają pustostanu — to korzystne dla wszystkich.",
       "q5": "Jak działa przejrzystość kosztów?",
-      "a5": "Najemcy anonimowo udostępniają swoje realne miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc wiesz, ile zapłacisz, zanim podpiszesz umowę.",
+      "a5": "Najemcy anonimowo udostępniają swoje miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc wiesz, ile zapłacisz, zanim podpiszesz umowę.",
       "q6": "Czy moje dane są bezpieczne?",
       "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO."
     },
@@ -234,7 +234,7 @@
       "titleHighlight": "każdego",
       "findHome": {
         "title": "Znajdź mieszkanie",
-        "description": "Przeglądaj cesje najmu i podnajmy z realnymi kosztami. Bez ukrytych opłat — uczciwe oferty od prawdziwych najemców.",
+        "description": "Przeglądaj cesje najmu i podnajmy z pełnym rozbiciem kosztów. Bez ukrytych opłat — uczciwe oferty od najemców.",
         "cta": "Przeglądaj oferty"
       },
       "findRoommate": {
@@ -275,7 +275,7 @@
       "freeNote": "Dodawanie ogłoszeń jest darmowe"
     },
     "footer": {
-      "tagline": "Wynajem w Warszawie bez niespodzianek: realne koszty od najemców, ogłoszenia i darmowe wzory dokumentów.",
+      "tagline": "Wynajem w Warszawie bez niespodzianek: cała prawda o kosztach od najemców, ogłoszenia i darmowe wzory dokumentów.",
       "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
       "product": "Produkt",
       "browseListings": "Cesje najmu",
@@ -400,7 +400,7 @@
       "featuresAmenities": "Udogodnienia",
       "thingsToKnow": "Co warto wiedzieć",
       "buildingInfo": "Informacje o budynku",
-      "buildingCostHint": "Chcesz zobaczyć realne koszty mediów w tym budynku zgłoszone przez najemców?",
+      "buildingCostHint": "Chcesz zobaczyć rzeczywiste koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
       "locationScore": {
         "title": "Ocena lokalizacji",
@@ -693,7 +693,7 @@
       "basisNorm": "szacunek według stawek Warszawy",
       "czynsz": "Czynsz administracyjny (woda, ogrzewanie, śmieci, utrzymanie)",
       "czynszSub": "Jedna wspólna opłata do wspólnoty lub spółdzielni. Zwykle zawiera już wodę, ogrzewanie, wywóz śmieci i utrzymanie budynku.",
-      "czynszData": "według realnej mediany czynszu w tej dzielnicy",
+      "czynszData": "według mediany czynszu w tej dzielnicy",
       "breakdownToggle": "Co składa się na czynsz",
       "maintenance": "Utrzymanie budynku, fundusz remontowy",
       "heating": "Ogrzewanie (średnio na miesiąc)",
@@ -705,7 +705,7 @@
       "gas": "Gaz"
     },
     "disclaimer": "To orientacja według publicznych stawek Warszawy i median czynszu od lokatorów, a nie dokładny rachunek. Realna kwota zależy od budynku, liczników i pory roku.",
-    "ctaDistrict": "Zobacz realne dane",
+    "ctaDistrict": "Zobacz dane najemców",
     "ctaSubmit": "Dodaj swoje koszty",
     "shareLabel": "Udostępnij",
     "sourcesNote": "Stawki: MPWiK, ciepło systemowe, G11, wywóz śmieci Warszawa (2025–2026). Czynsz najmu — mediany zgłoszeń Passflat."
@@ -714,7 +714,7 @@
     "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
     "cityMetaDescription": "Ile naprawdę płacą najemcy w {city} — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
     "cityH1": "Ile naprawdę kosztuje wynajem w {city}",
-    "cityIntro": "Mediany realnych kosztów od najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
+    "cityIntro": "Mediany kosztów od samych najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
     "districtsHeading": "Koszty według dzielnic",
     "exploreAll": "Wszystkie budynki i filtry",
     "emptyCity": "Brak danych — dodaj swoje koszty jako pierwszy.",
@@ -728,7 +728,7 @@
   },
   "costs": {
     "title": "Przejrzystość kosztów",
-    "subtitle": "Realne koszty najmu zgłoszone przez najemców",
+    "subtitle": "Ile naprawdę płacą najemcy",
     "calculatorTeaser": {
       "title": "Ile wyjdzie miesięcznie z wszystkimi opłatami?",
       "desc": "Czynsz najmu plus media — szacunek w kilka kliknięć",
@@ -840,7 +840,7 @@
     },
     "submit": {
       "title": "Zgłoś swoje koszty",
-      "description": "Pomóż społeczności dzieląc się swoimi realnymi wydatkami",
+      "description": "Pomóż społeczności dzieląc się swoimi wydatkami",
       "pageTitle": "Zgłoś swoje koszty",
       "pageSubtitle": "Pomóż innym podjąć świadomą decyzję. Zajmie to mniej niż 2 minuty.",
       "rentalType": "Co wynajmujesz?",
@@ -1043,7 +1043,7 @@
       "depositReturnedRate": "{percent}% odzyskało kaucję",
       "depositReturnedAvgPct": "≈ {percent}% kaucji odzyskane",
       "depositMonths": "≈ {months} × czynsz",
-      "utilitiesIncomplete": "Nie wszyscy podali media — realna kwota może być wyższa",
+      "utilitiesIncomplete": "Nie wszyscy podali media — ostateczna kwota może być wyższa",
       "leaseTypeLabel": "Rodzaj najmu",
       "leaseStandardShort": "Standardowy",
       "leaseOccasionalShort": "Okazjonalny",
@@ -1139,9 +1139,9 @@
     "tabCosts": "Porównuję koszty",
     "seekers": {
       "label": "Dla szukających mieszkania",
-      "title": "Znajdź nowe mieszkanie — z realnymi kosztami, bez niespodzianek",
+      "title": "Znajdź nowe mieszkanie — ze wszystkimi kosztami na widoku, bez niespodzianek",
       "step1Title": "Przeglądaj zweryfikowane oferty",
-      "step1Desc": "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z pełnym rozbiciem kosztów — czynsz, opłaty administracyjne i realne koszty mediów.",
+      "step1Desc": "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z pełnym rozbiciem kosztów — czynsz, opłaty administracyjne i rzeczywiste koszty mediów.",
       "step2Title": "Filtruj i eksploruj",
       "step2Desc": "Zawęź wyszukiwanie wg dzielnicy, zakresu cen, liczby pokoi i daty wprowadzenia. Przeglądaj oferty na interaktywnej mapie.",
       "step3Title": "Skontaktuj się z obecnym najemcą",
@@ -1169,9 +1169,9 @@
     },
     "costs": {
       "label": "Przejrzystość kosztów",
-      "title": "Poznaj realne koszty przed podpisaniem",
+      "title": "Dowiedz się, na ile wyjdzie mieszkanie, przed podpisaniem",
       "step1Title": "Zgłoś anonimowy raport kosztów",
-      "step1Desc": "Podziel się realnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet — w tym rachunkami, które przychodzą rzadziej (np. rozliczenie wody co 6 miesięcy), które przeliczamy na równowartość miesięczną.",
+      "step1Desc": "Podziel się własnymi kosztami mediów w swoim budynku — prąd, gaz, ogrzewanie, woda, internet — w tym rachunkami, które przychodzą rzadziej (np. rozliczenie wody co 6 miesięcy), które przeliczamy na równowartość miesięczną.",
       "step2Title": "Przeglądaj całą bazę kosztów",
       "step2Desc": "Dane o kosztach są otwarte — zobacz liczby dla wszystkich budynków. Dodaj swój raport, by baza rosła i była aktualna.",
       "step3Title": "Porównaj przed podpisaniem",
@@ -1213,7 +1213,7 @@
       "q6": "Czy mogę dodać raporty kosztów dla więcej niż jednego budynku?",
       "a6": "Masz więcej niż jedno mieszkanie? Możesz dodać osobny raport kosztów dla każdego budynku i zarządzać nimi wszystkimi z zakładki Raporty kosztów w swoim panelu.",
       "q7": "Jak dokładny jest kalkulator kosztów i skąd pochodzi szacunek?",
-      "a7": "Czynsz najmu w kalkulatorze liczymy z realnej mediany zgłoszeń lokatorów w dzielnicy (a gdy danych jest mało — z mediany miasta), a media — według aktualnych publicznych stawek Warszawy (czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet). To orientacja do planowania budżetu, a nie dokładny rachunek: realna kwota zależy od konkretnego budynku, liczników i pory roku."
+      "a7": "Czynsz najmu w kalkulatorze liczymy z mediany zgłoszeń lokatorów w dzielnicy (a gdy danych jest mało — z mediany miasta), a media — według aktualnych publicznych stawek Warszawy (czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet). To orientacja do planowania budżetu, a nie dokładny rachunek: realna kwota zależy od konkretnego budynku, liczników i pory roku."
     },
     "ctaTitle": "Gotowy, aby zacząć?",
     "ctaBrowse": "Przeglądaj oferty",
@@ -1227,7 +1227,7 @@
       "label": "Problem",
       "title": "Wynajem w Polsce jest zepsuty",
       "p1": "Najemcy tracą kaucje, gdy muszą się wyprowadzić przed końcem umowy. <howItWorksLink>Nie ma łatwego sposobu na znalezienie zastępcy</howItWorksLink> — więc albo płacisz karę, albo tracisz miesięczne czynsze.",
-      "p2": "Koszty mediów są ukryte do momentu podpisania umowy. Dowiadujesz się o realnych miesięcznych wydatkach dopiero po przeprowadzce — a wtedy jest już za późno.",
+      "p2": "Koszty mediów są ukryte do momentu podpisania umowy. Dowiadujesz się o miesięcznych wydatkach dopiero po przeprowadzce — a wtedy jest już za późno.",
       "p3": "Prowizje pośredników są wysokie, a obcokrajowcy mają jeszcze większą lukę informacyjną przy szukaniu mieszkania.",
       "p4": "A gdy zastępca się znajdzie — zaczyna się papierkowa robota: cesja, podnajem, umowa współlokatorska. Gotowych wzorów brak, prawnik drogi, a pomyłka w umowie jest groźna."
     },
@@ -1241,13 +1241,13 @@
       "pillar3Title": "Tymczasowy podnajem",
       "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
       "pillar4Title": "Przejrzystość kosztów",
-      "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę. A kalkulator kosztów podpowie orientacyjną kwotę dla dowolnej dzielnicy i powierzchni — czynsz najmu plus media — w kilka kliknięć."
+      "pillar4Desc": "Koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę. A kalkulator kosztów podpowie orientacyjną kwotę dla dowolnej dzielnicy i powierzchni — czynsz najmu plus media — w kilka kliknięć."
     },
     "team": {
       "label": "Kim jesteśmy",
       "title": "Stworzone przez najemców, dla najemców",
       "description": "Sami wynajmujemy w Warszawie i przeszliśmy to wszystko na własnej skórze — utracone kaucje, rachunki za media, o których nikt nie uprzedził, cenę, którą poznajesz dopiero po przeprowadzce. Z tego bólu wyrósł Passflat.",
-      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Obecnie to realne koszty według budynków, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów."
+      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Obecnie to koszty według budynków, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów."
     },
     "values": {
       "label": "Nasze zasady",
@@ -1291,7 +1291,7 @@
     "topic3Desc": "Od szukania ofert po podpisanie umowy — wszystko, co nowy mieszkaniec musi wiedzieć o rynku najmu w Warszawie.",
     "topic4": "Czym jest czynsz administracyjny i co obejmuje?",
     "topic4Desc": "Czynsz administracyjny to jeden z najbardziej mylących elementów wynajmu w Polsce. Wyjaśniamy, za co tak naprawdę płacisz.",
-    "ctaText": "W międzyczasie sprawdź realne koszty najmu wg budynków",
+    "ctaText": "W międzyczasie zobacz, ile płacą najemcy wg budynków",
     "ctaButton": "Przeglądaj dane o kosztach",
     "backToBlog": "Powrót do bloga",
     "readMore": "Czytaj dalej"
@@ -1440,7 +1440,7 @@
     "general": {
       "title": "Ogólne",
       "q1": "Czym jest Passflat?",
-      "a1": "Passflat to marketplace najmu w Warszawie: ogłoszenia (cesja najmu, szukanie współlokatora, podnajem), baza realnych kosztów od najemców (czynsz, media, kaucje) i darmowe wzory dokumentów do transakcji.",
+      "a1": "Passflat to marketplace najmu w Warszawie: ogłoszenia (cesja najmu, szukanie współlokatora, podnajem), baza kosztów od samych najemców (czynsz, media, kaucje) i darmowe wzory dokumentów do transakcji.",
       "q2": "Czy Passflat jest darmowy?",
       "a2": "Tak. Przeglądanie ofert, raporty kosztów, dodawanie ogłoszeń i wzory dokumentów — są bezpłatne.",
       "q3": "W jakich miastach działa Passflat?",
