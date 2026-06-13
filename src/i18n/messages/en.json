@@ -317,6 +317,24 @@
     "terms": "Terms of Service"
   },
   "listings": {
+    "report": {
+      "button": "Report",
+      "title": "Report this listing",
+      "description": "Tell us what's wrong. We'll review the listing.",
+      "reasons": {
+        "scam": "Scam",
+        "inaccurate": "Inaccurate information",
+        "offensive": "Offensive or discriminatory content",
+        "spam": "Spam or duplicate",
+        "other": "Other"
+      },
+      "detailPlaceholder": "Details (optional)",
+      "loginRequired": "Sign in to report",
+      "success": "Thanks, your report was sent",
+      "error": "Could not send. Please try again.",
+      "cancel": "Cancel",
+      "submit": "Submit"
+    },
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
     "titleRoommate": "Roommate Search",
