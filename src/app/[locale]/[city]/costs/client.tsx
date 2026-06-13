@@ -296,25 +296,32 @@ export function CostsOverviewClient({
 
         {/* Calculator teaser — a separate entry block into the full tool, carrying
             the active district filter through as a deep-link. */}
-        <div className="container mx-auto px-4 pt-8">
+        <div className="container mx-auto px-4 pt-6">
           <Link
             href={`/${citySlug}/calculator${selectedDistrict ? `?district=${selectedDistrict}` : ''}`}
             className="block"
           >
             <Card className="group border-primary/20 bg-primary/5 transition-colors hover:border-primary/40">
-              <CardContent className="flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Calculator className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="font-semibold">{t('costs.calculatorTeaser.title')}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">
+                      {t('costs.calculatorTeaser.title')}
+                    </p>
+                    <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
                       {t('costs.calculatorTeaser.desc')}
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" tabIndex={-1} className="shrink-0 gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  tabIndex={-1}
+                  className="w-full shrink-0 gap-1.5 sm:w-auto"
+                >
                   {t('costs.calculatorTeaser.cta')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
