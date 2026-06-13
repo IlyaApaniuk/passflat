@@ -10,6 +10,7 @@ import { Footer } from '@/components/landing/footer';
 import { PhotoGallery } from '@/components/listings/photo-gallery';
 import { InterestModal } from '@/components/listings/interest-modal';
 import { FavoriteButton } from '@/components/listings/favorite-button';
+import { ReportButton } from '@/components/listings/report-button';
 import { TranslateButton } from '@/components/listings/translate-button';
 import { TemplateDownload } from '@/components/documents/template-download';
 import { LocationScore } from '@/components/listings/location-score';
@@ -308,6 +309,13 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     isFavorite={isFavorite(listing.id)}
                     onToggle={() => toggleFavorite(listing.id)}
                   />
+                  {!isOwner && (
+                    <ReportButton
+                      targetType="listing"
+                      targetId={listing.id}
+                      isLoggedIn={isLoggedIn}
+                    />
+                  )}
                 </div>
               </motion.div>
 
