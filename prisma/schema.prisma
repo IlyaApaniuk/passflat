@@ -130,6 +130,10 @@ model Listing {
   buildingId String @map("building_id") @db.Uuid
   authorId   String @map("author_id") @db.Uuid
 
+  // SEO-friendly URL slug (transliterated title + short id suffix). Nullable so the
+  // migration lands without a backfill dance; set on create + backfilled for old rows.
+  slug String? @unique
+
   type            String  @default("replacement") // 'replacement' | 'roommate' | 'sublet'
   apartmentNumber String? @map("apartment_number")
 

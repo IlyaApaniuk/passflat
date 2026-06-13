@@ -3,6 +3,8 @@ export type ListingType = 'replacement' | 'roommate' | 'sublet';
 // Shared types for listings
 export interface Listing {
   id: string;
+  /** SEO URL slug; falls back to id for any legacy row not yet backfilled. */
+  slug: string;
   type: ListingType;
   title: string;
   address: string;
@@ -78,4 +80,3 @@ export interface ListingFilters {
   hasPhotos?: boolean;
   registrationPossible?: boolean;
 }
-

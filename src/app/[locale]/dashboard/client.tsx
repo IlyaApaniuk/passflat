@@ -69,6 +69,7 @@ type ListingType = 'replacement' | 'roommate' | 'sublet';
 
 interface DashboardListing {
   id: string;
+  slug: string;
   title: string;
   type: ListingType;
   address: string;
@@ -914,7 +915,7 @@ export function DashboardClient({
                           transition={{ delay: i * 0.05 }}
                         >
                           <Link
-                            href={`/${listing.citySlug}/${listing.type}/${listing.id}`}
+                            href={`/${listing.citySlug}/${listing.type}/${listing.slug}`}
                             className="block"
                           >
                             <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/20">
@@ -992,7 +993,7 @@ export function DashboardClient({
                                           <DropdownMenuContent align="end">
                                             <DropdownMenuItem asChild>
                                               <Link
-                                                href={`/${listing.citySlug}/${listing.type}/${listing.id}`}
+                                                href={`/${listing.citySlug}/${listing.type}/${listing.slug}`}
                                               >
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 {t('dashboard.viewListing')}

@@ -21,6 +21,7 @@ import type { ListingType } from '@/lib/listings-data';
 
 export interface FeaturedListingData {
   id: string;
+  slug: string;
   type?: ListingType;
   title: string;
   address: string;
@@ -199,7 +200,7 @@ function FeaturedCard({
   };
 
   return (
-    <Link href={`/${citySlug}/${route}/${listing.id}`} className="group block">
+    <Link href={`/${citySlug}/${route}/${listing.slug}`} className="group block">
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card transition-all duration-300 hover:border-accent/30 hover:shadow-xl hover:shadow-accent/5">
         <div className="relative aspect-[4/3] overflow-hidden">
           <Image

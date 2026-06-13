@@ -191,7 +191,7 @@ function ListingCardImpl({
       transition={{ duration: 0.3 }}
     >
       <Link
-        href={`/${citySlug}/${route}/${listing.id}`}
+        href={`/${citySlug}/${route}/${listing.slug}`}
         onMouseEnter={() => onHover?.(listing.id)}
         onMouseLeave={() => onHover?.(null)}
       >

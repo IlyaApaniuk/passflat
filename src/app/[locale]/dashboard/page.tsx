@@ -61,6 +61,7 @@ export default async function DashboardPage() {
 
   const serializedListings = listings.map((l) => ({
     id: l.id,
+    slug: l.slug ?? l.id,
     title: l.title,
     type: l.type as 'replacement' | 'roommate' | 'sublet',
     address: l.building.addressFull,
@@ -81,6 +82,7 @@ export default async function DashboardPage() {
     .filter((s) => s.listing.status === 'active')
     .map((s) => ({
       id: s.listing.id,
+      slug: s.listing.slug ?? s.listing.id,
       title: s.listing.title,
       type: s.listing.type as 'replacement' | 'roommate' | 'sublet',
       address: s.listing.building.addressFull,

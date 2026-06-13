@@ -27,6 +27,7 @@ const TYPE_ROUTE: Record<ListingType, string> = {
 
 export interface MapListing {
   id: string;
+  slug: string;
   lat: number;
   lng: number;
   title: string;
@@ -336,7 +337,7 @@ export function ListingsMap({
                 <X className="h-3.5 w-3.5" />
               </button>
               <Link
-                href={`/${citySlug}/${TYPE_ROUTE[listingType]}/${popupInfo.id}`}
+                href={`/${citySlug}/${TYPE_ROUTE[listingType]}/${popupInfo.slug}`}
                 className="block cursor-pointer transition-opacity hover:opacity-80"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

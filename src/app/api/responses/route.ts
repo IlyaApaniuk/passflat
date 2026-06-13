@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       responderEmail: user.email || '',
       responderPhone: phone || undefined,
       message: message || 'No message provided.',
-      listingUrl: localeUrl(locale, `/${citySlug}/replacement/${listing.id}`),
+      listingUrl: localeUrl(locale, `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`),
       dashboardUrl: localeUrl(locale, '/dashboard'),
     });
   }
