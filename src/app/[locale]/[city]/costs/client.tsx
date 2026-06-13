@@ -35,6 +35,7 @@ import {
   Home,
   DoorOpen,
   BarChart3,
+  Calculator,
 } from 'lucide-react';
 
 export type { CostAccess };
@@ -292,6 +293,35 @@ export function CostsOverviewClient({
             </motion.div>
           </div>
         </section>
+
+        {/* Calculator teaser — a separate entry block into the full tool, carrying
+            the active district filter through as a deep-link. */}
+        <div className="container mx-auto px-4 pt-8">
+          <Link
+            href={`/${citySlug}/calculator${selectedDistrict ? `?district=${selectedDistrict}` : ''}`}
+            className="block"
+          >
+            <Card className="group border-primary/20 bg-primary/5 transition-colors hover:border-primary/40">
+              <CardContent className="flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Calculator className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{t('costs.calculatorTeaser.title')}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('costs.calculatorTeaser.desc')}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" tabIndex={-1} className="shrink-0 gap-1.5">
+                  {t('costs.calculatorTeaser.cta')}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
 
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
@@ -23,7 +23,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { ShareButton } from '@/components/costs/share-button';
-import { ArrowRight, Calculator, Flame, Info, Plus } from 'lucide-react';
+import { ArrowRight, Calculator, Info, Plus } from 'lucide-react';
 import {
   defaultOccupants,
   estimateTotal,
@@ -63,6 +63,29 @@ const fmt = (n: number) =>
     .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const fmtRange = (low: number, high: number) =>
   low === high ? fmt(low) : `${fmt(low)}–${fmt(high)}`;
+
+/** One cell of a segmented (equal-width) chip group. */
+function Seg({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={active ? 'default' : 'outline'}
+      onClick={onClick}
+      className="flex-1"
+    >
+      {children}
+    </Button>
+  );
+}
 
 export function CalculatorClient({
   citySlug,
@@ -133,11 +156,15 @@ export function CalculatorClient({
   const dataHref =
     selected && selected.reportCount > 0 ? `/${citySlug}/${selected.slug}` : `/${citySlug}/costs`;
 
+  // "All districts" is an explicit city-wide choice, so a city-median rent reads
+  // as expected there — only a *specific* district falling back to the city median
+  // warrants the "little data in this district" caveat.
+  const isCityWide = districtValue === CITY_VALUE;
   const rentBasisLabel =
     rent.basis === 'district'
       ? t('calculator.result.basisData', { count: selected?.reportCount ?? 0 })
       : rent.basis === 'city'
-        ? t('calculator.result.basisCity')
+        ? t(isCityWide ? 'calculator.result.basisCityWide' : 'calculator.result.basisCityFallback')
         : t('calculator.result.basisNone');
 
   const breakdownRow = (line: CostLine | undefined, label: string, sub?: string) =>
@@ -174,9 +201,7 @@ export function CalculatorClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={CITY_VALUE}>
-                  {t('calculator.controls.allDistricts', { city: cityName })}
-                </SelectItem>
+                <SelectItem value={CITY_VALUE}>{t('calculator.controls.allDistricts')}</SelectItem>
                 {districts.map((d) => (
                   <SelectItem key={d.slug} value={d.slug}>
                     {d.name}
@@ -186,69 +211,63 @@ export function CalculatorClient({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="calc-area">{t('calculator.controls.area')}</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="calc-area"
-                type="number"
-                inputMode="numeric"
-                min={10}
-                max={300}
-                value={area}
-                onChange={(e) => setArea(Math.max(0, Number(e.target.value) || 0))}
-                className="w-28 tabular-nums"
-              />
-              <span className="text-sm text-muted-foreground">
-                {t('calculator.controls.areaUnit')}
-              </span>
-              <div className="ml-auto flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* Rooms — preset chips that drive the area */}
+            <div className="space-y-1.5">
+              <Label>{t('calculator.controls.roomsLabel')}</Label>
+              <div className="flex gap-1.5">
                 {ROOM_AREA_PRESETS.map((p) => (
-                  <Button
-                    key={p.rooms}
-                    type="button"
-                    size="sm"
-                    variant={area === p.areaM2 ? 'default' : 'outline'}
-                    onClick={() => setRooms(p.areaM2)}
-                  >
-                    {t('calculator.controls.rooms', { rooms: p.rooms })}
-                  </Button>
+                  <Seg key={p.rooms} active={area === p.areaM2} onClick={() => setRooms(p.areaM2)}>
+                    {p.rooms === 4 ? '4+' : p.rooms}
+                  </Seg>
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label>{t('calculator.controls.occupants')}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {OCCUPANT_OPTIONS.map((n) => (
-                <Button
-                  key={n}
-                  type="button"
-                  size="sm"
-                  variant={occupants === n ? 'default' : 'outline'}
-                  onClick={() => setOccupants(n)}
-                >
-                  {n === 4
-                    ? t('calculator.controls.occupant4plus')
-                    : t('calculator.controls.occupantN', { count: n })}
-                </Button>
-              ))}
+            {/* Area — exact, editable */}
+            <div className="space-y-1.5">
+              <Label htmlFor="calc-area">{t('calculator.controls.area')}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="calc-area"
+                  type="number"
+                  inputMode="numeric"
+                  min={10}
+                  max={300}
+                  value={area}
+                  onChange={(e) => setArea(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-24 tabular-nums"
+                />
+                <span className="text-sm text-muted-foreground">
+                  {t('calculator.controls.areaUnit')}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label>{t('calculator.controls.gas')}</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant={hasGas ? 'default' : 'outline'}
-              onClick={() => setHasGas((v) => !v)}
-              className="gap-1.5"
-            >
-              <Flame className="h-3.5 w-3.5" />
-              {hasGas ? t('calculator.controls.gasOn') : t('calculator.controls.gasOff')}
-            </Button>
+            {/* Occupants */}
+            <div className="space-y-1.5">
+              <Label>{t('calculator.controls.occupants')}</Label>
+              <div className="flex gap-1.5">
+                {OCCUPANT_OPTIONS.map((n) => (
+                  <Seg key={n} active={occupants === n} onClick={() => setOccupants(n)}>
+                    {n === 4 ? '4+' : n}
+                  </Seg>
+                ))}
+              </div>
+            </div>
+
+            {/* Gas */}
+            <div className="space-y-1.5">
+              <Label>{t('calculator.controls.gas')}</Label>
+              <div className="flex gap-1.5">
+                <Seg active={!hasGas} onClick={() => setHasGas(false)}>
+                  {t('calculator.controls.gasOff')}
+                </Seg>
+                <Seg active={hasGas} onClick={() => setHasGas(true)}>
+                  {t('calculator.controls.gasOn')}
+                </Seg>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -308,7 +327,7 @@ export function CalculatorClient({
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {komunalka.czynszBasis === 'data'
-                      ? t('calculator.result.czynszData', { count: selected?.reportCount ?? 0 })
+                      ? t('calculator.result.czynszData')
                       : t('calculator.result.czynszSub')}
                   </p>
                   <Accordion type="single" collapsible>
