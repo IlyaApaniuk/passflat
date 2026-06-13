@@ -12,7 +12,7 @@ import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { median } from '@/lib/cost-stats';
 import { ShareButton } from '@/components/costs/share-button';
-import { ArrowRight, MapPin, Building2, Plus } from 'lucide-react';
+import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
 // revalidated for crawlers instead of rendering per request.
@@ -106,6 +106,12 @@ export default async function CityCostsHub({ params }: PageProps) {
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild>
                 <Link href={`/${city}/costs`}>{t('costsSeo.exploreAll')}</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/${city}/calculator`}>
+                  <Calculator className="mr-1.5 h-4 w-4" />
+                  {t('calculator.badge')}
+                </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link href={`/${city}/costs/submit`}>

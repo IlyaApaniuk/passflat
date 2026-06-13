@@ -29,6 +29,7 @@ import {
   Unlock,
   BarChart3,
   ArrowRight,
+  Calculator,
   FileText,
   Plus,
   Quote,
@@ -119,6 +120,7 @@ export function HowItWorksClient({
     { q: t('faq.q4'), a: t('faq.a4') },
     { q: t('faq.q5'), a: t('faq.a5') },
     { q: t('faq.q6'), a: t('faq.a6') },
+    { q: t('faq.q7'), a: t('faq.a7') },
   ];
 
   return (
@@ -241,22 +243,31 @@ export function HowItWorksClient({
                     </Link>
                   </Button>
                 )}
-                {activeTab === 'costs' &&
-                  (hasContributed ? (
-                    <Button size="lg" className="gap-2" asChild>
-                      <Link href="/warsaw/costs">
-                        <BarChart3 className="h-4 w-4" />
-                        {t('costs.ctaExplore')}
+                {activeTab === 'costs' && (
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    {hasContributed ? (
+                      <Button size="lg" className="gap-2" asChild>
+                        <Link href="/warsaw/costs">
+                          <BarChart3 className="h-4 w-4" />
+                          {t('costs.ctaExplore')}
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button size="lg" className="gap-2" asChild>
+                        <Link href="/warsaw/costs/submit">
+                          <ArrowRight className="h-4 w-4" />
+                          {t('costs.cta')}
+                        </Link>
+                      </Button>
+                    )}
+                    <Button size="lg" variant="outline" className="gap-2" asChild>
+                      <Link href="/warsaw/calculator">
+                        <Calculator className="h-4 w-4" />
+                        {t('costs.ctaCalculator')}
                       </Link>
                     </Button>
-                  ) : (
-                    <Button size="lg" className="gap-2" asChild>
-                      <Link href="/warsaw/costs/submit">
-                        <ArrowRight className="h-4 w-4" />
-                        {t('costs.cta')}
-                      </Link>
-                    </Button>
-                  ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>

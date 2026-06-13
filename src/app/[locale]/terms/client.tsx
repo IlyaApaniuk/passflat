@@ -31,6 +31,7 @@ export function TermsClient() {
               <li>{t('service.item1')}</li>
               <li>{t('service.item2')}</li>
               <li>{t('service.item3')}</li>
+              <li>{t('service.item4')}</li>
             </ul>
 
             {/* 3. User Accounts */}
@@ -75,6 +76,7 @@ export function TermsClient() {
               <li>{t('liability.item1')}</li>
               <li>{t('liability.item2')}</li>
               <li>{t('liability.item3')}</li>
+              <li>{t('liability.item4')}</li>
             </ul>
 
             {/* 8. Intellectual Property */}

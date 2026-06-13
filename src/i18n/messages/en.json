@@ -82,13 +82,14 @@
       "addCta": "Post a Listing",
       "trustLeaseTakeovers": "Lease Takeovers",
       "trustLeaseTakeoversDesc": "Find tenants to take over your lease and keep your deposit",
-      "trustRealCost": "Real Cost Data",
+      "trustRealCost": "What listings hide",
       "trustRealCostDesc": "Crowdsourced utility costs so you know what you will actually pay",
       "trustRoommate": "Roommate Search",
       "trustSublet": "Temporary Sublets",
       "trustVerified": "Verified Listings",
       "trustVerifiedDesc": "Trusted community with transparent pricing and reviews",
       "costsCta": "See costs by district",
+      "calculatorCta": "Calculator",
       "statsListings": "Listings",
       "statsCostReports": "Cost Reports",
       "statsDistricts": "Districts",
@@ -102,7 +103,7 @@
       "tabSublet": "Temporary Sublet",
       "replacement": {
         "step1Title": "Browse Listings",
-        "step1Desc": "Search apartments by location, price, and amenities. Real costs upfront.",
+        "step1Desc": "Search apartments by location, price, and amenities. All costs upfront.",
         "step2Title": "Connect",
         "step2Desc": "Message the current tenant directly. Ask questions, schedule viewings.",
         "step3Title": "Take Over Lease",
@@ -136,8 +137,8 @@
       "titleHighlight": "Passflat",
       "titleAfter": "?",
       "subtitle": "Built for renters tired of hidden costs and broken promises.",
-      "realCostDataTitle": "Real Cost Data",
-      "realCostDataDesc": "See what tenants actually pay — rent, utilities, admin fees. Crowdsourced data from real buildings across Warsaw.",
+      "realCostDataTitle": "Costs, no sugarcoating",
+      "realCostDataDesc": "See what tenants actually pay — rent, utilities, admin fees. Crowdsourced data from tenants themselves across Warsaw.",
       "saveDepositTitle": "Save Your Deposit",
       "saveDepositDesc": "Find someone to take over your lease instead of losing 1–3 months deposit.",
       "directContactTitle": "Direct Contact",
@@ -155,14 +156,14 @@
       "rentFees": "Rent + fees",
       "from": "From {date}",
       "comingSoonTitle": "Listings coming soon",
-      "comingSoonDesc": "Be the first to post! Real listings will appear here.",
+      "comingSoonDesc": "Be the first to post! Listings will appear here.",
       "postCta": "Post a Listing"
     },
     "costTransparency": {
       "badge": "Cost Transparency",
       "title": "Know the",
-      "titleHighlight": "real cost before you sign",
-      "subtitle": "Crowdsourced cost data from real tenants. See what people actually pay for utilities, admin fees, and hidden costs.",
+      "titleHighlight": "what they hide before you sign",
+      "subtitle": "Crowdsourced cost data from tenants themselves. See what people actually pay for utilities, admin fees, and hidden costs.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
       "addMoreCosts": "Add new costs",
@@ -224,7 +225,7 @@
       "q4": "Do I need the landlord's approval?",
       "a4": "Yes, the landlord must consent to the transfer. Most landlords agree because they get a vetted replacement tenant and avoid vacancy — it's a win for everyone.",
       "q5": "How does cost transparency work?",
-      "a5": "Tenants anonymously share their real monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see what you'll actually pay before signing a lease.",
+      "a5": "Tenants anonymously share their monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see what you'll actually pay before signing a lease.",
       "q6": "Is my data safe?",
       "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR."
     },
@@ -233,7 +234,7 @@
       "titleHighlight": "everyone",
       "findHome": {
         "title": "Find a home",
-        "description": "Browse lease takeovers and sublets with real cost data. No hidden fees, no surprises — honest listings from real tenants.",
+        "description": "Browse lease takeovers and sublets with a full cost breakdown. No hidden fees, no surprises — honest listings from tenants.",
         "cta": "Browse Listings"
       },
       "findRoommate": {
@@ -274,7 +275,7 @@
       "freeNote": "Posting listings is free"
     },
     "footer": {
-      "tagline": "Renting in Warsaw without surprises: real costs from tenants, listings, and free document templates.",
+      "tagline": "Renting in Warsaw without surprises: the full truth on costs from tenants, listings, and free document templates.",
       "expanding": "Starting in Warsaw, expanding across Europe.",
       "product": "Product",
       "browseListings": "Lease Takeovers",
@@ -399,7 +400,7 @@
       "featuresAmenities": "Features & Amenities",
       "thingsToKnow": "Good to know",
       "buildingInfo": "Building Information",
-      "buildingCostHint": "Want to see real utility costs for this building reported by tenants?",
+      "buildingCostHint": "Want to see the actual utility costs for this building reported by tenants?",
       "viewBuildingCosts": "View Building Cost Reports",
       "locationScore": {
         "title": "Location score",
@@ -661,11 +662,59 @@
     "share": "Share",
     "copied": "Link copied"
   },
+  "calculator": {
+    "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",
+    "metaDescription": "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities based on Warsaw tariffs — admin fee (czynsz), heating, electricity, water, garbage, internet.",
+    "breadcrumb": "Calculator",
+    "badge": "Cost calculator",
+    "h1": "What renting in {city} costs with all payments included",
+    "intro": "The full monthly cost of a flat with all payments included: rent plus utilities (czynsz, heating, electricity, water, garbage, internet). Rent comes from the median of tenant reports; utilities are calculated from current Warsaw tariffs. It is a planning estimate, not an exact bill.",
+    "controls": {
+      "district": "District",
+      "allDistricts": "All districts",
+      "roomsLabel": "Rooms",
+      "area": "Area",
+      "areaUnit": "m²",
+      "occupants": "How many people",
+      "gas": "Gas",
+      "gasOn": "Has gas",
+      "gasOff": "No gas"
+    },
+    "result": {
+      "rangeLabel": "Roughly per month",
+      "perMonth": "/mo",
+      "areaSummary": "{area} m²",
+      "rent": "Rent",
+      "basisData": "based on {count, plural, one {# report} other {# reports}} in the district",
+      "basisCityWide": "from the whole-city median",
+      "basisCityFallback": "from city median · little data in this district",
+      "basisNone": "no rent data yet",
+      "komunalka": "Utilities",
+      "basisNorm": "estimate from Warsaw tariffs",
+      "czynsz": "Czynsz / admin fee (water, heating, garbage, upkeep)",
+      "czynszSub": "A single payment to the building or housing co-op. It usually already includes water, heating, garbage and building upkeep.",
+      "czynszData": "from the czynsz median in this district",
+      "breakdownToggle": "What is inside czynsz",
+      "maintenance": "Building upkeep, repair fund",
+      "heating": "Heating (monthly average)",
+      "water": "Water and sewage",
+      "garbage": "Garbage collection",
+      "breakdownNote": "These are the parts that make up czynsz.",
+      "electricity": "Electricity",
+      "internet": "Internet",
+      "gas": "Gas"
+    },
+    "disclaimer": "This is a ballpark from public Warsaw tariffs and tenant rent medians, not an exact bill. The real amount depends on the building, meters and season.",
+    "ctaDistrict": "See tenant data",
+    "ctaSubmit": "Add your costs",
+    "shareLabel": "Share",
+    "sourcesNote": "Tariffs: MPWiK, district heating, G11, Warsaw garbage (2025–2026). Rent — Passflat report medians."
+  },
   "costsSeo": {
     "cityMetaTitle": "Rent in {city}: real costs by district",
     "cityMetaDescription": "What tenants actually pay to rent in {city} — rent, utilities and deposits, by district. Crowdsourced, open data.",
-    "cityH1": "What renting in {city} really costs",
-    "cityIntro": "Median real costs reported by tenants — rent, utilities (komunalka) and deposits — across the districts of {city}. Pick a district to see the buildings.",
+    "cityH1": "What renting in {city} actually costs",
+    "cityIntro": "Median costs reported by tenants themselves — rent, utilities (komunalka) and deposits — across the districts of {city}. Pick a district to see the buildings.",
     "districtsHeading": "Costs by district",
     "exploreAll": "All buildings & filters",
     "emptyCity": "No data yet — be the first to add your costs.",
@@ -679,7 +728,12 @@
   },
   "costs": {
     "title": "Cost Transparency",
-    "subtitle": "Real rental costs reported by tenants",
+    "subtitle": "What tenants actually pay to rent",
+    "calculatorTeaser": {
+      "title": "How much per month with all payments included?",
+      "desc": "Rent plus utilities — an estimate in a couple of clicks",
+      "cta": "Open the calculator"
+    },
     "compare": {
       "tabBuildings": "Buildings",
       "tabDistricts": "District comparison",
@@ -763,7 +817,7 @@
     },
     "buyAccess": {
       "title": "Buy Access to Cost Data",
-      "subtitle": "Get instant access to real cost reports for all buildings.",
+      "subtitle": "Get instant access to cost reports for all buildings.",
       "tier7": "7 days",
       "tier30": "30 days",
       "tier90": "90 days",
@@ -786,7 +840,7 @@
     },
     "submit": {
       "title": "Submit Your Costs",
-      "description": "Help the community by sharing your real expenses",
+      "description": "Help the community by sharing your own expenses",
       "pageTitle": "Submit Your Costs",
       "pageSubtitle": "Help others make an informed decision. It takes less than 2 minutes.",
       "rentalType": "What are you renting?",
@@ -989,7 +1043,7 @@
       "depositReturnedRate": "{percent}% got their deposit back",
       "depositReturnedAvgPct": "≈ {percent}% of the deposit returned",
       "depositMonths": "≈ {months} months' rent",
-      "utilitiesIncomplete": "Not everyone listed utilities — the real total may be higher",
+      "utilitiesIncomplete": "Not everyone listed utilities — the final total may be higher",
       "leaseTypeLabel": "Lease type",
       "leaseStandardShort": "Standard",
       "leaseOccasionalShort": "Occasional",
@@ -1085,9 +1139,9 @@
     "tabCosts": "Comparing costs",
     "seekers": {
       "label": "For apartment seekers",
-      "title": "Find a new apartment — with real costs, no surprises",
+      "title": "Find a new apartment — with every cost in the open, no surprises",
       "step1Title": "Browse verified listings",
-      "step1Desc": "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with full cost breakdown — rent, admin fees, and real utility costs.",
+      "step1Desc": "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with full cost breakdown — rent, admin fees, and actual utility costs.",
       "step2Title": "Filter and explore",
       "step2Desc": "Narrow your search by district, price range, number of rooms, and move-in date. Browse listings on an interactive map.",
       "step3Title": "Contact the current tenant",
@@ -1115,16 +1169,17 @@
     },
     "costs": {
       "label": "Cost Transparency",
-      "title": "Know real costs before you sign",
+      "title": "Know what it'll cost before you sign",
       "step1Title": "Submit an anonymous cost report",
-      "step1Desc": "Share your real utility costs for your building — electricity, gas, heating, water, internet — including bills that come less often (e.g. a water recalculation every 6 months), which we show as a monthly equivalent.",
+      "step1Desc": "Share your own utility costs for your building — electricity, gas, heating, water, internet — including bills that come less often (e.g. a water recalculation every 6 months), which we show as a monthly equivalent.",
       "step2Title": "Browse the full cost database",
       "step2Desc": "Cost data is open — see the numbers for every building. Add your report to keep the database growing and current.",
       "step3Title": "Compare before signing",
       "step3Desc": "See typical (median), min, and max costs per building. <compareLink>Compare costs</compareLink> across districts — before you sign a lease.",
       "cta": "Submit Your Costs",
       "ctaBuy": "Buy Access",
-      "ctaExplore": "Explore Cost Data"
+      "ctaExplore": "Explore Cost Data",
+      "ctaCalculator": "Cost calculator"
     },
     "trust": {
       "euData": "Data stored in EU",
@@ -1156,7 +1211,9 @@
       "q5": "Is Passflat available outside Warsaw?",
       "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap.",
       "q6": "Can I submit cost reports for more than one building?",
-      "a6": "Have more than one flat? You can add a separate cost report for each building and manage them all from the Cost reports tab in your dashboard."
+      "a6": "Have more than one flat? You can add a separate cost report for each building and manage them all from the Cost reports tab in your dashboard.",
+      "q7": "How accurate is the cost calculator, and where does the estimate come from?",
+      "a7": "Rent in the calculator comes from the median of tenant reports in the district (or the city median where district data is thin), and utilities from current public Warsaw tariffs (czynsz, heating, electricity, water, garbage, internet). It is a planning estimate, not an exact bill: the real amount depends on the specific building, meters, and season."
     },
     "ctaTitle": "Ready to get started?",
     "ctaBrowse": "Browse Listings",
@@ -1170,7 +1227,7 @@
       "label": "The Problem",
       "title": "Renting in Poland is broken",
       "p1": "Tenants lose deposits when they need to move before the lease ends. There's <howItWorksLink>no easy way to find a replacement</howItWorksLink> — so you either pay a penalty or lose months of rent.",
-      "p2": "Utility costs are hidden until you sign the lease. You find out about real monthly expenses after moving in — and by then it's too late.",
+      "p2": "Utility costs are hidden until you sign the lease. You find out about the monthly expenses only after moving in — and by then it's too late.",
       "p3": "Agency fees are steep, and foreigners face an even bigger information gap when searching for apartments.",
       "p4": "And once a replacement is found, the paperwork begins: a lease takeover, a sublet, a roommate agreement. There are no ready-made templates, lawyers are expensive, and getting the contract wrong is scary."
     },
@@ -1184,19 +1241,19 @@
       "pillar3Title": "Temporary Sublet",
       "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
       "pillar4Title": "Cost Transparency",
-      "pillar4Desc": "Community-sourced real utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign."
+      "pillar4Desc": "Community-sourced utility costs, as they are. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
     },
     "team": {
       "label": "Who We Are",
       "title": "Built by renters, for renters",
       "description": "We rent in Warsaw ourselves and we've been through all of it — lost deposits, utility bills no one warned us about, a price you only learn after moving in. Passflat grew out of that pain.",
-      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Right now that's real costs by building, listings (lease takeover, roommate, sublet), and free document templates."
+      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Right now that's costs by building, listings (lease takeover, roommate, sublet), and free document templates."
     },
     "values": {
       "label": "Our Principles",
       "title": "Platform rules",
       "principle1": "No hidden information",
-      "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
+      "principle1Desc": "We show the numbers as they are — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
       "principle2": "Your data belongs to you",
       "principle2Desc": "Every cost report is anonymous — it can't be tied to you, and we never sell data to third parties.",
       "principle3": "Open by default",
@@ -1234,7 +1291,7 @@
     "topic3Desc": "From searching for listings to signing the lease — everything a new resident needs to know about Warsaw's rental market.",
     "topic4": "What is czynsz administracyjny and what does it cover?",
     "topic4Desc": "Admin fee is one of the most confusing elements of renting in Poland. We explain what you're actually paying for.",
-    "ctaText": "While you wait, explore real rental costs by building",
+    "ctaText": "While you wait, explore what tenants pay by building",
     "ctaButton": "Explore Cost Data",
     "backToBlog": "Back to Blog",
     "readMore": "Read more"
@@ -1383,7 +1440,7 @@
     "general": {
       "title": "General",
       "q1": "What is Passflat?",
-      "a1": "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of real costs from tenants (rent, utilities, deposits), and free document templates for the deal.",
+      "a1": "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of costs from tenants themselves (rent, utilities, deposits), and free document templates for the deal.",
       "q2": "Is Passflat free?",
       "a2": "Yes. Browsing listings, cost reports, posting listings, and document templates — all free.",
       "q3": "What cities does Passflat operate in?",
@@ -1613,7 +1670,7 @@
   "termsPage": {
     "title": "Terms of Service",
     "subtitle": "Rules and guidelines for using the Passflat platform.",
-    "lastUpdated": "Last updated: May 18, 2026",
+    "lastUpdated": "Last updated: June 13, 2026",
     "acceptance": {
       "title": "1. Acceptance of Terms",
       "p1": "By using Passflat (passflat.com), you agree to these Terms of Service. If you do not agree, please do not use the platform.",
@@ -1623,7 +1680,8 @@
       "title": "2. Service Description",
       "item1": "Passflat is a platform connecting tenants for lease takeovers — helping current tenants find replacements and new tenants find apartments.",
       "item2": "Passflat provides a community-sourced cost database where tenants share real utility costs to help others make informed decisions.",
-      "item3": "Passflat is NOT a real estate agency, property manager, or party to any lease agreement. We facilitate connections between tenants — any legal arrangements are between the involved parties."
+      "item3": "Passflat is NOT a real estate agency, property manager, or party to any lease agreement. We facilitate connections between tenants — any legal arrangements are between the involved parties.",
+      "item4": "Passflat provides a rent cost calculator — an indicative estimate of monthly costs (rent plus utilities) based on public Warsaw tariffs and community report medians."
     },
     "accounts": {
       "title": "3. User Accounts",
@@ -1659,7 +1717,8 @@
       "title": "7. Limitation of Liability",
       "item1": "Passflat is a platform with listings, user-submitted cost data, and document templates. We do not verify apartments, conduct property inspections, or guarantee the accuracy of user-submitted information (including cost reports). Document templates are basic samples and do not constitute legal advice.",
       "item2": "Users are solely responsible for verifying listing information, conducting viewings, and entering into legal agreements (amendments, lease assignments) with landlords and other tenants.",
-      "item3": "Passflat is not liable for any disputes, losses, or damages arising from transactions or interactions between users or between users and landlords."
+      "item3": "Passflat is not liable for any disputes, losses, or damages arising from transactions or interactions between users or between users and landlords.",
+      "item4": "The cost calculator provides an approximate estimate based on public tariffs and averaged community data. It is not financial, legal, or tax advice, nor a guarantee of your actual bills; real costs depend on the specific building, meters, tariff plan, and season. Do not rely on it as the sole basis for decisions — verify terms with the landlord and service providers."
     },
     "ip": {
       "title": "8. Intellectual Property",
