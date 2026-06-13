@@ -35,6 +35,7 @@ import {
   Home,
   DoorOpen,
   BarChart3,
+  Calculator,
 } from 'lucide-react';
 
 export type { CostAccess };
@@ -292,6 +293,42 @@ export function CostsOverviewClient({
             </motion.div>
           </div>
         </section>
+
+        {/* Calculator teaser — a separate entry block into the full tool, carrying
+            the active district filter through as a deep-link. */}
+        <div className="container mx-auto px-4 pt-6">
+          <Link
+            href={`/${citySlug}/calculator${selectedDistrict ? `?district=${selectedDistrict}` : ''}`}
+            className="block"
+          >
+            <Card className="group border-primary/20 bg-primary/5 transition-colors hover:border-primary/40">
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Calculator className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">
+                      {t('costs.calculatorTeaser.title')}
+                    </p>
+                    <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
+                      {t('costs.calculatorTeaser.desc')}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  tabIndex={-1}
+                  className="w-full shrink-0 gap-1.5 sm:w-auto"
+                >
+                  {t('costs.calculatorTeaser.cta')}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
 
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row">
