@@ -1178,7 +1178,8 @@
       "step3Desc": "Zobacz typowe (mediana), minimalne i maksymalne koszty na budynek. <compareLink>Porównaj koszty</compareLink> dzielnic — zanim podpiszesz umowę.",
       "cta": "Dodaj swoje koszty",
       "ctaBuy": "Kup dostęp",
-      "ctaExplore": "Przeglądaj dane o kosztach"
+      "ctaExplore": "Przeglądaj dane o kosztach",
+      "ctaCalculator": "Kalkulator kosztów"
     },
     "trust": {
       "euData": "Dane przechowywane w UE",
@@ -1210,7 +1211,9 @@
       "q5": "Czy Passflat jest dostępny poza Warszawą?",
       "a5": "Zaczynamy od Warszawy, ale platforma jest zaprojektowana z myślą o ekspansji na wiele miast. Kraków, Wrocław i inne europejskie miasta są w naszym planie.",
       "q6": "Czy mogę dodać raporty kosztów dla więcej niż jednego budynku?",
-      "a6": "Masz więcej niż jedno mieszkanie? Możesz dodać osobny raport kosztów dla każdego budynku i zarządzać nimi wszystkimi z zakładki Raporty kosztów w swoim panelu."
+      "a6": "Masz więcej niż jedno mieszkanie? Możesz dodać osobny raport kosztów dla każdego budynku i zarządzać nimi wszystkimi z zakładki Raporty kosztów w swoim panelu.",
+      "q7": "Jak dokładny jest kalkulator kosztów i skąd pochodzi szacunek?",
+      "a7": "Czynsz najmu w kalkulatorze liczymy z realnej mediany zgłoszeń lokatorów w dzielnicy (a gdy danych jest mało — z mediany miasta), a media — według aktualnych publicznych stawek Warszawy (czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet). To orientacja do planowania budżetu, a nie dokładny rachunek: realna kwota zależy od konkretnego budynku, liczników i pory roku."
     },
     "ctaTitle": "Gotowy, aby zacząć?",
     "ctaBrowse": "Przeglądaj oferty",
@@ -1238,7 +1241,7 @@
       "pillar3Title": "Tymczasowy podnajem",
       "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
       "pillar4Title": "Przejrzystość kosztów",
-      "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę."
+      "pillar4Desc": "Realne koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę. A kalkulator kosztów podpowie orientacyjną kwotę dla dowolnej dzielnicy i powierzchni — czynsz najmu plus media — w kilka kliknięć."
     },
     "team": {
       "label": "Kim jesteśmy",
@@ -1667,7 +1670,7 @@
   "termsPage": {
     "title": "Regulamin",
     "subtitle": "Zasady i wytyczne korzystania z platformy Passflat.",
-    "lastUpdated": "Ostatnia aktualizacja: 18 maja 2026",
+    "lastUpdated": "Ostatnia aktualizacja: 13 czerwca 2026",
     "acceptance": {
       "title": "1. Akceptacja regulaminu",
       "p1": "Korzystając z Passflat (passflat.com), akceptujesz niniejszy Regulamin. Jeśli się nie zgadzasz, prosimy o niekorzystanie z platformy.",
@@ -1677,7 +1680,8 @@
       "title": "2. Opis usługi",
       "item1": "Passflat to platforma łącząca najemców w celu cesji najmu — pomagająca obecnym najemcom znaleźć zastępców, a nowym najemcom znaleźć mieszkania.",
       "item2": "Passflat udostępnia bazę danych kosztów od społeczności, w której najemcy dzielą się realnymi kosztami mediów, aby pomóc innym podejmować świadome decyzje.",
-      "item3": "Passflat NIE jest pośrednikiem nieruchomości, zarządcą ani stroną jakiejkolwiek umowy najmu. Ułatwiamy kontakt między najemcami — wszelkie ustalenia prawne są między zainteresowanymi stronami."
+      "item3": "Passflat NIE jest pośrednikiem nieruchomości, zarządcą ani stroną jakiejkolwiek umowy najmu. Ułatwiamy kontakt między najemcami — wszelkie ustalenia prawne są między zainteresowanymi stronami.",
+      "item4": "Passflat udostępnia kalkulator orientacyjnego kosztu najmu — poglądowy szacunek miesięcznych kosztów (czynsz najmu plus media) na podstawie publicznych stawek Warszawy i median zgłoszeń społeczności."
     },
     "accounts": {
       "title": "3. Konta użytkowników",
@@ -1713,7 +1717,8 @@
       "title": "7. Ograniczenie odpowiedzialności",
       "item1": "Passflat to platforma z ogłoszeniami, danymi o kosztach od użytkowników i wzorami dokumentów. Nie weryfikujemy mieszkań, nie przeprowadzamy inspekcji nieruchomości ani nie gwarantujemy dokładności informacji zamieszczonych przez użytkowników (w tym raportów kosztów). Wzory dokumentów to podstawowe szablony i nie stanowią porady prawnej.",
       "item2": "Użytkownicy ponoszą wyłączną odpowiedzialność za weryfikację informacji w ogłoszeniach, przeprowadzanie oględzin i zawieranie umów prawnych (aneksów, cesji najmu) z wynajmującymi i innymi najemcami.",
-      "item3": "Passflat nie ponosi odpowiedzialności za jakiekolwiek spory, straty lub szkody wynikające z transakcji lub interakcji między użytkownikami lub między użytkownikami a wynajmującymi."
+      "item3": "Passflat nie ponosi odpowiedzialności za jakiekolwiek spory, straty lub szkody wynikające z transakcji lub interakcji między użytkownikami lub między użytkownikami a wynajmującymi.",
+      "item4": "Kalkulator kosztów podaje przybliżony szacunek na podstawie publicznych stawek i uśrednionych danych społeczności. Nie jest to porada finansowa, prawna ani podatkowa, ani gwarancja Twoich rzeczywistych rachunków; realne koszty zależą od konkretnego budynku, liczników, taryfy i pory roku. Nie polegaj na nim jako jedynej podstawie decyzji — zweryfikuj warunki u wynajmującego i dostawców usług."
     },
     "ip": {
       "title": "8. Własność intelektualna",

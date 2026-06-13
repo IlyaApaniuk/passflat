@@ -1178,7 +1178,8 @@
       "step3Desc": "See typical (median), min, and max costs per building. <compareLink>Compare costs</compareLink> across districts — before you sign a lease.",
       "cta": "Submit Your Costs",
       "ctaBuy": "Buy Access",
-      "ctaExplore": "Explore Cost Data"
+      "ctaExplore": "Explore Cost Data",
+      "ctaCalculator": "Cost calculator"
     },
     "trust": {
       "euData": "Data stored in EU",
@@ -1210,7 +1211,9 @@
       "q5": "Is Passflat available outside Warsaw?",
       "a5": "We're starting with Warsaw, but the platform is designed for multi-city expansion. Kraków, Wrocław, and other European cities are on our roadmap.",
       "q6": "Can I submit cost reports for more than one building?",
-      "a6": "Have more than one flat? You can add a separate cost report for each building and manage them all from the Cost reports tab in your dashboard."
+      "a6": "Have more than one flat? You can add a separate cost report for each building and manage them all from the Cost reports tab in your dashboard.",
+      "q7": "How accurate is the cost calculator, and where does the estimate come from?",
+      "a7": "Rent in the calculator comes from the real median of tenant reports in the district (or the city median where district data is thin), and utilities from current public Warsaw tariffs (czynsz, heating, electricity, water, garbage, internet). It is a planning estimate, not an exact bill: the real amount depends on the specific building, meters, and season."
     },
     "ctaTitle": "Ready to get started?",
     "ctaBrowse": "Browse Listings",
@@ -1238,7 +1241,7 @@
       "pillar3Title": "Temporary Sublet",
       "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
       "pillar4Title": "Cost Transparency",
-      "pillar4Desc": "Community-sourced real utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign."
+      "pillar4Desc": "Community-sourced real utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
     },
     "team": {
       "label": "Who We Are",
@@ -1667,7 +1670,7 @@
   "termsPage": {
     "title": "Terms of Service",
     "subtitle": "Rules and guidelines for using the Passflat platform.",
-    "lastUpdated": "Last updated: May 18, 2026",
+    "lastUpdated": "Last updated: June 13, 2026",
     "acceptance": {
       "title": "1. Acceptance of Terms",
       "p1": "By using Passflat (passflat.com), you agree to these Terms of Service. If you do not agree, please do not use the platform.",
@@ -1677,7 +1680,8 @@
       "title": "2. Service Description",
       "item1": "Passflat is a platform connecting tenants for lease takeovers — helping current tenants find replacements and new tenants find apartments.",
       "item2": "Passflat provides a community-sourced cost database where tenants share real utility costs to help others make informed decisions.",
-      "item3": "Passflat is NOT a real estate agency, property manager, or party to any lease agreement. We facilitate connections between tenants — any legal arrangements are between the involved parties."
+      "item3": "Passflat is NOT a real estate agency, property manager, or party to any lease agreement. We facilitate connections between tenants — any legal arrangements are between the involved parties.",
+      "item4": "Passflat provides a rent cost calculator — an indicative estimate of monthly costs (rent plus utilities) based on public Warsaw tariffs and community report medians."
     },
     "accounts": {
       "title": "3. User Accounts",
@@ -1713,7 +1717,8 @@
       "title": "7. Limitation of Liability",
       "item1": "Passflat is a platform with listings, user-submitted cost data, and document templates. We do not verify apartments, conduct property inspections, or guarantee the accuracy of user-submitted information (including cost reports). Document templates are basic samples and do not constitute legal advice.",
       "item2": "Users are solely responsible for verifying listing information, conducting viewings, and entering into legal agreements (amendments, lease assignments) with landlords and other tenants.",
-      "item3": "Passflat is not liable for any disputes, losses, or damages arising from transactions or interactions between users or between users and landlords."
+      "item3": "Passflat is not liable for any disputes, losses, or damages arising from transactions or interactions between users or between users and landlords.",
+      "item4": "The cost calculator provides an approximate estimate based on public tariffs and averaged community data. It is not financial, legal, or tax advice, nor a guarantee of your actual bills; real costs depend on the specific building, meters, tariff plan, and season. Do not rely on it as the sole basis for decisions — verify terms with the landlord and service providers."
     },
     "ip": {
       "title": "8. Intellectual Property",
