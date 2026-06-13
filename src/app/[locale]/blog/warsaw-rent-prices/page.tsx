@@ -14,10 +14,12 @@ import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { median } from '@/lib/cost-stats';
 import { ArrowRight, Calculator, Plus } from 'lucide-react';
 
-// A data report assembled from the live cost DB — auto-current, so ISR (no manual
-// refresh). Targets the head query "сколько стоит аренда в Варшаве [year]" and
+// A data report assembled from the live cost DB. Rendered on demand (not
+// statically prerendered at build, which would require a DB) — the heavy query
+// is cached at the data layer (getBuildingsData, 300s), so it stays auto-current
+// and cheap. Targets the head query "сколько стоит аренда в Варшаве [year]" and
 // funnels into the calculator + district pages. City is fixed (Warsaw) for now.
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 const CITY = 'warsaw';
 const SLUG = 'warsaw-rent-prices';
 
