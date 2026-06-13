@@ -317,6 +317,24 @@
     "terms": "Regulamin"
   },
   "listings": {
+    "report": {
+      "button": "Zgłoś",
+      "title": "Zgłoś ogłoszenie",
+      "description": "Napisz, co jest nie tak. Sprawdzimy ogłoszenie.",
+      "reasons": {
+        "scam": "Oszustwo",
+        "inaccurate": "Nieprawdziwe informacje",
+        "offensive": "Treści obraźliwe lub dyskryminujące",
+        "spam": "Spam lub duplikat",
+        "other": "Inne"
+      },
+      "detailPlaceholder": "Szczegóły (opcjonalnie)",
+      "loginRequired": "Zaloguj się, aby zgłosić",
+      "success": "Dziękujemy, zgłoszenie wysłane",
+      "error": "Nie udało się wysłać. Spróbuj ponownie.",
+      "cancel": "Anuluj",
+      "submit": "Wyślij"
+    },
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
     "titleRoommate": "Szukam współlokatora",
