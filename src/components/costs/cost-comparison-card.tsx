@@ -111,14 +111,15 @@ export function CostComparisonCard({
       {user.total != null &&
         district?.total != null &&
         district.total > 0 &&
-        comparison.districtName && (
+        comparison.districtSlug && (
           <div className="mt-3">
             {/* Personal share: the landing's OG card brags "I pay X% below {area}",
-              then pivots the friend to check their own (drives a contribution). */}
+              shows the area's real median, then pivots the friend to check their
+              own (drives a contribution). District passed as slug → resolved there. */}
             <ShareButton
               path={`/${comparison.citySlug}/costs/share?pct=${Math.round(
                 ((user.total - district.total) / district.total) * 100,
-              )}&district=${encodeURIComponent(comparison.districtName)}`}
+              )}&d=${comparison.districtSlug}`}
               source="dashboard-comparison"
               refToken={userId}
               label={t('dashboard.costComparison.share')}

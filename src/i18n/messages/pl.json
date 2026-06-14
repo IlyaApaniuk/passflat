@@ -686,7 +686,8 @@
     "landingHeading": "Zobacz, ile naprawdę płaci się w Twojej okolicy",
     "landingBody": "Ktoś porównał swój czynsz z dzielnicą i się tym podzielił. Sprawdź swój — za darmo, w dwie minuty.",
     "ctaCalculator": "Otwórz kalkulator",
-    "ctaCosts": "Zobacz koszty wg dzielnic"
+    "ctaCosts": "Zobacz koszty wg dzielnic",
+    "landingDataLabel": "Koszty wynajmu w dzielnicy {district}"
   },
   "rentReport": {
     "metaTitle": "Ile kosztuje wynajem w Warszawie w {year} — realne dane lokatorów",
