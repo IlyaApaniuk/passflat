@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateProfile } from '@/lib/profile';
@@ -484,11 +483,6 @@ export async function POST(request: NextRequest) {
       },
       include: { building: true, periodicCharges: true },
     });
-
-    // New report landed → bust the cost caches (overview, building, district +
-    // city baselines, dashboard medians — all tagged 'costs') so it shows up
-    // right away instead of after the 5–60 min ISR/unstable_cache TTLs.
-    revalidateTag('costs', 'max');
 
     // Only mark hasContributed for genuine self-submissions (not flagged, and
     // not an admin import where the admin is entering someone else's data).

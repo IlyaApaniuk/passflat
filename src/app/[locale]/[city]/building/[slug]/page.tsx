@@ -15,9 +15,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // ISR: the page reads no per-request auth — the summary ("база") is public for
 // everyone and crawlers, and the deeper per-utility detail is gated client-side
-// (useHasContributed). So it renders statically and revalidates hourly. A hard
-// server-side withhold (Phase 2 monetization) would opt it back into dynamic.
-export const revalidate = 3600;
+// (useHasContributed). It renders statically and revalidates often so a fresh
+// report shows up quickly. A hard server-side withhold (Phase 2 monetization)
+// would opt it back into dynamic.
+export const revalidate = 60;
 
 interface PageProps {
   params: Promise<{ locale: string; city: string; slug: string }>;
@@ -230,7 +231,7 @@ const getDistrictBaseline = unstable_cache(
     };
   },
   ['building-district-baseline'],
-  { revalidate: 600, tags: ['costs'] },
+  { revalidate: 60, tags: ['costs'] },
 );
 
 const getCityBaseline = unstable_cache(
@@ -261,7 +262,7 @@ const getCityBaseline = unstable_cache(
     };
   },
   ['building-city-baseline'],
-  { revalidate: 600, tags: ['costs'] },
+  { revalidate: 60, tags: ['costs'] },
 );
 
 // ---------------------------------------------------------------------------

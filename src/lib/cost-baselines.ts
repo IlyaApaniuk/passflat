@@ -1,4 +1,3 @@
-import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { median, perAreaValues } from '@/lib/cost-stats';
 
@@ -41,14 +40,10 @@ async function computeAreaMedians(
   };
 }
 
-export const getDistrictCostMedians = unstable_cache(
-  (districtId: string) => computeAreaMedians({ districtId }),
-  ['area-district-medians'],
-  { revalidate: 600, tags: ['costs'] },
-);
+// Deliberately NOT cached: the dashboard is per-user and dynamic, and a fresh
+// submit must reflect immediately. Each call is two scoped median queries —
+// cheap at this scale. (unstable_cache + revalidateTag proved unreliable for
+// on-demand busting under Next 16's legacy cache, so we just read live here.)
+export const getDistrictCostMedians = (districtId: string) => computeAreaMedians({ districtId });
 
-export const getCityCostMedians = unstable_cache(
-  (cityId: string) => computeAreaMedians({ cityId }),
-  ['area-city-medians'],
-  { revalidate: 600, tags: ['costs'] },
-);
+export const getCityCostMedians = (cityId: string) => computeAreaMedians({ cityId });
