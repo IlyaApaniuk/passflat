@@ -830,12 +830,10 @@ export function CostSubmitClient({
                                 if (row.u == null || row.m == null) return null;
                                 const pct =
                                   row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
-                                const deltaCls =
+                                const chipCls =
                                   pct > 0
-                                    ? 'text-red-600'
-                                    : pct < 0
-                                      ? 'text-green-600'
-                                      : 'text-muted-foreground';
+                                    ? 'bg-red-500/10 text-red-600'
+                                    : 'bg-green-500/10 text-green-600';
                                 const deltaLabel =
                                   pct === 0
                                     ? null
@@ -845,31 +843,29 @@ export function CostSubmitClient({
                                           percent: Math.abs(pct),
                                         });
                                 return (
-                                  <div key={row.label}>
-                                    <p className="text-sm">{row.label}</p>
-                                    <div className="mt-0.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
-                                      <span className="flex items-baseline gap-1">
-                                        <span className="text-xs text-muted-foreground">
-                                          {t('costs.submit.comparisonMine')}
-                                        </span>
-                                        <span className="font-semibold tabular-nums text-primary">
+                                  <div
+                                    key={row.label}
+                                    className="flex items-center justify-between gap-3 text-sm"
+                                  >
+                                    <span className="text-muted-foreground">{row.label}</span>
+                                    <span className="flex items-center gap-2">
+                                      <span className="whitespace-nowrap tabular-nums">
+                                        <span className="font-semibold text-primary">
                                           ≈{row.u.toLocaleString()}
                                         </span>
-                                      </span>
-                                      <span className="flex items-baseline gap-1 text-muted-foreground">
-                                        <span className="text-xs">
-                                          {t('costs.submit.comparisonDistrict')}
-                                        </span>
-                                        <span className="tabular-nums">
-                                          ≈{row.m.toLocaleString()} zł
+                                        <span className="text-muted-foreground">
+                                          {' '}
+                                          / ≈{row.m.toLocaleString()} zł
                                         </span>
                                       </span>
                                       {deltaLabel && (
-                                        <span className={`text-xs font-medium ${deltaCls}`}>
+                                        <span
+                                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                                        >
                                           {deltaLabel}
                                         </span>
                                       )}
-                                    </div>
+                                    </span>
                                   </div>
                                 );
                               })}
