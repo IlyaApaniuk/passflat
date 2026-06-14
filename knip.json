@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/components/ui/**!", "scripts/**", "src/app/[locale]/pricing/client.tsx!"],
+  "ignore": ["scripts-tmp-cleanup/**"],
+  "ignoreDependencies": ["@types/google.maps"],
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "optionalPeerDependencies": "warn",
+    "unlisted": "warn",
+    "binaries": "warn",
+    "unresolved": "warn",
+    "exports": "warn",
+    "nsExports": "warn",
+    "types": "warn",
+    "nsTypes": "warn",
+    "enumMembers": "warn",
+    "duplicates": "warn"
+  }
+}
