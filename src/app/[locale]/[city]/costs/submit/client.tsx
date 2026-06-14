@@ -850,12 +850,20 @@ export function CostSubmitClient({
                                     className="flex items-center justify-between gap-2 text-sm"
                                   >
                                     <span className="text-muted-foreground">{row.label}</span>
-                                    <span className="flex items-center gap-1.5">
-                                      <span className="font-semibold text-primary">
-                                        ≈{row.u.toLocaleString()}
+                                    <span className="flex flex-wrap items-center justify-end gap-x-1.5 text-right">
+                                      <span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {t('costs.submit.comparisonMine')}{' '}
+                                        </span>
+                                        <span className="font-semibold text-primary">
+                                          ≈{row.u.toLocaleString()}
+                                        </span>
                                       </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        / ≈{row.m.toLocaleString()} zł
+                                      <span className="text-muted-foreground">
+                                        <span className="text-xs">
+                                          · {t('costs.submit.comparisonDistrict')}{' '}
+                                        </span>
+                                        ≈{row.m.toLocaleString()} zł
                                       </span>
                                       {deltaLabel && (
                                         <span className={`text-xs font-medium ${deltaCls}`}>

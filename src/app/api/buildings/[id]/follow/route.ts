@@ -21,13 +21,19 @@ async function getUserId(): Promise<string | null> {
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getUserId();
-  if (!userId) return NextResponse.json({ following: false });
 
-  const follow = await prisma.buildingFollow.findUnique({
-    where: { userId_buildingId: { userId, buildingId: id } },
-    select: { id: true },
-  });
-  return NextResponse.json({ following: !!follow });
+  // Follower count is public (social proof); personal follow state needs auth.
+  const [count, follow] = await Promise.all([
+    prisma.buildingFollow.count({ where: { buildingId: id } }),
+    userId
+      ? prisma.buildingFollow.findUnique({
+          where: { userId_buildingId: { userId, buildingId: id } },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  return NextResponse.json({ following: !!follow, count });
 }
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
