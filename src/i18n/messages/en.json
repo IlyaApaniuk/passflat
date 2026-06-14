@@ -924,7 +924,7 @@
       "comparisonRentPerM2": "Rent/m²",
       "comparisonTotalPerM2": "Total/m²",
       "comparisonMine": "Mine",
-      "comparisonDistrict": "District",
+      "comparisonDistrict": "Average",
       "fillDistrictTitle": "Help fill {district}",
       "shareDistrict": "Share district",
       "shareBuilding": "Share building",
