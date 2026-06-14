@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { Calculator, Plus, Receipt, Sparkles } from 'lucide-react';
+import { Calculator, FileText, Plus, Receipt, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -30,7 +30,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
   // then. The current headline is the loss-aversion framing.)
-  const onCtaClick = (cta: 'costs' | 'calculator' | 'listing') =>
+  const onCtaClick = (cta: 'costs' | 'calculator' | 'templates' | 'listing') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
@@ -108,6 +108,18 @@ export function Hero({ stats: liveStats }: HeroProps) {
               <Link href={`/${DEFAULT_CITY}/calculator`} onClick={() => onCtaClick('calculator')}>
                 <Calculator className="mr-2 h-4 w-4" />
                 {t('calculatorCta')}
+              </Link>
+            </Button>
+            {/* Document templates — close the deal once the costs are known. */}
+            <Button
+              size="lg"
+              variant="outline"
+              className="group h-12 rounded-full px-8 text-base"
+              asChild
+            >
+              <Link href="/resources" onClick={() => onCtaClick('templates')}>
+                <FileText className="mr-2 h-4 w-4" />
+                {t('templatesCta')}
               </Link>
             </Button>
             {/* Tertiary CTA — post a listing. */}
