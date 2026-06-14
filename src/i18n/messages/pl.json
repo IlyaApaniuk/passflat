@@ -679,7 +679,14 @@
   },
   "share": {
     "share": "Udostępnij",
-    "copied": "Skopiowano link"
+    "copied": "Skopiowano link",
+    "cardTitle": "Płacę {percent}% poniżej średniej dzielnicy {district}",
+    "cardTitleGeneric": "Ile naprawdę kosztuje wynajem w Warszawie",
+    "cardDescription": "Sprawdź, czy nie przepłacasz za wynajem — Passflat",
+    "landingHeading": "Zobacz, ile naprawdę płaci się w Twojej okolicy",
+    "landingBody": "Ktoś porównał swój czynsz z dzielnicą i się tym podzielił. Sprawdź swój — za darmo, w dwie minuty.",
+    "ctaCalculator": "Otwórz kalkulator",
+    "ctaCosts": "Zobacz koszty wg dzielnic"
   },
   "rentReport": {
     "metaTitle": "Ile kosztuje wynajem w Warszawie w {year} — realne dane lokatorów",
@@ -1424,6 +1431,15 @@
       "languageLabel": "Język"
     },
     "costsSectionTitle": "Moje koszty",
+    "costComparison": {
+      "title": "Porównanie z dzielnicą i miastem",
+      "total": "Razem/mies",
+      "rentPerM2": "Czynsz/m²",
+      "totalPerM2": "Razem/m²",
+      "district": "Dzielnica",
+      "city": "Miasto",
+      "share": "Udostępnij porównanie"
+    },
     "followsSectionTitle": "Obserwowane budynki",
     "noFollows": "Nie obserwujesz jeszcze żadnego budynku",
     "noFollowsDesc": "Obserwuj budynek, aby dostać e-mail, gdy pojawią się nowe raporty.",

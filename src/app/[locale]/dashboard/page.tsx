@@ -3,6 +3,8 @@ import { getLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { DashboardClient } from './client';
+import { getDistrictCostMedians, getCityCostMedians } from '@/lib/cost-baselines';
+import type { CostComparison } from '@/components/costs/cost-comparison-card';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -119,6 +121,47 @@ export default async function DashboardPage() {
     createdAt: f.createdAt.toISOString(),
   }));
 
+  // "You vs your area" comparison, anchored on the most recent visible report.
+  const anchor = costReports.find((r) => r.isVisible && r.totalMonthlyAvg != null);
+  let costComparison: CostComparison | null = null;
+  if (anchor) {
+    const area = anchor.areaM2 != null ? Number(anchor.areaM2) : null;
+    const rentNum = anchor.rent != null ? Number(anchor.rent) : null;
+    const totalNum = Number(anchor.totalMonthlyAvg);
+    const perM2 = (v: number | null) =>
+      v != null && area != null && area > 0 ? Math.round(v / area) : null;
+
+    const [districtMedians, cityMedians] = await Promise.all([
+      anchor.building.districtId
+        ? getDistrictCostMedians(anchor.building.districtId)
+        : Promise.resolve(null),
+      getCityCostMedians(anchor.building.cityId),
+    ]);
+
+    costComparison = {
+      districtName: anchor.building.district?.nameKey ?? null,
+      districtSlug: anchor.building.district?.slug ?? null,
+      citySlug: anchor.building.city.slug,
+      user: {
+        total: Math.round(totalNum),
+        rentPerM2: perM2(rentNum),
+        totalPerM2: perM2(totalNum),
+      },
+      district: districtMedians
+        ? {
+            total: districtMedians.total,
+            rentPerM2: districtMedians.rentPerM2,
+            totalPerM2: districtMedians.totalPerM2,
+          }
+        : null,
+      city: {
+        total: cityMedians.total,
+        rentPerM2: cityMedians.rentPerM2,
+        totalPerM2: cityMedians.totalPerM2,
+      },
+    };
+  }
+
   return (
     <DashboardClient
       listings={serializedListings}
@@ -132,6 +175,7 @@ export default async function DashboardPage() {
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
       emailsOptOut={profile?.emailsOptOut ?? false}
       userId={user.id}
+      costComparison={costComparison}
     />
   );
 }

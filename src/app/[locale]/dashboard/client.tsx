@@ -63,6 +63,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { DeleteAccountDialog } from '@/components/account/delete-account-dialog';
 import { ShareButton } from '@/components/costs/share-button';
+import { CostComparisonCard, type CostComparison } from '@/components/costs/cost-comparison-card';
 import { LANGUAGES } from '@/i18n/languages';
 
 type ListingType = 'replacement' | 'roommate' | 'sublet';
@@ -131,6 +132,7 @@ interface Props {
   costAccessUntil: string | null;
   emailsOptOut: boolean;
   userId: string;
+  costComparison: CostComparison | null;
 }
 
 const statCardVariants = {
@@ -166,6 +168,7 @@ export function DashboardClient({
   costAccessUntil,
   emailsOptOut,
   userId,
+  costComparison,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -558,6 +561,8 @@ export function DashboardClient({
                 />
               </div>
             )}
+
+            {costComparison && <CostComparisonCard comparison={costComparison} userId={userId} />}
 
             {costReports.length === 0 ? (
               <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">

@@ -679,7 +679,14 @@
   },
   "share": {
     "share": "Share",
-    "copied": "Link copied"
+    "copied": "Link copied",
+    "cardTitle": "I pay {percent}% below the {district} average",
+    "cardTitleGeneric": "What renting really costs across Warsaw",
+    "cardDescription": "Check if you're overpaying on rent — Passflat",
+    "landingHeading": "See what people really pay in your area",
+    "landingBody": "Someone compared their rent to the area and shared it. Check yours — it's free and takes two minutes.",
+    "ctaCalculator": "Open the calculator",
+    "ctaCosts": "Browse costs by district"
   },
   "rentReport": {
     "metaTitle": "How much rent costs in Warsaw in {year} — real tenant data",
@@ -1424,6 +1431,15 @@
       "languageLabel": "Language"
     },
     "costsSectionTitle": "My costs",
+    "costComparison": {
+      "title": "How you compare to your area",
+      "total": "Total/mo",
+      "rentPerM2": "Rent/m²",
+      "totalPerM2": "Total/m²",
+      "district": "District",
+      "city": "City",
+      "share": "Share comparison"
+    },
     "followsSectionTitle": "Followed buildings",
     "noFollows": "Not following any buildings yet",
     "noFollowsDesc": "Follow a building to get an email when new cost reports are added.",
