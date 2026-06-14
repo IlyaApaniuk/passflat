@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -811,69 +811,65 @@ export function CostSubmitClient({
 
                           {(submittedComparison.userRentPerM2 != null ||
                             submittedComparison.userTotalPerM2 != null) && (
-                            <div className="mt-3 space-y-1.5 border-t pt-3">
-                              <p className="text-xs font-medium text-muted-foreground">
+                            <div className="mt-3 border-t pt-3">
+                              <p className="mb-2 text-xs font-medium text-muted-foreground">
                                 {t('costs.submit.comparisonPerM2Heading')}
                               </p>
-                              {[
-                                {
-                                  label: t('costs.submit.comparisonRentPerM2'),
-                                  u: submittedComparison.userRentPerM2,
-                                  m: submittedComparison.districtMedianRentPerM2,
-                                },
-                                {
-                                  label: t('costs.submit.comparisonTotalPerM2'),
-                                  u: submittedComparison.userTotalPerM2,
-                                  m: submittedComparison.districtMedianTotalPerM2,
-                                },
-                              ].map((row) => {
-                                if (row.u == null || row.m == null) return null;
-                                const pct =
-                                  row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
-                                const deltaCls =
-                                  pct > 0
-                                    ? 'text-red-600'
-                                    : pct < 0
-                                      ? 'text-green-600'
-                                      : 'text-muted-foreground';
-                                const deltaLabel =
-                                  pct === 0
-                                    ? null
-                                    : pct > 0
-                                      ? t('costs.building.percentHigher', { percent: pct })
-                                      : t('costs.building.percentLower', {
-                                          percent: Math.abs(pct),
-                                        });
-                                return (
-                                  <div
-                                    key={row.label}
-                                    className="flex items-center justify-between gap-2 text-sm"
-                                  >
-                                    <span className="text-muted-foreground">{row.label}</span>
-                                    <span className="flex flex-wrap items-center justify-end gap-x-1.5 text-right">
-                                      <span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {t('costs.submit.comparisonMine')}{' '}
-                                        </span>
-                                        <span className="font-semibold text-primary">
-                                          ≈{row.u.toLocaleString()}
-                                        </span>
-                                      </span>
-                                      <span className="text-muted-foreground">
-                                        <span className="text-xs">
-                                          · {t('costs.submit.comparisonDistrict')}{' '}
-                                        </span>
+                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 gap-y-1.5 text-sm">
+                                {/* Column headers — aligned over the value columns. */}
+                                <div />
+                                <div className="text-right text-xs font-medium text-muted-foreground">
+                                  {t('costs.submit.comparisonMine')}
+                                </div>
+                                <div className="text-right text-xs font-medium text-muted-foreground">
+                                  {t('costs.submit.comparisonDistrict')}
+                                </div>
+                                <div />
+                                {[
+                                  {
+                                    label: t('costs.submit.comparisonRentPerM2'),
+                                    u: submittedComparison.userRentPerM2,
+                                    m: submittedComparison.districtMedianRentPerM2,
+                                  },
+                                  {
+                                    label: t('costs.submit.comparisonTotalPerM2'),
+                                    u: submittedComparison.userTotalPerM2,
+                                    m: submittedComparison.districtMedianTotalPerM2,
+                                  },
+                                ].map((row) => {
+                                  if (row.u == null || row.m == null) return null;
+                                  const pct =
+                                    row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
+                                  const deltaCls =
+                                    pct > 0
+                                      ? 'text-red-600'
+                                      : pct < 0
+                                        ? 'text-green-600'
+                                        : 'text-muted-foreground';
+                                  const deltaLabel =
+                                    pct === 0
+                                      ? null
+                                      : pct > 0
+                                        ? t('costs.building.percentHigher', { percent: pct })
+                                        : t('costs.building.percentLower', {
+                                            percent: Math.abs(pct),
+                                          });
+                                  return (
+                                    <Fragment key={row.label}>
+                                      <div className="text-muted-foreground">{row.label}</div>
+                                      <div className="text-right font-semibold tabular-nums text-primary">
+                                        ≈{row.u.toLocaleString()}
+                                      </div>
+                                      <div className="whitespace-nowrap text-right tabular-nums">
                                         ≈{row.m.toLocaleString()} zł
-                                      </span>
-                                      {deltaLabel && (
-                                        <span className={`text-xs font-medium ${deltaCls}`}>
-                                          {deltaLabel}
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                                      </div>
+                                      <div className={`text-right text-xs font-medium ${deltaCls}`}>
+                                        {deltaLabel}
+                                      </div>
+                                    </Fragment>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
                         </div>
