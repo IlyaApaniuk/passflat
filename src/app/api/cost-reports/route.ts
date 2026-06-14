@@ -26,6 +26,12 @@ import {
 // low enough to stop a flood.
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const RATE_LIMIT_MAX_PER_WINDOW = 10;
+// Platform-wide circuit breaker (genuine user submissions only). Set far above
+// normal volume so only a coordinated multi-account flood trips it — caps how
+// fast the medians can be poisoned regardless of how many accounts are used.
+// NOTE: a slow distributed attack under this ceiling still needs IP/device-level
+// limiting (shared store, e.g. Upstash) — a deliberate follow-up, not here.
+const GLOBAL_RATE_LIMIT_MAX_PER_WINDOW = 200;
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -67,13 +73,21 @@ export async function POST(request: NextRequest) {
     // Counts the user's own recent reports (no extra store needed); admins doing
     // bulk imports are exempt.
     if (!isCostImportAdmin(user.email)) {
-      const recentCount = await prisma.costReport.count({
-        where: {
-          authorId: user.id,
-          createdAt: { gt: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
-        },
-      });
-      if (recentCount >= RATE_LIMIT_MAX_PER_WINDOW) {
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
+      const [recentCount, recentGlobal] = await Promise.all([
+        prisma.costReport.count({
+          where: { authorId: user.id, createdAt: { gt: windowStart } },
+        }),
+        // Platform-wide flood guard: many fresh accounts, each under the per-user
+        // cap, could still bypass it — so also bound total user submissions/hour.
+        prisma.costReport.count({
+          where: { source: 'user', createdAt: { gt: windowStart } },
+        }),
+      ]);
+      if (
+        recentCount >= RATE_LIMIT_MAX_PER_WINDOW ||
+        recentGlobal >= GLOBAL_RATE_LIMIT_MAX_PER_WINDOW
+      ) {
         return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
       }
     }
