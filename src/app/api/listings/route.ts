@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import {
   isValidListingType,
   validateTypeSpecificFields,
+  validateListingNumericFields,
   computeExpiresAt,
   computePriceFields,
   getPriceFieldForType,
@@ -130,6 +131,11 @@ export async function POST(request: NextRequest) {
   const typeValidation = validateTypeSpecificFields(type, body);
   if (!typeValidation.valid) {
     return NextResponse.json({ error: typeValidation.error }, { status: 400 });
+  }
+
+  const numericValidation = validateListingNumericFields(body);
+  if (!numericValidation.valid) {
+    return NextResponse.json({ error: numericValidation.error }, { status: 400 });
   }
 
   const city = await prisma.city.findUnique({
