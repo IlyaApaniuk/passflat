@@ -66,6 +66,40 @@ export function validateTypeSpecificFields(
   }
 }
 
+// Numeric sanity bounds for listing money/size fields. Mirrors the cost-report
+// STRICT_FIELDS approach so a typo (rent: 1 or 1_000_000) is rejected instead of
+// polluting the search index. Absent/empty fields are skipped (presence is
+// enforced per-type in validateTypeSpecificFields).
+const LISTING_FIELD_RANGES: Record<string, { min: number; max: number }> = {
+  rent: { min: 100, max: 30_000 },
+  adminFee: { min: 0, max: 5_000 },
+  utilitiesAvg: { min: 0, max: 5_000 },
+  depositAmount: { min: 0, max: 100_000 },
+  pricePerPerson: { min: 100, max: 15_000 },
+  totalApartmentRent: { min: 100, max: 50_000 },
+  priceTotal: { min: 100, max: 50_000 },
+  areaM2: { min: 5, max: 500 },
+  rooms: { min: 1, max: 20 },
+  totalRooms: { min: 1, max: 20 },
+  currentRoommates: { min: 0, max: 20 },
+  floor: { min: -2, max: 200 },
+  preferredAgeMin: { min: 16, max: 100 },
+  preferredAgeMax: { min: 16, max: 100 },
+};
+
+export function validateListingNumericFields(body: Record<string, unknown>): ValidationResult {
+  for (const [field, range] of Object.entries(LISTING_FIELD_RANGES)) {
+    const raw = body[field];
+    if (raw == null || raw === '') continue;
+    const value = typeof raw === 'number' ? raw : parseFloat(String(raw));
+    if (Number.isNaN(value)) continue;
+    if (value < range.min || value > range.max) {
+      return { valid: false, error: `${field} must be between ${range.min} and ${range.max}` };
+    }
+  }
+  return { valid: true };
+}
+
 const REPLACEMENT_EXPIRY_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 const ROOMMATE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

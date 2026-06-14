@@ -73,6 +73,15 @@ export async function GET(request: NextRequest) {
     ]);
     if (newReports === 0) continue;
 
+    // Reserve the notification *before* sending so a crash after Resend accepts
+    // the email can't re-notify next run (duplicates read as spam). Trade-off is
+    // at-most-once: a rare hard send failure (after sendEmail's own retries)
+    // skips this batch and the follower catches the next new report instead.
+    await prisma.buildingFollow.update({
+      where: { id: follow.id },
+      data: { lastNotifiedAt: now },
+    });
+
     const locale = resolveEmailLocale(follow.user?.locale);
     const citySlug = follow.building.city?.slug || 'warsaw';
     const result = await sendEmail({
@@ -95,10 +104,6 @@ export async function GET(request: NextRequest) {
       activityFailed += 1;
       continue;
     }
-    await prisma.buildingFollow.update({
-      where: { id: follow.id },
-      data: { lastNotifiedAt: now },
-    });
     activitySent += 1;
   }
 
@@ -151,6 +156,13 @@ export async function GET(request: NextRequest) {
     const report = author.costReports[0];
     if (!email || !report) continue;
 
+    // Reserve before send (see Trigger A): a duplicate is worse than a rare miss
+    // for a twice-a-year nudge, and the cooldown already gates re-tries.
+    await prisma.profile.update({
+      where: { id: author.id },
+      data: { lastReengagementAt: now },
+    });
+
     const locale = resolveEmailLocale(author.locale);
     const citySlug = report.building.city?.slug || 'warsaw';
     const freshAt = report.confirmedAt ?? report.createdAt;
@@ -180,10 +192,6 @@ export async function GET(request: NextRequest) {
       refreshFailed += 1;
       continue;
     }
-    await prisma.profile.update({
-      where: { id: author.id },
-      data: { lastReengagementAt: now },
-    });
     refreshSent += 1;
   }
 

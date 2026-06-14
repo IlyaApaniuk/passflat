@@ -19,6 +19,12 @@ import type { EmailLocale, EmailTemplate, EmailTranslator } from './types';
 
 const FROM_EMAIL = process.env.RESEND_FROM || 'Passflat <noreply@passflat.com>';
 
+// Retry transient send failures (network/Resend hiccups) with exponential backoff.
+// Render/translate failures are deterministic and are NOT retried.
+const EMAIL_MAX_ATTEMPTS = 3;
+const EMAIL_RETRY_BASE_MS = 500;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function buildEmail(
   t: EmailTranslator,
   spec: EmailTemplate,
@@ -127,24 +133,32 @@ export async function sendEmail(args: SendEmailArgs) {
     const { subject, element } = buildEmail(translate, spec as EmailTemplate);
     const html = await render(element);
 
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to,
-      replyTo,
-      subject,
-      html,
-    });
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= EMAIL_MAX_ATTEMPTS; attempt++) {
+      const { data, error } = await resend.emails
+        .send({ from: FROM_EMAIL, to, replyTo, subject, html })
+        .catch((sendErr: unknown) => ({ data: null, error: sendErr }));
 
-    if (error) {
-      console.error(`[email] Failed to send "${spec.template}" email:`, error);
-      captureServerException(error, {
-        properties: { source: 'email_send', template: spec.template },
-      });
-      await flushPostHog();
-      return { success: false as const, error };
+      if (!error) {
+        return { success: true as const, id: data?.id };
+      }
+
+      lastError = error;
+      if (attempt < EMAIL_MAX_ATTEMPTS) {
+        // Transient failure — back off (500ms, 1s) before the next attempt.
+        await sleep(EMAIL_RETRY_BASE_MS * 2 ** (attempt - 1));
+      }
     }
 
-    return { success: true as const, id: data?.id };
+    console.error(
+      `[email] Failed to send "${spec.template}" after ${EMAIL_MAX_ATTEMPTS} attempts:`,
+      lastError,
+    );
+    captureServerException(lastError, {
+      properties: { source: 'email_send', template: spec.template, attempts: EMAIL_MAX_ATTEMPTS },
+    });
+    await flushPostHog();
+    return { success: false as const, error: lastError };
   } catch (err) {
     console.error(`[email] Exception sending "${spec.template}" email:`, err);
     captureServerException(err, {

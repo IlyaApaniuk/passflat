@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 
+// Cap work per run so a large backlog drains across runs instead of OOM/timeout.
+const BATCH = 500;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -16,6 +19,7 @@ export async function GET(request: NextRequest) {
       updatedAt: { lte: ninetyDaysAgo },
     },
     select: { id: true, photos: true },
+    take: BATCH,
   });
 
   let deletedCount = 0;
@@ -35,6 +39,7 @@ export async function GET(request: NextRequest) {
     success: true,
     deletedCount,
     photosDeleted,
+    hasMore: staleListings.length === BATCH,
     timestamp: new Date().toISOString(),
   });
 }

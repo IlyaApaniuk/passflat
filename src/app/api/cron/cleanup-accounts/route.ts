@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 import { trackServerEvent } from '@/lib/posthog-server';
 
+// Cap work per run so a large backlog drains across runs instead of OOM/timeout.
+// Account deletion is heavier (storage + auth calls), so a smaller batch.
+const BATCH = 100;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -27,6 +31,7 @@ export async function GET(request: NextRequest) {
         select: { id: true, photos: true },
       },
     },
+    take: BATCH,
   });
 
   let deletedCount = 0;
@@ -53,6 +58,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     deletedCount,
+    hasMore: profilesToDelete.length === BATCH,
     timestamp: new Date().toISOString(),
   });
 }

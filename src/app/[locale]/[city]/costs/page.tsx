@@ -7,7 +7,8 @@ import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { CostsOverviewClient, type CostAccess } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
-import { median, perAreaValues } from '@/lib/cost-stats';
+import { median } from '@/lib/cost-stats';
+import { getBuildingsData } from '@/lib/cost-aggregates';
 import type { CityBounds } from '@/lib/listings-data';
 
 const ANON_ACCESS: CostAccess = {
@@ -16,120 +17,11 @@ const ANON_ACCESS: CostAccess = {
   isFlagged: false,
 };
 
-type BuildingData = {
-  id: string;
-  slug: string;
-  address: string;
-  district: string;
-  districtSlug: string;
-  reports: number;
-  medianTotal: number;
-  medianRent: number;
-  medianAdminFee: number;
-  medianRentPerM2: number | null;
-  medianTotalPerM2: number | null;
-  medianAdminFeePerM2: number | null;
-  medianExpenses: number | null;
-  lat: number | null;
-  lng: number | null;
-  rentalType: string | null;
-};
-
 // Cache the city lookup; cities/districts change rarely.
 const getCityForCosts = unstable_cache(
   (slug: string) => prisma.city.findUnique({ where: { slug }, include: { districts: true } }),
   ['costs-city'],
   { revalidate: 600, tags: ['costs'] },
-);
-
-// The expensive part: buildings + their visible cost reports, reduced to plain,
-// JSON-serializable medians inside the cache so it's not re-run (with nested
-// joins) on every request. Keyed by the arguments (city + filters).
-const getBuildingsData = unstable_cache(
-  async (
-    cityId: string,
-    districtFilter: string | null,
-    searchQuery: string | null,
-  ): Promise<BuildingData[]> => {
-    const buildingWhere: Record<string, unknown> = { cityId };
-    if (districtFilter) buildingWhere.district = { slug: districtFilter };
-    if (searchQuery) buildingWhere.addressFull = { contains: searchQuery, mode: 'insensitive' };
-
-    const buildings = await prisma.building.findMany({
-      where: { ...buildingWhere, costReports: { some: { isVisible: true } } },
-      include: {
-        district: true,
-        costReports: {
-          where: { isVisible: true },
-          select: {
-            rent: true,
-            adminFee: true,
-            totalMonthlyAvg: true,
-            areaM2: true,
-            rentalType: true,
-            // FUTURE (paid utility analytics): add electricityAvg, gas, heating,
-            // water here, then compute per-building medians in the .map() below.
-          },
-        },
-      },
-      orderBy: { costReports: { _count: 'desc' } },
-    });
-
-    return buildings.map((b) => {
-      const reports = b.costReports;
-      const count = reports.length;
-
-      const rentalTypes = reports.map((r) => r.rentalType).filter((v): v is string => v !== null);
-      const dominantRentalType =
-        rentalTypes.length > 0
-          ? Object.entries(
-              rentalTypes.reduce<Record<string, number>>((acc, t) => {
-                acc[t] = (acc[t] || 0) + 1;
-                return acc;
-              }, {}),
-            ).sort((a, b) => b[1] - a[1])[0][0]
-          : null;
-
-      const num = (v: unknown) => (v == null ? null : Number(v));
-
-      return {
-        id: b.id,
-        slug: b.slug,
-        address: b.addressFull,
-        district: b.district?.nameKey ?? '',
-        districtSlug: b.district?.slug ?? '',
-        reports: count,
-        medianTotal: median(reports.map((r) => num(r.totalMonthlyAvg))) ?? 0,
-        medianRent: median(reports.map((r) => num(r.rent))) ?? 0,
-        medianAdminFee: median(reports.map((r) => num(r.adminFee))) ?? 0,
-        // Per-report (total − rent) then median — the typical non-rent spend.
-        medianExpenses: median(
-          reports.map((r) => {
-            const tot = num(r.totalMonthlyAvg);
-            const rnt = num(r.rent);
-            return tot != null && rnt != null ? tot - rnt : null;
-          }),
-        ),
-        // Per-report ratio, then median — never average-of-averages.
-        medianRentPerM2: median(
-          perAreaValues(reports.map((r) => ({ value: num(r.rent), areaM2: num(r.areaM2) }))),
-        ),
-        medianTotalPerM2: median(
-          perAreaValues(
-            reports.map((r) => ({ value: num(r.totalMonthlyAvg), areaM2: num(r.areaM2) })),
-          ),
-        ),
-        medianAdminFeePerM2: median(
-          perAreaValues(reports.map((r) => ({ value: num(r.adminFee), areaM2: num(r.areaM2) }))),
-        ),
-        lat: b.lat ? Number(b.lat) : null,
-        lng: b.lng ? Number(b.lng) : null,
-        rentalType: dominantRentalType,
-      };
-    });
-  },
-  ['costs-buildings'],
-  { revalidate: 300, tags: ['costs'] },
 );
 
 /**
