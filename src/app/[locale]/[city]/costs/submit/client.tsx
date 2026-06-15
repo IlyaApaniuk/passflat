@@ -435,6 +435,16 @@ export function CostSubmitClient({
       return;
     }
     setUtilitiesError(false);
+
+    // A valid in-city address is required for new reports. An out-of-city pick is
+    // rejected at selection (the form is left empty), so surface a clear address
+    // error here rather than the server's generic "Missing required fields".
+    if (!editMode && (!formData.street.trim() || !formData.buildingNumber.trim())) {
+      setError(t('costs.submit.addressRequired'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -917,13 +927,13 @@ export function CostSubmitClient({
                 )}
                 {/* Slim navigation: the share above is the primary action, so the
                     dashboard is a secondary outline and browsing a ghost link. */}
-                <div className="mt-6 flex flex-col items-center gap-2">
+                <div className="mt-6 flex flex-col gap-2">
                   <Button variant="outline" className="w-full" asChild>
                     <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
                       {t('costs.submit.viewMyReports')}
                     </Link>
                   </Button>
-                  <Button variant="ghost" size="sm" className="self-center" asChild>
+                  <Button variant="ghost" className="w-full" asChild>
                     <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
                   </Button>
                 </div>

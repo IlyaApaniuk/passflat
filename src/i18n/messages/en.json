@@ -1002,6 +1002,7 @@
       "leaseUnknown": "Not sure",
       "leaseTypeRequired": "Please select the lease type",
       "addressOutsideCity": "Please choose an address within {city}.",
+      "addressRequired": "Enter your address",
       "rateLimited": "Too many reports in a short time. Please try again later.",
       "ownerEmail": "Owner email (optional)",
       "ownerEmailHint": "Links this report to that account when they log in. Leave empty to keep it unattributed.",
