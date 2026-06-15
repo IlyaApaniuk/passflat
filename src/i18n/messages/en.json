@@ -687,7 +687,11 @@
     "landingBody": "Someone compared their rent to the area and shared it. Check yours — it's free and takes two minutes.",
     "ctaCalculator": "Open the calculator",
     "ctaCosts": "Browse costs by district",
-    "landingDataLabel": "Rent costs in {district}"
+    "landingDataLabel": "Rent costs in {district}",
+    "ogTitle": "I pay less than my area",
+    "ogStatLabel": "Below the {district} median",
+    "ogStat": "-{percent}%",
+    "ogMedian": "Area median: ≈{amount} zł"
   },
   "rentReport": {
     "metaTitle": "How much rent costs in Warsaw in {year} — real tenant data",

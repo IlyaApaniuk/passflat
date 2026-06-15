@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
-import { getOgImage } from '@/lib/seo';
+import { getCostOgImage, getOgImage } from '@/lib/seo';
 import { getDistrictCostMedians } from '@/lib/cost-baselines';
 
 // Personal "I pay X% below my area" share landing: the OG preview carries the
@@ -34,25 +34,46 @@ const getDistrict = cache(async (citySlug: string, slug?: string) => {
   });
 });
 
+// Deduped too: generateMetadata (for the OG split line) + the page both need it.
+const getMedians = cache((districtId: string) => getDistrictCostMedians(districtId));
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { city } = await params;
   const { pct, d } = await searchParams;
   const t = await getTranslations('share');
   const district = await getDistrict(city, d);
   const pctNum = parsePct(pct);
-
-  // Only the "below the area" case is brag-worthy; otherwise stay generic.
-  const title =
-    pctNum != null && pctNum < 0 && district
-      ? t('cardTitle', { percent: Math.abs(pctNum), district: district.nameKey })
-      : t('cardTitleGeneric');
   const description = t('cardDescription');
+
+  // Only the "below the area" case is brag-worthy. There it gets the rich
+  // designed OG card (big green "-X%" headline + the area's real median as
+  // proof) — the viral artifact dropped into chats. Otherwise a plain text card.
+  let title: string;
+  let image;
+  if (pctNum != null && pctNum < 0 && district) {
+    const percent = Math.abs(pctNum);
+    title = t('cardTitle', { percent, district: district.nameKey });
+    const medians = await getMedians(district.id);
+    image = getCostOgImage({
+      title: t('ogTitle'),
+      subtitle: description,
+      statLabel: t('ogStatLabel', { district: district.nameKey }),
+      stat: t('ogStat', { percent }),
+      split:
+        medians?.total != null
+          ? t('ogMedian', { amount: medians.total.toLocaleString() })
+          : undefined,
+    });
+  } else {
+    title = t('cardTitleGeneric');
+    image = getOgImage(title, description);
+  }
 
   return {
     title,
     description,
     robots: { index: false, follow: true },
-    openGraph: { title, description, images: [getOgImage(title, description)] },
+    openGraph: { title, description, images: [image] },
   };
 }
 
@@ -61,7 +82,7 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   const { d } = await searchParams;
   const t = await getTranslations('share');
   const district = await getDistrict(city, d);
-  const medians = district ? await getDistrictCostMedians(district.id) : null;
+  const medians = district ? await getMedians(district.id) : null;
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
