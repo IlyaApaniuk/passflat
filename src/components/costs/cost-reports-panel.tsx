@@ -122,8 +122,9 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      {/* Header: address + district + headline total, with edit + view links. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {/* Header: address + district (left) and the headline total (right). The
+          actions (edit / share) live in a footer row below. */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
           {r.status === 'flagged' && (
             <Badge
@@ -144,20 +145,10 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             <p className="mt-0.5 text-sm text-muted-foreground">{r.districtName}</p>
           )}
         </div>
-        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-          <p className="text-lg font-bold text-primary">
-            {r.user.total.toLocaleString()} PLN
-            <span className="text-sm font-normal text-muted-foreground">
-              {t('common.perMonth')}
-            </span>
-          </p>
-          <Button size="sm" variant="outline" className="gap-1.5" asChild>
-            <Link href={`/${r.citySlug}/costs/submit?edit=true&id=${r.reportId}`}>
-              <Edit className="h-3.5 w-3.5" />
-              {t('common.edit')}
-            </Link>
-          </Button>
-        </div>
+        <p className="shrink-0 text-lg font-bold text-primary">
+          {r.user.total.toLocaleString()} PLN
+          <span className="text-sm font-normal text-muted-foreground">{t('common.perMonth')}</span>
+        </p>
       </div>
 
       {/* Headline: how this report's monthly total sits vs the district median. */}
@@ -248,9 +239,17 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
         </p>
       )}
 
-      {/* Personal share: brag/neutral OG card; pivots a friend to check their own. */}
-      {districtMedianTotal != null && districtMedianTotal > 0 && r.districtSlug && (
-        <div className="mt-3 sm:flex sm:justify-end">
+      {/* Actions: edit this report + share the comparison (whose OG card brags
+          when below the area, stays neutral otherwise). Stacked full-width on
+          mobile, right-aligned on desktop. */}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button size="sm" variant="outline" className="w-full gap-1.5 sm:w-auto" asChild>
+          <Link href={`/${r.citySlug}/costs/submit?edit=true&id=${r.reportId}`}>
+            <Edit className="h-3.5 w-3.5" />
+            {t('common.edit')}
+          </Link>
+        </Button>
+        {districtMedianTotal != null && districtMedianTotal > 0 && r.districtSlug && (
           <ShareButton
             path={`/${r.citySlug}/costs/share?pct=${Math.round(
               ((r.user.total - districtMedianTotal) / districtMedianTotal) * 100,
@@ -260,8 +259,8 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             label={t('dashboard.costComparison.share')}
             className="w-full sm:w-auto"
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
