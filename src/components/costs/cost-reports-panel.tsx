@@ -254,7 +254,7 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
           <ShareButton
             path={`/${r.citySlug}/costs/share?pct=${Math.round(
               ((r.user.total - districtMedianTotal) / districtMedianTotal) * 100,
-            )}&d=${r.districtSlug}`}
+            )}&d=${r.districtSlug}&amt=${r.user.total}`}
             source="dashboard-comparison"
             refToken={userId}
             label={t('dashboard.costComparison.share')}

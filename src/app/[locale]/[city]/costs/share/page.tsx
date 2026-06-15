@@ -17,13 +17,22 @@ export const dynamic = 'force-dynamic';
 
 type Props = {
   params: Promise<{ locale: string; city: string }>;
-  searchParams: Promise<{ pct?: string; d?: string }>;
+  searchParams: Promise<{ pct?: string; d?: string; amt?: string }>;
 };
 
 function parsePct(pct?: string): number | null {
   if (!pct) return null;
   const n = parseInt(pct, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+// The sharer's own monthly total, passed through the share link so the landing
+// can name a concrete number. Guarded to a sane range so a hand-edited URL can't
+// inject garbage.
+function parseAmount(amt?: string): number | null {
+  if (!amt) return null;
+  const n = parseInt(amt, 10);
+  return Number.isFinite(n) && n > 0 && n < 1_000_000 ? n : null;
 }
 
 // Deduped across generateMetadata + the page render.
@@ -94,22 +103,30 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CostShareLandingPage({ params, searchParams }: Props) {
   const { city } = await params;
-  const { d, pct } = await searchParams;
+  const { d, pct, amt } = await searchParams;
   const t = await getTranslations('share');
   const tr = await getTranslations('costs.overview');
   const district = await getDistrict(city, d);
   const stats = district ? await getDistrictCostStats(district.id) : null;
   const pctNum = parsePct(pct);
+  const amtNum = parseAmount(amt);
 
-  // Reveal HOW MUCH the sharer is above/below their area — the curiosity hook
-  // that makes the visitor want to check their own. Falls back to the generic
-  // line when there's no comparable percentage.
-  const bodyText =
-    pctNum != null && pctNum !== 0 && district
-      ? pctNum < 0
-        ? t('landingBodyBelow', { percent: Math.abs(pctNum), district: district.nameKey })
-        : t('landingBodyAbove', { percent: pctNum, district: district.nameKey })
-      : t('landingBody');
+  // Reveal HOW MUCH the sharer is above/below their area (and their concrete
+  // amount when the link carries it) — the curiosity hook that makes the visitor
+  // want to check their own. Falls back to the generic line with no percentage.
+  let bodyText = t('landingBody');
+  if (district && pctNum != null && pctNum !== 0) {
+    const base = { percent: Math.abs(pctNum), district: district.nameKey };
+    if (amtNum != null) {
+      const withAmount = { ...base, amount: amtNum.toLocaleString() };
+      bodyText =
+        pctNum < 0
+          ? t('landingBodyBelowAmount', withAmount)
+          : t('landingBodyAboveAmount', withAmount);
+    } else {
+      bodyText = pctNum < 0 ? t('landingBodyBelow', base) : t('landingBodyAbove', base);
+    }
+  }
 
   const total = stats?.total.median ?? null;
   const { p25, p75 } = stats?.total ?? { p25: null, p75: null };
