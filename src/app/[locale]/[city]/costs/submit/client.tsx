@@ -251,6 +251,10 @@ export function CostSubmitClient({
     districtSlug: string | null;
     districtMedian: number | null;
     districtReportCount: number;
+    userRentPerM2: number | null;
+    userTotalPerM2: number | null;
+    districtMedianRentPerM2: number | null;
+    districtMedianTotalPerM2: number | null;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -771,27 +775,102 @@ export function CostSubmitClient({
                           {(() => {
                             const u = submittedComparison.userTotal!;
                             const m = submittedComparison.districtMedian!;
-                            const pct = Math.round(((u - m) / m) * 100);
-                            const label =
-                              pct === 0
-                                ? t('costs.building.matchesMedian')
-                                : pct > 0
-                                  ? t('costs.building.percentHigher', { percent: pct })
-                                  : t('costs.building.percentLower', { percent: Math.abs(pct) });
+                            const delta = Math.round(u - m);
                             const cls =
-                              pct === 0
+                              delta === 0
                                 ? 'bg-muted text-muted-foreground'
-                                : pct > 0
+                                : delta > 0
                                   ? 'bg-red-500/10 text-red-600'
                                   : 'bg-green-500/10 text-green-600';
+                            const label =
+                              delta === 0
+                                ? t('costs.building.matchesMedian')
+                                : delta > 0
+                                  ? t('costs.submit.comparisonOverpay', {
+                                      amount: delta.toLocaleString(),
+                                    })
+                                  : t('costs.submit.comparisonSave', {
+                                      amount: Math.abs(delta).toLocaleString(),
+                                    });
                             return (
-                              <span
-                                className={`mt-3 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}
-                              >
-                                {label}
-                              </span>
+                              <p className="mt-3 text-xs">
+                                <span
+                                  className={`inline-block rounded-full px-2.5 py-1 font-medium ${cls}`}
+                                >
+                                  {label}
+                                </span>
+                                <span className="ml-2 text-muted-foreground">
+                                  ·{' '}
+                                  {t('costs.overview.nReports', {
+                                    count: submittedComparison.districtReportCount,
+                                  })}
+                                </span>
+                              </p>
                             );
                           })()}
+
+                          {(submittedComparison.userRentPerM2 != null ||
+                            submittedComparison.userTotalPerM2 != null) && (
+                            <div className="mt-3 space-y-2 border-t pt-3">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {t('costs.submit.comparisonPerM2Heading')}
+                              </p>
+                              {[
+                                {
+                                  label: t('costs.submit.comparisonRentPerM2'),
+                                  u: submittedComparison.userRentPerM2,
+                                  m: submittedComparison.districtMedianRentPerM2,
+                                },
+                                {
+                                  label: t('costs.submit.comparisonTotalPerM2'),
+                                  u: submittedComparison.userTotalPerM2,
+                                  m: submittedComparison.districtMedianTotalPerM2,
+                                },
+                              ].map((row) => {
+                                if (row.u == null || row.m == null) return null;
+                                const pct =
+                                  row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
+                                const chipCls =
+                                  pct > 0
+                                    ? 'bg-red-500/10 text-red-600'
+                                    : 'bg-green-500/10 text-green-600';
+                                const deltaLabel =
+                                  pct === 0
+                                    ? null
+                                    : pct > 0
+                                      ? t('costs.building.percentHigher', { percent: pct })
+                                      : t('costs.building.percentLower', {
+                                          percent: Math.abs(pct),
+                                        });
+                                return (
+                                  <div
+                                    key={row.label}
+                                    className="flex items-center justify-between gap-3 text-sm"
+                                  >
+                                    <span className="text-muted-foreground">{row.label}</span>
+                                    <span className="flex items-center gap-2">
+                                      <span className="whitespace-nowrap tabular-nums">
+                                        <span className="font-semibold text-primary">
+                                          ≈{row.u.toLocaleString()}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {' '}
+                                          / ≈{row.m.toLocaleString()} zł
+                                        </span>
+                                      </span>
+                                      {deltaLabel && (
+                                        <span
+                                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                                        >
+                                          {deltaLabel}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
 

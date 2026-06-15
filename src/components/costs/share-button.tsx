@@ -1,10 +1,11 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Share2 } from 'lucide-react';
+import { routing } from '@/i18n/routing';
 
 interface ShareButtonProps {
   /** Locale-relative path to share, e.g. `/warsaw/building/x`. The absolute URL
@@ -24,12 +25,12 @@ interface ShareButtonProps {
 }
 
 /**
- * Copy a shareable link to the open cost data — a plain copy-to-clipboard, no OS
- * share sheet. Every copied URL carries `utm_source=share` so share-driven visits
- * show up in the PostHog acquisition cohorts. This is the core viral artifact —
- * the whole strategy leans on people dropping a building's real costs into a flat
- * chat / Telegram / FB group. Feedback is a toast (snackbar) so the button label
- * stays stable and doesn't reflow.
+ * Copy a shareable link to the open cost data to the clipboard — same behaviour
+ * on mobile and desktop (a copied link unfurls into the OG card on paste). Every
+ * URL carries `utm_source=share` so share-driven visits show up in the PostHog
+ * acquisition cohorts. This is the core viral artifact — the whole strategy leans
+ * on people dropping a building's real costs into a chat / Telegram / FB group.
+ * Feedback is a toast so the button label stays stable and doesn't reflow.
  */
 export function ShareButton({
   path,
@@ -41,13 +42,18 @@ export function ShareButton({
   className,
 }: ShareButtonProps) {
   const t = useTranslations('share');
+  const locale = useLocale();
   const posthog = usePostHog();
 
   const buildUrl = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    // Share in the sharer's own language: friends they send it to speak the same
+    // language. `localePrefix: 'as-needed'` → the default locale has no prefix,
+    // the others do. `path` is always locale-relative (e.g. `/warsaw/...`).
+    const localePrefix = locale === routing.defaultLocale ? '' : `/${locale}`;
     const sep = path.includes('?') ? '&' : '?';
     const ref = refToken ? `&ref=${encodeURIComponent(refToken)}` : '';
-    return `${origin}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
+    return `${origin}${localePrefix}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
   };
 
   const onCopy = async () => {

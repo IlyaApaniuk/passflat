@@ -6,7 +6,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport } from '@/lib/cost-validation';
-import { median } from '@/lib/cost-stats';
+import { median, perAreaValues } from '@/lib/cost-stats';
 import { classifyRef } from '@/lib/referral';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
@@ -532,11 +532,20 @@ export async function POST(request: NextRequest) {
               isVisible: true,
               totalMonthlyAvg: { not: null },
             },
-            select: { totalMonthlyAvg: true },
+            select: { totalMonthlyAvg: true, rent: true, areaM2: true },
             take: 5000,
           })
         : Promise.resolve([]),
     ]);
+
+    // Per-m² figures (rent + total) for both the user and the district median,
+    // so the comparison holds across different flat sizes — not just headline rent.
+    const toNum = (v: unknown) => (v == null ? null : Number(v));
+    const userArea = areaM2 ? parseFloat(areaM2) : null;
+    const userRentNum = rent ? parseFloat(rent) : null;
+    const perM2 = (value: number | null) =>
+      value != null && userArea != null && userArea > 0 ? Math.round(value / userArea) : null;
+    const roundOrNull = (v: number | null) => (v == null ? null : Math.round(v));
 
     const comparison = {
       userTotal: totalMonthlyAvg || null,
@@ -545,6 +554,25 @@ export async function POST(request: NextRequest) {
       districtSlug: bldgDistrict?.slug ?? null,
       districtMedian: median(districtReports.map((r) => Number(r.totalMonthlyAvg))),
       districtReportCount: districtReports.length,
+      userRentPerM2: perM2(userRentNum),
+      userTotalPerM2: perM2(totalMonthlyAvg || null),
+      districtMedianRentPerM2: roundOrNull(
+        median(
+          perAreaValues(
+            districtReports.map((r) => ({ value: toNum(r.rent), areaM2: toNum(r.areaM2) })),
+          ),
+        ),
+      ),
+      districtMedianTotalPerM2: roundOrNull(
+        median(
+          perAreaValues(
+            districtReports.map((r) => ({
+              value: toNum(r.totalMonthlyAvg),
+              areaM2: toNum(r.areaM2),
+            })),
+          ),
+        ),
+      ),
     };
 
     return NextResponse.json({ costReport, wasFlagged, comparison }, { status: 201 });
