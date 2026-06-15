@@ -29,12 +29,13 @@ const SOFT_FIELDS: Record<string, SoftField> = {
 };
 
 // Exposed so the submit form can reuse the same ranges for inline, pre-submit
-// warnings (these are plain constants — safe to import on the client).
+// warnings (these are plain constants — safe to import on the client). Soft
+// fields carry an implicit min of 0 — a negative utility/cost is never valid.
 export const FIELD_RANGES: Record<string, { min?: number; max: number }> = {
   ...Object.fromEntries(
     Object.entries(STRICT_FIELDS).map(([k, v]) => [k, { min: v.range.min, max: v.range.max }]),
   ),
-  ...Object.fromEntries(Object.entries(SOFT_FIELDS).map(([k, v]) => [k, { max: v.max }])),
+  ...Object.fromEntries(Object.entries(SOFT_FIELDS).map(([k, v]) => [k, { min: 0, max: v.max }])),
 };
 
 export interface ValidationResult {
@@ -68,7 +69,11 @@ export function validateCostReport(
     if (raw == null || raw === '') continue;
     const value = typeof raw === 'number' ? raw : parseFloat(raw);
     if (isNaN(value)) continue;
-    if (value > config.max) {
+    // A negative utility/cost is garbage (it would understate the total) — reject
+    // it outright; only an implausibly LARGE value is a soft flag.
+    if (value < 0) {
+      hardErrors.push({ field, message: `${field} cannot be negative` });
+    } else if (value > config.max) {
       flaggedFields.push(field);
     }
   }

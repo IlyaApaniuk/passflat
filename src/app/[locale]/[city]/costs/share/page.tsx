@@ -111,22 +111,17 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   const pctNum = parsePct(pct);
   const amtNum = parseAmount(amt);
 
-  // Pays LESS → a personal brag (with their concrete amount when the link
-  // carries it) — the strong viral hook. Otherwise (pays more / equal / no
-  // percentage) → a NEUTRAL line anchored on the public district median, never
-  // exposing or shaming the sharer's overpay — matching the neutral OG card.
+  // The hook: name the sharer's real rent + whether it's below/above the area
+  // market, then ask the visitor to check their own (works wherever they live).
+  // Needs both the amount and a non-zero gap; otherwise falls back to generic.
   let bodyText = t('landingBody');
-  if (district && pctNum != null && pctNum < 0) {
-    const base = { percent: Math.abs(pctNum), district: district.nameKey };
-    bodyText =
-      amtNum != null
-        ? t('landingBodyBelowAmount', { ...base, amount: amtNum.toLocaleString() })
-        : t('landingBodyBelow', base);
-  } else if (district && stats?.total.median != null) {
-    bodyText = t('landingBodyArea', {
+  if (district && pctNum != null && pctNum !== 0 && amtNum != null) {
+    const base = {
+      percent: Math.abs(pctNum),
       district: district.nameKey,
-      amount: stats.total.median.toLocaleString(),
-    });
+      amount: amtNum.toLocaleString(),
+    };
+    bodyText = pctNum < 0 ? t('landingBodyBelow', base) : t('landingBodyAbove', base);
   }
 
   const total = stats?.total.median ?? null;

@@ -57,15 +57,16 @@ export function CostReportsPanel({
   return (
     <Tabs defaultValue={reports[0].reportId} className="w-full">
       {reports.length > 1 && (
-        // Mobile: a single horizontally-scrollable row (slides sideways) rather
-        // than wrapping to many lines. `-mx-1 px-1` keeps the focus rings from
-        // being clipped by overflow; tabs never shrink so they stay readable.
-        <TabsList className="-mx-1 mb-3 flex h-auto w-[calc(100%+0.5rem)] justify-start gap-1 overflow-x-auto px-1">
+        // A single horizontally-scrollable row (slides sideways) instead of
+        // squeezing every tab into the width. `flex-none` overrides the shadcn
+        // trigger's default `flex-1` (which would shrink/truncate the labels);
+        // the scrollbar is hidden for a clean strip.
+        <TabsList className="mb-3 flex h-auto w-full justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {reports.map((r) => (
             <TabsTrigger
               key={r.reportId}
               value={r.reportId}
-              className="max-w-[12rem] shrink-0 truncate"
+              className="max-w-[12rem] flex-none truncate"
             >
               {r.address}
             </TabsTrigger>
@@ -193,10 +194,15 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
           }
           // Thin district → simple "yours / district median" delta line.
           const pct = m.d.median > 0 ? Math.round(((value - m.d.median) / m.d.median) * 100) : 0;
-          const chipCls = pct > 0 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600';
+          const chipCls =
+            pct === 0
+              ? 'bg-muted text-muted-foreground'
+              : pct > 0
+                ? 'bg-red-500/10 text-red-600'
+                : 'bg-green-500/10 text-green-600';
           const deltaLabel =
             pct === 0
-              ? null
+              ? t('costs.building.onPar')
               : pct > 0
                 ? t('costs.building.percentHigher', { percent: pct })
                 : t('costs.building.percentLower', { percent: Math.abs(pct) });
@@ -211,13 +217,11 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
                     / {fmt(m.d.median)} {m.unit}
                   </span>
                 </span>
-                {deltaLabel && (
-                  <span
-                    className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                  >
-                    {deltaLabel}
-                  </span>
-                )}
+                <span
+                  className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                >
+                  {deltaLabel}
+                </span>
               </span>
             </div>
           );

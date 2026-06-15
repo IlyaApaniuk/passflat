@@ -17,12 +17,21 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   const isEditMode = search.edit === 'true';
   const reportId = typeof search.id === 'string' ? search.id : undefined;
 
-  const city = await prisma.city.findUnique({ where: { slug: citySlug } });
+  const city = await prisma.city.findUnique({
+    where: { slug: citySlug },
+    include: { country: true },
+  });
   if (!city || !city.isActive) notFound();
 
   const t = await getTranslations();
   const cityName = t(city.nameKey);
   const cityBounds = (city.bounds as CityBounds | null) ?? undefined;
+  // The city's name in the country's default locale (e.g. "Warszawa") — matches
+  // what Google Places returns as the locality, so the client can reject a
+  // neighbouring town picked from autocomplete right away (locale-agnostic: both
+  // sides are the Polish spelling, unlike the user-facing localized cityName).
+  const tCanonical = await getTranslations({ locale: city.country.defaultLocale });
+  const cityCanonicalName = tCanonical(city.nameKey);
 
   const supabase = await createClient();
   const {
@@ -114,6 +123,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
     <CostSubmitClient
       citySlug={citySlug}
       cityName={cityName}
+      cityCanonicalName={cityCanonicalName}
       cityBounds={cityBounds}
       userId={user.id}
       editMode={isEditMode && existingReport != null}

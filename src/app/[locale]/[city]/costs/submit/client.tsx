@@ -141,6 +141,7 @@ function hasDetailedUtilities(report: ExistingReport): boolean {
 interface CostSubmitClientProps {
   citySlug: string;
   cityName: string;
+  cityCanonicalName: string;
   cityBounds?: CityBounds;
   /** The submitter's user id — appended as `?ref=` to the post-submit share so a
    *  friend who signs up + contributes is attributed to them (peer virality). */
@@ -201,6 +202,7 @@ function makeEmptyForm() {
 export function CostSubmitClient({
   citySlug,
   cityName,
+  cityCanonicalName,
   cityBounds,
   userId,
   editMode = false,
@@ -243,7 +245,6 @@ export function CostSubmitClient({
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
-  const [submittedBuildingSlug, setSubmittedBuildingSlug] = useState<string | null>(null);
   const [submittedComparison, setSubmittedComparison] = useState<{
     userTotal: number | null;
     buildingReportCount: number;
@@ -264,6 +265,10 @@ export function CostSubmitClient({
   const leaseTypeRef = useRef<HTMLDivElement>(null);
   const [utilitiesError, setUtilitiesError] = useState(false);
   const utilitiesRef = useRef<HTMLDivElement>(null);
+  // Inline address error (out-of-city pick / missing address), shown next to the
+  // field and blocking submit — not the top-of-form banner.
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const addressRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState(
     existingReport ? { ...existingReport } : makeEmptyForm(),
@@ -382,10 +387,28 @@ export function CostSubmitClient({
   };
 
   const handlePlaceSelect = (place: PlaceResult) => {
-    if (cityBounds && place.lat && place.lng && !isInsideBounds(place.lat, place.lng, cityBounds)) {
-      setError(t('costs.submit.addressOutsideCity', { city: cityName }));
+    // Reject out-of-city picks: outside the bounding box (far-away cities) or a
+    // neighbouring town inside the box (Places returns its own locality, not the
+    // city's — compare canonical default-locale spellings, both Latin).
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const cityCandidates = [citySlug, cityCanonicalName].map(norm).filter(Boolean);
+    const outOfBounds =
+      !!cityBounds &&
+      !!place.lat &&
+      !!place.lng &&
+      !isInsideBounds(place.lat, place.lng, cityBounds);
+    const outOfCity =
+      place.city.trim() !== '' &&
+      cityCandidates.length > 0 &&
+      !cityCandidates.includes(norm(place.city));
+    if (outOfBounds || outOfCity) {
+      // Inline error next to the field + drop the captured address so the form
+      // can't be submitted with an out-of-city pick.
+      setAddressError(t('costs.submit.addressOutsideCity', { city: cityName }));
+      updateFormData({ street: '', buildingNumber: '', district: '', placeId: '', lat: 0, lng: 0 });
       return;
     }
+    setAddressError(null);
     setError(null);
     placeCityRef.current = place.city;
     updateFormData({
@@ -425,6 +448,22 @@ export function CostSubmitClient({
       return;
     }
     setUtilitiesError(false);
+
+    // Block on the address inline (next to the field), never reaching the server's
+    // generic "Missing required fields". An out-of-city pick already set
+    // addressError at selection; an untouched field gets a "required" message.
+    if (!editMode) {
+      if (addressError) {
+        addressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (!formData.street.trim() || !formData.buildingNumber.trim()) {
+        setAddressError(t('costs.submit.addressRequired'));
+        addressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -565,11 +604,8 @@ export function CostSubmitClient({
         throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
-      const costReport = data.costReport as
-        | { id?: string; building?: { slug?: string } }
-        | undefined;
+      const costReport = data.costReport as { id?: string } | undefined;
       setSubmittedReportId(costReport?.id ?? null);
-      setSubmittedBuildingSlug(costReport?.building?.slug ?? null);
       setSubmittedComparison((data.comparison as typeof submittedComparison) ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
@@ -831,12 +867,14 @@ export function CostSubmitClient({
                                 const pct =
                                   row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
                                 const chipCls =
-                                  pct > 0
-                                    ? 'bg-red-500/10 text-red-600'
-                                    : 'bg-green-500/10 text-green-600';
+                                  pct === 0
+                                    ? 'bg-muted text-muted-foreground'
+                                    : pct > 0
+                                      ? 'bg-red-500/10 text-red-600'
+                                      : 'bg-green-500/10 text-green-600';
                                 const deltaLabel =
                                   pct === 0
-                                    ? null
+                                    ? t('costs.building.onPar')
                                     : pct > 0
                                       ? t('costs.building.percentHigher', { percent: pct })
                                       : t('costs.building.percentLower', {
@@ -858,13 +896,11 @@ export function CostSubmitClient({
                                           / ≈{row.m.toLocaleString()} zł
                                         </span>
                                       </span>
-                                      {deltaLabel && (
-                                        <span
-                                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                                        >
-                                          {deltaLabel}
-                                        </span>
-                                      )}
+                                      <span
+                                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                                      >
+                                        {deltaLabel}
+                                      </span>
                                     </span>
                                   </div>
                                 );
@@ -874,56 +910,46 @@ export function CostSubmitClient({
                         </div>
                       )}
 
-                    {/* Fill the district — the realistic viral unit (reachable via
-                        area chats, no fragile apartment-count denominator). */}
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                      <p className="font-semibold">
-                        {submittedComparison.districtName
-                          ? t('costs.submit.fillDistrictTitle', {
-                              district: submittedComparison.districtName,
-                            })
-                          : t('costs.submit.completeBuildingTitle')}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t('costs.submit.fillDistrictDesc')}
-                      </p>
-                      {submittedComparison.districtName && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {submittedComparison.districtName} ·{' '}
-                          {t('costs.overview.nReports', {
-                            count: submittedComparison.districtReportCount,
-                          })}
+                    {/* Share the comparison — invite friends/acquaintances
+                        (wherever they live) to check if THEY over/underpay and add
+                        their own costs. The link opens the personal comparison
+                        landing (their amount + below/above the area market). */}
+                    {submittedComparison.districtSlug && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                        <p className="font-semibold">{t('costs.submit.shareInviteTitle')}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {t('costs.submit.shareInviteDesc')}
                         </p>
-                      )}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {submittedComparison.districtSlug && (
-                          <ShareButton
-                            path={`/${citySlug}/${submittedComparison.districtSlug}`}
-                            source="submit-district"
-                            refToken={userId}
-                            label={t('costs.submit.shareDistrict')}
-                            variant="default"
-                          />
-                        )}
-                        {submittedBuildingSlug && (
-                          <ShareButton
-                            path={`/${citySlug}/building/${submittedBuildingSlug}`}
-                            source="submit-building"
-                            refToken={userId}
-                            label={t('costs.submit.shareBuilding')}
-                          />
-                        )}
+                        <ShareButton
+                          path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}${
+                            submittedComparison.districtMedian && submittedComparison.userTotal
+                              ? `&pct=${Math.round(
+                                  ((submittedComparison.userTotal -
+                                    submittedComparison.districtMedian) /
+                                    submittedComparison.districtMedian) *
+                                    100,
+                                )}&amt=${submittedComparison.userTotal}`
+                              : ''
+                          }`}
+                          source="submit-comparison"
+                          refToken={userId}
+                          label={t('costs.submit.shareComparison')}
+                          variant="default"
+                          className="mt-3 w-full"
+                        />
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
-                <div className="mt-6 flex flex-col gap-3">
-                  <Button asChild>
+                {/* Slim navigation: the share above is the primary action, so the
+                    dashboard is a secondary outline and browsing a ghost link. */}
+                <div className="mt-6 flex flex-col gap-2">
+                  <Button variant="outline" className="w-full" asChild>
                     <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
                       {t('costs.submit.viewMyReports')}
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild>
+                  <Button variant="ghost" className="w-full" asChild>
                     <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
                   </Button>
                 </div>
@@ -1097,19 +1123,25 @@ export function CostSubmitClient({
                     </div>
 
                     {!editMode && (
-                      <div className="space-y-2">
+                      <div ref={addressRef} className="scroll-mt-24 space-y-2">
                         <Label>{t('listings.create.searchAddress')}</Label>
                         <AddressAutocomplete
                           onPlaceSelect={handlePlaceSelect}
                           placeholder={t('listings.create.addressPlaceholder')}
                           bounds={cityBounds}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          {t('listings.create.addressHint')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('costs.submit.addressNotFoundHint')}
-                        </p>
+                        {addressError ? (
+                          <p className="text-sm font-medium text-destructive">{addressError}</p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-muted-foreground">
+                              {t('listings.create.addressHint')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.submit.addressNotFoundHint')}
+                            </p>
+                          </>
+                        )}
                       </div>
                     )}
 
