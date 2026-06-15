@@ -111,21 +111,22 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   const pctNum = parsePct(pct);
   const amtNum = parseAmount(amt);
 
-  // Reveal HOW MUCH the sharer is above/below their area (and their concrete
-  // amount when the link carries it) — the curiosity hook that makes the visitor
-  // want to check their own. Falls back to the generic line with no percentage.
+  // Pays LESS → a personal brag (with their concrete amount when the link
+  // carries it) — the strong viral hook. Otherwise (pays more / equal / no
+  // percentage) → a NEUTRAL line anchored on the public district median, never
+  // exposing or shaming the sharer's overpay — matching the neutral OG card.
   let bodyText = t('landingBody');
-  if (district && pctNum != null && pctNum !== 0) {
+  if (district && pctNum != null && pctNum < 0) {
     const base = { percent: Math.abs(pctNum), district: district.nameKey };
-    if (amtNum != null) {
-      const withAmount = { ...base, amount: amtNum.toLocaleString() };
-      bodyText =
-        pctNum < 0
-          ? t('landingBodyBelowAmount', withAmount)
-          : t('landingBodyAboveAmount', withAmount);
-    } else {
-      bodyText = pctNum < 0 ? t('landingBodyBelow', base) : t('landingBodyAbove', base);
-    }
+    bodyText =
+      amtNum != null
+        ? t('landingBodyBelowAmount', { ...base, amount: amtNum.toLocaleString() })
+        : t('landingBodyBelow', base);
+  } else if (district && stats?.total.median != null) {
+    bodyText = t('landingBodyArea', {
+      district: district.nameKey,
+      amount: stats.total.median.toLocaleString(),
+    });
   }
 
   const total = stats?.total.median ?? null;
