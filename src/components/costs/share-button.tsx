@@ -28,13 +28,14 @@ interface ShareButtonProps {
 }
 
 /**
- * Share a link to the open cost data. On mobile (and supporting desktop
- * browsers) this opens the native OS share sheet — one tap into WhatsApp /
- * Telegram / Instagram / etc., where the link's OG card unfurls — and falls back
- * to copy-to-clipboard where the Web Share API is unavailable. Every URL carries
- * `utm_source=share` so share-driven visits show up in the PostHog acquisition
- * cohorts. This is the core viral artifact — the whole strategy leans on people
- * dropping a building's real costs into a flat chat / Telegram / FB group.
+ * Share a link to the open cost data. On touch devices (phones/tablets) this
+ * opens the native OS share sheet — one tap into WhatsApp / Telegram / Instagram
+ * / etc., where the link's OG card unfurls. On desktop it copies the link to the
+ * clipboard instead: desktop share targets are flaky (some drop the URL and keep
+ * only the text), and a copied link that unfurls on paste is more reliable.
+ * Every URL carries `utm_source=share` so share-driven visits show up in the
+ * PostHog acquisition cohorts. This is the core viral artifact — the whole
+ * strategy leans on people dropping a building's real costs into a chat / group.
  */
 export function ShareButton({
   path,
@@ -63,8 +64,12 @@ export function ShareButton({
 
   const onShare = async () => {
     const url = buildUrl();
+    // Native share only on touch devices (coarse primary pointer = phone/tablet);
+    // desktop gets a plain copy. Keeps desktop off the flaky OS share sheet.
+    const isTouch =
+      typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
     const canNativeShare =
-      typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+      isTouch && typeof navigator !== 'undefined' && typeof navigator.share === 'function';
     posthog?.capture('share_clicked', { source, path, native: canNativeShare });
 
     if (canNativeShare) {
