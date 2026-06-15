@@ -62,13 +62,15 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     } else {
       // Overpay / equal: no self-shaming brag — a neutral "what people pay in
       // {district}" data card (the median as the stat). Still a useful data drop.
+      // The IMAGE title stays short (no district — it goes in the stat label) so
+      // it never wraps into the subtitle; the longer text goes to og:title.
       title = t('cardTitleArea', { district: district.nameKey });
       image =
         median != null
           ? getCostOgImage({
-              title,
+              title: t('ogTitleNeutral'),
               subtitle: description,
-              statLabel: t('ogStatNeutralLabel'),
+              statLabel: t('ogStatNeutralLabel', { district: district.nameKey }),
               stat: `≈${median.toLocaleString()} zł`,
               split:
                 stats.totalPerM2.median != null
@@ -92,11 +94,22 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CostShareLandingPage({ params, searchParams }: Props) {
   const { city } = await params;
-  const { d } = await searchParams;
+  const { d, pct } = await searchParams;
   const t = await getTranslations('share');
   const tr = await getTranslations('costs.overview');
   const district = await getDistrict(city, d);
   const stats = district ? await getDistrictCostStats(district.id) : null;
+  const pctNum = parsePct(pct);
+
+  // Reveal HOW MUCH the sharer is above/below their area — the curiosity hook
+  // that makes the visitor want to check their own. Falls back to the generic
+  // line when there's no comparable percentage.
+  const bodyText =
+    pctNum != null && pctNum !== 0 && district
+      ? pctNum < 0
+        ? t('landingBodyBelow', { percent: Math.abs(pctNum), district: district.nameKey })
+        : t('landingBodyAbove', { percent: pctNum, district: district.nameKey })
+      : t('landingBody');
 
   const total = stats?.total.median ?? null;
   const { p25, p75 } = stats?.total ?? { p25: null, p75: null };
@@ -107,7 +120,7 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center px-4 pt-28 pb-16 text-center sm:pt-36">
       <h1 className="text-2xl font-bold sm:text-3xl">{t('landingHeading')}</h1>
-      <p className="mt-3 text-muted-foreground">{t('landingBody')}</p>
+      <p className="mt-3 text-muted-foreground">{bodyText}</p>
 
       {district && total != null && stats && (
         <div className="mt-6 w-full rounded-xl border bg-card p-5">
