@@ -265,6 +265,10 @@ export function CostSubmitClient({
   const leaseTypeRef = useRef<HTMLDivElement>(null);
   const [utilitiesError, setUtilitiesError] = useState(false);
   const utilitiesRef = useRef<HTMLDivElement>(null);
+  // Inline address error (out-of-city pick / missing address), shown next to the
+  // field and blocking submit — not the top-of-form banner.
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const addressRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState(
     existingReport ? { ...existingReport } : makeEmptyForm(),
@@ -383,19 +387,28 @@ export function CostSubmitClient({
   };
 
   const handlePlaceSelect = (place: PlaceResult) => {
-    // Outside the city's bounding box (catches far-away cities).
-    if (cityBounds && place.lat && place.lng && !isInsideBounds(place.lat, place.lng, cityBounds)) {
-      setError(t('costs.submit.addressOutsideCity', { city: cityName }));
-      return;
-    }
-    // Inside the box but a neighbouring town (Places returns its own locality, not
-    // the city's). Compare the canonical (default-locale) spellings — both Latin.
+    // Reject out-of-city picks: outside the bounding box (far-away cities) or a
+    // neighbouring town inside the box (Places returns its own locality, not the
+    // city's — compare canonical default-locale spellings, both Latin).
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
     const cityCandidates = [citySlug, cityCanonicalName].map(norm).filter(Boolean);
-    if (place.city && cityCandidates.length && !cityCandidates.includes(norm(place.city))) {
-      setError(t('costs.submit.addressOutsideCity', { city: cityName }));
+    const outOfBounds =
+      !!cityBounds &&
+      !!place.lat &&
+      !!place.lng &&
+      !isInsideBounds(place.lat, place.lng, cityBounds);
+    const outOfCity =
+      place.city.trim() !== '' &&
+      cityCandidates.length > 0 &&
+      !cityCandidates.includes(norm(place.city));
+    if (outOfBounds || outOfCity) {
+      // Inline error next to the field + drop the captured address so the form
+      // can't be submitted with an out-of-city pick.
+      setAddressError(t('costs.submit.addressOutsideCity', { city: cityName }));
+      updateFormData({ street: '', buildingNumber: '', district: '', placeId: '', lat: 0, lng: 0 });
       return;
     }
+    setAddressError(null);
     setError(null);
     placeCityRef.current = place.city;
     updateFormData({
@@ -436,13 +449,19 @@ export function CostSubmitClient({
     }
     setUtilitiesError(false);
 
-    // A valid in-city address is required for new reports. An out-of-city pick is
-    // rejected at selection (the form is left empty), so surface a clear address
-    // error here rather than the server's generic "Missing required fields".
-    if (!editMode && (!formData.street.trim() || !formData.buildingNumber.trim())) {
-      setError(t('costs.submit.addressRequired'));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    // Block on the address inline (next to the field), never reaching the server's
+    // generic "Missing required fields". An out-of-city pick already set
+    // addressError at selection; an untouched field gets a "required" message.
+    if (!editMode) {
+      if (addressError) {
+        addressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (!formData.street.trim() || !formData.buildingNumber.trim()) {
+        setAddressError(t('costs.submit.addressRequired'));
+        addressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -1104,19 +1123,25 @@ export function CostSubmitClient({
                     </div>
 
                     {!editMode && (
-                      <div className="space-y-2">
+                      <div ref={addressRef} className="scroll-mt-24 space-y-2">
                         <Label>{t('listings.create.searchAddress')}</Label>
                         <AddressAutocomplete
                           onPlaceSelect={handlePlaceSelect}
                           placeholder={t('listings.create.addressPlaceholder')}
                           bounds={cityBounds}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          {t('listings.create.addressHint')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('costs.submit.addressNotFoundHint')}
-                        </p>
+                        {addressError ? (
+                          <p className="text-sm font-medium text-destructive">{addressError}</p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-muted-foreground">
+                              {t('listings.create.addressHint')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('costs.submit.addressNotFoundHint')}
+                            </p>
+                          </>
+                        )}
                       </div>
                     )}
 
