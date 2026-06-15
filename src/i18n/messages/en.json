@@ -688,7 +688,7 @@
     "landingBodyBelow": "Someone you know pays {percent}% less than the {district} average. How about you? Check yours — it's free and takes two minutes.",
     "landingBodyBelowAmount": "Someone you know pays ≈{amount} zł — {percent}% less than the {district} average. How about you? Check yours — it's free and takes two minutes.",
     "landingBodyArea": "In {district}, rent averages ≈{amount} zł. Are you overpaying? Check your costs — it's free and takes two minutes.",
-    "ctaCalculator": "Open the calculator",
+    "ctaCalculator": "Cost calculator",
     "ctaCosts": "Browse costs by district",
     "landingDataLabel": "Rent costs in {district}",
     "ogTitle": "I pay less than my area",

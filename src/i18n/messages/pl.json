@@ -688,7 +688,7 @@
     "landingBodyBelow": "Twój znajomy płaci za wynajem o {percent}% mniej niż średnia w dzielnicy {district}. A ile płacisz Ty? Sprawdź — za darmo, w dwie minuty.",
     "landingBodyBelowAmount": "Twój znajomy płaci za wynajem ≈{amount} zł — o {percent}% mniej niż średnia w dzielnicy {district}. A ile płacisz Ty? Sprawdź — za darmo, w dwie minuty.",
     "landingBodyArea": "W dzielnicy {district} za wynajem płaci się średnio ≈{amount} zł. Czy nie przepłacasz? Sprawdź swoje koszty — za darmo, w dwie minuty.",
-    "ctaCalculator": "Otwórz kalkulator",
+    "ctaCalculator": "Kalkulator kosztów",
     "ctaCosts": "Zobacz koszty wg dzielnic",
     "landingDataLabel": "Koszty wynajmu w dzielnicy {district}",
     "ogTitle": "Płacę mniej za wynajem",
