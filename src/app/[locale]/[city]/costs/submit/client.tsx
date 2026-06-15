@@ -867,12 +867,14 @@ export function CostSubmitClient({
                                 const pct =
                                   row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
                                 const chipCls =
-                                  pct > 0
-                                    ? 'bg-red-500/10 text-red-600'
-                                    : 'bg-green-500/10 text-green-600';
+                                  pct === 0
+                                    ? 'bg-muted text-muted-foreground'
+                                    : pct > 0
+                                      ? 'bg-red-500/10 text-red-600'
+                                      : 'bg-green-500/10 text-green-600';
                                 const deltaLabel =
                                   pct === 0
-                                    ? null
+                                    ? t('costs.building.onPar')
                                     : pct > 0
                                       ? t('costs.building.percentHigher', { percent: pct })
                                       : t('costs.building.percentLower', {
@@ -894,13 +896,11 @@ export function CostSubmitClient({
                                           / ≈{row.m.toLocaleString()} zł
                                         </span>
                                       </span>
-                                      {deltaLabel && (
-                                        <span
-                                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                                        >
-                                          {deltaLabel}
-                                        </span>
-                                      )}
+                                      <span
+                                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                                      >
+                                        {deltaLabel}
+                                      </span>
                                     </span>
                                   </div>
                                 );

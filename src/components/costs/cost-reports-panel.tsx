@@ -194,10 +194,15 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
           }
           // Thin district → simple "yours / district median" delta line.
           const pct = m.d.median > 0 ? Math.round(((value - m.d.median) / m.d.median) * 100) : 0;
-          const chipCls = pct > 0 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600';
+          const chipCls =
+            pct === 0
+              ? 'bg-muted text-muted-foreground'
+              : pct > 0
+                ? 'bg-red-500/10 text-red-600'
+                : 'bg-green-500/10 text-green-600';
           const deltaLabel =
             pct === 0
-              ? null
+              ? t('costs.building.onPar')
               : pct > 0
                 ? t('costs.building.percentHigher', { percent: pct })
                 : t('costs.building.percentLower', { percent: Math.abs(pct) });
@@ -212,13 +217,11 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
                     / {fmt(m.d.median)} {m.unit}
                   </span>
                 </span>
-                {deltaLabel && (
-                  <span
-                    className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                  >
-                    {deltaLabel}
-                  </span>
-                )}
+                <span
+                  className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                >
+                  {deltaLabel}
+                </span>
               </span>
             </div>
           );
