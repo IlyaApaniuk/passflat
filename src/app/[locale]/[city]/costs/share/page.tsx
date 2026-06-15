@@ -182,11 +182,12 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
       )}
 
       {/* How it works — orient a cold visitor. */}
-      <div className="mt-8 w-full text-left">
+      <div className="mt-8 w-full">
         <h2 className="text-center text-sm font-semibold text-muted-foreground">
           {t('landingHowTitle')}
         </h2>
-        <ol className="mt-3 space-y-2">
+        {/* Centre the list as a block; rows stay left-aligned so the numbers line up. */}
+        <ol className="mx-auto mt-3 w-fit space-y-2 text-left">
           {steps.map((step, i) => (
             <li key={i} className="flex items-start gap-3 text-sm">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">

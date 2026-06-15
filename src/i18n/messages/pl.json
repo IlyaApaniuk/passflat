@@ -680,6 +680,7 @@
   "share": {
     "share": "Udostępnij",
     "copied": "Skopiowano link",
+    "shareText": "Realne koszty wynajmu w Warszawie — sprawdź, czy nie przepłacasz.",
     "cardTitle": "Płacę {percent}% poniżej średniej dzielnicy {district}",
     "cardTitleGeneric": "Ile naprawdę kosztuje wynajem w Warszawie",
     "cardDescription": "Sprawdź, czy nie przepłacasz za wynajem — Passflat",

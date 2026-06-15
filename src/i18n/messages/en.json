@@ -680,6 +680,7 @@
   "share": {
     "share": "Share",
     "copied": "Link copied",
+    "shareText": "Real rent costs in Warsaw — see if you're overpaying.",
     "cardTitle": "I pay {percent}% below the {district} average",
     "cardTitleGeneric": "What renting really costs across Warsaw",
     "cardDescription": "Check if you're overpaying on rent — Passflat",

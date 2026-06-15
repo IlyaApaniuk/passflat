@@ -19,24 +19,29 @@ interface ShareButtonProps {
   refToken?: string;
   /** Override the button text (e.g. "Share district") — defaults to a generic "Share". */
   label?: string;
+  /** Message that accompanies the link in the native share sheet (ignored by the
+   *  clipboard fallback, which copies the bare URL). Defaults to a generic line. */
+  text?: string;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
 }
 
 /**
- * Copy a shareable link to the open cost data — a plain copy-to-clipboard, no OS
- * share sheet. Every copied URL carries `utm_source=share` so share-driven visits
- * show up in the PostHog acquisition cohorts. This is the core viral artifact —
- * the whole strategy leans on people dropping a building's real costs into a flat
- * chat / Telegram / FB group. Feedback is a toast (snackbar) so the button label
- * stays stable and doesn't reflow.
+ * Share a link to the open cost data. On mobile (and supporting desktop
+ * browsers) this opens the native OS share sheet — one tap into WhatsApp /
+ * Telegram / Instagram / etc., where the link's OG card unfurls — and falls back
+ * to copy-to-clipboard where the Web Share API is unavailable. Every URL carries
+ * `utm_source=share` so share-driven visits show up in the PostHog acquisition
+ * cohorts. This is the core viral artifact — the whole strategy leans on people
+ * dropping a building's real costs into a flat chat / Telegram / FB group.
  */
 export function ShareButton({
   path,
   source,
   refToken,
   label,
+  text,
   variant = 'outline',
   size = 'sm',
   className,
@@ -56,9 +61,23 @@ export function ShareButton({
     return `${origin}${localePrefix}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
   };
 
-  const onCopy = async () => {
+  const onShare = async () => {
     const url = buildUrl();
-    posthog?.capture('share_clicked', { source, path });
+    const canNativeShare =
+      typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    posthog?.capture('share_clicked', { source, path, native: canNativeShare });
+
+    if (canNativeShare) {
+      try {
+        await navigator.share({ title: 'Passflat', text: text ?? t('shareText'), url });
+        return;
+      } catch (err) {
+        // User dismissed the sheet → stop (don't also copy). Any other error
+        // (e.g. share not allowed) → fall through to the clipboard fallback.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(url);
       toast.success(t('copied'));
@@ -68,7 +87,7 @@ export function ShareButton({
   };
 
   return (
-    <Button type="button" variant={variant} size={size} className={className} onClick={onCopy}>
+    <Button type="button" variant={variant} size={size} className={className} onClick={onShare}>
       <Share2 className="mr-1.5 h-4 w-4" />
       {label ?? t('share')}
     </Button>
