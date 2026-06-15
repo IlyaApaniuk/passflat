@@ -512,6 +512,9 @@ export async function POST(request: NextRequest) {
     trackServerEvent(user.id, 'cost_report_submitted', {
       building_id: building.id,
       city: citySlug,
+      // The report's provenance (user | import | scraped) so PostHog cohorts can
+      // separate organic contributions from seeded data — the North-Star signal.
+      source: reportSource,
       was_flagged: wasFlagged,
       fill_on_behalf: fillOnBehalf,
       scraped_import: scrapedImport,
