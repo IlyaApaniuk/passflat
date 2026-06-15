@@ -144,7 +144,7 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             <p className="mt-0.5 text-sm text-muted-foreground">{r.districtName}</p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
           <p className="text-lg font-bold text-primary">
             {r.user.total.toLocaleString()} PLN
             <span className="text-sm font-normal text-muted-foreground">
@@ -250,7 +250,7 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
 
       {/* Personal share: brag/neutral OG card; pivots a friend to check their own. */}
       {districtMedianTotal != null && districtMedianTotal > 0 && r.districtSlug && (
-        <div className="mt-3">
+        <div className="mt-3 sm:flex sm:justify-end">
           <ShareButton
             path={`/${r.citySlug}/costs/share?pct=${Math.round(
               ((r.user.total - districtMedianTotal) / districtMedianTotal) * 100,
@@ -258,6 +258,7 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             source="dashboard-comparison"
             refToken={userId}
             label={t('dashboard.costComparison.share')}
+            className="w-full sm:w-auto"
           />
         </div>
       )}

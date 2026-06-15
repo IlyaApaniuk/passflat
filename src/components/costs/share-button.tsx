@@ -19,30 +19,24 @@ interface ShareButtonProps {
   refToken?: string;
   /** Override the button text (e.g. "Share district") — defaults to a generic "Share". */
   label?: string;
-  /** Message that accompanies the link in the native share sheet (ignored by the
-   *  clipboard fallback, which copies the bare URL). Defaults to a generic line. */
-  text?: string;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
 }
 
 /**
- * Share a link to the open cost data. On touch devices (phones/tablets) this
- * opens the native OS share sheet — one tap into WhatsApp / Telegram / Instagram
- * / etc., where the link's OG card unfurls. On desktop it copies the link to the
- * clipboard instead: desktop share targets are flaky (some drop the URL and keep
- * only the text), and a copied link that unfurls on paste is more reliable.
- * Every URL carries `utm_source=share` so share-driven visits show up in the
- * PostHog acquisition cohorts. This is the core viral artifact — the whole
- * strategy leans on people dropping a building's real costs into a chat / group.
+ * Copy a shareable link to the open cost data to the clipboard — same behaviour
+ * on mobile and desktop (a copied link unfurls into the OG card on paste). Every
+ * URL carries `utm_source=share` so share-driven visits show up in the PostHog
+ * acquisition cohorts. This is the core viral artifact — the whole strategy leans
+ * on people dropping a building's real costs into a chat / Telegram / FB group.
+ * Feedback is a toast so the button label stays stable and doesn't reflow.
  */
 export function ShareButton({
   path,
   source,
   refToken,
   label,
-  text,
   variant = 'outline',
   size = 'sm',
   className,
@@ -62,31 +56,9 @@ export function ShareButton({
     return `${origin}${localePrefix}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
   };
 
-  const onShare = async () => {
+  const onCopy = async () => {
     const url = buildUrl();
-    // Native share only on touch devices (coarse primary pointer = phone/tablet);
-    // desktop gets a plain copy. Keeps desktop off the flaky OS share sheet.
-    const isTouch =
-      typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
-    const canNativeShare =
-      isTouch && typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-    posthog?.capture('share_clicked', { source, path, native: canNativeShare });
-
-    if (canNativeShare) {
-      try {
-        // Put the URL inside `text` instead of the separate `url` field: some
-        // targets (notably Telegram) keep only `text` and silently drop `url`,
-        // so the link would vanish. A URL embedded in the message body still
-        // unfurls into the OG card in every chat app.
-        await navigator.share({ title: 'Passflat', text: `${text ?? t('shareText')}\n${url}` });
-        return;
-      } catch (err) {
-        // User dismissed the sheet → stop (don't also copy). Any other error
-        // (e.g. share not allowed) → fall through to the clipboard fallback.
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-      }
-    }
-
+    posthog?.capture('share_clicked', { source, path });
     try {
       await navigator.clipboard.writeText(url);
       toast.success(t('copied'));
@@ -96,7 +68,7 @@ export function ShareButton({
   };
 
   return (
-    <Button type="button" variant={variant} size={size} className={className} onClick={onShare}>
+    <Button type="button" variant={variant} size={size} className={className} onClick={onCopy}>
       <Share2 className="mr-1.5 h-4 w-4" />
       {label ?? t('share')}
     </Button>
