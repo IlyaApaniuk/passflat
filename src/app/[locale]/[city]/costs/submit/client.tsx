@@ -243,7 +243,6 @@ export function CostSubmitClient({
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
-  const [submittedBuildingSlug, setSubmittedBuildingSlug] = useState<string | null>(null);
   const [submittedComparison, setSubmittedComparison] = useState<{
     userTotal: number | null;
     buildingReportCount: number;
@@ -565,11 +564,8 @@ export function CostSubmitClient({
         throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
-      const costReport = data.costReport as
-        | { id?: string; building?: { slug?: string } }
-        | undefined;
+      const costReport = data.costReport as { id?: string } | undefined;
       setSubmittedReportId(costReport?.id ?? null);
-      setSubmittedBuildingSlug(costReport?.building?.slug ?? null);
       setSubmittedComparison((data.comparison as typeof submittedComparison) ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
@@ -895,35 +891,28 @@ export function CostSubmitClient({
                           })}
                         </p>
                       )}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {submittedComparison.districtSlug && (
-                          <ShareButton
-                            path={`/${citySlug}/${submittedComparison.districtSlug}`}
-                            source="submit-district"
-                            refToken={userId}
-                            label={t('costs.submit.shareDistrict')}
-                            variant="default"
-                          />
-                        )}
-                        {submittedBuildingSlug && (
-                          <ShareButton
-                            path={`/${citySlug}/building/${submittedBuildingSlug}`}
-                            source="submit-building"
-                            refToken={userId}
-                            label={t('costs.submit.shareBuilding')}
-                          />
-                        )}
-                      </div>
+                      {submittedComparison.districtSlug && (
+                        <ShareButton
+                          path={`/${citySlug}/${submittedComparison.districtSlug}`}
+                          source="submit-district"
+                          refToken={userId}
+                          label={t('costs.submit.shareDistrict')}
+                          variant="default"
+                          className="mt-3 w-full"
+                        />
+                      )}
                     </div>
                   </div>
                 )}
-                <div className="mt-6 flex flex-col gap-3">
-                  <Button asChild>
+                {/* Slim navigation: the share above is the primary action, so the
+                    dashboard is a secondary outline and browsing a ghost link. */}
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <Button variant="outline" className="w-full" asChild>
                     <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
                       {t('costs.submit.viewMyReports')}
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild>
+                  <Button variant="ghost" size="sm" className="self-center" asChild>
                     <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
                   </Button>
                 </div>
