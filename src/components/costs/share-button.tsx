@@ -74,7 +74,11 @@ export function ShareButton({
 
     if (canNativeShare) {
       try {
-        await navigator.share({ title: 'Passflat', text: text ?? t('shareText'), url });
+        // Put the URL inside `text` instead of the separate `url` field: some
+        // targets (notably Telegram) keep only `text` and silently drop `url`,
+        // so the link would vanish. A URL embedded in the message body still
+        // unfurls into the OG card in every chat app.
+        await navigator.share({ title: 'Passflat', text: `${text ?? t('shareText')}\n${url}` });
         return;
       } catch (err) {
         // User dismissed the sheet → stop (don't also copy). Any other error
