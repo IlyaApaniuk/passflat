@@ -891,38 +891,35 @@ export function CostSubmitClient({
                         </div>
                       )}
 
-                    {/* Fill the district — the realistic viral unit (reachable via
-                        area chats, no fragile apartment-count denominator). */}
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                      <p className="font-semibold">
-                        {submittedComparison.districtName
-                          ? t('costs.submit.fillDistrictTitle', {
-                              district: submittedComparison.districtName,
-                            })
-                          : t('costs.submit.completeBuildingTitle')}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t('costs.submit.fillDistrictDesc')}
-                      </p>
-                      {submittedComparison.districtName && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {submittedComparison.districtName} ·{' '}
-                          {t('costs.overview.nReports', {
-                            count: submittedComparison.districtReportCount,
-                          })}
+                    {/* Share the comparison — invite friends/acquaintances
+                        (wherever they live) to check if THEY over/underpay and add
+                        their own costs. The link opens the personal comparison
+                        landing (their amount + below/above the area market). */}
+                    {submittedComparison.districtSlug && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                        <p className="font-semibold">{t('costs.submit.shareInviteTitle')}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {t('costs.submit.shareInviteDesc')}
                         </p>
-                      )}
-                      {submittedComparison.districtSlug && (
                         <ShareButton
-                          path={`/${citySlug}/${submittedComparison.districtSlug}`}
-                          source="submit-district"
+                          path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}${
+                            submittedComparison.districtMedian && submittedComparison.userTotal
+                              ? `&pct=${Math.round(
+                                  ((submittedComparison.userTotal -
+                                    submittedComparison.districtMedian) /
+                                    submittedComparison.districtMedian) *
+                                    100,
+                                )}&amt=${submittedComparison.userTotal}`
+                              : ''
+                          }`}
+                          source="submit-comparison"
                           refToken={userId}
-                          label={t('costs.submit.shareDistrict')}
+                          label={t('costs.submit.shareComparison')}
                           variant="default"
                           className="mt-3 w-full"
                         />
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Slim navigation: the share above is the primary action, so the
