@@ -141,6 +141,7 @@ function hasDetailedUtilities(report: ExistingReport): boolean {
 interface CostSubmitClientProps {
   citySlug: string;
   cityName: string;
+  cityCanonicalName: string;
   cityBounds?: CityBounds;
   /** The submitter's user id — appended as `?ref=` to the post-submit share so a
    *  friend who signs up + contributes is attributed to them (peer virality). */
@@ -201,6 +202,7 @@ function makeEmptyForm() {
 export function CostSubmitClient({
   citySlug,
   cityName,
+  cityCanonicalName,
   cityBounds,
   userId,
   editMode = false,
@@ -381,7 +383,16 @@ export function CostSubmitClient({
   };
 
   const handlePlaceSelect = (place: PlaceResult) => {
+    // Outside the city's bounding box (catches far-away cities).
     if (cityBounds && place.lat && place.lng && !isInsideBounds(place.lat, place.lng, cityBounds)) {
+      setError(t('costs.submit.addressOutsideCity', { city: cityName }));
+      return;
+    }
+    // Inside the box but a neighbouring town (Places returns its own locality, not
+    // the city's). Compare the canonical (default-locale) spellings — both Latin.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const cityCandidates = [citySlug, cityCanonicalName].map(norm).filter(Boolean);
+    if (place.city && cityCandidates.length && !cityCandidates.includes(norm(place.city))) {
       setError(t('costs.submit.addressOutsideCity', { city: cityName }));
       return;
     }

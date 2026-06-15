@@ -296,11 +296,15 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-    } else if (typeof placeCity === 'string' && placeCity.trim()) {
-      // Bounds/coords unavailable: compare the Places city against the city's own
-      // names — its localized name (in the country's default locale, e.g.
-      // "Warszawa") and its slug — never the slug alone (which would reject
-      // "Warszawa" != "warsaw").
+    }
+
+    // Locality (city-name) check — runs IN ADDITION to the bounds box. The box is
+    // a loose rectangle, so a neighbouring town (Pruszków, Ząbki…) can sit inside
+    // it; Places returns that town's own locality, not "Warszawa", so this is what
+    // actually rejects suburbs. Compare against the city's own names — its slug and
+    // its localized name in the country's default locale (e.g. "Warszawa") — never
+    // the slug alone (which would reject "Warszawa" != "warsaw").
+    if (typeof placeCity === 'string' && placeCity.trim()) {
       const norm = (s: string) =>
         transliterate(s)
           .toLowerCase()
