@@ -954,7 +954,7 @@
       "utilitiesIncludedOpt": "Входить в оренду",
       "utilitiesUnknown": "Не пам'ятаю",
       "utilitiesRequired": "Оберіть варіант — це уточнює повну вартість",
-      "utilitiesIncludedNote": "Враховано: комуналка входить в оренду або czynsz.",
+      "utilitiesIncludedNote": "Комуналка входить в оренду.",
       "utilitiesUnknownNote": "Без комуналки звіт менш повний, але все одно корисний.",
       "recommended": "рекомендовано",
       "livedFromHint": "Допомагає показати, наскільки свіжі дані.",

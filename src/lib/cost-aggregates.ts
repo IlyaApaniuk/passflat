@@ -115,7 +115,7 @@ export const getBuildingsData = unstable_cache(
     });
   },
   ['cost-aggregates-buildings'],
-  { revalidate: 60, tags: ['costs'] },
+  { revalidate: 300, tags: ['costs'] },
 );
 
 export type DistrictRollup = {

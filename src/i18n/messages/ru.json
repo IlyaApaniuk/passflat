@@ -954,7 +954,7 @@
       "utilitiesIncludedOpt": "Входит в аренду",
       "utilitiesUnknown": "Не помню",
       "utilitiesRequired": "Выберите вариант — это уточняет полную стоимость",
-      "utilitiesIncludedNote": "Учтено: коммуналка входит в аренду или czynsz.",
+      "utilitiesIncludedNote": "Коммуналка входит в аренду.",
       "utilitiesUnknownNote": "Без коммуналки отчёт менее полный, но всё равно полезен.",
       "recommended": "рекомендуется",
       "livedFromHint": "Помогает показать, насколько свежие данные.",

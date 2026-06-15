@@ -954,7 +954,7 @@
       "utilitiesIncludedOpt": "W cenie najmu",
       "utilitiesUnknown": "Nie pamiętam",
       "utilitiesRequired": "Wybierz opcję — to doprecyzowuje pełny koszt",
-      "utilitiesIncludedNote": "Uwzględnione: media wliczone w najem lub czynsz.",
+      "utilitiesIncludedNote": "Media są wliczone w najem.",
       "utilitiesUnknownNote": "Bez mediów raport jest mniej pełny, ale wciąż przydatny.",
       "recommended": "zalecane",
       "livedFromHint": "Pomaga pokazać, jak aktualne są dane.",
