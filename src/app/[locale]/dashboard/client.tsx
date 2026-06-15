@@ -63,7 +63,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { DeleteAccountDialog } from '@/components/account/delete-account-dialog';
 import { ShareButton } from '@/components/costs/share-button';
-import { CostComparisonCard, type CostComparison } from '@/components/costs/cost-comparison-card';
+import { CostReportsPanel, type ReportComparison } from '@/components/costs/cost-reports-panel';
 import { LANGUAGES } from '@/i18n/languages';
 
 type ListingType = 'replacement' | 'roommate' | 'sublet';
@@ -98,18 +98,6 @@ interface DashboardSavedListing {
   savedAt: string;
 }
 
-interface DashboardCostReport {
-  id: string;
-  address: string;
-  citySlug: string;
-  slug: string;
-  district: string;
-  total: number;
-  status: 'flagged' | 'visible';
-  periodicCount: number;
-  createdAt: string;
-}
-
 interface DashboardFollow {
   id: string;
   buildingId: string;
@@ -123,7 +111,6 @@ interface DashboardFollow {
 interface Props {
   listings: DashboardListing[];
   savedListings: DashboardSavedListing[];
-  costReports: DashboardCostReport[];
   followedBuildings: DashboardFollow[];
   userEmail: string;
   displayName: string | null;
@@ -132,7 +119,7 @@ interface Props {
   costAccessUntil: string | null;
   emailsOptOut: boolean;
   userId: string;
-  costComparison: CostComparison | null;
+  reportComparisons: ReportComparison[];
 }
 
 const statCardVariants = {
@@ -159,7 +146,6 @@ interface PaymentRow {
 export function DashboardClient({
   listings,
   savedListings,
-  costReports,
   followedBuildings,
   userEmail,
   displayName: initialDisplayName,
@@ -168,7 +154,7 @@ export function DashboardClient({
   costAccessUntil,
   emailsOptOut,
   userId,
-  costComparison,
+  reportComparisons,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale();
@@ -410,7 +396,7 @@ export function DashboardClient({
   // Data-access state — the value loop: contributing costs unlocks the data.
   const paidAccessActive = !!costAccessUntil && new Date(costAccessUntil) > new Date();
   const hasDataAccess = hasContributedCost || paidAccessActive;
-  const accessCitySlug = costReports[0]?.citySlug ?? 'warsaw';
+  const accessCitySlug = reportComparisons[0]?.citySlug ?? 'warsaw';
 
   const handleUnfollow = async (buildingId: string) => {
     setUnfollowingId(buildingId);
@@ -501,9 +487,9 @@ export function DashboardClient({
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold">{t('dashboard.costsSectionTitle')}</h2>
-              {costReports.length > 0 && (
+              {reportComparisons.length > 0 && (
                 <Button variant="outline" className="gap-2" asChild>
-                  <Link href={`/${costReports[0]?.citySlug ?? 'warsaw'}/costs/submit`}>
+                  <Link href={`/${accessCitySlug}/costs/submit`}>
                     <Plus className="h-4 w-4" />
                     {t('dashboard.addCostReport')}
                   </Link>
@@ -538,7 +524,7 @@ export function DashboardClient({
               </div>
             )}
 
-            {costReports.length > 0 && (
+            {reportComparisons.length > 0 && (
               <div className="mb-4 flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -562,9 +548,7 @@ export function DashboardClient({
               </div>
             )}
 
-            {costComparison && <CostComparisonCard comparison={costComparison} userId={userId} />}
-
-            {costReports.length === 0 ? (
+            {reportComparisons.length === 0 ? (
               <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
                 <CardContent className="flex flex-col items-center py-12 text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
@@ -575,7 +559,7 @@ export function DashboardClient({
                     {t('dashboard.noCostReportsDesc')}
                   </p>
                   <Button size="lg" className="mt-6 gap-2" asChild>
-                    <Link href={`/${costReports[0]?.citySlug ?? 'warsaw'}/costs/submit`}>
+                    <Link href={`/${accessCitySlug}/costs/submit`}>
                       <Plus className="h-4 w-4" />
                       {t('dashboard.addCostReport')}
                     </Link>
@@ -583,73 +567,7 @@ export function DashboardClient({
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {costReports.map((r, i) => (
-                  <motion.div
-                    key={r.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <Link href={`/${r.citySlug}/building/${r.slug}`} className="block">
-                      <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/20">
-                        <CardContent className="p-4">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              {r.status === 'flagged' && (
-                                <Badge
-                                  variant="outline"
-                                  className="border-amber-500/20 bg-amber-500/10 text-amber-600"
-                                >
-                                  {t('dashboard.costReportFlagged')}
-                                </Badge>
-                              )}
-                              <p className="mt-2 flex items-center gap-1 font-medium">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                {r.address}
-                              </p>
-                              {r.district && (
-                                <p className="mt-1 text-sm text-muted-foreground">{r.district}</p>
-                              )}
-                              {r.periodicCount > 0 && (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {t('costs.building.periodic')} · {r.periodicCount}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-start gap-2 sm:items-end">
-                              <p className="text-lg font-bold text-primary">
-                                {r.total.toLocaleString()} PLN
-                                <span className="text-sm font-normal text-muted-foreground">
-                                  {t('common.perMonth')}
-                                </span>
-                              </p>
-                              <div
-                                className="flex items-center gap-2"
-                                onClick={(e) => e.preventDefault()}
-                              >
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="gap-1.5"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    router.push(`/${r.citySlug}/costs/submit?edit=true&id=${r.id}`);
-                                  }}
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                  {t('common.edit')}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
+              <CostReportsPanel reports={reportComparisons} userId={userId} />
             )}
           </motion.section>
 

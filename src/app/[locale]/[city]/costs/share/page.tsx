@@ -5,13 +5,14 @@ import { prisma } from '@/lib/prisma';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { getCostOgImage, getOgImage } from '@/lib/seo';
-import { getDistrictCostMedians } from '@/lib/cost-baselines';
+import { getDistrictCostStats } from '@/lib/cost-baselines';
 
 // Personal "I pay X% below my area" share landing: the OG preview carries the
-// sharer's brag (the viral hook); the page shows the area's REAL median (concrete
-// proof) and pivots the visitor to check their OWN costs (calculator / district
-// data → a new contribution). Reads query params + the district median, carries
-// ?ref (captured by middleware). Dynamic, off the build, not indexed.
+// sharer's brag (the viral hook); the page shows the area's REAL costs (concrete
+// proof — split, typical range, sample size) and pivots the visitor to check
+// their OWN costs (submit / calculator → a new contribution). Reads query params
+// + the district stats, carries ?ref (captured by middleware). Dynamic, off the
+// build, not indexed.
 export const dynamic = 'force-dynamic';
 
 type Props = {
@@ -34,9 +35,6 @@ const getDistrict = cache(async (citySlug: string, slug?: string) => {
   });
 });
 
-// Deduped too: generateMetadata (for the OG split line) + the page both need it.
-const getMedians = cache((districtId: string) => getDistrictCostMedians(districtId));
-
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { city } = await params;
   const { pct, d } = await searchParams;
@@ -45,25 +43,40 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const pctNum = parsePct(pct);
   const description = t('cardDescription');
 
-  // Only the "below the area" case is brag-worthy. There it gets the rich
-  // designed OG card (big green "-X%" headline + the area's real median as
-  // proof) — the viral artifact dropped into chats. Otherwise a plain text card.
   let title: string;
   let image;
-  if (pctNum != null && pctNum < 0 && district) {
-    const percent = Math.abs(pctNum);
-    title = t('cardTitle', { percent, district: district.nameKey });
-    const medians = await getMedians(district.id);
-    image = getCostOgImage({
-      title: t('ogTitle'),
-      subtitle: description,
-      statLabel: t('ogStatLabel', { district: district.nameKey }),
-      stat: t('ogStat', { percent }),
-      split:
-        medians?.total != null
-          ? t('ogMedian', { amount: medians.total.toLocaleString() })
-          : undefined,
-    });
+  if (district) {
+    const stats = await getDistrictCostStats(district.id); // cached → no double query
+    const median = stats.total.median;
+    if (pctNum != null && pctNum < 0) {
+      // Brag: "I pay X% below {district}" — big green "-X%" + the median as proof.
+      const percent = Math.abs(pctNum);
+      title = t('cardTitle', { percent, district: district.nameKey });
+      image = getCostOgImage({
+        title: t('ogTitle'),
+        subtitle: description,
+        statLabel: t('ogStatLabel', { district: district.nameKey }),
+        stat: t('ogStat', { percent }),
+        split: median != null ? t('ogMedian', { amount: median.toLocaleString() }) : undefined,
+      });
+    } else {
+      // Overpay / equal: no self-shaming brag — a neutral "what people pay in
+      // {district}" data card (the median as the stat). Still a useful data drop.
+      title = t('cardTitleArea', { district: district.nameKey });
+      image =
+        median != null
+          ? getCostOgImage({
+              title,
+              subtitle: description,
+              statLabel: t('ogStatNeutralLabel'),
+              stat: `≈${median.toLocaleString()} zł`,
+              split:
+                stats.totalPerM2.median != null
+                  ? t('ogMedianPerM2', { amount: stats.totalPerM2.median.toLocaleString() })
+                  : undefined,
+            })
+          : getOgImage(title, description);
+    }
   } else {
     title = t('cardTitleGeneric');
     image = getOgImage(title, description);
@@ -81,30 +94,87 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   const { city } = await params;
   const { d } = await searchParams;
   const t = await getTranslations('share');
+  const tr = await getTranslations('costs.overview');
   const district = await getDistrict(city, d);
-  const medians = district ? await getMedians(district.id) : null;
+  const stats = district ? await getDistrictCostStats(district.id) : null;
+
+  const total = stats?.total.median ?? null;
+  const { p25, p75 } = stats?.total ?? { p25: null, p75: null };
+  const hasRange = !!stats && stats.count >= 3 && p25 != null && p75 != null && p75 > p25;
+
+  const steps = [t('landingStep1'), t('landingStep2'), t('landingStep3')];
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
       <h1 className="text-2xl font-bold sm:text-3xl">{t('landingHeading')}</h1>
       <p className="mt-3 text-muted-foreground">{t('landingBody')}</p>
 
-      {district && medians?.total != null && (
+      {district && total != null && stats && (
         <div className="mt-6 w-full rounded-xl border bg-card p-5">
           <p className="text-sm text-muted-foreground">
             {t('landingDataLabel', { district: district.nameKey })}
           </p>
-          <p className="mt-1 text-3xl font-bold tabular-nums">
-            ≈{medians.total.toLocaleString()} zł
+          <p className="mt-1 text-3xl font-bold tabular-nums">≈{total.toLocaleString()} zł</p>
+
+          {/* Аренда/Расходы split + per-m² — concrete, maps to the visitor's flat. */}
+          {(stats.rentMedian != null ||
+            stats.expensesMedian != null ||
+            stats.totalPerM2.median != null) && (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              {stats.rentMedian != null && (
+                <span>
+                  {t('landingRent')} ≈{stats.rentMedian.toLocaleString()}
+                </span>
+              )}
+              {stats.expensesMedian != null && (
+                <span>
+                  {t('landingExpenses')} ≈{stats.expensesMedian.toLocaleString()}
+                </span>
+              )}
+              {stats.totalPerM2.median != null && (
+                <span>≈{stats.totalPerM2.median.toLocaleString()} zł/m²</span>
+              )}
+            </div>
+          )}
+
+          {/* Typical p25–p75 range — "the data is alive" signal (dense districts). */}
+          {hasRange && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t('landingRange', { from: p25.toLocaleString(), to: p75.toLocaleString() })}
+            </p>
+          )}
+
+          <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+            {tr('nReports', { count: stats.count })}
           </p>
         </div>
       )}
 
-      <div className="mt-6 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+      {/* How it works — orient a cold visitor. */}
+      <div className="mt-8 w-full text-left">
+        <h2 className="text-center text-sm font-semibold text-muted-foreground">
+          {t('landingHowTitle')}
+        </h2>
+        <ol className="mt-3 space-y-2">
+          {steps.map((step, i) => (
+            <li key={i} className="flex items-start gap-3 text-sm">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {i + 1}
+              </span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
         <Button asChild>
-          <Link href={`/${city}/calculator`}>{t('ctaCalculator')}</Link>
+          <Link href={`/${city}/costs/submit`}>{t('ctaSubmit')}</Link>
         </Button>
         <Button variant="outline" asChild>
+          <Link href={`/${city}/calculator`}>{t('ctaCalculator')}</Link>
+        </Button>
+        <Button variant="ghost" asChild>
           <Link href={`/${city}/costs`}>{t('ctaCosts')}</Link>
         </Button>
       </div>

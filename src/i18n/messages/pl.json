@@ -691,7 +691,18 @@
     "ogTitle": "Płacę mniej za wynajem",
     "ogStatLabel": "Poniżej mediany dzielnicy {district}",
     "ogStat": "-{percent}%",
-    "ogMedian": "Mediana dzielnicy: ≈{amount} zł"
+    "ogMedian": "Mediana dzielnicy: ≈{amount} zł",
+    "cardTitleArea": "Ile naprawdę płaci się za wynajem w dzielnicy {district}",
+    "ogStatNeutralLabel": "Mediana czynszu miesięcznie",
+    "ogMedianPerM2": "≈{amount} zł/m²",
+    "landingRent": "Czynsz",
+    "landingExpenses": "Opłaty",
+    "landingRange": "Najczęściej płaci się {from}–{to} zł",
+    "landingHowTitle": "Jak to działa",
+    "landingStep1": "Dodaj swoje koszty — to dwie minuty",
+    "landingStep2": "Porównaj je z medianą dzielnicy i miasta",
+    "landingStep3": "Sprawdź, czy nie przepłacasz za wynajem",
+    "ctaSubmit": "Porównaj swoje koszty"
   },
   "rentReport": {
     "metaTitle": "Ile kosztuje wynajem w Warszawie w {year} — realne dane lokatorów",

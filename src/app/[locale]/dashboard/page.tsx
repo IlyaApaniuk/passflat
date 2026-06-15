@@ -3,8 +3,8 @@ import { getLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { DashboardClient } from './client';
-import { getDistrictCostMedians, getCityCostMedians } from '@/lib/cost-baselines';
-import type { CostComparison } from '@/components/costs/cost-comparison-card';
+import { getDistrictCostStats, getCityCostStats } from '@/lib/cost-baselines';
+import type { ReportComparison } from '@/components/costs/cost-reports-panel';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -96,21 +96,6 @@ export default async function DashboardPage() {
       savedAt: s.createdAt.toISOString(),
     }));
 
-  const serializedCostReports = costReports.map((r) => ({
-    id: r.id,
-    address: r.building.addressFull,
-    citySlug: r.building.city.slug,
-    slug: r.building.slug,
-    district: r.building.district?.nameKey ?? '',
-    total: Number(r.totalMonthlyAvg ?? 0),
-    status:
-      r.verificationStatus === 'flagged' && !r.isVisible
-        ? ('flagged' as const)
-        : ('visible' as const),
-    periodicCount: r.periodicCharges.length,
-    createdAt: r.createdAt.toISOString(),
-  }));
-
   const serializedFollows = buildingFollows.map((f) => ({
     id: f.id,
     buildingId: f.buildingId,
@@ -121,52 +106,54 @@ export default async function DashboardPage() {
     createdAt: f.createdAt.toISOString(),
   }));
 
-  // "You vs your area" comparison, anchored on the most recent visible report.
-  const anchor = costReports.find((r) => r.isVisible && r.totalMonthlyAvg != null);
-  let costComparison: CostComparison | null = null;
-  if (anchor) {
-    const area = anchor.areaM2 != null ? Number(anchor.areaM2) : null;
-    const rentNum = anchor.rent != null ? Number(anchor.rent) : null;
-    const totalNum = Number(anchor.totalMonthlyAvg);
-    const perM2 = (v: number | null) =>
-      v != null && area != null && area > 0 ? Math.round(v / area) : null;
+  // "You vs your area" — one comparison per report (most recent first, since the
+  // query is ordered desc). District/city stats are React-cached so reports that
+  // share a district resolve to a single query.
+  const reportComparisons: ReportComparison[] = await Promise.all(
+    costReports
+      .filter((r) => r.totalMonthlyAvg != null)
+      .map(async (r) => {
+        const area = r.areaM2 != null ? Number(r.areaM2) : null;
+        const rentNum = r.rent != null ? Number(r.rent) : null;
+        const totalNum = Number(r.totalMonthlyAvg);
+        const perM2 = (v: number | null) =>
+          v != null && area != null && area > 0 ? Math.round(v / area) : null;
 
-    const [districtMedians, cityMedians] = await Promise.all([
-      anchor.building.districtId
-        ? getDistrictCostMedians(anchor.building.districtId)
-        : Promise.resolve(null),
-      getCityCostMedians(anchor.building.cityId),
-    ]);
+        const [districtStats, cityStats] = await Promise.all([
+          r.building.districtId
+            ? getDistrictCostStats(r.building.districtId)
+            : Promise.resolve(null),
+          getCityCostStats(r.building.cityId),
+        ]);
 
-    costComparison = {
-      districtName: anchor.building.district?.nameKey ?? null,
-      districtSlug: anchor.building.district?.slug ?? null,
-      citySlug: anchor.building.city.slug,
-      user: {
-        total: Math.round(totalNum),
-        rentPerM2: perM2(rentNum),
-        totalPerM2: perM2(totalNum),
-      },
-      district: districtMedians
-        ? {
-            total: districtMedians.total,
-            rentPerM2: districtMedians.rentPerM2,
-            totalPerM2: districtMedians.totalPerM2,
-          }
-        : null,
-      city: {
-        total: cityMedians.total,
-        rentPerM2: cityMedians.rentPerM2,
-        totalPerM2: cityMedians.totalPerM2,
-      },
-    };
-  }
+        return {
+          reportId: r.id,
+          address: r.building.addressFull,
+          districtName: r.building.district?.nameKey ?? null,
+          districtSlug: r.building.district?.slug ?? null,
+          citySlug: r.building.city.slug,
+          buildingSlug: r.building.slug,
+          createdAt: r.createdAt.toISOString(),
+          status:
+            r.verificationStatus === 'flagged' && !r.isVisible
+              ? ('flagged' as const)
+              : ('visible' as const),
+          periodicCount: r.periodicCharges.length,
+          user: {
+            total: Math.round(totalNum),
+            rentPerM2: perM2(rentNum),
+            totalPerM2: perM2(totalNum),
+          },
+          districtStats,
+          cityStats,
+        };
+      }),
+  );
 
   return (
     <DashboardClient
       listings={serializedListings}
       savedListings={serializedSaved}
-      costReports={serializedCostReports}
       followedBuildings={serializedFollows}
       userEmail={user.email ?? ''}
       displayName={profile?.displayName ?? null}
@@ -175,7 +162,7 @@ export default async function DashboardPage() {
       costAccessUntil={profile?.costAccessUntil?.toISOString() ?? null}
       emailsOptOut={profile?.emailsOptOut ?? false}
       userId={user.id}
-      costComparison={costComparison}
+      reportComparisons={reportComparisons}
     />
   );
 }

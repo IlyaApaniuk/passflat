@@ -691,7 +691,18 @@
     "ogTitle": "Я плачу за аренду меньше",
     "ogStatLabel": "Ниже медианы района {district}",
     "ogStat": "-{percent}%",
-    "ogMedian": "Медиана района: ≈{amount} zł"
+    "ogMedian": "Медиана района: ≈{amount} zł",
+    "cardTitleArea": "Сколько реально платят за аренду в районе {district}",
+    "ogStatNeutralLabel": "Медиана аренды за месяц",
+    "ogMedianPerM2": "≈{amount} zł/м²",
+    "landingRent": "Аренда",
+    "landingExpenses": "Расходы",
+    "landingRange": "Обычно платят {from}–{to} zł",
+    "landingHowTitle": "Как это работает",
+    "landingStep1": "Внеси свои расходы — это пара минут",
+    "landingStep2": "Сравни их с медианой района и города",
+    "landingStep3": "Узнай, переплачиваешь ли ты за аренду",
+    "ctaSubmit": "Сравнить свои расходы"
   },
   "rentReport": {
     "metaTitle": "Сколько стоит аренда в Варшаве в {year} — реальные данные жильцов",

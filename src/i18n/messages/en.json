@@ -691,7 +691,18 @@
     "ogTitle": "I pay less than my area",
     "ogStatLabel": "Below the {district} median",
     "ogStat": "-{percent}%",
-    "ogMedian": "Area median: ≈{amount} zł"
+    "ogMedian": "Area median: ≈{amount} zł",
+    "cardTitleArea": "What people really pay for rent in {district}",
+    "ogStatNeutralLabel": "Median rent per month",
+    "ogMedianPerM2": "≈{amount} zł/m²",
+    "landingRent": "Rent",
+    "landingExpenses": "Expenses",
+    "landingRange": "Most pay {from}–{to} zł",
+    "landingHowTitle": "How it works",
+    "landingStep1": "Add your costs — it takes a couple of minutes",
+    "landingStep2": "Compare them to the district and city median",
+    "landingStep3": "See whether you're overpaying on rent",
+    "ctaSubmit": "Compare your costs"
   },
   "rentReport": {
     "metaTitle": "How much rent costs in Warsaw in {year} — real tenant data",
