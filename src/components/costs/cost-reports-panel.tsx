@@ -57,9 +57,16 @@ export function CostReportsPanel({
   return (
     <Tabs defaultValue={reports[0].reportId} className="w-full">
       {reports.length > 1 && (
-        <TabsList className="mb-3 flex h-auto w-full flex-wrap justify-start gap-1">
+        // Mobile: a single horizontally-scrollable row (slides sideways) rather
+        // than wrapping to many lines. `-mx-1 px-1` keeps the focus rings from
+        // being clipped by overflow; tabs never shrink so they stay readable.
+        <TabsList className="-mx-1 mb-3 flex h-auto w-[calc(100%+0.5rem)] justify-start gap-1 overflow-x-auto px-1">
           {reports.map((r) => (
-            <TabsTrigger key={r.reportId} value={r.reportId} className="max-w-[14rem] truncate">
+            <TabsTrigger
+              key={r.reportId}
+              value={r.reportId}
+              className="max-w-[12rem] shrink-0 truncate"
+            >
               {r.address}
             </TabsTrigger>
           ))}

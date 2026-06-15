@@ -105,7 +105,7 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   const steps = [t('landingStep1'), t('landingStep2'), t('landingStep3')];
 
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
+    <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center px-4 pt-28 pb-16 text-center sm:pt-36">
       <h1 className="text-2xl font-bold sm:text-3xl">{t('landingHeading')}</h1>
       <p className="mt-3 text-muted-foreground">{t('landingBody')}</p>
 
