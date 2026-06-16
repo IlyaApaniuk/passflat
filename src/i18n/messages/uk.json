@@ -179,8 +179,8 @@
       "electricity": "Електрика",
       "reports": "звітів",
       "accuracyScore": "Точність даних",
-      "communityVerified": "Дані перевірені спільнотою",
-      "anonymousVerified": "Анонімно та перевірено мешканцями"
+      "communityVerified": "Дані від спільноти",
+      "anonymousVerified": "Анонімні дані від мешканців"
     },
     "districts": {
       "title": "Досліджуйте",

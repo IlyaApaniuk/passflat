@@ -162,8 +162,8 @@
     },
     "costTransparency": {
       "badge": "Cost Transparency",
-      "title": "Know the",
-      "titleHighlight": "what they hide before you sign",
+      "title": "See the",
+      "titleHighlight": "hidden costs before you sign",
       "subtitle": "Crowdsourced cost data from tenants themselves. See what people actually pay for utilities, admin fees, and hidden costs.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
@@ -179,8 +179,8 @@
       "electricity": "Electricity",
       "reports": "reports",
       "accuracyScore": "Accuracy score",
-      "communityVerified": "Community-verified data",
-      "anonymousVerified": "Anonymous & verified by tenants"
+      "communityVerified": "Community-reported data",
+      "anonymousVerified": "Anonymous tenant-reported data"
     },
     "districts": {
       "title": "Explore",
