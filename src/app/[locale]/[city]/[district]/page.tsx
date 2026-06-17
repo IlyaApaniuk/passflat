@@ -130,10 +130,18 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                           {t('costs.overview.expenses')} ≈ {rollup.medianExpenses.toLocaleString()}
                         </>
                       )}
+                      {rollup.medianTotalPerM2 > 0 && (
+                        <>
+                          {' · '}
+                          {t('costs.building.totalPerM2Compare')} ≈{' '}
+                          {Math.round(rollup.medianTotalPerM2).toLocaleString()}{' '}
+                          {t('costs.overview.perM2')}
+                        </>
+                      )}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {rollup.buildingCount} ·{' '}
+                    {t('costs.overview.nBuildings', { count: rollup.buildingCount })} ·{' '}
                     {t('costs.overview.nReports', { count: rollup.reportCount })}
                   </p>
                 </CardContent>

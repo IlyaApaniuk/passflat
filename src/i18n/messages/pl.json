@@ -859,6 +859,7 @@
       "sortPerM2": "Czynsz / m²",
       "sortReports": "Zgłoszenia",
       "nReports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
+      "nBuildings": "{count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}}",
       "estimateLegend": "Mediany to wartości orientacyjne ze zgłoszeń najemców, nie oferty.",
       "noBuildingsFound": "Nie znaleziono budynków",
       "noBuildingsDesc": "Spróbuj innego wyszukiwania lub bądź pierwszy — zgłoś koszty swojego budynku",

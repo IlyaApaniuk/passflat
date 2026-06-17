@@ -859,6 +859,7 @@
       "sortPerM2": "Оренда / м²",
       "sortReports": "Звіти",
       "nReports": "{count, plural, one {# звіт} few {# звіти} many {# звітів} other {# звітів}}",
+      "nBuildings": "{count, plural, one {# будинок} few {# будинки} many {# будинків} other {# будинків}}",
       "estimateLegend": "Медіани — орієнтовні оцінки зі звітів орендарів, а не пропозиції.",
       "noBuildingsFound": "Будинки не знайдено",
       "noBuildingsDesc": "Спробуйте інший пошук або будьте першим — надішліть витрати вашого будинку",

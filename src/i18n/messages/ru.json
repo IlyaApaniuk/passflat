@@ -859,6 +859,7 @@
       "sortPerM2": "Аренда / м²",
       "sortReports": "Отчёты",
       "nReports": "{count, plural, one {# отчёт} few {# отчёта} many {# отчётов} other {# отчётов}}",
+      "nBuildings": "{count, plural, one {# дом} few {# дома} many {# домов} other {# домов}}",
       "estimateLegend": "Медианы — ориентировочные оценки из отчётов жильцов, а не котировки.",
       "noBuildingsFound": "Здания не найдены",
       "noBuildingsDesc": "Попробуйте другой поиск или будьте первым — отправьте расходы вашего здания",

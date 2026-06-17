@@ -859,6 +859,7 @@
       "sortPerM2": "Rent / m²",
       "sortReports": "Reports",
       "nReports": "{count, plural, one {# report} other {# reports}}",
+      "nBuildings": "{count, plural, one {# building} other {# buildings}}",
       "estimateLegend": "Medians are directional estimates from tenant reports, not quotes.",
       "noBuildingsFound": "No buildings found",
       "noBuildingsDesc": "Try a different search or be the first — submit costs for your building",
