@@ -33,6 +33,7 @@ import {
   Equal,
   CalendarClock,
   RefreshCw,
+  Ruler,
   CheckCircle2,
   Info,
   FileText,
@@ -621,7 +622,7 @@ export function BuildingCostsClient({
                       )}
 
                       {/* Rent vs Expenses split — what makes up the total. */}
-                      {(costs.rent || costs.expenses) && (
+                      {(costs.rent || costs.expenses || comparison.thisBuildingTotalPerM2) && (
                         <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t pt-4">
                           {costs.rent && (
                             <div className="flex items-center gap-2">
@@ -649,6 +650,22 @@ export function BuildingCostsClient({
                                 </p>
                                 <p className="text-lg font-semibold">
                                   ≈ {costs.expenses.median.toLocaleString()} PLN
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {comparison.thisBuildingTotalPerM2 && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                                <Ruler className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">
+                                  {t('costs.building.totalPerM2Compare')}
+                                </p>
+                                <p className="text-lg font-semibold">
+                                  ≈ {Math.round(comparison.thisBuildingTotalPerM2).toLocaleString()}{' '}
+                                  {t('costs.building.perM2')}
                                 </p>
                               </div>
                             </div>
