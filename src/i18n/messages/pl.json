@@ -349,6 +349,7 @@
       "showMore": "Pokaż {count} więcej",
       "noMatches": "Brak wyników",
       "selectDate": "Wybierz",
+      "sheetDescription": "Zawęź oferty według ceny, pokoi, dzielnicy, dat i więcej.",
       "type": "Typ",
       "allTypes": "Wszystkie",
       "priceRange": "Zakres cen",

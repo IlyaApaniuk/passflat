@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback, useDeferredValue, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
@@ -69,6 +69,9 @@ function ListingsPageInner({
   const t = useTranslations();
   const posthog = usePostHog();
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
+  // Keep the filter controls (chips, inputs, sheet) snappy while the heavier
+  // list re-filter runs at a lower priority.
+  const deferredFilters = useDeferredValue(filters);
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   // Mobile lands on the LIST (where filters pay off), not the map; desktop shows
@@ -114,46 +117,55 @@ function ListingsPageInner({
 
   const filteredListings = useMemo(() => {
     return listings.filter((listing) => {
-      if (filters.priceMin && listing.totalCost < filters.priceMin) return false;
-      if (filters.priceMax && listing.totalCost > filters.priceMax) return false;
-      if (filters.bedrooms?.length && !filters.bedrooms.some((b) => listing.bedrooms >= b))
+      if (deferredFilters.priceMin && listing.totalCost < deferredFilters.priceMin) return false;
+      if (deferredFilters.priceMax && listing.totalCost > deferredFilters.priceMax) return false;
+      if (
+        deferredFilters.bedrooms?.length &&
+        !deferredFilters.bedrooms.some((b) => listing.bedrooms >= b)
+      )
         return false;
-      if (filters.districts?.length && !filters.districts.includes(listing.district)) return false;
-      if (filters.areaMin && listing.area < filters.areaMin) return false;
-      if (filters.areaMax && listing.area > filters.areaMax) return false;
-      if (filters.availableFrom) {
-        const filterDate = new Date(filters.availableFrom);
+      if (
+        deferredFilters.districts?.length &&
+        !deferredFilters.districts.includes(listing.district)
+      )
+        return false;
+      if (deferredFilters.areaMin && listing.area < deferredFilters.areaMin) return false;
+      if (deferredFilters.areaMax && listing.area > deferredFilters.areaMax) return false;
+      if (deferredFilters.availableFrom) {
+        const filterDate = new Date(deferredFilters.availableFrom);
         const listingDate = new Date(listing.availableFrom);
         if (listingDate > filterDate) return false;
       }
       if (
-        filters.amenities?.length &&
-        !filters.amenities.every((a) => listing.features.includes(a))
+        deferredFilters.amenities?.length &&
+        !deferredFilters.amenities.every((a) => listing.features.includes(a))
       )
         return false;
-      if (filters.roomType && listing.roomType !== filters.roomType) return false;
+      if (deferredFilters.roomType && listing.roomType !== deferredFilters.roomType) return false;
       if (
-        filters.preferredGender &&
-        filters.preferredGender !== 'any' &&
-        listing.preferredGender !== filters.preferredGender &&
+        deferredFilters.preferredGender &&
+        deferredFilters.preferredGender !== 'any' &&
+        listing.preferredGender !== deferredFilters.preferredGender &&
         listing.preferredGender !== 'any'
       )
         return false;
-      if (filters.availableTo) {
-        const filterDate = new Date(filters.availableTo);
+      if (deferredFilters.availableTo) {
+        const filterDate = new Date(deferredFilters.availableTo);
         if (!listing.availableTo) return false;
         const listingDate = new Date(listing.availableTo);
         if (listingDate < filterDate) return false;
       }
-      if (filters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
-      if (filters.internetIncluded && !listing.internetIncluded) return false;
-      if (filters.floorMin != null && listing.floor < filters.floorMin) return false;
-      if (filters.floorMax != null && listing.floor > filters.floorMax) return false;
-      if (filters.hasPhotos && listing.photoCount === 0) return false;
-      if (filters.registrationPossible && !listing.registrationPossible) return false;
+      if (deferredFilters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
+      if (deferredFilters.internetIncluded && !listing.internetIncluded) return false;
+      if (deferredFilters.floorMin != null && listing.floor < deferredFilters.floorMin)
+        return false;
+      if (deferredFilters.floorMax != null && listing.floor > deferredFilters.floorMax)
+        return false;
+      if (deferredFilters.hasPhotos && listing.photoCount === 0) return false;
+      if (deferredFilters.registrationPossible && !listing.registrationPossible) return false;
       return true;
     });
-  }, [listings, filters]);
+  }, [listings, deferredFilters]);
 
   const sortedListings = useMemo(() => {
     const sorted = [...filteredListings];
@@ -210,7 +222,7 @@ function ListingsPageInner({
             <ListingTypeTabs listingType={listingType} citySlug={citySlug} />
 
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="min-w-0 text-sm text-muted-foreground">
+              <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
                 {t.rich('listings.listingsInCity', {
                   count: visibleListings.length,
                   b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,

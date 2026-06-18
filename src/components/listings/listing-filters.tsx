@@ -9,7 +9,13 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Accordion,
   AccordionContent,
@@ -239,7 +245,7 @@ function BedroomsFilter({
         return (
           <button
             key={num}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-all ${
               isActive
                 ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -561,7 +567,7 @@ function RoomTypeFilter({
             key={idx}
             variant={isActive ? 'default' : 'outline'}
             size="sm"
-            className={`h-8 text-xs transition-all ${
+            className={`h-9 text-xs transition-all ${
               isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
             onClick={() => onFiltersChange({ ...filters, roomType: option.value })}
@@ -600,7 +606,7 @@ function PreferredGenderFilter({
             key={idx}
             variant={isActive ? 'default' : 'outline'}
             size="sm"
-            className={`h-8 text-xs transition-all ${
+            className={`h-9 text-xs transition-all ${
               isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
             onClick={() => onFiltersChange({ ...filters, preferredGender: option.value })}
@@ -1014,6 +1020,9 @@ export function ListingFiltersMobile({
       <SheetContent side="bottom" className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0">
         <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>{t('listings.filters.title')}</SheetTitle>
+          <SheetDescription className="sr-only">
+            {t('listings.filters.sheetDescription')}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4">
