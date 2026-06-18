@@ -143,9 +143,11 @@ interface CostSubmitClientProps {
   cityName: string;
   cityCanonicalName: string;
   cityBounds?: CityBounds;
-  /** The submitter's user id — appended as `?ref=` to the post-submit share so a
-   *  friend who signs up + contributes is attributed to them (peer virality). */
-  userId: string;
+  /** The submitter's user id, or `null` for a logged-out (anonymous) visitor.
+   *  When present it's appended as `?ref=` to the post-submit share so a friend
+   *  who signs up + contributes is attributed to them (peer virality). When null,
+   *  the success card shows a "log in to unlock full stats" hook instead. */
+  userId: string | null;
   editMode?: boolean;
   existingReport?: ExistingReport | null;
   canFillOnBehalf?: boolean;
@@ -213,6 +215,12 @@ export function CostSubmitClient({
   const t = useTranslations();
   const locale = useLocale();
   const posthog = usePostHog();
+  // Logged-out visitor: the report is submitted anonymously and the success card
+  // shows the "log in to unlock full stats" hook (the claim loop).
+  const isAnonymous = !userId;
+  // Honeypot: an off-screen field no human fills; a value means a bot. Read at
+  // submit and sent to the API, which silently drops bot submissions.
+  const honeypotRef = useRef<HTMLInputElement>(null);
   // Current month ("YYYY-MM") — tenancy dates can't be in the future.
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -248,6 +256,7 @@ export function CostSubmitClient({
   const [submittedComparison, setSubmittedComparison] = useState<{
     userTotal: number | null;
     buildingReportCount: number;
+    buildingSlug: string | null;
     districtName: string | null;
     districtSlug: string | null;
     districtMedian: number | null;
@@ -569,6 +578,7 @@ export function CostSubmitClient({
             lng: formData.lng || undefined,
             citySlug,
             placeCity: placeCityRef.current || undefined,
+            companyWebsite: honeypotRef.current?.value || undefined,
             ...(showFillOnBehalf && fillOnBehalf
               ? {
                   fillOnBehalf: true,
@@ -909,46 +919,108 @@ export function CostSubmitClient({
                           )}
                         </div>
                       )}
-
-                    {/* Share the comparison — invite friends/acquaintances
-                        (wherever they live) to check if THEY over/underpay and add
-                        their own costs. The link opens the personal comparison
-                        landing (their amount + below/above the area market). */}
-                    {submittedComparison.districtSlug && (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                        <p className="font-semibold">{t('costs.submit.shareInviteTitle')}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t('costs.submit.shareInviteDesc')}
-                        </p>
-                        <ShareButton
-                          path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}${
-                            submittedComparison.districtMedian && submittedComparison.userTotal
-                              ? `&pct=${Math.round(
-                                  ((submittedComparison.userTotal -
-                                    submittedComparison.districtMedian) /
-                                    submittedComparison.districtMedian) *
-                                    100,
-                                )}&amt=${submittedComparison.userTotal}`
-                              : ''
-                          }`}
-                          source="submit-comparison"
-                          refToken={userId}
-                          label={t('costs.submit.shareComparison')}
-                          variant="default"
-                          className="mt-3 w-full"
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
-                {/* Slim navigation: the share above is the primary action, so the
-                    dashboard is a secondary outline and browsing a ghost link. */}
+                {/* Anonymous submitter: their report is already saved. Hook them
+                    to log in — it claims the report and unlocks the deeper, gated
+                    building stats (utilities breakdown, deposit return, tenure,
+                    district position). The pf_anon cookie survives the redirect,
+                    so the auth callback claims it and the building page lands
+                    already-unlocked. */}
+                {isAnonymous && (
+                  <div className="mt-5 rounded-lg border border-primary/30 bg-primary/5 p-4 text-left">
+                    <p className="flex items-center gap-2 font-semibold">
+                      <Lock className="h-4 w-4 text-primary" />
+                      {t('costs.submit.unlockTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('costs.submit.unlockDesc')}
+                    </p>
+                    <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        {t('costs.submit.unlockItemUtilities')}
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        {t('costs.submit.unlockItemDeposit')}
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        {t('costs.submit.unlockItemTenure')}
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        {t('costs.submit.unlockItemPosition')}
+                      </li>
+                    </ul>
+                    <Button asChild className="mt-4 w-full">
+                      <Link
+                        href={{
+                          pathname: '/auth/login',
+                          query: {
+                            next: submittedComparison?.buildingSlug
+                              ? `/${locale}/${citySlug}/building/${submittedComparison.buildingSlug}`
+                              : `/${locale}/${citySlug}/costs`,
+                          },
+                        }}
+                        onClick={() =>
+                          posthog?.capture('anon_unlock_cta_clicked', { city: citySlug })
+                        }
+                      >
+                        {t('costs.submit.unlockCta')}
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Share the comparison — invite friends/acquaintances (wherever
+                    they live) to check if THEY over/underpay and add their own
+                    costs. Primary for logged-in submitters (virality is the goal);
+                    demoted to a neutral, outline card for anonymous — their share
+                    carries no peer-ref and the claim-via-login above is the
+                    higher-value next step. */}
+                {submittedComparison?.districtSlug && (
+                  <div
+                    className={`mt-4 rounded-lg border p-4 text-left ${
+                      isAnonymous ? 'bg-muted/40' : 'border-primary/20 bg-primary/5'
+                    }`}
+                  >
+                    <p className="font-semibold">{t('costs.submit.shareInviteTitle')}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('costs.submit.shareInviteDesc')}
+                    </p>
+                    <ShareButton
+                      path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}${
+                        submittedComparison.districtMedian && submittedComparison.userTotal
+                          ? `&pct=${Math.round(
+                              ((submittedComparison.userTotal -
+                                submittedComparison.districtMedian) /
+                                submittedComparison.districtMedian) *
+                                100,
+                            )}&amt=${submittedComparison.userTotal}`
+                          : ''
+                      }`}
+                      source="submit-comparison"
+                      refToken={userId ?? undefined}
+                      label={t('costs.submit.shareComparison')}
+                      variant={isAnonymous ? 'outline' : 'default'}
+                      className="mt-3 w-full"
+                    />
+                  </div>
+                )}
+
+                {/* Slim navigation: secondary destinations. "My reports" is
+                    logged-in only (anonymous users have no dashboard — the unlock
+                    hook above is their path). */}
                 <div className="mt-6 flex flex-col gap-2">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
-                      {t('costs.submit.viewMyReports')}
-                    </Link>
-                  </Button>
+                  {!isAnonymous && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
+                        {t('costs.submit.viewMyReports')}
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" className="w-full" asChild>
                     <Link href={`/${citySlug}/costs`}>{t('costs.submit.viewCostReports')}</Link>
                   </Button>
@@ -1047,6 +1119,18 @@ export function CostSubmitClient({
             </AnimatePresence>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Honeypot: off-screen (not display:none, so bots still fill it),
+                  hidden from assistive tech and keyboard. A value → bot → dropped
+                  server-side. */}
+              <input
+                ref={honeypotRef}
+                type="text"
+                name="companyWebsite"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="pointer-events-none absolute -left-[9999px] h-0 w-0 opacity-0"
+              />
               <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card className="transition-shadow hover:shadow-sm">
                   <CardHeader>

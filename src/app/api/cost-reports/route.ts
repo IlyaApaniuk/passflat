@@ -17,9 +17,12 @@ import {
   IMPORT_AUTHOR_DISPLAY_NAME,
   SCRAPED_AUTHOR_ID,
   SCRAPED_AUTHOR_DISPLAY_NAME,
+  ANON_AUTHOR_ID,
+  ANON_AUTHOR_DISPLAY_NAME,
   isCostImportAdmin,
   getAdminImportMode,
 } from '@/lib/import-constants';
+import { ensureAnonId } from '@/lib/anon-id';
 
 // Submit rate limit (anti-spam): at most N reports per rolling window per user.
 // Generous enough for someone genuinely filling several flats in one sitting,
@@ -64,22 +67,29 @@ async function getUser() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // The cost form is open to logged-out visitors. An anonymous submission is
+    // owned by the system ANON_AUTHOR_ID profile and tagged with a per-browser id
+    // so it can be claimed on the visitor's first login (see lib/anon-id.ts).
+    const isAnon = !user;
+    const isAdmin = user ? isCostImportAdmin(user.email) : false;
+    const anonId = isAnon ? await ensureAnonId() : null;
 
-    // Anti-spam rate limit: cap how many reports one account can submit per hour
-    // so a single user can't flood (and poison) the medians — the only asset.
-    // Counts the user's own recent reports (no extra store needed); admins doing
-    // bulk imports are exempt.
-    if (!isCostImportAdmin(user.email)) {
+    // Anti-spam rate limit: cap how many reports one submitter can file per hour
+    // so they can't flood (and poison) the medians — the only asset. For accounts
+    // it's per-user; for anonymous submitters it's per-`anonymousId` (a cookie, so
+    // resettable — the platform-wide guard below is the real backstop). Admins
+    // doing bulk imports are exempt.
+    if (!isAdmin) {
       const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
       const [recentCount, recentGlobal] = await Promise.all([
         prisma.costReport.count({
-          where: { authorId: user.id, createdAt: { gt: windowStart } },
+          where: isAnon
+            ? { anonymousId: anonId, createdAt: { gt: windowStart } }
+            : { authorId: user!.id, createdAt: { gt: windowStart } },
         }),
-        // Platform-wide flood guard: many fresh accounts, each under the per-user
-        // cap, could still bypass it — so also bound total user submissions/hour.
+        // Platform-wide flood guard: many fresh accounts/browsers, each under the
+        // per-submitter cap, could still bypass it — so also bound total user
+        // submissions/hour.
         prisma.costReport.count({
           where: { source: 'user', createdAt: { gt: windowStart } },
         }),
@@ -92,10 +102,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Guarantee a profile exists before any write that FKs to author_id.
+    // Guarantee a profile exists before any write that FKs to author_id (logged-in
+    // only — anonymous reports are owned by the system ANON_AUTHOR_ID profile).
     // Snapshot is taken BEFORE this submission flips hasContributedCost, so we
     // can tell a first contribution from a repeat one for referral attribution.
-    const profileBefore = await getOrCreateProfile(user);
+    const profileBefore = user ? await getOrCreateProfile(user) : null;
 
     const body = await request.json();
     const {
@@ -142,7 +153,19 @@ export async function POST(request: NextRequest) {
       fillOnBehalf: fillOnBehalfInput,
       importedEmail: importedEmailInput,
       scrapedImport: scrapedImportInput,
+      companyWebsite, // honeypot — hidden from humans, only bots fill it
     } = body;
+
+    // Honeypot: the form renders an off-screen field no human sees. If it carries
+    // a value the submitter is a bot — ACK with a success-shaped response and
+    // write nothing, so the bot can't tell it was rejected. Cheap spam guard on
+    // the now-open (logged-out) form.
+    if (typeof companyWebsite === 'string' && companyWebsite.trim() !== '') {
+      return NextResponse.json(
+        { costReport: null, wasFlagged: false, comparison: null },
+        { status: 201 },
+      );
+    }
 
     // Admin import modes: an authorized admin enters data through the normal
     // form, but the report is owned by a system profile rather than the admin.
@@ -154,17 +177,18 @@ export async function POST(request: NextRequest) {
     //   'scraped' — report is owned by the system "Scraped" profile, has no
     //      owner email and is never claimed (used for scraped listings).
     // Coordinates still come from Places either way.
-    const isAdmin = isCostImportAdmin(user.email);
     const adminMode = getAdminImportMode();
     // Explicit flag is the signal (email is optional now); also treat a bare
     // importedEmail as a request for backward compatibility.
     const fillOnBehalfRequested = fillOnBehalfInput === true || importedEmailInput !== undefined;
     const scrapedRequested = scrapedImportInput === true;
     if ((fillOnBehalfRequested || scrapedRequested) && !isAdmin) {
-      // Never let a non-admin attribute a report to a system profile. Ignore the
-      // field and fall back to a normal self-submission.
+      // Never let a non-admin (or anonymous) request attribute a report to a
+      // system profile. Ignore the field and fall back to a normal submission.
       console.warn(
-        `[cost-reports POST] non-admin user ${user.id} sent admin import fields; ignoring`,
+        `[cost-reports POST] non-admin submitter ${
+          user?.id ?? `anon:${anonId}`
+        } sent admin import fields; ignoring`,
       );
     }
 
@@ -194,7 +218,11 @@ export async function POST(request: NextRequest) {
       ? SCRAPED_AUTHOR_ID
       : fillOnBehalf
         ? IMPORT_AUTHOR_ID
-        : user.id;
+        : isAnon
+          ? ANON_AUTHOR_ID
+          : user!.id;
+    // Anonymous reports stay source 'user' so they count in the medians and the
+    // North-Star supply metric; claimed/unclaimed is distinguished by authorId.
     const reportSource = scrapedImport ? 'scraped' : fillOnBehalf ? 'import' : 'user';
 
     const periodicCharges = sanitizePeriodicCharges(periodicChargesInput);
@@ -386,7 +414,9 @@ export async function POST(request: NextRequest) {
     // many reports per building (one per friend), like the bulk CSV import.
     if (!fillOnBehalf) {
       const existingReport = await prisma.costReport.findFirst({
-        where: { authorId: user.id, buildingId: building.id },
+        where: isAnon
+          ? { anonymousId: anonId, buildingId: building.id }
+          : { authorId: user!.id, buildingId: building.id },
         select: { id: true },
       });
       if (existingReport) {
@@ -441,12 +471,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Anonymous reports are owned by the system Anonymous profile until a login
+    // claims them; ensure it exists before the report FKs to it.
+    if (isAnon) {
+      await prisma.profile.upsert({
+        where: { id: ANON_AUTHOR_ID },
+        create: { id: ANON_AUTHOR_ID, displayName: ANON_AUTHOR_DISPLAY_NAME },
+        update: {},
+      });
+    }
+
     const costReport = await prisma.costReport.create({
       data: {
         buildingId: building.id,
         authorId: effectiveAuthorId,
         source: reportSource,
         importedEmail: fillOnBehalf ? normalizedImportedEmail : null,
+        anonymousId: isAnon ? anonId : null,
         claimedAt: null,
         currency: 'PLN',
         rent: rent ? parseFloat(rent) : null,
@@ -488,9 +529,10 @@ export async function POST(request: NextRequest) {
       include: { building: true, periodicCharges: true },
     });
 
-    // Only mark hasContributed for genuine self-submissions (not flagged, and
-    // not an admin import where the admin is entering someone else's data).
-    if (!wasFlagged && !adminImport) {
+    // Only mark hasContributed for genuine self-submissions (not flagged, not an
+    // admin import, and not anonymous). For anonymous reports this happens on the
+    // visitor's first login, when the report is claimed (see lib/claim-reports.ts).
+    if (!wasFlagged && !adminImport && user && profileBefore) {
       await prisma.profile.update({
         where: { id: user.id },
         data: { hasContributedCost: true },
@@ -509,7 +551,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    trackServerEvent(user.id, 'cost_report_submitted', {
+    trackServerEvent(user?.id ?? anonId!, 'cost_report_submitted', {
       building_id: building.id,
       city: citySlug,
       // The report's provenance (user | import | scraped) so PostHog cohorts can
@@ -518,6 +560,7 @@ export async function POST(request: NextRequest) {
       was_flagged: wasFlagged,
       fill_on_behalf: fillOnBehalf,
       scraped_import: scrapedImport,
+      anonymous: isAnon,
     });
 
     // Post-submit payload for the "you vs your district" comparison + the
@@ -557,6 +600,7 @@ export async function POST(request: NextRequest) {
     const comparison = {
       userTotal: totalMonthlyAvg || null,
       buildingReportCount,
+      buildingSlug: building.slug,
       districtName: bldgDistrict?.nameKey ?? null,
       districtSlug: bldgDistrict?.slug ?? null,
       districtMedian: median(districtReports.map((r) => Number(r.totalMonthlyAvg))),

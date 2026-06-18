@@ -830,7 +830,7 @@
       "submitCosts": "Submit Costs",
       "districts": "Districts",
       "allDistricts": "All Districts",
-      "buildingsWithReports": "buildings with cost reports",
+      "buildingsWithReports": "buildings",
       "reports": "reports",
       "unlockFullData": "Cost reports are locked",
       "unlockDesc": "Unlock by submitting your costs, or buy access",
@@ -859,6 +859,7 @@
       "sortPerM2": "Rent / m²",
       "sortReports": "Reports",
       "nReports": "{count, plural, one {# report} other {# reports}}",
+      "nReportsUnit": "{count, plural, one {report} other {reports}}",
       "nBuildings": "{count, plural, one {# building} other {# buildings}}",
       "estimateLegend": "Medians are directional estimates from tenant reports, not quotes.",
       "noBuildingsFound": "No buildings found",
@@ -944,6 +945,13 @@
       "addressNotFoundHint": "Can't find your address? Pick the closest match — you can fix details later.",
       "completeBuildingTitle": "Help complete this building",
       "comparisonHeading": "Compared to the district median",
+      "unlockTitle": "Log in to unlock the full statistics",
+      "unlockDesc": "Your report is saved. Create an account or log in to claim it and reveal the deeper numbers for this building.",
+      "unlockItemUtilities": "Full utilities breakdown — electricity, gas, heating, water",
+      "unlockItemDeposit": "Deposit return rates and how long they take",
+      "unlockItemTenure": "How long tenants actually stay",
+      "unlockItemPosition": "Where this building ranks in its district",
+      "unlockCta": "Log in to unlock",
       "yourCosts": "You pay",
       "comparisonSave": "You save ≈{amount} zł/mo",
       "comparisonOverpay": "You overpay ≈{amount} zł/mo",
@@ -1794,7 +1802,8 @@
       "title": "5. Cost Reports",
       "item1": "Cost reports must reflect real costs from your personal experience as a tenant in the reported building.",
       "item2": "Submitting false or deliberately misleading cost data may result in account removal and deletion of all reports.",
-      "item3": "Cost reports are displayed in anonymized, aggregated form."
+      "item3": "Cost reports are displayed in anonymized, aggregated form.",
+      "item4": "Cost reports you submit are retained in anonymized form and remain part of the community dataset even if you delete your account; they are not re-linked to a new account."
     },
     "payments": {
       "title": "6. Payments",
@@ -1931,7 +1940,8 @@
   "account": {
     "delete": {
       "title": "Delete Account",
-      "warning": "This will permanently delete your account after 30 days. All your listings, conversations, and data will be removed.",
+      "warning": "This will permanently delete your account after 30 days. Your listings, conversations, and personal information will be removed.",
+      "costDataNote": "Cost reports you've contributed are kept in anonymized form (de-linked from your account) to preserve the community data — they are not re-linked if you sign up again.",
       "stats": "You have {listings} active listings and {conversations} conversations.",
       "promotedWarning": "Your promoted listing \"{title}\" has {days, plural, one {# day} other {# days}} remaining.",
       "noRefund": "No refund will be issued for promoted listings.",

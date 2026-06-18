@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOrCreateProfile } from '@/lib/profile';
+import { claimAnonymousReports } from '@/lib/claim-reports';
 import { redirect } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/site-url';
@@ -32,6 +33,10 @@ export async function login(formData: FormData) {
   // exists here so subsequent writes don't hit the author_id FK.
   if (data.user) {
     await getOrCreateProfile(data.user, locale);
+    // Password login doesn't pass through /auth/callback, so claim anonymous
+    // reports here too — a returning user who just submitted logged-out still
+    // gets their report + the contributor unlock.
+    await claimAnonymousReports(data.user.id);
   }
 
   redirect(next || `/${locale}/dashboard`);

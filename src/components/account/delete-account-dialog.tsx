@@ -88,6 +88,7 @@ export function DeleteAccountDialog({ userEmail }: Props) {
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-sm">
               <p>{t('warning')}</p>
+              <p className="text-xs text-muted-foreground">{t('costDataNote')}</p>
 
               {loading ? (
                 <div className="flex items-center gap-2 py-2">
