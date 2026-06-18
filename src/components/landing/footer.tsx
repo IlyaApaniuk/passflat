@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
-import { Home, Linkedin, Instagram } from 'lucide-react';
+import { Home, Linkedin, Instagram, AtSign } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -67,6 +67,17 @@ export function Footer() {
                 aria-label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
+              </a>
+              <a
+                href="https://www.threads.com/@passflatapp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Threads"
+              >
+                {/* lucide has no Threads glyph; @ matches the outline set and
+                    reads as Threads (its handles are @username). */}
+                <AtSign className="h-4 w-4" />
               </a>
             </div>
           </div>
