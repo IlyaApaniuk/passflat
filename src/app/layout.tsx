@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { SITE_URL } from '@/lib/site-url';
 import { robotsMeta } from '@/lib/seo';
 import './globals.css';
@@ -10,6 +10,16 @@ export const metadata: Metadata = {
     apple: '/icon.svg',
   },
   robots: robotsMeta,
+};
+
+// viewport-fit=cover is required for `env(safe-area-inset-*)` to resolve to real
+// values on notched/home-indicator phones — without it the sticky filter apply
+// bar would sit under the iOS home indicator. (Defaults restated so the export
+// doesn't drop Next's width/initial-scale.)
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 /**

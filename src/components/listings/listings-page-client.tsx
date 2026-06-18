@@ -9,6 +9,7 @@ import {
   ListingFiltersDesktop,
   ListingFiltersMobile,
   ActiveFilters,
+  QuickFilters,
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
@@ -69,8 +70,15 @@ function ListingsPageInner({
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [showMap, setShowMap] = useState(true);
+  // Mobile lands on the LIST (where filters pay off), not the map; desktop shows
+  // both side by side regardless. The list/map toggle (mobile-only) flips this.
+  const [showMap, setShowMap] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  const activeFilterCount = Object.values(filters).filter(
+    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
+  ).length;
 
   const handleFiltersChange = useCallback(
     (newFilters: typeof filters) => {
@@ -190,30 +198,22 @@ function ListingsPageInner({
           listingType={listingType}
         />
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="border-b bg-card px-4 py-3"
           >
-            <p className="mb-2 text-sm text-muted-foreground">
-              {t.rich('listings.listingsInCity', {
-                count: visibleListings.length,
-                b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-              })}
-            </p>
-            <div className="flex items-center justify-between">
-              <ListingFiltersMobile
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                districts={districtNames}
-                citySlug={citySlug}
-                listingType={listingType}
-                resultCount={filteredListings.length}
-              />
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 text-sm text-muted-foreground">
+                {t.rich('listings.listingsInCity', {
+                  count: visibleListings.length,
+                  b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+                })}
+              </p>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                   <SelectTrigger className="w-[140px] sm:w-[180px]">
                     <SelectValue placeholder={t('listings.sort.sortBy')} />
@@ -236,6 +236,27 @@ function ListingsPageInner({
                 </Button>
               </div>
             </div>
+
+            {/* Mobile quick-filter chips (desktop uses the sidebar). The full
+                filter set lives in the controlled bottom sheet below. */}
+            <div className="mt-3 xl:hidden">
+              <QuickFilters
+                filters={filters}
+                onOpen={() => setFilterSheetOpen(true)}
+                activeCount={activeFilterCount}
+              />
+            </div>
+
+            <ListingFiltersMobile
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+              districts={districtNames}
+              citySlug={citySlug}
+              listingType={listingType}
+              resultCount={filteredListings.length}
+              open={filterSheetOpen}
+              onOpenChange={setFilterSheetOpen}
+            />
           </motion.div>
 
           <div className="border-b bg-card px-4 py-2">
@@ -254,7 +275,7 @@ function ListingsPageInner({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className={`flex-1 overflow-y-auto p-4 ${
+                className={`min-w-0 flex-1 overflow-y-auto p-4 ${
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >

@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Accordion,
   AccordionContent,
@@ -301,51 +301,230 @@ function BedroomsFilter({
 function AmenitiesFilter({
   filters,
   onFiltersChange,
+  searchable = false,
+  idPrefix = 'amenity',
 }: {
   filters: ListingFilters;
   onFiltersChange: (filters: ListingFilters) => void;
+  searchable?: boolean;
+  idPrefix?: string;
 }) {
   const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
 
   return (
     <div className="space-y-3">
-      {AMENITY_CATEGORIES.map((category) => (
-        <div key={category.categoryKey}>
-          <p className="mb-1 px-1 text-xs font-medium text-muted-foreground">
-            {t(category.categoryKey)}
-          </p>
-          {category.items.map((amenity) => {
-            const checked = filters.amenities?.includes(amenity) ?? false;
-            return (
-              <div
-                key={amenity}
-                className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
-              >
-                <Checkbox
-                  id={`amenity-${amenity}`}
-                  checked={checked}
-                  onCheckedChange={(isChecked) => {
-                    const current = filters.amenities ?? [];
-                    const updated = isChecked
-                      ? [...current, amenity]
-                      : current.filter((a) => a !== amenity);
-                    onFiltersChange({
-                      ...filters,
-                      amenities: updated.length ? updated : undefined,
-                    });
-                  }}
-                />
-                <Label
-                  htmlFor={`amenity-${amenity}`}
-                  className="flex-1 cursor-pointer text-sm font-normal"
+      {searchable && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('listings.filters.searchAmenities')}
+          className="h-9"
+        />
+      )}
+      {AMENITY_CATEGORIES.map((category) => {
+        const items = q
+          ? category.items.filter((a) =>
+              t(`listings.features.${a}` as Parameters<typeof t>[0])
+                .toLowerCase()
+                .includes(q),
+            )
+          : category.items;
+        if (items.length === 0) return null;
+        return (
+          <div key={category.categoryKey}>
+            <p className="mb-1 px-1 text-xs font-medium text-muted-foreground">
+              {t(category.categoryKey)}
+            </p>
+            {items.map((amenity) => {
+              const checked = filters.amenities?.includes(amenity) ?? false;
+              return (
+                <div
+                  key={amenity}
+                  className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:bg-muted/50"
                 >
-                  {t(`listings.features.${amenity}` as Parameters<typeof t>[0])}
-                </Label>
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                  <Checkbox
+                    id={`${idPrefix}-${amenity}`}
+                    checked={checked}
+                    onCheckedChange={(isChecked) => {
+                      const current = filters.amenities ?? [];
+                      const updated = isChecked
+                        ? [...current, amenity]
+                        : current.filter((a) => a !== amenity);
+                      onFiltersChange({
+                        ...filters,
+                        amenities: updated.length ? updated : undefined,
+                      });
+                    }}
+                  />
+                  <Label
+                    htmlFor={`${idPrefix}-${amenity}`}
+                    className="flex-1 cursor-pointer py-2.5 text-sm font-normal"
+                  >
+                    {t(`listings.features.${amenity}` as Parameters<typeof t>[0])}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DistrictsFilter({
+  filters,
+  onFiltersChange,
+  districts,
+  idPrefix = 'district',
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+  districts?: string[];
+  idPrefix?: string;
+}) {
+  const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const all = districts ?? [];
+  const q = query.trim().toLowerCase();
+  const filtered = q ? all.filter((d) => d.toLowerCase().includes(q)) : all;
+  const LIMIT = 8;
+  const collapsed = !showAll && !q && filtered.length > LIMIT;
+  const shown = collapsed ? filtered.slice(0, LIMIT) : filtered;
+
+  return (
+    <div className="space-y-2">
+      {all.length > 10 && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('listings.filters.searchDistricts')}
+          className="h-9"
+        />
+      )}
+      <div className="space-y-0.5">
+        {shown.map((district) => {
+          const checked = filters.districts?.includes(district) || false;
+          return (
+            <div
+              key={district}
+              className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:bg-muted/50"
+            >
+              <Checkbox
+                id={`${idPrefix}-${district}`}
+                checked={checked}
+                onCheckedChange={(c) => {
+                  const current = filters.districts || [];
+                  const updated = c
+                    ? [...current, district]
+                    : current.filter((d) => d !== district);
+                  onFiltersChange({
+                    ...filters,
+                    districts: updated.length ? updated : undefined,
+                  });
+                }}
+              />
+              <Label
+                htmlFor={`${idPrefix}-${district}`}
+                className="flex-1 cursor-pointer py-2.5 text-sm font-normal"
+              >
+                {district}
+              </Label>
+            </div>
+          );
+        })}
+        {shown.length === 0 && (
+          <p className="px-1 py-2 text-xs text-muted-foreground">
+            {t('listings.filters.noMatches')}
+          </p>
+        )}
+      </div>
+      {collapsed && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-full text-xs text-muted-foreground"
+          onClick={() => setShowAll(true)}
+        >
+          {t('listings.filters.showMore', { count: filtered.length - LIMIT })}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Mobile-only horizontally scrollable quick-filter chips. Each chip opens the
+ * full filter bottom sheet; the leading "All filters" chip carries the active
+ * count. Chips show their current value so the most-used refinements are visible
+ * and one tap away (Baymard/Airbnb two-tier pattern) instead of buried in the sheet.
+ */
+export function QuickFilters({
+  filters,
+  onOpen,
+  activeCount,
+}: {
+  filters: ListingFilters;
+  onOpen: () => void;
+  activeCount: number;
+}) {
+  const t = useTranslations();
+
+  const chip = (key: string, label: string, active: boolean) => (
+    <button
+      key={key}
+      type="button"
+      onClick={onOpen}
+      className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors ${
+        active
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-border bg-background text-muted-foreground hover:border-primary/40'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const priceLabel =
+    filters.priceMin || filters.priceMax
+      ? filters.priceMin && filters.priceMax
+        ? `${filters.priceMin.toLocaleString()}–${filters.priceMax.toLocaleString()}`
+        : filters.priceMax
+          ? `≤${filters.priceMax.toLocaleString()}`
+          : `≥${filters.priceMin!.toLocaleString()}`
+      : t('listings.filters.priceRange');
+  const roomsLabel = filters.bedrooms?.length
+    ? filters.bedrooms.map((b) => `${b}+`).join(', ')
+    : t('listings.filters.bedrooms');
+  const districtsLabel = filters.districts?.length
+    ? filters.districts.length === 1
+      ? filters.districts[0]
+      : `${filters.districts[0]} +${filters.districts.length - 1}`
+    : t('listings.filters.districts');
+  const datesLabel = filters.availableFrom ?? t('listings.filters.dates');
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        {t('listings.filters.title')}
+        {activeCount > 0 && (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+            {activeCount}
+          </span>
+        )}
+      </button>
+      {chip('price', priceLabel, !!(filters.priceMin || filters.priceMax))}
+      {chip('rooms', roomsLabel, !!filters.bedrooms?.length)}
+      {chip('districts', districtsLabel, !!filters.districts?.length)}
+      {chip('dates', datesLabel, !!(filters.availableFrom || filters.availableTo))}
     </div>
   );
 }
@@ -823,33 +1002,29 @@ export function ListingFiltersMobile({
   citySlug,
   listingType,
   resultCount,
-}: ListingFiltersProps & { resultCount?: number }) {
+  open: controlledOpen,
+  onOpenChange,
+}: ListingFiltersProps & {
+  resultCount?: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const activeCount = Object.values(filters).filter(
-    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
-  ).length;
+  // Controlled when the parent drives it (quick-filter chips); falls back to its
+  // own state otherwise.
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 xl:hidden hover:border-primary/40">
-          <SlidersHorizontal className="h-4 w-4" />
-          {t('listings.filters.title')}
-          {activeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-              {activeCount}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-full max-w-sm overflow-y-auto">
-        <SheetHeader>
+      <SheetContent side="bottom" className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0">
+        <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>{t('listings.filters.title')}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6 px-4">
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4">
           {/* Type */}
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
@@ -933,8 +1108,13 @@ export function ListingFiltersMobile({
           {/* Amenities */}
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.amenities')}</Label>
-            <div className="mt-2 max-h-48 overflow-y-auto">
-              <AmenitiesFilter filters={filters} onFiltersChange={onFiltersChange} />
+            <div className="mt-2">
+              <AmenitiesFilter
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                searchable
+                idPrefix="m-amenity"
+              />
             </div>
           </div>
 
@@ -961,46 +1141,27 @@ export function ListingFiltersMobile({
           {/* Districts */}
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.districts')}</Label>
-            <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
-              {districts?.map((district) => (
-                <div
-                  key={district}
-                  className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
-                >
-                  <Checkbox
-                    id={`mobile-district-${district}`}
-                    checked={filters.districts?.includes(district) || false}
-                    onCheckedChange={(checked) => {
-                      const current = filters.districts || [];
-                      const updated = checked
-                        ? [...current, district]
-                        : current.filter((d) => d !== district);
-                      onFiltersChange({
-                        ...filters,
-                        districts: updated.length ? updated : undefined,
-                      });
-                    }}
-                  />
-                  <Label
-                    htmlFor={`mobile-district-${district}`}
-                    className="flex-1 cursor-pointer text-sm font-normal"
-                  >
-                    {district}
-                  </Label>
-                </div>
-              ))}
+            <div className="mt-2">
+              <DistrictsFilter
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                districts={districts}
+                idPrefix="m-district"
+              />
             </div>
           </div>
         </div>
 
-        <div className="mt-8 flex gap-3 px-4 pb-4">
-          <Button variant="outline" className="flex-1" onClick={() => onFiltersChange({})}>
+        <div className="sticky bottom-0 mt-auto flex gap-3 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+          <Button variant="outline" className="h-11 flex-1" onClick={() => onFiltersChange({})}>
             {t('listings.filters.clearAll')}
           </Button>
-          <Button className="flex-1" onClick={() => setOpen(false)}>
-            {resultCount != null
-              ? t('listings.filters.showResultsCount', { count: resultCount })
-              : t('listings.filters.showResults')}
+          <Button className="h-11 flex-1" onClick={() => setOpen(false)}>
+            <span aria-live="polite">
+              {resultCount != null
+                ? t('listings.filters.showResultsCount', { count: resultCount })
+                : t('listings.filters.showResults')}
+            </span>
           </Button>
         </div>
       </SheetContent>
