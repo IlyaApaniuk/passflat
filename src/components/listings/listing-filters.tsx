@@ -113,6 +113,8 @@ function PriceRangeSlider({
         step={range.step}
         value={localValues}
         onValueChange={handleSliderChange}
+        minStepsBetweenThumbs={1}
+        thumbLabels={[t('listings.filters.min'), t('listings.filters.max')]}
         className="my-1"
       />
       <div className="flex items-center gap-2 mt-4">
@@ -164,97 +166,61 @@ function DatesFilter({
   const selectedTo = filters.availableTo ? new Date(filters.availableTo) : undefined;
   const showTo = listingType === 'sublet';
 
-  return (
-    <div className={`grid gap-3 ${showTo ? 'grid-cols-2' : 'grid-cols-1'}`}>
+  // One date field — a compact popover trigger. `collisionPadding` keeps the
+  // calendar fully on-screen when it's opened from inside the mobile sheet.
+  const field = (
+    labelKey: 'availableFrom' | 'availableTo',
+    selected: Date | undefined,
+    onChange: (iso: string | undefined) => void,
+  ) => {
+    const label = t(`listings.filters.${labelKey}` as Parameters<typeof t>[0]);
+    return (
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">{t('listings.filters.availableFrom')}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+              className="h-9 w-full justify-start gap-2 text-left text-sm font-normal hover:border-primary/40"
             >
-              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              {selectedFrom ? (
-                format(selectedFrom, 'PP')
-              ) : (
-                <span className="text-muted-foreground text-xs">
-                  {t('listings.filters.availableFrom')}
-                </span>
-              )}
+              <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className={`truncate ${selected ? '' : 'text-xs text-muted-foreground'}`}>
+                {selected ? format(selected, 'dd.MM.yyyy') : t('listings.filters.selectDate')}
+              </span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align="start" collisionPadding={16}>
             <Calendar
               mode="single"
-              selected={selectedFrom}
-              onSelect={(date) =>
-                onFiltersChange({
-                  ...filters,
-                  availableFrom: date ? format(date, 'yyyy-MM-dd') : undefined,
-                })
-              }
+              selected={selected}
+              onSelect={(date) => onChange(date ? format(date, 'yyyy-MM-dd') : undefined)}
             />
           </PopoverContent>
         </Popover>
-        {selectedFrom && (
+        {selected && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onChange(undefined)}
           >
             <X className="mr-1 h-3 w-3" />
             {t('listings.filters.clearAll')}
           </Button>
         )}
       </div>
+    );
+  };
 
-      {showTo && (
-        <div className="space-y-2">
-          <span className="text-xs text-muted-foreground">{t('listings.filters.availableTo')}</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                {selectedTo ? (
-                  format(selectedTo, 'PP')
-                ) : (
-                  <span className="text-muted-foreground text-xs">
-                    {t('listings.filters.availableTo')}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedTo}
-                onSelect={(date) =>
-                  onFiltersChange({
-                    ...filters,
-                    availableTo: date ? format(date, 'yyyy-MM-dd') : undefined,
-                  })
-                }
-              />
-            </PopoverContent>
-          </Popover>
-          {selectedTo && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
-            >
-              <X className="mr-1 h-3 w-3" />
-              {t('listings.filters.clearAll')}
-            </Button>
-          )}
-        </div>
+  return (
+    <div className={`grid gap-3 ${showTo ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {field('availableFrom', selectedFrom, (iso) =>
+        onFiltersChange({ ...filters, availableFrom: iso }),
       )}
+      {showTo &&
+        field('availableTo', selectedTo, (iso) =>
+          onFiltersChange({ ...filters, availableTo: iso }),
+        )}
     </div>
   );
 }
@@ -462,22 +428,65 @@ function DistrictsFilter({
  * count. Chips show their current value so the most-used refinements are visible
  * and one tap away (Baymard/Airbnb two-tier pattern) instead of buried in the sheet.
  */
+/**
+ * Listing-type switcher as a segmented control for the results header. Changing
+ * type is a route change (a top-level decision), not a filter — so it lives
+ * outside the filter sheet/sidebar (OLX/Otodom present transaction type as a
+ * first-class choice). Full-width on mobile, auto-width on desktop.
+ */
+export function ListingTypeTabs({
+  listingType,
+  citySlug,
+}: {
+  listingType: ListingType;
+  citySlug?: string;
+}) {
+  const t = useTranslations();
+  const router = useRouter();
+  return (
+    <div className="flex w-full gap-1 rounded-lg border bg-muted/40 p-1 sm:w-auto">
+      {LISTING_TYPES.map((typeOption) => {
+        const isActive = listingType === typeOption;
+        return (
+          <button
+            key={typeOption}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => {
+              if (typeOption !== listingType && citySlug) {
+                router.push(`/${citySlug}/${typeOption}`);
+              }
+            }}
+            className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-colors sm:flex-none ${
+              isActive
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t(`listings.types.${typeOption}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function QuickFilters({
   filters,
   onOpen,
   activeCount,
 }: {
   filters: ListingFilters;
-  onOpen: () => void;
+  onOpen: (section?: string) => void;
   activeCount: number;
 }) {
   const t = useTranslations();
 
-  const chip = (key: string, label: string, active: boolean) => (
+  const chip = (key: string, section: string, label: string, active: boolean) => (
     <button
       key={key}
       type="button"
-      onClick={onOpen}
+      onClick={() => onOpen(section)}
       className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors ${
         active
           ? 'border-primary bg-primary/10 text-primary'
@@ -510,7 +519,7 @@ export function QuickFilters({
     <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => onOpen()}
         className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40"
       >
         <SlidersHorizontal className="h-4 w-4" />
@@ -521,10 +530,10 @@ export function QuickFilters({
           </span>
         )}
       </button>
-      {chip('price', priceLabel, !!(filters.priceMin || filters.priceMax))}
-      {chip('rooms', roomsLabel, !!filters.bedrooms?.length)}
-      {chip('districts', districtsLabel, !!filters.districts?.length)}
-      {chip('dates', datesLabel, !!(filters.availableFrom || filters.availableTo))}
+      {chip('price', 'price', priceLabel, !!(filters.priceMin || filters.priceMax))}
+      {chip('rooms', 'bedrooms', roomsLabel, !!filters.bedrooms?.length)}
+      {chip('districts', 'districts', districtsLabel, !!filters.districts?.length)}
+      {chip('dates', 'dates', datesLabel, !!(filters.availableFrom || filters.availableTo))}
     </div>
   );
 }
@@ -801,11 +810,9 @@ export function ListingFiltersDesktop({
   filters,
   onFiltersChange,
   districts,
-  citySlug,
   listingType,
 }: ListingFiltersProps) {
   const t = useTranslations();
-  const router = useRouter();
   return (
     <div className="hidden w-72 shrink-0 overflow-y-auto border-r border-border/50 bg-card/50 backdrop-blur-sm p-5 xl:block">
       <div className="flex items-center justify-between">
@@ -821,34 +828,7 @@ export function ListingFiltersDesktop({
         </Button>
       </div>
 
-      {/* 1. Listing type */}
-      <div className="mt-4">
-        <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {LISTING_TYPES.map((typeOption) => {
-            const isActive = listingType === typeOption;
-            return (
-              <Button
-                key={typeOption}
-                variant={isActive ? 'default' : 'outline'}
-                size="sm"
-                className={`h-8 text-xs transition-all ${
-                  isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
-                }`}
-                onClick={() => {
-                  if (typeOption !== listingType && citySlug) {
-                    router.push(`/${citySlug}/${typeOption}`);
-                  }
-                }}
-              >
-                {t(`listings.types.${typeOption}`)}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Quick toggles */}
+      {/* Quick toggles */}
       <div className="mt-4 space-y-3">
         <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
         <RegistrationPossibleFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -999,23 +979,35 @@ export function ListingFiltersMobile({
   filters,
   onFiltersChange,
   districts,
-  citySlug,
   listingType,
   resultCount,
   open: controlledOpen,
   onOpenChange,
+  scrollToSection,
 }: ListingFiltersProps & {
   resultCount?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  scrollToSection?: string;
 }) {
   const t = useTranslations();
-  const router = useRouter();
   // Controlled when the parent drives it (quick-filter chips); falls back to its
   // own state otherwise.
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
+
+  // Opened from a quick-filter chip → scroll that section into view (a beat after
+  // the open animation, once the content is laid out).
+  useEffect(() => {
+    if (!open || !scrollToSection) return;
+    const tid = setTimeout(() => {
+      document
+        .getElementById(`flt-${scrollToSection}`)
+        ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 160);
+    return () => clearTimeout(tid);
+  }, [open, scrollToSection]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -1025,34 +1017,6 @@ export function ListingFiltersMobile({
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4">
-          {/* Type */}
-          <div>
-            <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {LISTING_TYPES.map((typeOption) => {
-                const isActive = listingType === typeOption;
-                return (
-                  <Button
-                    key={typeOption}
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
-                    className={`h-8 text-xs transition-all ${
-                      isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
-                    }`}
-                    onClick={() => {
-                      if (typeOption !== listingType && citySlug) {
-                        setOpen(false);
-                        router.push(`/${citySlug}/${typeOption}`);
-                      }
-                    }}
-                  >
-                    {t(`listings.types.${typeOption}`)}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Quick toggles */}
           <div className="space-y-3">
             <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -1066,7 +1030,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Price */}
-          <div>
+          <div id="flt-price" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.priceRange')}</Label>
             <div className="mt-2">
               <PriceRangeSlider
@@ -1078,7 +1042,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Bedrooms — pill-chips */}
-          <div>
+          <div id="flt-bedrooms" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.bedrooms')}</Label>
             <div className="mt-2">
               <BedroomsFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -1086,7 +1050,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Dates — combined */}
-          <div>
+          <div id="flt-dates" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.dates')}</Label>
             <div className="mt-2">
               <DatesFilter
@@ -1139,7 +1103,7 @@ export function ListingFiltersMobile({
           )}
 
           {/* Districts */}
-          <div>
+          <div id="flt-districts" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.districts')}</Label>
             <div className="mt-2">
               <DistrictsFilter

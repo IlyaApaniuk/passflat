@@ -340,7 +340,7 @@
     "titleReplacement": "Передача оренди",
     "titleRoommate": "Пошук співмешканця",
     "titleSublet": "Тимчасова суборенда",
-    "listingsInCity": "<b>{count}</b> {count, plural, one {оголошення} few {оголошення} many {оголошень} other {оголошень}} у Варшаві",
+    "listingsInCity": "<b>{count}</b> {count, plural, one {оголошення} few {оголошення} many {оголошень} other {оголошень}}",
     "filters": {
       "title": "Фільтри",
       "clearAll": "Очистити все",
@@ -348,6 +348,7 @@
       "searchAmenities": "Пошук зручностей",
       "showMore": "Ще {count}",
       "noMatches": "Нічого не знайдено",
+      "selectDate": "Оберіть",
       "type": "Тип",
       "allTypes": "Усі",
       "priceRange": "Діапазон цін",
