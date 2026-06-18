@@ -9,7 +9,13 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Accordion,
   AccordionContent,
@@ -113,6 +119,8 @@ function PriceRangeSlider({
         step={range.step}
         value={localValues}
         onValueChange={handleSliderChange}
+        minStepsBetweenThumbs={1}
+        thumbLabels={[t('listings.filters.min'), t('listings.filters.max')]}
         className="my-1"
       />
       <div className="flex items-center gap-2 mt-4">
@@ -164,97 +172,61 @@ function DatesFilter({
   const selectedTo = filters.availableTo ? new Date(filters.availableTo) : undefined;
   const showTo = listingType === 'sublet';
 
-  return (
-    <div className={`grid gap-3 ${showTo ? 'grid-cols-2' : 'grid-cols-1'}`}>
+  // One date field — a compact popover trigger. `collisionPadding` keeps the
+  // calendar fully on-screen when it's opened from inside the mobile sheet.
+  const field = (
+    labelKey: 'availableFrom' | 'availableTo',
+    selected: Date | undefined,
+    onChange: (iso: string | undefined) => void,
+  ) => {
+    const label = t(`listings.filters.${labelKey}` as Parameters<typeof t>[0]);
+    return (
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">{t('listings.filters.availableFrom')}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
+              className="h-9 w-full justify-start gap-2 text-left text-sm font-normal hover:border-primary/40"
             >
-              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              {selectedFrom ? (
-                format(selectedFrom, 'PP')
-              ) : (
-                <span className="text-muted-foreground text-xs">
-                  {t('listings.filters.availableFrom')}
-                </span>
-              )}
+              <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className={`truncate ${selected ? '' : 'text-xs text-muted-foreground'}`}>
+                {selected ? format(selected, 'dd.MM.yyyy') : t('listings.filters.selectDate')}
+              </span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align="start" collisionPadding={16}>
             <Calendar
               mode="single"
-              selected={selectedFrom}
-              onSelect={(date) =>
-                onFiltersChange({
-                  ...filters,
-                  availableFrom: date ? format(date, 'yyyy-MM-dd') : undefined,
-                })
-              }
+              selected={selected}
+              onSelect={(date) => onChange(date ? format(date, 'yyyy-MM-dd') : undefined)}
             />
           </PopoverContent>
         </Popover>
-        {selectedFrom && (
+        {selected && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => onFiltersChange({ ...filters, availableFrom: undefined })}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onChange(undefined)}
           >
             <X className="mr-1 h-3 w-3" />
             {t('listings.filters.clearAll')}
           </Button>
         )}
       </div>
+    );
+  };
 
-      {showTo && (
-        <div className="space-y-2">
-          <span className="text-xs text-muted-foreground">{t('listings.filters.availableTo')}</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full h-9 justify-start text-left text-sm font-normal hover:border-primary/40"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                {selectedTo ? (
-                  format(selectedTo, 'PP')
-                ) : (
-                  <span className="text-muted-foreground text-xs">
-                    {t('listings.filters.availableTo')}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedTo}
-                onSelect={(date) =>
-                  onFiltersChange({
-                    ...filters,
-                    availableTo: date ? format(date, 'yyyy-MM-dd') : undefined,
-                  })
-                }
-              />
-            </PopoverContent>
-          </Popover>
-          {selectedTo && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-              onClick={() => onFiltersChange({ ...filters, availableTo: undefined })}
-            >
-              <X className="mr-1 h-3 w-3" />
-              {t('listings.filters.clearAll')}
-            </Button>
-          )}
-        </div>
+  return (
+    <div className={`grid gap-3 ${showTo ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {field('availableFrom', selectedFrom, (iso) =>
+        onFiltersChange({ ...filters, availableFrom: iso }),
       )}
+      {showTo &&
+        field('availableTo', selectedTo, (iso) =>
+          onFiltersChange({ ...filters, availableTo: iso }),
+        )}
     </div>
   );
 }
@@ -273,7 +245,7 @@ function BedroomsFilter({
         return (
           <button
             key={num}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-all ${
               isActive
                 ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -301,51 +273,273 @@ function BedroomsFilter({
 function AmenitiesFilter({
   filters,
   onFiltersChange,
+  searchable = false,
+  idPrefix = 'amenity',
 }: {
   filters: ListingFilters;
   onFiltersChange: (filters: ListingFilters) => void;
+  searchable?: boolean;
+  idPrefix?: string;
 }) {
   const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
 
   return (
     <div className="space-y-3">
-      {AMENITY_CATEGORIES.map((category) => (
-        <div key={category.categoryKey}>
-          <p className="mb-1 px-1 text-xs font-medium text-muted-foreground">
-            {t(category.categoryKey)}
-          </p>
-          {category.items.map((amenity) => {
-            const checked = filters.amenities?.includes(amenity) ?? false;
-            return (
-              <div
-                key={amenity}
-                className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
-              >
-                <Checkbox
-                  id={`amenity-${amenity}`}
-                  checked={checked}
-                  onCheckedChange={(isChecked) => {
-                    const current = filters.amenities ?? [];
-                    const updated = isChecked
-                      ? [...current, amenity]
-                      : current.filter((a) => a !== amenity);
-                    onFiltersChange({
-                      ...filters,
-                      amenities: updated.length ? updated : undefined,
-                    });
-                  }}
-                />
-                <Label
-                  htmlFor={`amenity-${amenity}`}
-                  className="flex-1 cursor-pointer text-sm font-normal"
+      {searchable && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('listings.filters.searchAmenities')}
+          className="h-9"
+        />
+      )}
+      {AMENITY_CATEGORIES.map((category) => {
+        const items = q
+          ? category.items.filter((a) =>
+              t(`listings.features.${a}` as Parameters<typeof t>[0])
+                .toLowerCase()
+                .includes(q),
+            )
+          : category.items;
+        if (items.length === 0) return null;
+        return (
+          <div key={category.categoryKey}>
+            <p className="mb-1 px-1 text-xs font-medium text-muted-foreground">
+              {t(category.categoryKey)}
+            </p>
+            {items.map((amenity) => {
+              const checked = filters.amenities?.includes(amenity) ?? false;
+              return (
+                <div
+                  key={amenity}
+                  className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:bg-muted/50"
                 >
-                  {t(`listings.features.${amenity}` as Parameters<typeof t>[0])}
-                </Label>
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                  <Checkbox
+                    id={`${idPrefix}-${amenity}`}
+                    checked={checked}
+                    onCheckedChange={(isChecked) => {
+                      const current = filters.amenities ?? [];
+                      const updated = isChecked
+                        ? [...current, amenity]
+                        : current.filter((a) => a !== amenity);
+                      onFiltersChange({
+                        ...filters,
+                        amenities: updated.length ? updated : undefined,
+                      });
+                    }}
+                  />
+                  <Label
+                    htmlFor={`${idPrefix}-${amenity}`}
+                    className="flex-1 cursor-pointer py-2.5 text-sm font-normal"
+                  >
+                    {t(`listings.features.${amenity}` as Parameters<typeof t>[0])}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DistrictsFilter({
+  filters,
+  onFiltersChange,
+  districts,
+  idPrefix = 'district',
+}: {
+  filters: ListingFilters;
+  onFiltersChange: (filters: ListingFilters) => void;
+  districts?: string[];
+  idPrefix?: string;
+}) {
+  const t = useTranslations();
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const all = districts ?? [];
+  const q = query.trim().toLowerCase();
+  const filtered = q ? all.filter((d) => d.toLowerCase().includes(q)) : all;
+  const LIMIT = 8;
+  const collapsed = !showAll && !q && filtered.length > LIMIT;
+  const shown = collapsed ? filtered.slice(0, LIMIT) : filtered;
+
+  return (
+    <div className="space-y-2">
+      {all.length > 10 && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('listings.filters.searchDistricts')}
+          className="h-9"
+        />
+      )}
+      <div className="space-y-0.5">
+        {shown.map((district) => {
+          const checked = filters.districts?.includes(district) || false;
+          return (
+            <div
+              key={district}
+              className="flex min-h-11 items-center gap-2 rounded-md px-1 transition-colors hover:bg-muted/50"
+            >
+              <Checkbox
+                id={`${idPrefix}-${district}`}
+                checked={checked}
+                onCheckedChange={(c) => {
+                  const current = filters.districts || [];
+                  const updated = c
+                    ? [...current, district]
+                    : current.filter((d) => d !== district);
+                  onFiltersChange({
+                    ...filters,
+                    districts: updated.length ? updated : undefined,
+                  });
+                }}
+              />
+              <Label
+                htmlFor={`${idPrefix}-${district}`}
+                className="flex-1 cursor-pointer py-2.5 text-sm font-normal"
+              >
+                {district}
+              </Label>
+            </div>
+          );
+        })}
+        {shown.length === 0 && (
+          <p className="px-1 py-2 text-xs text-muted-foreground">
+            {t('listings.filters.noMatches')}
+          </p>
+        )}
+      </div>
+      {collapsed && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-full text-xs text-muted-foreground"
+          onClick={() => setShowAll(true)}
+        >
+          {t('listings.filters.showMore', { count: filtered.length - LIMIT })}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Mobile-only horizontally scrollable quick-filter chips. Each chip opens the
+ * full filter bottom sheet; the leading "All filters" chip carries the active
+ * count. Chips show their current value so the most-used refinements are visible
+ * and one tap away (Baymard/Airbnb two-tier pattern) instead of buried in the sheet.
+ */
+/**
+ * Listing-type switcher as a segmented control for the results header. Changing
+ * type is a route change (a top-level decision), not a filter — so it lives
+ * outside the filter sheet/sidebar (OLX/Otodom present transaction type as a
+ * first-class choice). Full-width on mobile, auto-width on desktop.
+ */
+export function ListingTypeTabs({
+  listingType,
+  citySlug,
+}: {
+  listingType: ListingType;
+  citySlug?: string;
+}) {
+  const t = useTranslations();
+  const router = useRouter();
+  return (
+    <div className="flex w-full gap-1 rounded-lg border bg-muted/40 p-1 sm:w-auto">
+      {LISTING_TYPES.map((typeOption) => {
+        const isActive = listingType === typeOption;
+        return (
+          <button
+            key={typeOption}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => {
+              if (typeOption !== listingType && citySlug) {
+                router.push(`/${citySlug}/${typeOption}`);
+              }
+            }}
+            className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-colors sm:flex-none ${
+              isActive
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t(`listings.types.${typeOption}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function QuickFilters({
+  filters,
+  onOpen,
+  activeCount,
+}: {
+  filters: ListingFilters;
+  onOpen: (section?: string) => void;
+  activeCount: number;
+}) {
+  const t = useTranslations();
+
+  const chip = (key: string, section: string, label: string, active: boolean) => (
+    <button
+      key={key}
+      type="button"
+      onClick={() => onOpen(section)}
+      className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors ${
+        active
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-border bg-background text-muted-foreground hover:border-primary/40'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const priceLabel =
+    filters.priceMin || filters.priceMax
+      ? filters.priceMin && filters.priceMax
+        ? `${filters.priceMin.toLocaleString()}–${filters.priceMax.toLocaleString()}`
+        : filters.priceMax
+          ? `≤${filters.priceMax.toLocaleString()}`
+          : `≥${filters.priceMin!.toLocaleString()}`
+      : t('listings.filters.priceRange');
+  const roomsLabel = filters.bedrooms?.length
+    ? filters.bedrooms.map((b) => `${b}+`).join(', ')
+    : t('listings.filters.bedrooms');
+  const districtsLabel = filters.districts?.length
+    ? filters.districts.length === 1
+      ? filters.districts[0]
+      : `${filters.districts[0]} +${filters.districts.length - 1}`
+    : t('listings.filters.districts');
+  const datesLabel = filters.availableFrom ?? t('listings.filters.dates');
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button
+        type="button"
+        onClick={() => onOpen()}
+        className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        {t('listings.filters.title')}
+        {activeCount > 0 && (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+            {activeCount}
+          </span>
+        )}
+      </button>
+      {chip('price', 'price', priceLabel, !!(filters.priceMin || filters.priceMax))}
+      {chip('rooms', 'bedrooms', roomsLabel, !!filters.bedrooms?.length)}
+      {chip('districts', 'districts', districtsLabel, !!filters.districts?.length)}
+      {chip('dates', 'dates', datesLabel, !!(filters.availableFrom || filters.availableTo))}
     </div>
   );
 }
@@ -373,7 +567,7 @@ function RoomTypeFilter({
             key={idx}
             variant={isActive ? 'default' : 'outline'}
             size="sm"
-            className={`h-8 text-xs transition-all ${
+            className={`h-9 text-xs transition-all ${
               isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
             onClick={() => onFiltersChange({ ...filters, roomType: option.value })}
@@ -412,7 +606,7 @@ function PreferredGenderFilter({
             key={idx}
             variant={isActive ? 'default' : 'outline'}
             size="sm"
-            className={`h-8 text-xs transition-all ${
+            className={`h-9 text-xs transition-all ${
               isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
             }`}
             onClick={() => onFiltersChange({ ...filters, preferredGender: option.value })}
@@ -622,11 +816,9 @@ export function ListingFiltersDesktop({
   filters,
   onFiltersChange,
   districts,
-  citySlug,
   listingType,
 }: ListingFiltersProps) {
   const t = useTranslations();
-  const router = useRouter();
   return (
     <div className="hidden w-72 shrink-0 overflow-y-auto border-r border-border/50 bg-card/50 backdrop-blur-sm p-5 xl:block">
       <div className="flex items-center justify-between">
@@ -642,34 +834,7 @@ export function ListingFiltersDesktop({
         </Button>
       </div>
 
-      {/* 1. Listing type */}
-      <div className="mt-4">
-        <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {LISTING_TYPES.map((typeOption) => {
-            const isActive = listingType === typeOption;
-            return (
-              <Button
-                key={typeOption}
-                variant={isActive ? 'default' : 'outline'}
-                size="sm"
-                className={`h-8 text-xs transition-all ${
-                  isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
-                }`}
-                onClick={() => {
-                  if (typeOption !== listingType && citySlug) {
-                    router.push(`/${citySlug}/${typeOption}`);
-                  }
-                }}
-              >
-                {t(`listings.types.${typeOption}`)}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Quick toggles */}
+      {/* Quick toggles */}
       <div className="mt-4 space-y-3">
         <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
         <RegistrationPossibleFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -820,64 +985,47 @@ export function ListingFiltersMobile({
   filters,
   onFiltersChange,
   districts,
-  citySlug,
   listingType,
   resultCount,
-}: ListingFiltersProps & { resultCount?: number }) {
+  open: controlledOpen,
+  onOpenChange,
+  scrollToSection,
+}: ListingFiltersProps & {
+  resultCount?: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  scrollToSection?: string;
+}) {
   const t = useTranslations();
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const activeCount = Object.values(filters).filter(
-    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
-  ).length;
+  // Controlled when the parent drives it (quick-filter chips); falls back to its
+  // own state otherwise.
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+
+  // Opened from a quick-filter chip → scroll that section into view (a beat after
+  // the open animation, once the content is laid out).
+  useEffect(() => {
+    if (!open || !scrollToSection) return;
+    const tid = setTimeout(() => {
+      document
+        .getElementById(`flt-${scrollToSection}`)
+        ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 160);
+    return () => clearTimeout(tid);
+  }, [open, scrollToSection]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 xl:hidden hover:border-primary/40">
-          <SlidersHorizontal className="h-4 w-4" />
-          {t('listings.filters.title')}
-          {activeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-              {activeCount}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-full max-w-sm overflow-y-auto">
-        <SheetHeader>
+      <SheetContent side="bottom" className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0">
+        <SheetHeader className="border-b px-4 py-3">
           <SheetTitle>{t('listings.filters.title')}</SheetTitle>
+          <SheetDescription className="sr-only">
+            {t('listings.filters.sheetDescription')}
+          </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6 px-4">
-          {/* Type */}
-          <div>
-            <Label className="text-sm font-medium">{t('listings.filters.type')}</Label>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {LISTING_TYPES.map((typeOption) => {
-                const isActive = listingType === typeOption;
-                return (
-                  <Button
-                    key={typeOption}
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
-                    className={`h-8 text-xs transition-all ${
-                      isActive ? 'shadow-sm shadow-primary/20' : 'hover:border-primary/40'
-                    }`}
-                    onClick={() => {
-                      if (typeOption !== listingType && citySlug) {
-                        setOpen(false);
-                        router.push(`/${citySlug}/${typeOption}`);
-                      }
-                    }}
-                  >
-                    {t(`listings.types.${typeOption}`)}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4">
           {/* Quick toggles */}
           <div className="space-y-3">
             <WithPhotosFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -891,7 +1039,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Price */}
-          <div>
+          <div id="flt-price" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.priceRange')}</Label>
             <div className="mt-2">
               <PriceRangeSlider
@@ -903,7 +1051,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Bedrooms — pill-chips */}
-          <div>
+          <div id="flt-bedrooms" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.bedrooms')}</Label>
             <div className="mt-2">
               <BedroomsFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -911,7 +1059,7 @@ export function ListingFiltersMobile({
           </div>
 
           {/* Dates — combined */}
-          <div>
+          <div id="flt-dates" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.dates')}</Label>
             <div className="mt-2">
               <DatesFilter
@@ -933,8 +1081,13 @@ export function ListingFiltersMobile({
           {/* Amenities */}
           <div>
             <Label className="text-sm font-medium">{t('listings.filters.amenities')}</Label>
-            <div className="mt-2 max-h-48 overflow-y-auto">
-              <AmenitiesFilter filters={filters} onFiltersChange={onFiltersChange} />
+            <div className="mt-2">
+              <AmenitiesFilter
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                searchable
+                idPrefix="m-amenity"
+              />
             </div>
           </div>
 
@@ -959,48 +1112,29 @@ export function ListingFiltersMobile({
           )}
 
           {/* Districts */}
-          <div>
+          <div id="flt-districts" className="scroll-mt-4">
             <Label className="text-sm font-medium">{t('listings.filters.districts')}</Label>
-            <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
-              {districts?.map((district) => (
-                <div
-                  key={district}
-                  className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/50"
-                >
-                  <Checkbox
-                    id={`mobile-district-${district}`}
-                    checked={filters.districts?.includes(district) || false}
-                    onCheckedChange={(checked) => {
-                      const current = filters.districts || [];
-                      const updated = checked
-                        ? [...current, district]
-                        : current.filter((d) => d !== district);
-                      onFiltersChange({
-                        ...filters,
-                        districts: updated.length ? updated : undefined,
-                      });
-                    }}
-                  />
-                  <Label
-                    htmlFor={`mobile-district-${district}`}
-                    className="flex-1 cursor-pointer text-sm font-normal"
-                  >
-                    {district}
-                  </Label>
-                </div>
-              ))}
+            <div className="mt-2">
+              <DistrictsFilter
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                districts={districts}
+                idPrefix="m-district"
+              />
             </div>
           </div>
         </div>
 
-        <div className="mt-8 flex gap-3 px-4 pb-4">
-          <Button variant="outline" className="flex-1" onClick={() => onFiltersChange({})}>
+        <div className="sticky bottom-0 mt-auto flex gap-3 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+          <Button variant="outline" className="h-11 flex-1" onClick={() => onFiltersChange({})}>
             {t('listings.filters.clearAll')}
           </Button>
-          <Button className="flex-1" onClick={() => setOpen(false)}>
-            {resultCount != null
-              ? t('listings.filters.showResultsCount', { count: resultCount })
-              : t('listings.filters.showResults')}
+          <Button className="h-11 flex-1" onClick={() => setOpen(false)}>
+            <span aria-live="polite">
+              {resultCount != null
+                ? t('listings.filters.showResultsCount', { count: resultCount })
+                : t('listings.filters.showResults')}
+            </span>
           </Button>
         </div>
       </SheetContent>

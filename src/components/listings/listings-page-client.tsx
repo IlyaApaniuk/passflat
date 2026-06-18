@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback, useDeferredValue, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
@@ -9,6 +9,8 @@ import {
   ListingFiltersDesktop,
   ListingFiltersMobile,
   ActiveFilters,
+  QuickFilters,
+  ListingTypeTabs,
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
@@ -67,10 +69,21 @@ function ListingsPageInner({
   const t = useTranslations();
   const posthog = usePostHog();
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
+  // Keep the filter controls (chips, inputs, sheet) snappy while the heavier
+  // list re-filter runs at a lower priority.
+  const deferredFilters = useDeferredValue(filters);
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [showMap, setShowMap] = useState(true);
+  // Mobile lands on the LIST (where filters pay off), not the map; desktop shows
+  // both side by side regardless. The list/map toggle (mobile-only) flips this.
+  const [showMap, setShowMap] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [filterSection, setFilterSection] = useState<string | undefined>(undefined);
+
+  const activeFilterCount = Object.values(filters).filter(
+    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
+  ).length;
 
   const handleFiltersChange = useCallback(
     (newFilters: typeof filters) => {
@@ -104,46 +117,55 @@ function ListingsPageInner({
 
   const filteredListings = useMemo(() => {
     return listings.filter((listing) => {
-      if (filters.priceMin && listing.totalCost < filters.priceMin) return false;
-      if (filters.priceMax && listing.totalCost > filters.priceMax) return false;
-      if (filters.bedrooms?.length && !filters.bedrooms.some((b) => listing.bedrooms >= b))
+      if (deferredFilters.priceMin && listing.totalCost < deferredFilters.priceMin) return false;
+      if (deferredFilters.priceMax && listing.totalCost > deferredFilters.priceMax) return false;
+      if (
+        deferredFilters.bedrooms?.length &&
+        !deferredFilters.bedrooms.some((b) => listing.bedrooms >= b)
+      )
         return false;
-      if (filters.districts?.length && !filters.districts.includes(listing.district)) return false;
-      if (filters.areaMin && listing.area < filters.areaMin) return false;
-      if (filters.areaMax && listing.area > filters.areaMax) return false;
-      if (filters.availableFrom) {
-        const filterDate = new Date(filters.availableFrom);
+      if (
+        deferredFilters.districts?.length &&
+        !deferredFilters.districts.includes(listing.district)
+      )
+        return false;
+      if (deferredFilters.areaMin && listing.area < deferredFilters.areaMin) return false;
+      if (deferredFilters.areaMax && listing.area > deferredFilters.areaMax) return false;
+      if (deferredFilters.availableFrom) {
+        const filterDate = new Date(deferredFilters.availableFrom);
         const listingDate = new Date(listing.availableFrom);
         if (listingDate > filterDate) return false;
       }
       if (
-        filters.amenities?.length &&
-        !filters.amenities.every((a) => listing.features.includes(a))
+        deferredFilters.amenities?.length &&
+        !deferredFilters.amenities.every((a) => listing.features.includes(a))
       )
         return false;
-      if (filters.roomType && listing.roomType !== filters.roomType) return false;
+      if (deferredFilters.roomType && listing.roomType !== deferredFilters.roomType) return false;
       if (
-        filters.preferredGender &&
-        filters.preferredGender !== 'any' &&
-        listing.preferredGender !== filters.preferredGender &&
+        deferredFilters.preferredGender &&
+        deferredFilters.preferredGender !== 'any' &&
+        listing.preferredGender !== deferredFilters.preferredGender &&
         listing.preferredGender !== 'any'
       )
         return false;
-      if (filters.availableTo) {
-        const filterDate = new Date(filters.availableTo);
+      if (deferredFilters.availableTo) {
+        const filterDate = new Date(deferredFilters.availableTo);
         if (!listing.availableTo) return false;
         const listingDate = new Date(listing.availableTo);
         if (listingDate < filterDate) return false;
       }
-      if (filters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
-      if (filters.internetIncluded && !listing.internetIncluded) return false;
-      if (filters.floorMin != null && listing.floor < filters.floorMin) return false;
-      if (filters.floorMax != null && listing.floor > filters.floorMax) return false;
-      if (filters.hasPhotos && listing.photoCount === 0) return false;
-      if (filters.registrationPossible && !listing.registrationPossible) return false;
+      if (deferredFilters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
+      if (deferredFilters.internetIncluded && !listing.internetIncluded) return false;
+      if (deferredFilters.floorMin != null && listing.floor < deferredFilters.floorMin)
+        return false;
+      if (deferredFilters.floorMax != null && listing.floor > deferredFilters.floorMax)
+        return false;
+      if (deferredFilters.hasPhotos && listing.photoCount === 0) return false;
+      if (deferredFilters.registrationPossible && !listing.registrationPossible) return false;
       return true;
     });
-  }, [listings, filters]);
+  }, [listings, deferredFilters]);
 
   const sortedListings = useMemo(() => {
     const sorted = [...filteredListings];
@@ -190,30 +212,24 @@ function ListingsPageInner({
           listingType={listingType}
         />
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="border-b bg-card px-4 py-3"
           >
-            <p className="mb-2 text-sm text-muted-foreground">
-              {t.rich('listings.listingsInCity', {
-                count: visibleListings.length,
-                b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-              })}
-            </p>
-            <div className="flex items-center justify-between">
-              <ListingFiltersMobile
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                districts={districtNames}
-                citySlug={citySlug}
-                listingType={listingType}
-                resultCount={filteredListings.length}
-              />
+            <ListingTypeTabs listingType={listingType} citySlug={citySlug} />
 
-              <div className="flex items-center gap-2">
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
+                {t.rich('listings.listingsInCity', {
+                  count: visibleListings.length,
+                  b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+                })}
+              </p>
+
+              <div className="flex shrink-0 items-center gap-2">
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                   <SelectTrigger className="w-[140px] sm:w-[180px]">
                     <SelectValue placeholder={t('listings.sort.sortBy')} />
@@ -236,6 +252,31 @@ function ListingsPageInner({
                 </Button>
               </div>
             </div>
+
+            {/* Mobile quick-filter chips (desktop uses the sidebar). The full
+                filter set lives in the controlled bottom sheet below. */}
+            <div className="mt-3 xl:hidden">
+              <QuickFilters
+                filters={filters}
+                onOpen={(section) => {
+                  setFilterSection(section);
+                  setFilterSheetOpen(true);
+                }}
+                activeCount={activeFilterCount}
+              />
+            </div>
+
+            <ListingFiltersMobile
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+              districts={districtNames}
+              citySlug={citySlug}
+              listingType={listingType}
+              resultCount={filteredListings.length}
+              open={filterSheetOpen}
+              onOpenChange={setFilterSheetOpen}
+              scrollToSection={filterSection}
+            />
           </motion.div>
 
           <div className="border-b bg-card px-4 py-2">
@@ -254,7 +295,7 @@ function ListingsPageInner({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className={`flex-1 overflow-y-auto p-4 ${
+                className={`min-w-0 flex-1 overflow-y-auto p-4 ${
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >

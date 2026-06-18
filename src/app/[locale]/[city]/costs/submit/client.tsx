@@ -323,10 +323,23 @@ export function CostSubmitClient({
     try {
       const raw = localStorage.getItem(draftKey);
       if (raw) {
-        // One-time hydration from a saved draft (external store → state).
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setFormData((prev) => ({ ...prev, ...JSON.parse(raw) }));
+        const draft = JSON.parse(raw);
+        // One-time hydration from a saved draft (external store → state) PLUS
+        // syncing the progressive-disclosure toggles to the restored values.
+        // Without this, restored data in a collapsed section (e.g. a stale
+        // "past tenant / 0% deposit", or detailed utilities) stays INVISIBLE yet
+        // is still submitted — the phantom-data bug. Mirrors how existingReport
+        // drives these toggles.
+        /* eslint-disable react-hooks/set-state-in-effect */
+        setFormData((prev) => ({ ...prev, ...draft }));
         setDraftRestored(true);
+        if (draft.isCurrentTenant === false || draft.livedFrom || draft.depositReturned)
+          setShowTenancy(true);
+        if (hasDetailedUtilities(draft)) setShowDetailedUtilities(true);
+        if (draft.electricityWinter || draft.electricitySummer) setShowElectricitySeasonal(true);
+        if (draft.heatingWinter || draft.heatingSummer) setShowHeatingSeasonal(true);
+        if (draft.periodicCharges?.length) setShowPeriodic(true);
+        /* eslint-enable react-hooks/set-state-in-effect */
       }
     } catch {
       /* ignore malformed draft */
@@ -785,8 +798,12 @@ export function CostSubmitClient({
                 >
                   <Check className="h-8 w-8 text-primary" />
                 </motion.div>
-                <h1 className="text-2xl font-bold">{t('costs.submit.thankYou')}</h1>
-                <p className="mt-2 text-muted-foreground">{t('costs.submit.thankYouDesc')}</p>
+                <h1 className="text-2xl font-bold">
+                  {editMode ? t('costs.submit.editThankYou') : t('costs.submit.thankYou')}
+                </h1>
+                <p className="mt-2 text-muted-foreground">
+                  {editMode ? t('costs.submit.editThankYouDesc') : t('costs.submit.thankYouDesc')}
+                </p>
                 {submittedComparison && (
                   <div className="mt-5 space-y-4 text-left">
                     {/* You vs your district — the personal hook that makes the
@@ -1015,7 +1032,7 @@ export function CostSubmitClient({
                     hook above is their path). */}
                 <div className="mt-6 flex flex-col gap-2">
                   {!isAnonymous && (
-                    <Button variant="outline" className="w-full" asChild>
+                    <Button variant={editMode ? 'default' : 'outline'} className="w-full" asChild>
                       <Link href={{ pathname: '/dashboard', query: { tab: 'costs' } }}>
                         {t('costs.submit.viewMyReports')}
                       </Link>
