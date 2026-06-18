@@ -3,6 +3,7 @@ import createIntlMiddleware from 'next-intl/middleware';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { routing } from './i18n/routing';
 import { captureReferralFromRequest } from './lib/referral';
+import { captureAnonIdFromRequest } from './lib/anon-id';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -12,8 +13,10 @@ function isProtectedPath(pathWithoutLocale: string): boolean {
   if (pathWithoutLocale === '/create-listing' || pathWithoutLocale.startsWith('/create-listing/'))
     return true;
   if (pathWithoutLocale === '/messages' || pathWithoutLocale.startsWith('/messages/')) return true;
-  if (/\/costs\/submit(\/|$)/.test(pathWithoutLocale)) return true;
-  if (/\/[^/]+\/costs\/submit(\/|$)/.test(pathWithoutLocale)) return true;
+  // NOTE: `/costs/submit` is intentionally NOT protected — the cost form is open
+  // to logged-out visitors (anonymous submission), the login wall before data
+  // entry was a supply-killer on cold-start traffic. Login becomes a post-submit
+  // hook to claim the report + unlock deeper stats (see lib/anon-id.ts).
   return false;
 }
 
@@ -30,6 +33,10 @@ export default async function middleware(request: NextRequest) {
   // below so it works on every matched path (public landing/cost pages included,
   // which never reach the auth branch). Cheap cookie write, no network.
   captureReferralFromRequest(request, response);
+
+  // Ensure a stable anonymous id on every visit so a logged-out cost submission
+  // can be claimed on the visitor's first login. Cheap cookie write, no network.
+  captureAnonIdFromRequest(request, response);
 
   // If next-intl issued a locale redirect, return it as-is — no auth needed.
   if (response.status >= 300 && response.status < 400) {

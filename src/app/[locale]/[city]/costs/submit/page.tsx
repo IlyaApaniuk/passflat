@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect, notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
@@ -12,7 +12,7 @@ interface PageProps {
 }
 
 export default async function SubmitCostsPage({ params, searchParams }: PageProps) {
-  const { city: citySlug, locale } = await params;
+  const { city: citySlug } = await params;
   const search = await searchParams;
   const isEditMode = search.edit === 'true';
   const reportId = typeof search.id === 'string' ? search.id : undefined;
@@ -38,15 +38,15 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect(`/${locale}/auth/login?next=/${locale}/${citySlug}/costs/submit`);
-  }
-
-  const canFillOnBehalf = isCostImportAdmin(user.email);
+  // The form is open to logged-out visitors — anonymous submissions are owned by
+  // a system profile and claimed on first login (no auth wall before data entry).
+  const canFillOnBehalf = isCostImportAdmin(user?.email);
   const adminImportMode = getAdminImportMode();
 
   let existingReport = null;
-  if (isEditMode) {
+  // Editing an existing report is a logged-in action (matched by authorId); an
+  // anonymous visitor only ever lands on a fresh submission.
+  if (isEditMode && user) {
     const report = await prisma.costReport.findFirst({
       where: reportId ? { id: reportId, authorId: user.id } : { authorId: user.id },
       include: { building: true, periodicCharges: true },
@@ -125,7 +125,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
       cityName={cityName}
       cityCanonicalName={cityCanonicalName}
       cityBounds={cityBounds}
-      userId={user.id}
+      userId={user?.id ?? null}
       editMode={isEditMode && existingReport != null}
       existingReport={existingReport}
       canFillOnBehalf={canFillOnBehalf}

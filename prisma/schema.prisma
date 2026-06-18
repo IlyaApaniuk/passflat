@@ -335,8 +335,12 @@ model CostReport {
   isVisible          Boolean @default(true) @map("is_visible")
 
   // Source & email-claim (for imported submissions, e.g. Google Form)
-  source        String    @default("user") // 'user' | 'import'
+  source        String    @default("user") // 'user' | 'import' | 'scraped'
   importedEmail String?   @map("imported_email") // normalized lowercase, used to auto-link on login
+  // Per-browser id for reports submitted anonymously (open form). The report is
+  // owned by ANON_AUTHOR_ID until the visitor's first login claims it by this id;
+  // cleared (set null) on claim. See lib/anon-id.ts and lib/claim-reports.ts.
+  anonymousId   String?   @map("anonymous_id")
   claimedAt     DateTime? @map("claimed_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -354,6 +358,7 @@ model CostReport {
   @@index([buildingId])
   @@index([authorId])
   @@index([importedEmail])
+  @@index([anonymousId])
   @@map("cost_reports")
 }
 
