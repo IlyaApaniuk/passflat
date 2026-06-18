@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateProfile } from '@/lib/profile';
 import { trackServerEvent, identifyUser } from '@/lib/posthog-server';
 import { classifyRef } from '@/lib/referral';
+import { claimAnonymousReports } from '@/lib/claim-reports';
 
 export async function GET(
   request: NextRequest,
@@ -66,6 +67,10 @@ export async function GET(
           console.error('[auth callback] failed to claim imported cost reports', claimErr);
         }
       }
+
+      // Claim any reports this browser submitted anonymously before logging in
+      // (open cost form → submit → "log in to unlock" hook). Self-contained.
+      await claimAnonymousReports(user.id);
 
       const authMethod = user.app_metadata?.provider === 'google' ? 'google' : 'email';
 

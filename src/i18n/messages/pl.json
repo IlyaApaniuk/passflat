@@ -830,7 +830,7 @@
       "submitCosts": "Zgłoś koszty",
       "districts": "Dzielnice",
       "allDistricts": "Wszystkie dzielnice",
-      "buildingsWithReports": "budynków z raportami kosztów",
+      "buildingsWithReports": "budynków",
       "reports": "raportów",
       "unlockFullData": "Raporty kosztów są zablokowane",
       "unlockDesc": "Odblokuj, wysyłając swoje koszty, lub kup dostęp",
@@ -859,6 +859,7 @@
       "sortPerM2": "Czynsz / m²",
       "sortReports": "Zgłoszenia",
       "nReports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
+      "nReportsUnit": "{count, plural, one {zgłoszenie} few {zgłoszenia} many {zgłoszeń} other {zgłoszeń}}",
       "nBuildings": "{count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}}",
       "estimateLegend": "Mediany to wartości orientacyjne ze zgłoszeń najemców, nie oferty.",
       "noBuildingsFound": "Nie znaleziono budynków",
@@ -944,6 +945,13 @@
       "addressNotFoundHint": "Nie możesz znaleźć adresu? Wybierz najbliższy — szczegóły poprawisz później.",
       "completeBuildingTitle": "Pomóż uzupełnić dane budynku",
       "comparisonHeading": "Porównanie z medianą dzielnicy",
+      "unlockTitle": "Zaloguj się, aby odblokować pełne statystyki",
+      "unlockDesc": "Twój raport jest zapisany. Załóż konto lub zaloguj się, aby przypisać go do siebie i odsłonić szczegółowe dane tego budynku.",
+      "unlockItemUtilities": "Pełny rozkład mediów — prąd, gaz, ogrzewanie, woda",
+      "unlockItemDeposit": "Zwrot kaucji — jak często i w ile dni",
+      "unlockItemTenure": "Jak długo najemcy naprawdę mieszkają",
+      "unlockItemPosition": "Pozycja tego budynku w dzielnicy",
+      "unlockCta": "Zaloguj się, aby odblokować",
       "yourCosts": "Płacisz",
       "comparisonSave": "Oszczędzasz ≈{amount} zł/mies",
       "comparisonOverpay": "Przepłacasz ≈{amount} zł/mies",
@@ -1794,7 +1802,8 @@
       "title": "5. Raporty kosztów",
       "item1": "Raporty kosztów muszą odzwierciedlać realne koszty z Twojego osobistego doświadczenia jako najemcy w zgłaszanym budynku.",
       "item2": "Przesyłanie fałszywych lub celowo mylących danych o kosztach może skutkować usunięciem konta i wszystkich raportów.",
-      "item3": "Raporty kosztów są wyświetlane w formie zanonimizowanej i zagregowanej."
+      "item3": "Raporty kosztów są wyświetlane w formie zanonimizowanej i zagregowanej.",
+      "item4": "Raporty kosztów, które przesyłasz, są przechowywane w formie zanonimizowanej i pozostają częścią zbioru danych społeczności nawet po usunięciu konta; nie są ponownie przypisywane do nowego konta."
     },
     "payments": {
       "title": "6. Płatności",
@@ -1931,7 +1940,8 @@
   "account": {
     "delete": {
       "title": "Usuń konto",
-      "warning": "To trwale usunie Twoje konto po 30 dniach. Wszystkie Twoje ogłoszenia, rozmowy i dane zostaną usunięte.",
+      "warning": "To trwale usunie Twoje konto po 30 dniach. Twoje ogłoszenia, rozmowy i dane osobowe zostaną usunięte.",
+      "costDataNote": "Dodane przez Ciebie raporty kosztów pozostaną w formie zanonimizowanej (odłączone od konta), aby zachować dane społeczności — nie są ponownie przypisywane po ponownej rejestracji.",
       "stats": "Masz {listings} aktywnych ogłoszeń i {conversations} rozmów.",
       "promotedWarning": "Twoje promowane ogłoszenie \"{title}\" ma jeszcze {days, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}.",
       "noRefund": "Zwrot za promowane ogłoszenia nie zostanie dokonany.",

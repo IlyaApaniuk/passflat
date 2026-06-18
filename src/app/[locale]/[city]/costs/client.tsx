@@ -192,6 +192,13 @@ export function CostsOverviewClient({
     [searchAndTypeFiltered, selectedDistrict],
   );
 
+  // Total cost reports across the currently filtered buildings — shown next to
+  // the building count so the header reflects both supply dimensions.
+  const totalReports = useMemo(
+    () => filteredBuildings.reduce((sum, b) => sum + b.reports, 0),
+    [filteredBuildings],
+  );
+
   const computedDistrictStats = useMemo(
     () =>
       districtStats.map((ds) => {
@@ -448,6 +455,9 @@ export function CostsOverviewClient({
                         {filteredBuildings.length}
                       </span>{' '}
                       {t('costs.overview.buildingsWithReports')}
+                      {' · '}
+                      <span className="font-medium text-foreground">{totalReports}</span>{' '}
+                      {t('costs.overview.nReportsUnit', { count: totalReports })}
                     </p>
                     <div className="flex w-full items-center gap-1 rounded-lg border bg-background p-1 sm:w-auto">
                       {(['all', 'apartment', 'room'] as const).map((type) => (

@@ -61,6 +61,7 @@ export function TermsClient() {
               <li>{t('costReports.item1')}</li>
               <li>{t('costReports.item2')}</li>
               <li>{t('costReports.item3')}</li>
+              <li>{t('costReports.item4')}</li>
             </ul>
 
             {/* 6. Payments */}

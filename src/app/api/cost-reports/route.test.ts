@@ -40,11 +40,16 @@ beforeEach(() => {
 });
 
 describe('POST /api/cost-reports — auth & rate-limit guards', () => {
-  it('returns 401 when the request is unauthenticated', async () => {
+  it('allows an unauthenticated request through as anonymous (no 401 auth wall)', async () => {
     h.user = null;
+    h.count.mockResolvedValue(0);
     const res = await POST(req());
-    expect(res.status).toBe(401);
-    expect(h.count).not.toHaveBeenCalled();
+    // The login wall before the form is gone: an anonymous submit is NOT
+    // rejected with 401. With an empty body it falls through to field
+    // validation (400) instead of an auth error.
+    expect(res.status).toBe(400);
+    // Anonymous submitters are still rate-limited (per anonymousId), not exempt.
+    expect(h.count).toHaveBeenCalled();
   });
 
   it('returns 429 when the per-account hourly cap is reached', async () => {

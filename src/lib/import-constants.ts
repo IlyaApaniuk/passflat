@@ -18,6 +18,28 @@ export const SCRAPED_AUTHOR_ID = '00000000-0000-4000-8000-000000000002';
 export const SCRAPED_AUTHOR_DISPLAY_NAME = 'Scraped';
 
 /**
+ * System profile that owns cost reports submitted anonymously (the open,
+ * logged-out form). Each report also carries a per-browser `anonymousId`; on the
+ * visitor's first login the report is re-pointed at their real account and the
+ * `anonymousId` cleared (see `claimAnonymousReports`). Keeping all unclaimed
+ * anonymous reports under one profile mirrors the Imported/Scraped pattern.
+ */
+export const ANON_AUTHOR_ID = '00000000-0000-4000-8000-000000000003';
+export const ANON_AUTHOR_DISPLAY_NAME = 'Anonymous';
+
+/**
+ * System profile that owns cost reports whose original author deleted their
+ * account. On hard-delete the reports are re-pointed here and stripped of any
+ * personal identifiers (email / anonymousId), so the community dataset — the
+ * medians — survives the deletion while the link to the person is severed. This
+ * is genuine anonymization (no re-identification key kept), which is what keeps
+ * retaining the data lawful under GDPR; reports are NEVER re-linked to a new
+ * account. Created lazily on the first such deletion.
+ */
+export const DELETED_AUTHOR_ID = '00000000-0000-4000-8000-000000000004';
+export const DELETED_AUTHOR_DISPLAY_NAME = 'Deleted user';
+
+/**
  * Which admin behaviour the cost form's admin section performs. Selected by the
  * ADMIN_IMPORT_MODE env var (server-only), sharing the COST_IMPORT_ADMIN_EMAILS
  * allowlist:
