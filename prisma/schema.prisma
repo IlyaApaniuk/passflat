@@ -538,12 +538,19 @@ model CityNotifySubscription {
   email          String
   city           String
   cityNormalized String    @map("city_normalized")
+  // "" = whole-city waitlist (the original landing path). Non-empty = a
+  // district-scoped listings waitlist (city slug in `city`, District.slug here,
+  // listingType = replacement|roommate|sublet). Empty-string defaults (NOT null)
+  // so the composite unique key dedupes deterministically — Postgres treats
+  // NULLs as distinct, which would break dedupe.
+  districtSlug   String    @default("") @map("district_slug")
+  listingType    String    @default("") @map("listing_type")
   locale         String?
   consent        Boolean   @default(false)
   createdAt      DateTime  @default(now()) @map("created_at")
   notifiedAt     DateTime? @map("notified_at")
 
-  @@unique([email, cityNormalized])
-  @@index([cityNormalized])
+  @@unique([email, cityNormalized, districtSlug, listingType], map: "city_notify_email_city_district_type_key")
+  @@index([cityNormalized, districtSlug], map: "city_notify_city_district_idx")
   @@map("city_notify_subscriptions")
 }
