@@ -328,6 +328,7 @@ function ListingsPageInner({
                     listingType={listingType}
                     selectedDistrict={selectedDistrict}
                     districtSlug={selectedDistrictSlug}
+                    isLoggedIn={isLoggedIn}
                   />
                 ) : (
                   <ListingGrid

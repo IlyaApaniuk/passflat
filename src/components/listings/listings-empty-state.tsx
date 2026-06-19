@@ -23,6 +23,7 @@ export function ListingsEmptyState({
   listingType,
   selectedDistrict,
   districtSlug,
+  isLoggedIn,
 }: {
   citySlug: string;
   /** District display name (already translated from nameKey), or undefined for whole-city. */
@@ -30,6 +31,8 @@ export function ListingsEmptyState({
   /** District.slug, or '' when no district is selected. */
   districtSlug: string;
   listingType: ListingType;
+  /** Logged-in users get a one-tap subscribe (email resolved from their session). */
+  isLoggedIn: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -49,20 +52,14 @@ export function ListingsEmptyState({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    if (!consent) {
-      setConsentError(true);
-      return;
-    }
+  const subscribe = async (withEmail: string | undefined) => {
     setStatus('loading');
     try {
       const res = await fetch('/api/city-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          ...(withEmail ? { email: withEmail } : {}),
           city: citySlug,
           districtSlug,
           listingType,
@@ -80,6 +77,16 @@ export function ListingsEmptyState({
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    if (!consent) {
+      setConsentError(true);
+      return;
+    }
+    void subscribe(email);
+  };
+
   const title = selectedDistrict
     ? t('listings.demandCapture.titleWithDistrict', { district: selectedDistrict })
     : t('listings.demandCapture.title');
@@ -90,12 +97,41 @@ export function ListingsEmptyState({
         <Bell className="h-7 w-7 text-primary" />
       </div>
       <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-1.5 text-sm text-muted-foreground">{t('listings.demandCapture.subtitle')}</p>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        {t(
+          isLoggedIn
+            ? 'listings.demandCapture.subtitleLoggedIn'
+            : 'listings.demandCapture.subtitle',
+        )}
+      </p>
 
       {status === 'success' ? (
         <div className="mt-6 flex w-full flex-col items-center gap-2 rounded-xl border bg-muted/40 p-5">
           <CheckCircle2 className="h-7 w-7 text-primary" />
           <p className="font-medium">{t('landing.cityNotify.success')}</p>
+        </div>
+      ) : isLoggedIn ? (
+        <div className="mt-6 w-full space-y-3">
+          <Button
+            onClick={() => void subscribe(undefined)}
+            disabled={status === 'loading'}
+            className="h-11 w-full"
+          >
+            <Bell className="mr-2 h-4 w-4" />
+            {t('listings.demandCapture.notifyMeButton')}
+          </Button>
+          {status === 'error' && (
+            <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {t.rich('landing.cityNotify.privacyNote', {
+              privacyLink: (chunks) => (
+                <Link href="/privacy" className="text-primary hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
+          </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-6 w-full space-y-3 text-left">

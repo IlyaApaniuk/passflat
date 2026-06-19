@@ -685,6 +685,8 @@
       "title": "Brak ogłoszeń",
       "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",
       "subtitle": "Zostaw email — damy znać, gdy tylko się pojawią.",
+      "subtitleLoggedIn": "Powiadomimy Cię e-mailem, gdy tylko się pojawią.",
+      "notifyMeButton": "Powiadom mnie",
       "costCtaTitle": "W międzyczasie — zobacz realne koszty najmu",
       "costCtaButton": "Zobacz koszty"
     },

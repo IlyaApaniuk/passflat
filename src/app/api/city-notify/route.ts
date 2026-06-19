@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
 import { resolveEmailLocale } from '@/lib/email/types';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
@@ -20,6 +22,25 @@ function isRateLimited(ip: string): boolean {
   recent.push(now);
   ipTimestamps.set(ip, recent);
   return false;
+}
+
+// Logged-in one-tap subscribe: when the client sends no email (we already have
+// their account email), resolve it from the Supabase session.
+async function getSessionEmail(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
+    );
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -48,20 +69,30 @@ export async function POST(request: NextRequest) {
     listingType?: string;
   };
 
-  if (!email?.trim() || !city?.trim()) {
-    return NextResponse.json({ error: 'Email and city are required' }, { status: 400 });
+  if (!city?.trim()) {
+    return NextResponse.json({ error: 'City is required' }, { status: 400 });
   }
 
   if (!consent) {
     return NextResponse.json({ error: 'Consent to data processing is required' }, { status: 400 });
   }
 
+  // Email from the body (logged-out form) or, for a logged-in one-tap subscribe,
+  // from the Supabase session.
+  let resolvedEmail = typeof email === 'string' ? email.trim() : '';
+  if (!resolvedEmail) {
+    resolvedEmail = (await getSessionEmail()) ?? '';
+  }
+  if (!resolvedEmail) {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(resolvedEmail)) {
     return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = resolvedEmail.toLowerCase();
   const cityName = city.trim();
   const cityNormalized = cityName.toLowerCase();
   const emailLocale = resolveEmailLocale(locale);

@@ -685,6 +685,8 @@
       "title": "No listings yet",
       "titleWithDistrict": "No listings in {district} yet",
       "subtitle": "Leave your email — we'll tell you the moment they appear.",
+      "subtitleLoggedIn": "We'll email your account the moment they appear.",
+      "notifyMeButton": "Notify me",
       "costCtaTitle": "Meanwhile, see real rental costs",
       "costCtaButton": "View costs"
     },
