@@ -12,11 +12,12 @@ import { Bell, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
 
 /**
- * Demand-capture for the empty listings state. Real search traffic lands on the
- * listings pages with no supply yet, so instead of a dead end we (1) collect a
- * district-scoped "notify me when listings appear" waitlist (reuses the
- * city-notify form + endpoint) and (2) route the demand to the open cost-data
- * product. Honesty: we only promise to email "when they appear" — no fake counts.
+ * Demand-capture for the empty listings state, organised as two intents:
+ *   1. "Looking for a place?" → district-scoped notify waitlist (logged-in users
+ *      get a one-tap subscribe; logged-out get the email form).
+ *   2. "Renting out / passing on?" → post your own listing (supply hook).
+ * Plus a subtle footer link into the open cost-data product. Honesty: we only
+ * promise to email "when they appear" — no fake counts.
  */
 export function ListingsEmptyState({
   citySlug,
@@ -91,113 +92,122 @@ export function ListingsEmptyState({
     ? t('listings.demandCapture.titleWithDistrict', { district: selectedDistrict })
     : t('listings.demandCapture.title');
 
+  const privacyLink = (chunks: React.ReactNode) => (
+    <Link href="/privacy" className="text-primary hover:underline">
+      {chunks}
+    </Link>
+  );
+
+  const postOwnHref = isLoggedIn
+    ? { pathname: '/create-listing' as const, query: { type: listingType } }
+    : {
+        pathname: '/auth/login' as const,
+        query: { next: `/${locale}/create-listing?type=${listingType}` },
+      };
+
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-12 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-        <Bell className="h-7 w-7 text-primary" />
+    <div className="mx-auto w-full max-w-md px-4 py-10">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Bell className="h-7 w-7 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold">{title}</h3>
       </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        {t(
-          isLoggedIn
-            ? 'listings.demandCapture.subtitleLoggedIn'
-            : 'listings.demandCapture.subtitle',
-        )}
-      </p>
 
-      {status === 'success' ? (
-        <div className="mt-6 flex w-full flex-col items-center gap-2 rounded-xl border bg-muted/40 p-5">
-          <CheckCircle2 className="h-7 w-7 text-primary" />
-          <p className="font-medium">{t('landing.cityNotify.success')}</p>
-        </div>
-      ) : isLoggedIn ? (
-        <div className="mt-6 w-full space-y-3">
-          <Button
-            onClick={() => void subscribe(undefined)}
-            disabled={status === 'loading'}
-            className="h-11 w-full"
-          >
-            <Bell className="mr-2 h-4 w-4" />
-            {t('listings.demandCapture.notifyMeButton')}
-          </Button>
-          {status === 'error' && (
-            <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {t.rich('landing.cityNotify.privacyNote', {
-              privacyLink: (chunks) => (
-                <Link href="/privacy" className="text-primary hover:underline">
-                  {chunks}
-                </Link>
-              ),
-            })}
+      <div className="space-y-3 text-left">
+        {/* Demand — looking for a place */}
+        <div className="rounded-xl border bg-card p-4">
+          <p className="font-semibold">{t('listings.demandCapture.searchCardTitle')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t(
+              isLoggedIn
+                ? 'listings.demandCapture.subtitleLoggedIn'
+                : 'listings.demandCapture.subtitle',
+            )}
           </p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-6 w-full space-y-3 text-left">
-          <Input
-            type="email"
-            required
-            placeholder={t('landing.cityNotify.emailPlaceholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-11"
-          />
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="waitlist-consent"
-              checked={consent}
-              onCheckedChange={(c) => {
-                setConsent(c === true);
-                if (c) setConsentError(false);
-              }}
-              aria-invalid={consentError}
-              className="mt-0.5"
-            />
-            <Label
-              htmlFor="waitlist-consent"
-              className="text-xs font-normal leading-snug text-muted-foreground"
-            >
-              {t('landing.cityNotify.consent')}
-            </Label>
-          </div>
-          {consentError && (
-            <p className="text-xs text-destructive">{t('landing.cityNotify.consentRequired')}</p>
-          )}
-          <Button type="submit" disabled={status === 'loading' || !consent} className="h-11 w-full">
-            <Send className="mr-2 h-4 w-4" />
-            {t('landing.cityNotify.submit')}
-          </Button>
-          {status === 'error' && (
-            <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {t.rich('landing.cityNotify.privacyNote', {
-              privacyLink: (chunks) => (
-                <Link href="/privacy" className="text-primary hover:underline">
-                  {chunks}
-                </Link>
-              ),
-            })}
-          </p>
-        </form>
-      )}
 
-      {/* Secondary actions: post your own (supply hook — the searcher may also
-          have a place to offer) + browse the cost data while they wait. */}
-      <div className="mt-8 w-full space-y-4 border-t pt-6 text-left">
-        <div>
-          <p className="text-sm font-medium">{t('listings.demandCapture.postOwnTitle')}</p>
-          <Button variant="outline" className="mt-2 w-full" asChild>
+          {status === 'success' ? (
+            <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+              <span className="font-medium">{t('landing.cityNotify.success')}</span>
+            </div>
+          ) : isLoggedIn ? (
+            <div className="mt-3 space-y-2">
+              <Button
+                onClick={() => void subscribe(undefined)}
+                disabled={status === 'loading'}
+                className="h-11 w-full"
+              >
+                <Bell className="mr-2 h-4 w-4" />
+                {t('listings.demandCapture.notifyMeButton')}
+              </Button>
+              {status === 'error' && (
+                <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {t.rich('listings.demandCapture.consentNote', { privacyLink })}
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-3 space-y-3">
+              <Input
+                type="email"
+                required
+                placeholder={t('landing.cityNotify.emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11"
+              />
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="waitlist-consent"
+                  checked={consent}
+                  onCheckedChange={(c) => {
+                    setConsent(c === true);
+                    if (c) setConsentError(false);
+                  }}
+                  aria-invalid={consentError}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="waitlist-consent"
+                  className="text-xs font-normal leading-snug text-muted-foreground"
+                >
+                  {t('landing.cityNotify.consent')}
+                </Label>
+              </div>
+              {consentError && (
+                <p className="text-xs text-destructive">
+                  {t('landing.cityNotify.consentRequired')}
+                </p>
+              )}
+              <Button
+                type="submit"
+                disabled={status === 'loading' || !consent}
+                className="h-11 w-full"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {t('listings.demandCapture.notifyMeButton')}
+              </Button>
+              {status === 'error' && (
+                <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {t.rich('landing.cityNotify.privacyNote', { privacyLink })}
+              </p>
+            </form>
+          )}
+        </div>
+
+        {/* Supply — have a place to offer */}
+        <div className="rounded-xl border bg-card p-4">
+          <p className="font-semibold">{t('listings.demandCapture.supplyCardTitle')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('listings.demandCapture.supplyCardBody')}
+          </p>
+          <Button variant="outline" className="mt-3 w-full" asChild>
             <Link
-              href={
-                isLoggedIn
-                  ? { pathname: '/create-listing', query: { type: listingType } }
-                  : {
-                      pathname: '/auth/login',
-                      query: { next: `/${locale}/create-listing?type=${listingType}` },
-                    }
-              }
+              href={postOwnHref}
               onClick={() =>
                 posthog?.capture('listing_create_cta_clicked', {
                   source: 'listings_empty_state',
@@ -212,24 +222,29 @@ export function ListingsEmptyState({
             </Link>
           </Button>
         </div>
-        <div>
-          <p className="text-sm font-medium">{t('listings.demandCapture.costCtaTitle')}</p>
-          <Button variant="outline" className="mt-2 w-full" asChild>
-            <Link
-              href={`/${citySlug}/costs`}
-              onClick={() =>
-                posthog?.capture('cost_data_cta_clicked', {
-                  source: 'listings_empty_state',
-                  city: citySlug,
-                  districtSlug,
-                })
-              }
-            >
-              {t('listings.demandCapture.costCtaButton')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+      </div>
+
+      {/* Cost data — subtle footer link */}
+      <div className="mt-4 text-center">
+        <Button
+          variant="link"
+          className="h-auto p-0 text-sm text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link
+            href={`/${citySlug}/costs`}
+            onClick={() =>
+              posthog?.capture('cost_data_cta_clicked', {
+                source: 'listings_empty_state',
+                city: citySlug,
+                districtSlug,
+              })
+            }
+          >
+            {t('listings.demandCapture.costCtaTitle')}
+            <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     </div>
   );

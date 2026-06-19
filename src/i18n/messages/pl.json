@@ -685,11 +685,15 @@
       "title": "Brak ogłoszeń",
       "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",
       "subtitle": "Zostaw email — damy znać, gdy tylko się pojawią.",
-      "subtitleLoggedIn": "Powiadomimy Cię e-mailem, gdy tylko się pojawią.",
+      "subtitleLoggedIn": "Wyślemy e-mail, gdy tylko pojawią się ogłoszenia.",
       "notifyMeButton": "Powiadom mnie",
       "postOwnTitle": "Masz coś do dodania tutaj?",
       "postOwnButton": "Dodaj ogłoszenie",
-      "costCtaTitle": "W międzyczasie — zobacz realne koszty najmu",
+      "searchCardTitle": "Szukasz mieszkania?",
+      "supplyCardTitle": "Wynajmujesz lub przekazujesz?",
+      "supplyCardBody": "Dodaj za darmo — cesja, współlokator lub podnajem.",
+      "consentNote": "Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.",
+      "costCtaTitle": "Zobacz realne koszty najmu",
       "costCtaButton": "Zobacz koszty"
     },
     "navListings": "Ogłoszenia"
