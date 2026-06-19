@@ -201,6 +201,25 @@ function ListingsPageInner({
     setMapBounds(b);
   }, []);
 
+  // Shared header bits (rendered in both the desktop and mobile header layouts).
+  const countText = t.rich('listings.listingsInCity', {
+    count: visibleListings.length,
+    b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+  });
+  const sortSelect = (
+    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+      <SelectTrigger className="w-[140px] sm:w-[180px]">
+        <SelectValue placeholder={t('listings.sort.sortBy')} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="newest">{t('listings.sort.newest')}</SelectItem>
+        <SelectItem value="price-asc">{t('listings.sort.priceAsc')}</SelectItem>
+        <SelectItem value="price-desc">{t('listings.sort.priceDesc')}</SelectItem>
+        <SelectItem value="area-desc">{t('listings.sort.largestFirst')}</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
   return (
     <div className="flex h-screen flex-col overflow-hidden pt-24">
       <div className="flex min-h-0 flex-1">
@@ -219,51 +238,42 @@ function ListingsPageInner({
             transition={{ duration: 0.3 }}
             className="border-b bg-card px-4 py-3"
           >
-            <ListingTypeTabs listingType={listingType} citySlug={citySlug} />
-
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
-                {t.rich('listings.listingsInCity', {
-                  count: visibleListings.length,
-                  b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-                })}
-              </p>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                  <SelectTrigger className="w-[140px] sm:w-[180px]">
-                    <SelectValue placeholder={t('listings.sort.sortBy')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">{t('listings.sort.newest')}</SelectItem>
-                    <SelectItem value="price-asc">{t('listings.sort.priceAsc')}</SelectItem>
-                    <SelectItem value="price-desc">{t('listings.sort.priceDesc')}</SelectItem>
-                    <SelectItem value="area-desc">{t('listings.sort.largestFirst')}</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="xl:hidden"
-                  onClick={() => setShowMap(!showMap)}
-                >
-                  {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
-                </Button>
+            {/* Desktop: underline type tabs + sort on one row, count below. */}
+            <div className="hidden xl:block">
+              <div className="flex items-center justify-between gap-3">
+                <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
+                <div className="shrink-0">{sortSelect}</div>
               </div>
+              <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
+                {countText}
+              </p>
             </div>
 
-            {/* Mobile quick-filter chips (desktop uses the sidebar). The full
-                filter set lives in the controlled bottom sheet below. */}
-            <div className="mt-3 xl:hidden">
-              <QuickFilters
-                filters={filters}
-                onOpen={(section) => {
-                  setFilterSection(section);
-                  setFilterSheetOpen(true);
-                }}
-                activeCount={activeFilterCount}
-              />
+            {/* Mobile: full-width segmented type, then count + sort/map, then the
+                quick-filter chips. The full filter set lives in the bottom sheet. */}
+            <div className="xl:hidden">
+              <ListingTypeTabs variant="segmented" listingType={listingType} citySlug={citySlug} />
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
+                  {countText}
+                </p>
+                <div className="flex shrink-0 items-center gap-2">
+                  {sortSelect}
+                  <Button variant="outline" size="icon" onClick={() => setShowMap(!showMap)}>
+                    {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3">
+                <QuickFilters
+                  filters={filters}
+                  onOpen={(section) => {
+                    setFilterSection(section);
+                    setFilterSheetOpen(true);
+                  }}
+                  activeCount={activeFilterCount}
+                />
+              </div>
             </div>
 
             <ListingFiltersMobile

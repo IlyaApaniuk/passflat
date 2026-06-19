@@ -435,22 +435,54 @@ function DistrictsFilter({
  * and one tap away (Baymard/Airbnb two-tier pattern) instead of buried in the sheet.
  */
 /**
- * Listing-type switcher as a segmented control for the results header. Changing
- * type is a route change (a top-level decision), not a filter — so it lives
- * outside the filter sheet/sidebar (OLX/Otodom present transaction type as a
- * first-class choice). Full-width on mobile, auto-width on desktop.
+ * Listing-type switcher for the results header. Changing type is a route change
+ * (a top-level decision), not a filter — so it lives outside the filter
+ * sheet/sidebar (OLX/Otodom present transaction type as a first-class choice).
+ * `variant`: 'segmented' = full-width pill control (mobile); 'tabs' = compact
+ * underline tabs (desktop).
  */
 export function ListingTypeTabs({
   listingType,
   citySlug,
+  variant = 'segmented',
 }: {
   listingType: ListingType;
   citySlug?: string;
+  variant?: 'segmented' | 'tabs';
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const go = (typeOption: ListingType) => {
+    if (typeOption !== listingType && citySlug) router.push(`/${citySlug}/${typeOption}`);
+  };
+
+  if (variant === 'tabs') {
+    return (
+      <div className="flex items-center gap-6">
+        {LISTING_TYPES.map((typeOption) => {
+          const isActive = listingType === typeOption;
+          return (
+            <button
+              key={typeOption}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => go(typeOption)}
+              className={`-mb-px border-b-2 pb-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {t(`listings.types.${typeOption}`)}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-full gap-1 rounded-lg border bg-muted/40 p-1 sm:w-auto">
+    <div className="flex w-full gap-1 rounded-lg border bg-muted/40 p-1">
       {LISTING_TYPES.map((typeOption) => {
         const isActive = listingType === typeOption;
         return (
@@ -458,12 +490,8 @@ export function ListingTypeTabs({
             key={typeOption}
             type="button"
             aria-pressed={isActive}
-            onClick={() => {
-              if (typeOption !== listingType && citySlug) {
-                router.push(`/${citySlug}/${typeOption}`);
-              }
-            }}
-            className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-colors sm:flex-none ${
+            onClick={() => go(typeOption)}
+            className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-colors ${
               isActive
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
