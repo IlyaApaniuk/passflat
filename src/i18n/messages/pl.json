@@ -681,6 +681,13 @@
     "registrationPossible": "Możliwość zameldowania",
     "empty": "Nie znaleziono ofert",
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
+    "demandCapture": {
+      "title": "Brak ogłoszeń",
+      "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",
+      "subtitle": "Zostaw email — damy znać, gdy tylko się pojawią.",
+      "costCtaTitle": "W międzyczasie — zobacz realne koszty najmu",
+      "costCtaButton": "Zobacz koszty"
+    },
     "navListings": "Ogłoszenia"
   },
   "share": {

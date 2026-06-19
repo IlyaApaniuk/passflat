@@ -13,6 +13,7 @@ import {
   ListingTypeTabs,
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
+import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 
@@ -220,6 +221,18 @@ function ListingsPageInner({
     </Select>
   );
 
+  // Demand-capture: show the waitlist on a TRUE empty (no supply at all for this
+  // type/city) or when a district is selected — NOT when heavy filters merely
+  // excluded results in a city that does have supply (keeps the plain
+  // "adjust filters" empty state for that case). Gate on filteredListings (stable),
+  // not visibleListings (goes transiently empty on map-pan).
+  const selectedDistrict = filters.districts?.[0];
+  const selectedDistrictSlug = selectedDistrict
+    ? (districts.find((d) => d.name === selectedDistrict)?.slug ?? '')
+    : '';
+  const showDemandCapture =
+    filteredListings.length === 0 && (listings.length === 0 || !!selectedDistrict);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden pt-24">
       <div className="flex min-h-0 flex-1">
@@ -309,14 +322,23 @@ function ListingsPageInner({
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
-                <ListingGrid
-                  listings={visibleListings}
-                  citySlug={citySlug}
-                  hoveredId={hoveredId}
-                  onHover={setHoveredId}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={toggleFavorite}
-                />
+                {showDemandCapture ? (
+                  <ListingsEmptyState
+                    citySlug={citySlug}
+                    listingType={listingType}
+                    selectedDistrict={selectedDistrict}
+                    districtSlug={selectedDistrictSlug}
+                  />
+                ) : (
+                  <ListingGrid
+                    listings={visibleListings}
+                    citySlug={citySlug}
+                    hoveredId={hoveredId}
+                    onHover={setHoveredId}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
 

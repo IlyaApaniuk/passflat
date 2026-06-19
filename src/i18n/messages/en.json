@@ -681,6 +681,13 @@
     "registrationPossible": "Registration possible",
     "empty": "No listings found",
     "emptyDesc": "Try adjusting your filters to see more results",
+    "demandCapture": {
+      "title": "No listings yet",
+      "titleWithDistrict": "No listings in {district} yet",
+      "subtitle": "Leave your email — we'll tell you the moment they appear.",
+      "costCtaTitle": "Meanwhile, see real rental costs",
+      "costCtaButton": "View costs"
+    },
     "navListings": "Listings"
   },
   "share": {
