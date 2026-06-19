@@ -1027,6 +1027,43 @@ export function CostSubmitClient({
                   </div>
                 )}
 
+                {/* Supply hook: a tenant who just reported moving out is the
+                    warmest source of a lease-takeover (cesja) listing — offer it
+                    right here. Anonymous users go via login (the ?type survives
+                    in `next`); logged-in users deep-link straight into create. */}
+                {!formData.isCurrentTenant && (
+                  <div className="mt-5 rounded-lg border border-primary/30 bg-primary/5 p-4 text-left">
+                    <p className="flex items-center gap-2 font-semibold">
+                      <Home className="h-4 w-4 text-primary" />
+                      {t('costs.submit.movingOutNudgeTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('costs.submit.movingOutNudgeBody')}
+                    </p>
+                    <Button asChild className="mt-4 w-full">
+                      <Link
+                        href={
+                          isAnonymous
+                            ? {
+                                pathname: '/auth/login',
+                                query: { next: `/${locale}/create-listing?type=replacement` },
+                              }
+                            : { pathname: '/create-listing', query: { type: 'replacement' } }
+                        }
+                        onClick={() =>
+                          posthog?.capture('cost_to_listing_nudge_clicked', {
+                            city: citySlug,
+                            type: 'replacement',
+                            is_anonymous: isAnonymous,
+                          })
+                        }
+                      >
+                        {t('costs.submit.movingOutNudgeButton')}
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+
                 {/* Slim navigation: secondary destinations. "My reports" is
                     logged-in only (anonymous users have no dashboard — the unlock
                     hook above is their path). */}

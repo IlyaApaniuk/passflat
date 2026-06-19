@@ -291,6 +291,15 @@ function CreateListingForm() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
 
+  // Deep-linked listing type (e.g. from the cost-flow "moving out? post a cesja"
+  // nudge → ?type=replacement). Validated against the real set; seeds the form and
+  // skips the type step so the user doesn't re-pick what we already set.
+  const typeParam = searchParams.get('type');
+  const initialType: ListingType | null =
+    typeParam === 'replacement' || typeParam === 'roommate' || typeParam === 'sublet'
+      ? typeParam
+      : null;
+
   const allSteps: { id: Step; label: string; icon: React.ElementType }[] = [
     { id: 'type', label: t('listings.create.stepType'), icon: LayoutList },
     { id: 'address', label: t('listings.create.stepAddress'), icon: MapPin },
@@ -305,8 +314,12 @@ function CreateListingForm() {
 
   const posthog = usePostHog();
   const photoStore = usePhotoUploadStore();
-  const [currentStep, setCurrentStep] = useState<Step>(editId ? 'details' : 'type');
-  const [formData, setFormData] = useState<ListingFormData>(initialFormData);
+  const [currentStep, setCurrentStep] = useState<Step>(
+    editId ? 'details' : initialType ? 'address' : 'type',
+  );
+  const [formData, setFormData] = useState<ListingFormData>(
+    initialType ? { ...initialFormData, listingType: initialType } : initialFormData,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId);
   const [error, setError] = useState<string | null>(null);
