@@ -681,6 +681,21 @@
     "registrationPossible": "Możliwość zameldowania",
     "empty": "Nie znaleziono ofert",
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
+    "demandCapture": {
+      "title": "Brak ogłoszeń",
+      "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",
+      "subtitle": "Zostaw email — damy znać, gdy tylko się pojawią.",
+      "subtitleLoggedIn": "Wyślemy e-mail, gdy tylko pojawią się ogłoszenia.",
+      "notifyMeButton": "Powiadom mnie",
+      "postOwnTitle": "Masz coś do dodania tutaj?",
+      "postOwnButton": "Dodaj ogłoszenie",
+      "searchCardTitle": "Szukasz mieszkania?",
+      "supplyCardTitle": "Wynajmujesz lub przekazujesz?",
+      "supplyCardBody": "Dodaj za darmo — cesja, współlokator lub podnajem.",
+      "consentNote": "Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.",
+      "costCtaTitle": "Zobacz realne koszty najmu",
+      "costCtaButton": "Zobacz koszty"
+    },
     "navListings": "Ogłoszenia"
   },
   "share": {
@@ -958,6 +973,9 @@
       "unlockItemTenure": "Jak długo najemcy naprawdę mieszkają",
       "unlockItemPosition": "Pozycja tego budynku w dzielnicy",
       "unlockCta": "Zaloguj się, aby odblokować",
+      "movingOutNudgeTitle": "Masz coś do zaoferowania?",
+      "movingOutNudgeBody": "Wyprowadzasz się, szukasz współlokatora lub podnajmujesz — dodaj ogłoszenie za darmo.",
+      "movingOutNudgeButton": "Dodaj ogłoszenie",
       "yourCosts": "Płacisz",
       "comparisonSave": "Oszczędzasz ≈{amount} zł/mies",
       "comparisonOverpay": "Przepłacasz ≈{amount} zł/mies",

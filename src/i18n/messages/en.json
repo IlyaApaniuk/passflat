@@ -681,6 +681,21 @@
     "registrationPossible": "Registration possible",
     "empty": "No listings found",
     "emptyDesc": "Try adjusting your filters to see more results",
+    "demandCapture": {
+      "title": "No listings yet",
+      "titleWithDistrict": "No listings in {district} yet",
+      "subtitle": "Leave your email — we'll tell you the moment they appear.",
+      "subtitleLoggedIn": "We'll email you the moment listings appear.",
+      "notifyMeButton": "Notify me",
+      "postOwnTitle": "Have a place to list here?",
+      "postOwnButton": "Post a listing",
+      "searchCardTitle": "Looking for a place?",
+      "supplyCardTitle": "Renting out or passing it on?",
+      "supplyCardBody": "Post it for free — lease takeover, flatmate, or sublet.",
+      "consentNote": "By tapping you agree to data processing — <privacyLink>privacy policy</privacyLink>.",
+      "costCtaTitle": "See real rental costs",
+      "costCtaButton": "View costs"
+    },
     "navListings": "Listings"
   },
   "share": {
@@ -958,6 +973,9 @@
       "unlockItemTenure": "How long tenants actually stay",
       "unlockItemPosition": "Where this building ranks in its district",
       "unlockCta": "Log in to unlock",
+      "movingOutNudgeTitle": "Have a place to offer?",
+      "movingOutNudgeBody": "Leaving, looking for a flatmate, or subletting — post a listing for free.",
+      "movingOutNudgeButton": "Post a listing",
       "yourCosts": "You pay",
       "comparisonSave": "You save ≈{amount} zł/mo",
       "comparisonOverpay": "You overpay ≈{amount} zł/mo",

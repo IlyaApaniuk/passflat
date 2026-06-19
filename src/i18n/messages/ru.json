@@ -681,6 +681,21 @@
     "registrationPossible": "Возможна регистрация",
     "empty": "Объявления не найдены",
     "emptyDesc": "Попробуйте изменить фильтры, чтобы увидеть больше результатов",
+    "demandCapture": {
+      "title": "Пока нет объявлений",
+      "titleWithDistrict": "В районе {district} пока нет объявлений",
+      "subtitle": "Оставь email — напишем, как только появятся.",
+      "subtitleLoggedIn": "Пришлём письмо, как только появятся объявления.",
+      "notifyMeButton": "Уведомить меня",
+      "postOwnTitle": "Есть что разместить здесь?",
+      "postOwnButton": "Разместить объявление",
+      "searchCardTitle": "Ищешь жильё?",
+      "supplyCardTitle": "Сдаёшь или передаёшь?",
+      "supplyCardBody": "Размести бесплатно — переуступка, сосед или субаренда.",
+      "consentNote": "Нажимая, вы соглашаетесь на обработку данных — <privacyLink>политика конфиденциальности</privacyLink>.",
+      "costCtaTitle": "Узнать реальные расходы на аренду",
+      "costCtaButton": "Смотреть расходы"
+    },
     "navListings": "Объявления"
   },
   "share": {
@@ -958,6 +973,9 @@
       "unlockItemTenure": "Сколько жильцы реально живут в доме",
       "unlockItemPosition": "Позиция этого дома в районе",
       "unlockCta": "Войти и открыть",
+      "movingOutNudgeTitle": "Есть что предложить по аренде?",
+      "movingOutNudgeBody": "Съезжаешь, ищешь соседа или сдаёшь на время — размести объявление бесплатно.",
+      "movingOutNudgeButton": "Разместить объявление",
       "yourCosts": "Ты платишь",
       "comparisonSave": "Экономишь ≈{amount} zł/мес",
       "comparisonOverpay": "Переплачиваешь ≈{amount} zł/мес",

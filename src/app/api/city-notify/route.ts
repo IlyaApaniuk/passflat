@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
 import { resolveEmailLocale } from '@/lib/email/types';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
@@ -22,6 +24,25 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
+// Logged-in one-tap subscribe: when the client sends no email (we already have
+// their account email), resolve it from the Supabase session.
+async function getSessionEmail(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
+    );
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 
@@ -39,40 +60,88 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { email, city, consent, locale } = body as {
+  const { email, city, consent, locale, districtSlug, listingType } = body as {
     email?: string;
     city?: string;
     consent?: boolean;
     locale?: string;
+    districtSlug?: string;
+    listingType?: string;
   };
 
-  if (!email?.trim() || !city?.trim()) {
-    return NextResponse.json({ error: 'Email and city are required' }, { status: 400 });
+  if (!city?.trim()) {
+    return NextResponse.json({ error: 'City is required' }, { status: 400 });
   }
 
   if (!consent) {
     return NextResponse.json({ error: 'Consent to data processing is required' }, { status: 400 });
   }
 
+  // Email from the body (logged-out form) or, for a logged-in one-tap subscribe,
+  // from the Supabase session.
+  let resolvedEmail = typeof email === 'string' ? email.trim() : '';
+  if (!resolvedEmail) {
+    resolvedEmail = (await getSessionEmail()) ?? '';
+  }
+  if (!resolvedEmail) {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(resolvedEmail)) {
     return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = resolvedEmail.toLowerCase();
   const cityName = city.trim();
   const cityNormalized = cityName.toLowerCase();
   const emailLocale = resolveEmailLocale(locale);
 
+  // District-scoped listings waitlist (new). "" keeps the original whole-city
+  // landing path. Validate against REAL records so we never store a phantom
+  // district/type (honesty guardrail) — here `city` is the city slug.
+  const LISTING_TYPES = ['replacement', 'roommate', 'sublet'];
+  let districtSlugClean = '';
+  let listingTypeClean = '';
+  if (typeof districtSlug === 'string' && districtSlug.trim()) {
+    const lt = typeof listingType === 'string' ? listingType.trim() : '';
+    if (!LISTING_TYPES.includes(lt)) {
+      return NextResponse.json({ error: 'Invalid listing type' }, { status: 400 });
+    }
+    const cityRec = await prisma.city.findUnique({
+      where: { slug: cityNormalized },
+      select: { id: true },
+    });
+    if (!cityRec) {
+      return NextResponse.json({ error: 'Unknown city' }, { status: 400 });
+    }
+    const dist = await prisma.district.findFirst({
+      where: { cityId: cityRec.id, slug: districtSlug.trim() },
+      select: { id: true },
+    });
+    if (!dist) {
+      return NextResponse.json({ error: 'Unknown district' }, { status: 400 });
+    }
+    districtSlugClean = districtSlug.trim();
+    listingTypeClean = lt;
+  }
+
   try {
     await prisma.cityNotifySubscription.upsert({
       where: {
-        email_cityNormalized: { email: normalizedEmail, cityNormalized },
+        email_cityNormalized_districtSlug_listingType: {
+          email: normalizedEmail,
+          cityNormalized,
+          districtSlug: districtSlugClean,
+          listingType: listingTypeClean,
+        },
       },
       create: {
         email: normalizedEmail,
         city: cityName,
         cityNormalized,
+        districtSlug: districtSlugClean,
+        listingType: listingTypeClean,
         locale: emailLocale,
         consent: true,
       },
@@ -92,26 +161,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 
-  trackServerEvent(normalizedEmail, 'city_notify_subscribed', {
-    city: cityName,
-    locale: emailLocale,
-  });
+  const isDistrict = districtSlugClean !== '';
+  trackServerEvent(
+    normalizedEmail,
+    isDistrict ? 'district_notify_subscribed' : 'city_notify_subscribed',
+    {
+      city: cityName,
+      locale: emailLocale,
+      ...(isDistrict ? { districtSlug: districtSlugClean, listingType: listingTypeClean } : {}),
+    },
+  );
   await flushPostHog();
 
-  try {
-    await sendEmail({
-      to: normalizedEmail,
-      locale: emailLocale,
-      template: 'cityNotifyConfirmation',
-      data: { cityName },
-    });
-  } catch (err) {
-    console.error('[city-notify] Failed to send confirmation email:', err);
-    captureServerException(err, {
-      distinctId: normalizedEmail,
-      properties: { source: 'city_notify', step: 'confirmation_email' },
-    });
-    await flushPostHog();
+  // City-level waitlist gets the existing "we'll tell you when we launch here"
+  // confirmation. District listings waitlists skip it for now — that copy is for
+  // city launch, and the district-launch dispatch is a deliberate follow-up (A3);
+  // the in-UI success state is the confirmation until then.
+  if (!isDistrict) {
+    try {
+      await sendEmail({
+        to: normalizedEmail,
+        locale: emailLocale,
+        template: 'cityNotifyConfirmation',
+        data: { cityName },
+      });
+    } catch (err) {
+      console.error('[city-notify] Failed to send confirmation email:', err);
+      captureServerException(err, {
+        distinctId: normalizedEmail,
+        properties: { source: 'city_notify', step: 'confirmation_email' },
+      });
+      await flushPostHog();
+    }
   }
 
   return NextResponse.json({ success: true }, { status: 200 });

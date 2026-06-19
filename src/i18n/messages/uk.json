@@ -681,6 +681,21 @@
     "registrationPossible": "Можлива реєстрація",
     "empty": "Оголошення не знайдено",
     "emptyDesc": "Спробуйте змінити фільтри, щоб побачити більше результатів",
+    "demandCapture": {
+      "title": "Поки немає оголошень",
+      "titleWithDistrict": "У районі {district} поки немає оголошень",
+      "subtitle": "Залиш email — напишемо, щойно з'являться.",
+      "subtitleLoggedIn": "Надішлемо лист, щойно з'являться оголошення.",
+      "notifyMeButton": "Сповістити мене",
+      "postOwnTitle": "Є що розмістити тут?",
+      "postOwnButton": "Розмістити оголошення",
+      "searchCardTitle": "Шукаєш житло?",
+      "supplyCardTitle": "Здаєш або передаєш?",
+      "supplyCardBody": "Розмісти безкоштовно — переуступка, сусід чи суборенда.",
+      "consentNote": "Натискаючи, ви погоджуєтесь на обробку даних — <privacyLink>політика конфіденційності</privacyLink>.",
+      "costCtaTitle": "Дізнатися реальні витрати на оренду",
+      "costCtaButton": "Дивитися витрати"
+    },
     "navListings": "Оголошення"
   },
   "share": {
@@ -958,6 +973,9 @@
       "unlockItemTenure": "Скільки мешканці реально живуть у будинку",
       "unlockItemPosition": "Позиція цього будинку в районі",
       "unlockCta": "Увійти й відкрити",
+      "movingOutNudgeTitle": "Є що запропонувати по оренді?",
+      "movingOutNudgeBody": "Виїжджаєш, шукаєш сусіда чи здаєш на час — розмісти оголошення безкоштовно.",
+      "movingOutNudgeButton": "Розмістити оголошення",
       "yourCosts": "Ти платиш",
       "comparisonSave": "Заощаджуєш ≈{amount} zł/міс",
       "comparisonOverpay": "Переплачуєш ≈{amount} zł/міс",
