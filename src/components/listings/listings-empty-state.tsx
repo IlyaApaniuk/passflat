@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Bell, CheckCircle2, Send, ArrowRight } from 'lucide-react';
+import { Bell, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
 
 /**
@@ -183,24 +183,53 @@ export function ListingsEmptyState({
         </form>
       )}
 
-      {/* Route the demand to the cost-data product while they wait. */}
-      <div className="mt-8 w-full border-t pt-6">
-        <p className="text-sm font-medium">{t('listings.demandCapture.costCtaTitle')}</p>
-        <Button variant="outline" className="mt-3 w-full" asChild>
-          <Link
-            href={`/${citySlug}/costs`}
-            onClick={() =>
-              posthog?.capture('cost_data_cta_clicked', {
-                source: 'listings_empty_state',
-                city: citySlug,
-                districtSlug,
-              })
-            }
-          >
-            {t('listings.demandCapture.costCtaButton')}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+      {/* Secondary actions: post your own (supply hook — the searcher may also
+          have a place to offer) + browse the cost data while they wait. */}
+      <div className="mt-8 w-full space-y-4 border-t pt-6 text-left">
+        <div>
+          <p className="text-sm font-medium">{t('listings.demandCapture.postOwnTitle')}</p>
+          <Button variant="outline" className="mt-2 w-full" asChild>
+            <Link
+              href={
+                isLoggedIn
+                  ? { pathname: '/create-listing', query: { type: listingType } }
+                  : {
+                      pathname: '/auth/login',
+                      query: { next: `/${locale}/create-listing?type=${listingType}` },
+                    }
+              }
+              onClick={() =>
+                posthog?.capture('listing_create_cta_clicked', {
+                  source: 'listings_empty_state',
+                  city: citySlug,
+                  listingType,
+                  is_anonymous: !isLoggedIn,
+                })
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t('listings.demandCapture.postOwnButton')}
+            </Link>
+          </Button>
+        </div>
+        <div>
+          <p className="text-sm font-medium">{t('listings.demandCapture.costCtaTitle')}</p>
+          <Button variant="outline" className="mt-2 w-full" asChild>
+            <Link
+              href={`/${citySlug}/costs`}
+              onClick={() =>
+                posthog?.capture('cost_data_cta_clicked', {
+                  source: 'listings_empty_state',
+                  city: citySlug,
+                  districtSlug,
+                })
+              }
+            >
+              {t('listings.demandCapture.costCtaButton')}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

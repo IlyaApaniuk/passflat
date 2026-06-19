@@ -1027,11 +1027,13 @@ export function CostSubmitClient({
                   </div>
                 )}
 
-                {/* Supply hook: a tenant who just reported moving out is the
-                    warmest source of a lease-takeover (cesja) listing — offer it
-                    right here. Anonymous users go via login (the ?type survives
-                    in `next`); logged-in users deep-link straight into create. */}
-                {!formData.isCurrentTenant && (
+                {/* Supply hook: a CURRENT tenant has a place they could offer — a
+                    lease takeover (cesja), a spare room, or a sublet. Soft,
+                    optional, generic (they pick the type in create-listing). Not
+                    shown to past tenants (they may be reporting an old rental and
+                    have nothing to offer). Anonymous users go via login (next
+                    survives the round-trip); logged-in users deep-link straight in. */}
+                {formData.isCurrentTenant && (
                   <div className="mt-5 rounded-lg border border-primary/30 bg-primary/5 p-4 text-left">
                     <p className="flex items-center gap-2 font-semibold">
                       <Home className="h-4 w-4 text-primary" />
@@ -1046,14 +1048,13 @@ export function CostSubmitClient({
                           isAnonymous
                             ? {
                                 pathname: '/auth/login',
-                                query: { next: `/${locale}/create-listing?type=replacement` },
+                                query: { next: `/${locale}/create-listing` },
                               }
-                            : { pathname: '/create-listing', query: { type: 'replacement' } }
+                            : { pathname: '/create-listing' }
                         }
                         onClick={() =>
                           posthog?.capture('cost_to_listing_nudge_clicked', {
                             city: citySlug,
-                            type: 'replacement',
                             is_anonymous: isAnonymous,
                           })
                         }
