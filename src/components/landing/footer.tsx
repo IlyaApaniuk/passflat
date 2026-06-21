@@ -25,8 +25,8 @@ export function Footer() {
     company: [
       { label: t('landing.footer.aboutUs'), href: '/about' },
       { label: t('landing.footer.howItWorks'), href: '/how-it-works' },
-      { label: `${t('landing.footer.blog')} (Beta)`, href: '/blog' },
       { label: t('landing.footer.contactUs'), href: '/contact' },
+      { label: t('landing.footer.blog'), href: '/blog' },
     ],
     legal: [
       { label: t('landing.footer.privacyPolicy'), href: '/privacy' },
