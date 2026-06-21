@@ -1,5 +1,7 @@
 # Внутренний чат (In-App Messaging)
 
+> **⚠️ ЗАМОРОЖЕНО (2026-06-21).** Forward-план новой фичи (чат tenant↔landlord) поверх **замороженного** листинг-продукта — сейчас НЕ строится. Режим feature-freeze: единственная разрешённая работа по коду — CRO-фикс воронки cost. Пиллар 2 = репутация агентств (не этот чат). Пересмотр через ~2-3 недели. Оставлено как дремлющий спек.
+
 ## Текущее состояние
 
 Сейчас взаимодействие между пользователями — one-shot:
@@ -12,6 +14,7 @@
 6. Кнопка "Reply" на дашборде **не делает ничего** — нет обработчика
 
 Проблемы:
+
 - Нет возможности продолжить диалог после первого сообщения
 - Автор объявления не может ответить через платформу
 - Пользователи уходят в Telegram/WhatsApp, теряя привязку к объявлению
@@ -23,13 +26,13 @@
 
 Проект уже использует Supabase (`@supabase/ssr`, `@supabase/supabase-js`) для авторизации и storage. Supabase Realtime — логичный выбор:
 
-| Критерий | Supabase Realtime | Polling |
-|----------|------------------|---------|
-| Задержка | ~100ms | 5-30с |
-| Нагрузка на сервер | Низкая (websocket) | Высокая (HTTP запросы) |
-| Инфра | Уже есть (Supabase) | Нет доп. инфры |
-| Сложность | Средняя | Низкая |
-| Масштабируемость | До 10K concurrent | Ограничена rate limits |
+| Критерий           | Supabase Realtime   | Polling                |
+| ------------------ | ------------------- | ---------------------- |
+| Задержка           | ~100ms              | 5-30с                  |
+| Нагрузка на сервер | Низкая (websocket)  | Высокая (HTTP запросы) |
+| Инфра              | Уже есть (Supabase) | Нет доп. инфры         |
+| Сложность          | Средняя             | Низкая                 |
+| Масштабируемость   | До 10K concurrent   | Ограничена rate limits |
 
 **Рекомендация:** MVP на Supabase Realtime. Подписки через Postgres Changes на таблицу `messages`. В будущем можно добавить Broadcast channels для typing indicators.
 
@@ -199,10 +202,7 @@ export async function POST(request: NextRequest) {
         listingId,
         participants: {
           createMany: {
-            data: [
-              { userId: user.id },
-              { userId: listing.authorId },
-            ],
+            data: [{ userId: user.id }, { userId: listing.authorId }],
           },
         },
       },
@@ -268,7 +268,7 @@ export async function GET() {
   // Подсчёт непрочитанных
   const withUnread = await Promise.all(
     conversations.map(async (conv) => {
-      const participant = conv.participants.find(p => p.userId === user.id);
+      const participant = conv.participants.find((p) => p.userId === user.id);
       const unreadCount = await prisma.message.count({
         where: {
           conversationId: conv.id,
@@ -277,7 +277,7 @@ export async function GET() {
         },
       });
       return { ...conv, unreadCount };
-    })
+    }),
   );
 
   return NextResponse.json({ conversations: withUnread });
@@ -288,10 +288,7 @@ export async function GET() {
 
 ```ts
 // src/app/api/conversations/[id]/messages/route.ts
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -325,10 +322,7 @@ export async function GET(
 ### `POST /api/conversations/[id]/messages` — отправить сообщение
 
 ```ts
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -367,10 +361,7 @@ export async function POST(
 
 ```ts
 // src/app/api/conversations/[id]/read/route.ts
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -391,7 +382,7 @@ export async function PATCH(
 
 ```tsx
 // src/hooks/use-chat-realtime.ts
-"use client";
+'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -404,13 +395,10 @@ interface Message {
   created_at: string;
 }
 
-export function useChatRealtime(
-  conversationId: string,
-  onNewMessage: (message: Message) => void
-) {
+export function useChatRealtime(conversationId: string, onNewMessage: (message: Message) => void) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
   useEffect(() => {
@@ -426,7 +414,7 @@ export function useChatRealtime(
         },
         (payload) => {
           onNewMessage(payload.new as Message);
-        }
+        },
       )
       .subscribe();
 
@@ -447,8 +435,8 @@ export function useUnreadCount(userId: string) {
   useEffect(() => {
     // Начальная загрузка
     fetch('/api/conversations/unread-count')
-      .then(res => res.json())
-      .then(data => setCount(data.count));
+      .then((res) => res.json())
+      .then((data) => setCount(data.count));
 
     // Realtime: подписка на новые сообщения
     const channel = supabase
@@ -462,12 +450,14 @@ export function useUnreadCount(userId: string) {
           filter: `sender_id=neq.${userId}`,
         },
         () => {
-          setCount(prev => prev + 1);
-        }
+          setCount((prev) => prev + 1);
+        },
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   return count;
@@ -479,6 +469,7 @@ export function useUnreadCount(userId: string) {
 ### 1. Страница чата — `src/app/[locale]/messages/page.tsx`
 
 Layout: двухпанельный (как Telegram Web):
+
 - **Левая панель:** список разговоров (ConversationList)
 - **Правая панель:** сообщения выбранного разговора (ChatView)
 - **Мобильная версия:** одна панель, переключение между списком и чатом
@@ -547,15 +538,14 @@ interface ConversationItemProps {
 
 ```tsx
 <Button size="sm" asChild>
-  <Link href={`/messages?conversation=${inquiry.conversationId}`}>
-    {t("common.reply")}
-  </Link>
+  <Link href={`/messages?conversation=${inquiry.conversationId}`}>{t('common.reply')}</Link>
 </Button>
 ```
 
 ### 6. Обновление InterestModal
 
 Обновить `src/components/listings/interest-modal.tsx`:
+
 - `handleSubmit` вызывает `POST /api/conversations` вместо `POST /api/responses`
 - После успешной отправки — перенаправление на страницу чата или показ success state
 
@@ -567,6 +557,7 @@ interface ConversationItemProps {
 2. **Новый разговор** — сразу (как сейчас `sendNewInquiryEmail`).
 
 Реализация через Vercel Cron Job (`src/app/api/cron/send-message-notifications/route.ts`):
+
 - Каждые 5 минут проверяет непрочитанные сообщения старше 5 минут
 - Если `lastReadAt` участника < `createdAt` сообщения — отправить email
 - Помечать отправленные (добавить поле `emailSentAt` в `Message` или отдельную таблицу)
@@ -591,6 +582,7 @@ await prisma.report.create({
 ### Блокировка пользователя
 
 В `ConversationParticipant` есть поле `isBlocked`. При блокировке:
+
 1. Установить `isBlocked = true` для заблокированного участника
 2. Заблокированный не может отправлять сообщения (проверка в POST messages)
 3. UI: показать "Этот пользователь заблокирован"
@@ -652,6 +644,7 @@ npx prisma migrate dev --name add-chat-models
 ```
 
 Создаёт таблицы:
+
 1. `conversations`
 2. `conversation_participants` (с unique на `conversation_id + user_id`)
 3. `messages` (с индексом на `conversation_id + created_at`)
@@ -680,18 +673,17 @@ for (const response of responses) {
       listingId: response.listingId,
       participants: {
         createMany: {
-          data: [
-            { userId: response.responderId },
-            { userId: response.listing.authorId },
-          ],
+          data: [{ userId: response.responderId }, { userId: response.listing.authorId }],
         },
       },
       messages: {
-        create: response.message ? {
-          senderId: response.responderId,
-          content: response.message,
-          createdAt: response.createdAt,
-        } : undefined,
+        create: response.message
+          ? {
+              senderId: response.responderId,
+              content: response.message,
+              createdAt: response.createdAt,
+            }
+          : undefined,
       },
     },
   });
@@ -701,6 +693,7 @@ for (const response of responses) {
 ## Этапы реализации
 
 ### Фаза 1 — MVP: базовый обмен сообщениями (3-4 дня)
+
 - [ ] Prisma модели + миграция
 - [ ] API: POST /api/conversations (создание из InterestModal)
 - [ ] API: GET /api/conversations (список)
@@ -713,6 +706,7 @@ for (const response of responses) {
 - [ ] i18n ключи
 
 ### Фаза 2 — Realtime (1-2 дня)
+
 - [ ] Supabase RLS policies
 - [ ] `ALTER PUBLICATION supabase_realtime ADD TABLE messages`
 - [ ] Хук `useChatRealtime` — подписка на новые сообщения
@@ -721,12 +715,14 @@ for (const response of responses) {
 - [ ] Оптимистичная вставка сообщений
 
 ### Фаза 3 — Уведомления (1 день)
+
 - [ ] Cron job для email-уведомлений о непрочитанных сообщениях
 - [ ] Email шаблон "New message from {name}"
 - [ ] Логика задержки (5 минут) для избежания спама
 - [ ] Обновить дашборд — кнопка Reply → Link на чат
 
 ### Фаза 4 — Модерация и полировка (1 день)
+
 - [ ] Report message UI
 - [ ] Block/unblock user
 - [ ] Миграция существующих ListingResponse → Conversation

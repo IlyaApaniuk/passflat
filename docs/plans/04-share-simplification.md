@@ -1,5 +1,7 @@
 # Упрощение кнопки Share
 
+> **⚠️ ЗАШИПЛЕНО (Jun 2026) + поверхность ЗАМОРОЖЕНА.** Изменение уже в проде (clipboard + toast на странице listing-детали). Поверхность `replacement/[id]` заморожена — не повод для новых листинг-правок. Единственная разрешённая работа по коду — CRO воронки cost.
+
 ## Текущее состояние
 
 В `src/app/[locale]/[city]/replacement/[id]/client.tsx` (строки 196-208) кнопка Share использует `navigator.share()`:
@@ -44,7 +46,7 @@
 
 ```tsx
 // Добавить в начало файла
-import { toast } from "sonner";
+import { toast } from 'sonner';
 ```
 
 Sonner уже подключён в `src/app/layout.tsx` через `<Toaster />` (пакет установлен).
@@ -79,9 +81,9 @@ Sonner уже подключён в `src/app/layout.tsx` через `<Toaster />
   onClick={async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success(t("common.linkCopied"));
+      toast.success(t('common.linkCopied'));
     } catch {
-      toast.error(t("common.copyFailed"));
+      toast.error(t('common.copyFailed'));
     }
   }}
 >
@@ -91,11 +93,11 @@ Sonner уже подключён в `src/app/layout.tsx` через `<Toaster />
 
 ### Вопрос иконки
 
-| Вариант | Иконка | За | Против |
-|---------|--------|----|--------|
-| `Share2` | ↗ | Узнаваема, привычна | Вводит в заблуждение — ожидание native share |
-| `Link` | 🔗 | Чётко говорит "ссылка" | Менее привычна |
-| `Copy` | 📋 | Чётко — "скопировать" | Может быть непонятна |
+| Вариант  | Иконка | За                     | Против                                       |
+| -------- | ------ | ---------------------- | -------------------------------------------- |
+| `Share2` | ↗      | Узнаваема, привычна    | Вводит в заблуждение — ожидание native share |
+| `Link`   | 🔗     | Чётко говорит "ссылка" | Менее привычна                               |
+| `Copy`   | 📋     | Чётко — "скопировать"  | Может быть непонятна                         |
 
 **Рекомендация:** оставить `Share2` — это стандарт для "поделиться", а toast сообщит пользователю о результате.
 
@@ -168,10 +170,10 @@ Sonner уже подключён в `src/app/layout.tsx` через `<Toaster />
 
 ```tsx
 // src/app/layout.tsx — должен содержать:
-import { Toaster } from "sonner";
+import { Toaster } from 'sonner';
 
 // Внутри <body>:
-<Toaster position="bottom-right" />
+<Toaster position="bottom-right" />;
 ```
 
 Если `<Toaster />` отсутствует — добавить. Но он наверняка уже есть, т.к. Sonner установлен и используется в проекте.
