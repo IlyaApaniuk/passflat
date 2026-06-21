@@ -34,6 +34,23 @@ function PostHogPageView() {
 
   useEffect(() => {
     if (pathname && ph) {
+      // First-touch channel attribution. The `pf_ref` cookie is httpOnly (the
+      // server uses it for signup attribution), so the client reads `?ref=` from
+      // the URL instead and registers it as a super-property. register_once keeps
+      // the first channel that ever brought this browser (matching the cookie's
+      // first-touch semantics) and persists it, so funnel events fired on later
+      // pages (cost_form_started, …) carry the acquisition channel. Mirrors
+      // REF_PATTERN / classifyRef in lib/referral.ts (can't import — server-only).
+      const rawRef = searchParams.get('ref');
+      if (rawRef && /^[A-Za-z0-9_-]{1,64}$/.test(rawRef)) {
+        const ref_type = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          rawRef,
+        )
+          ? 'peer'
+          : 'campaign';
+        ph.register_once({ ref: rawRef, ref_type });
+      }
+
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + '?' + searchParams.toString();
