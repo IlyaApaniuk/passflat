@@ -1,23 +1,25 @@
 # Passflat — Architecture
 
+> **⚠️ СТАТУС (2026-06-21):** ранний арх-спек, частично устарел. Текущее: **COSTS — единственный активный пиллар-заголовок**; листинги/tenant-replacement (`replacement/`, `create-listing/`) **ЗАМОРОЖЕНЫ** (в коде есть, из навигации убраны); листинг-поиск/агрегатор отдан Flatka; пиллар 2 = репутация агентств (ещё не построен). Promoted-листинг монетизация **ЗАПАРКОВАНА**. Карта = поверхность медиан расходов, не браузер объявлений. Локаль украинского = `uk`, не `ua`. Имена моделей ниже могут быть устаревшими (реальные: `Listing*`, `ListingResponse`, `Conversation`/`Message`, `CityNotifySubscription`).
+
 ## Tech Stack
 
-| Слой | Технология | Почему |
-|------|-----------|--------|
-| Framework | Next.js 15 (App Router) | SSR для SEO, i18n routing, React |
-| UI | Tailwind CSS + shadcn/ui | Быстро, кастомизируемо |
-| БД | Supabase (Postgres) | Auth, Storage, RLS, Realtime |
-| ORM | Prisma | Type-safe, migrations, studio |
-| i18n | next-intl | Routing по locale, серверные/клиентские переводы |
-| Карты (отображение) | Mapbox GL JS | Кластеризация, стилизация, дешевле Google на масштабе |
-| Геокодинг (автокомплит) | Google Places API | Лучший автокомплит адресов в мире |
-| Оплаты | Stripe | Мультивалютность, BLIK, SEPA, Klarna |
-| Email | Resend | Простой API, шаблоны |
-| Хостинг | Vercel | Edge, автодеплой, CDN |
-| Аналитика | PostHog | Privacy-friendly, funnels, feature flags |
-| Feature flags | PostHog / Vercel Flags | A/B тесты, разный функционал по странам |
-| Фото storage | Supabase Storage | Интеграция с Supabase, resize через edge functions |
-| Cron/очереди | Trigger.dev / Vercel Cron | Expiry объявлений, уведомления |
+| Слой                    | Технология                | Почему                                                |
+| ----------------------- | ------------------------- | ----------------------------------------------------- |
+| Framework               | Next.js 15 (App Router)   | SSR для SEO, i18n routing, React                      |
+| UI                      | Tailwind CSS + shadcn/ui  | Быстро, кастомизируемо                                |
+| БД                      | Supabase (Postgres)       | Auth, Storage, RLS, Realtime                          |
+| ORM                     | Prisma                    | Type-safe, migrations, studio                         |
+| i18n                    | next-intl                 | Routing по locale, серверные/клиентские переводы      |
+| Карты (отображение)     | Mapbox GL JS              | Кластеризация, стилизация, дешевле Google на масштабе |
+| Геокодинг (автокомплит) | Google Places API         | Лучший автокомплит адресов в мире                     |
+| Оплаты                  | Stripe                    | Мультивалютность, BLIK, SEPA, Klarna                  |
+| Email                   | Resend                    | Простой API, шаблоны                                  |
+| Хостинг                 | Vercel                    | Edge, автодеплой, CDN                                 |
+| Аналитика               | PostHog                   | Privacy-friendly, funnels, feature flags              |
+| Feature flags           | PostHog / Vercel Flags    | A/B тесты, разный функционал по странам               |
+| Фото storage            | Supabase Storage          | Интеграция с Supabase, resize через edge functions    |
+| Cron/очереди            | Trigger.dev / Vercel Cron | Expiry объявлений, уведомления                        |
 
 ## Языки
 
@@ -276,6 +278,7 @@ reports (
 ## Карта (интерактивная, split view)
 
 Layout как на Airbnb/Booking:
+
 - **Левая панель:** список объявлений с фильтрами (район, цена, комнаты, дата)
 - **Правая панель:** Mapbox GL карта с маркерами/кластерами
 - **Взаимодействие:** hover на маркер → подсветка карточки; клик на карточку → центрирование карты

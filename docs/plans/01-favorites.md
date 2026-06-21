@@ -1,5 +1,7 @@
 # Избранные объявления (Favorites)
 
+> **⚠️ ЗАШИПЛЕНО + ЗАМОРОЖЕНО (история).** Фича уже в коде (`SavedListing`, `use-favorites`, `favorite-button`). Относится к **замороженному** листинг-пиллару — не расширять, не переприоритизировать. Чек-листы ниже — закрытая история, не открытые задачи.
+
 ## Текущее состояние
 
 На странице детального просмотра объявления (`src/app/[locale]/[city]/replacement/[id]/client.tsx`) есть кнопка Heart, но она работает только через `useState` — при перезагрузке страницы состояние теряется:
@@ -7,16 +9,13 @@
 ```tsx
 const [saved, setSaved] = useState(false);
 // ...
-<Button
-  variant={saved ? "default" : "outline"}
-  size="icon"
-  onClick={() => setSaved(!saved)}
->
-  <Heart className={`h-4 w-4 transition-all ${saved ? "fill-current scale-110" : ""}`} />
-</Button>
+<Button variant={saved ? 'default' : 'outline'} size="icon" onClick={() => setSaved(!saved)}>
+  <Heart className={`h-4 w-4 transition-all ${saved ? 'fill-current scale-110' : ''}`} />
+</Button>;
 ```
 
 Нет:
+
 - Модели данных для сохранения избранного
 - API для добавления/удаления
 - Кнопки Heart на карточках в результатах поиска
@@ -55,8 +54,8 @@ export function useFavorites(isLoggedIn: boolean): UseFavoritesReturn {
   useEffect(() => {
     if (isLoggedIn) {
       fetch('/api/favorites')
-        .then(res => res.json())
-        .then(data => setFavorites(new Set(data.listingIds)))
+        .then((res) => res.json())
+        .then((data) => setFavorites(new Set(data.listingIds)))
         .finally(() => setIsLoading(false));
     } else {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -65,40 +64,41 @@ export function useFavorites(isLoggedIn: boolean): UseFavoritesReturn {
     }
   }, [isLoggedIn]);
 
-  const toggleFavorite = useCallback(async (listingId: string) => {
-    const isSaved = favorites.has(listingId);
+  const toggleFavorite = useCallback(
+    async (listingId: string) => {
+      const isSaved = favorites.has(listingId);
 
-    // Optimistic update
-    setFavorites(prev => {
-      const next = new Set(prev);
-      isSaved ? next.delete(listingId) : next.add(listingId);
-      return next;
-    });
+      // Optimistic update
+      setFavorites((prev) => {
+        const next = new Set(prev);
+        isSaved ? next.delete(listingId) : next.add(listingId);
+        return next;
+      });
 
-    if (isLoggedIn) {
-      try {
-        const res = await fetch('/api/favorites', {
-          method: isSaved ? 'DELETE' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ listingId }),
-        });
-        if (!res.ok) throw new Error();
-      } catch {
-        // Rollback
-        setFavorites(prev => {
-          const next = new Set(prev);
-          isSaved ? next.add(listingId) : next.delete(listingId);
-          return next;
-        });
+      if (isLoggedIn) {
+        try {
+          const res = await fetch('/api/favorites', {
+            method: isSaved ? 'DELETE' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listingId }),
+          });
+          if (!res.ok) throw new Error();
+        } catch {
+          // Rollback
+          setFavorites((prev) => {
+            const next = new Set(prev);
+            isSaved ? next.add(listingId) : next.delete(listingId);
+            return next;
+          });
+        }
+      } else {
+        const arr = Array.from(favorites);
+        isSaved ? arr.splice(arr.indexOf(listingId), 1) : arr.push(listingId);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(arr));
       }
-    } else {
-      const arr = Array.from(favorites);
-      isSaved
-        ? arr.splice(arr.indexOf(listingId), 1)
-        : arr.push(listingId);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(arr));
-    }
-  }, [favorites, isLoggedIn]);
+    },
+    [favorites, isLoggedIn],
+  );
 
   return {
     favorites,
@@ -204,8 +204,8 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    listingIds: saved.map(s => s.listingId),
-    listings: saved.map(s => s.listing),
+    listingIds: saved.map((s) => s.listingId),
+    listings: saved.map((s) => s.listing),
   });
 }
 ```
@@ -240,25 +240,30 @@ export async function POST(request: NextRequest) {
 
 ```tsx
 // src/components/listings/favorite-button.tsx
-"use client";
+'use client';
 
-import { Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface FavoriteButtonProps {
   isFavorite: boolean;
   onToggle: () => void;
-  size?: "default" | "sm";
+  size?: 'default' | 'sm';
   className?: string;
 }
 
-export function FavoriteButton({ isFavorite, onToggle, size = "default", className }: FavoriteButtonProps) {
+export function FavoriteButton({
+  isFavorite,
+  onToggle,
+  size = 'default',
+  className,
+}: FavoriteButtonProps) {
   return (
     <Button
-      variant={isFavorite ? "default" : "outline"}
+      variant={isFavorite ? 'default' : 'outline'}
       size="icon"
-      className={cn("transition-transform hover:scale-105", className)}
+      className={cn('transition-transform hover:scale-105', className)}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -267,9 +272,9 @@ export function FavoriteButton({ isFavorite, onToggle, size = "default", classNa
     >
       <Heart
         className={cn(
-          "transition-all",
-          size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4",
-          isFavorite && "fill-current scale-110"
+          'transition-all',
+          size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4',
+          isFavorite && 'fill-current scale-110',
         )}
       />
     </Button>
@@ -296,7 +301,7 @@ export function FavoriteButton({ isFavorite, onToggle, size = "default", classNa
 ```tsx
 <TabsTrigger value="saved" className="gap-2">
   <Heart className="h-4 w-4" />
-  {t("dashboard.savedListings")}
+  {t('dashboard.savedListings')}
   {savedCount > 0 && (
     <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
       {savedCount}
@@ -360,6 +365,7 @@ npx prisma migrate dev --name add-saved-listings
 ```
 
 Миграция создаст:
+
 1. Таблицу `saved_listings` с колонками `id`, `user_id`, `listing_id`, `created_at`
 2. Уникальный индекс на `(user_id, listing_id)`
 3. Индекс на `user_id`
@@ -368,29 +374,34 @@ npx prisma migrate dev --name add-saved-listings
 ## Этапы реализации
 
 ### Этап 1 — База (1-2 дня)
+
 - [ ] Prisma модель + миграция
 - [ ] API routes: POST, DELETE, GET `/api/favorites`
 - [ ] Хук `useFavorites`
 - [ ] Компонент `FavoriteButton`
 
 ### Этап 2 — Интеграция в UI (1 день)
+
 - [ ] Заменить useState на `useFavorites` в `client.tsx` детального просмотра
 - [ ] Добавить `FavoriteButton` на карточки в списке объявлений
 - [ ] Toast-уведомления через Sonner: "Добавлено в избранное" / "Удалено из избранного"
 - [ ] i18n ключи
 
 ### Этап 3 — Дашборд (0.5 дня)
+
 - [ ] Новый таб "Избранное" в дашборде
 - [ ] Серверная загрузка данных в `page.tsx` дашборда
 - [ ] Empty state с иконкой Heart
 
 ### Этап 4 — localStorage и синхронизация (0.5 дня)
+
 - [ ] localStorage fallback в `useFavorites` для неавторизованных
 - [ ] API `/api/favorites/sync` для пакетной синхронизации
 - [ ] Автоматическая синхронизация при логине
 - [ ] Очистка localStorage после синхронизации
 
 ### Этап 5 — Полировка (0.5 дня)
+
 - [ ] Анимация Heart (framer-motion pulse при добавлении)
 - [ ] PostHog event: `listing_favorited`, `listing_unfavorited`
 - [ ] Проверка удаления: при удалении объявления `onDelete: Cascade` удаляет записи из `saved_listings`
