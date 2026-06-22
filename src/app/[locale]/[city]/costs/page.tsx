@@ -113,11 +113,11 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
 
   // Cached, request-independent. The auth-specific state is streamed separately
   // below so this (and the rendered cost table) never blocks on it.
-  const buildingsData = await getBuildingsData(
-    city.id,
-    districtFilter ?? null,
-    searchQuery ?? null,
-  );
+  // Always fetch ALL buildings; `?district=` only PRE-SELECTS a district in the
+  // client filter (the client filters client-side). Server-filtering here would
+  // strip the data the "All districts" / other-district options need, leaving the
+  // sidebar stuck on a single district when arriving via a ?district= deep-link.
+  const buildingsData = await getBuildingsData(city.id, null, searchQuery ?? null);
 
   // Median of building-level medians (used for district roll-ups).
   const medianOf = (values: number[]) => median(values.filter((v) => v > 0)) ?? 0;
