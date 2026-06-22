@@ -5,6 +5,14 @@ import { MapPin, ArrowRight } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
+// A district card's `key` equals its DB slug for every district except the two
+// Praga ones (camelCase key vs hyphenated slug). Override just those so the cost
+// page's ?district=<slug> filter matches and the district is pre-selected.
+const DISTRICT_SLUG_OVERRIDES: Record<string, string> = {
+  pragaPolnoc: 'praga-polnoc',
+  pragaPoludnie: 'praga-poludnie',
+};
+
 interface DistrictConfig {
   key: string;
   nameKey: string;
@@ -119,7 +127,7 @@ export async function Districts() {
           {districts.map((district, i) => (
             <Reveal key={district.key} delay={i * 0.05} className="h-full">
               <Link
-                href={`/${DEFAULT_CITY}/replacement?districts=${district.nameKey}`}
+                href={`/${DEFAULT_CITY}/costs?district=${DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key}`}
                 className={`group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br p-4 backdrop-blur-sm transition-all hover:scale-[1.02] sm:p-5 ${district.color}`}
               >
                 <div className="flex items-center gap-2">
