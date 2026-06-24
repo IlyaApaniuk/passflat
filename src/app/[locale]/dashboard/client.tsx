@@ -730,12 +730,16 @@ export function DashboardClient({
             )}
 
             {myListings.length === 0 && savedItems.length === 0 ? (
-              <Card className="border-dashed bg-muted/30">
-                <CardContent className="flex flex-col items-center gap-3 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
-                  <p className="text-sm text-muted-foreground">
-                    {t('dashboard.noListingsCompact')}
+              <Card>
+                <CardContent className="flex flex-col items-center py-12 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+                    <Home className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">{t('dashboard.noListings')}</h3>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    {t('dashboard.noListingsDesc')}
                   </p>
-                  <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
+                  <Button className="mt-5 gap-2" asChild>
                     <Link href="/create-listing">
                       <Plus className="h-4 w-4" />
                       {t('dashboard.addListing')}
