@@ -1378,7 +1378,7 @@ function CreateListingForm() {
                           {renderFieldError('area')}
                         </div>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="floor">{t('listings.create.floorLabel')} *</Label>
                           <Input
@@ -1390,16 +1390,8 @@ function CreateListingForm() {
                           />
                           {renderFieldError('floor')}
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="totalFloors">{t('listings.create.totalFloors')}</Label>
-                          <Input
-                            id="totalFloors"
-                            type="number"
-                            placeholder="e.g., 10"
-                            value={formData.totalFloors}
-                            onChange={(e) => updateFormData({ totalFloors: e.target.value })}
-                          />
-                        </div>
+                        {/* "Количество этажей" (totalFloors) was collected but never
+                            sent to the API or stored — dropped to stop pretending. */}
                         <div className="space-y-2">
                           <Label>{t('listings.create.availableFrom')} *</Label>
                           <Popover>

@@ -14,7 +14,6 @@ export interface Listing {
   utilities: number;
   totalCost: number;
   bedrooms: number;
-  bathrooms: number;
   area: number;
   floor: number;
   totalFloors: number;

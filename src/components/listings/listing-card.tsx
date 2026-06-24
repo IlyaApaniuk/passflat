@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   MapPin,
   Bed,
-  Bath,
   Maximize2,
   Zap,
   Users,
@@ -259,10 +258,6 @@ function ListingCardImpl({
                     <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
                       <Bed className="h-3.5 w-3.5" />
                       {listing.bedrooms}
-                    </span>
-                    <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
-                      <Bath className="h-3.5 w-3.5" />
-                      {listing.bathrooms}
                     </span>
                     <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-0.5">
                       <Maximize2 className="h-3.5 w-3.5" />

@@ -36,7 +36,6 @@ async function getFeaturedListings(): Promise<FeaturedListingData[]> {
     address: listing.building.addressFull,
     totalCost: Number(listing.totalMonthly ?? 0),
     bedrooms: listing.rooms ?? 0,
-    bathrooms: 1,
     area: Number(listing.areaM2 ?? 0),
     image: listing.photos[0] ?? '/placeholder.jpg',
     promoted: listing.isPromoted,

@@ -42,7 +42,6 @@ export function serializeListingDetail(
     utilities: Number(listing.utilitiesAvg ?? 0),
     totalCost: Number(listing.totalMonthly ?? 0),
     bedrooms: listing.rooms ?? 0,
-    bathrooms: 1,
     area: Number(listing.areaM2 ?? 0),
     floor: listing.floor ?? 0,
     totalFloors: 0,

@@ -33,7 +33,6 @@ import {
   ArrowLeft,
   MapPin,
   Bed,
-  Bath,
   Maximize2,
   Building2,
   Calendar,
@@ -87,7 +86,6 @@ export interface ListingDetailData {
   utilities: number;
   totalCost: number;
   bedrooms: number;
-  bathrooms: number;
   area: number;
   floor: number;
   totalFloors: number;
@@ -273,6 +271,19 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     {listing.address}
                     {listing.district && `, ${listing.district}`}
                   </div>
+                  <div className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      {listing.author && (
+                        <>{t('listings.detail.postedBy', { name: listing.author })} · </>
+                      )}
+                      {new Date(listing.createdAt).toLocaleDateString(currentLocale, {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
                   {showTranslateButton && (
                     <div className="mt-3">
                       <TranslateButton
@@ -334,17 +345,6 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                       {listing.bedrooms !== 1
                         ? t('listings.detail.bedrooms')
                         : t('listings.detail.bedroom')}
-                    </span>
-                  </div>
-                )}
-                {listing.bathrooms > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Bath className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      <span className="font-semibold">{listing.bathrooms}</span>{' '}
-                      {listing.bathrooms !== 1
-                        ? t('listings.detail.bathrooms')
-                        : t('listings.detail.bathroom')}
                     </span>
                   </div>
                 )}

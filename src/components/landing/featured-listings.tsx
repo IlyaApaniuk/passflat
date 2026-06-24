@@ -27,7 +27,6 @@ export interface FeaturedListingData {
   address: string;
   totalCost: number;
   bedrooms: number;
-  bathrooms: number;
   area: number;
   image: string;
   promoted: boolean;
