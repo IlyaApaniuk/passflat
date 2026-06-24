@@ -1333,9 +1333,16 @@ function CreateListingForm() {
                           onChange={(e) => updateFormData({ description: e.target.value })}
                         />
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="bedrooms">{t('listings.create.bedroomsLabel')} *</Label>
+                          {/* For a roommate share, `rooms` represents the flat's total
+                              room count — label it as such instead of "bedrooms". */}
+                          <Label htmlFor="bedrooms">
+                            {formData.listingType === 'roommate'
+                              ? t('listings.create.totalRooms')
+                              : t('listings.create.bedroomsLabel')}{' '}
+                            *
+                          </Label>
                           <Select
                             value={formData.bedrooms}
                             onValueChange={(value) => updateFormData({ bedrooms: value })}
@@ -1344,7 +1351,10 @@ function CreateListingForm() {
                               <SelectValue placeholder={t('listings.create.select')} />
                             </SelectTrigger>
                             <SelectContent>
-                              {[1, 2, 3, 4, 5].map((n) => (
+                              {(formData.listingType === 'roommate'
+                                ? [1, 2, 3, 4, 5, 6]
+                                : [1, 2, 3, 4, 5]
+                              ).map((n) => (
                                 <SelectItem key={n} value={n.toString()}>
                                   {n}
                                 </SelectItem>
@@ -1353,24 +1363,9 @@ function CreateListingForm() {
                           </Select>
                           {renderFieldError('bedrooms')}
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="bathrooms">{t('listings.create.bathroomsLabel')} *</Label>
-                          <Select
-                            value={formData.bathrooms}
-                            onValueChange={(value) => updateFormData({ bathrooms: value })}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder={t('listings.create.select')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[1, 2, 3].map((n) => (
-                                <SelectItem key={n} value={n.toString()}>
-                                  {n}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Bathroom count was a dead field across every listing type —
+                            never sent to the API, display is a hardcoded "1" — so it's
+                            no longer collected here. */}
                         <div className="space-y-2">
                           <Label htmlFor="area">{t('listings.create.areaLabel')} *</Label>
                           <Input
@@ -1685,7 +1680,7 @@ function CreateListingForm() {
                             />
                           </div>
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="currentRoommates">
                               {t('listings.create.currentRoommates')}
@@ -1706,24 +1701,8 @@ function CreateListingForm() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="totalRooms">{t('listings.create.totalRooms')}</Label>
-                            <Select
-                              value={formData.totalRooms}
-                              onValueChange={(value) => updateFormData({ totalRooms: value })}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder={t('listings.create.select')} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {[1, 2, 3, 4, 5, 6].map((n) => (
-                                  <SelectItem key={n} value={n.toString()}>
-                                    {n}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          {/* Total room count lives in the apartment-details "Всего
+                              комнат" field (DB `rooms`); no duplicate field here. */}
                           <div className="space-y-2">
                             <Label htmlFor="roomType">{t('listings.create.roomType')}</Label>
                             <Select
@@ -2062,10 +2041,10 @@ function CreateListingForm() {
 
                       <div className="mt-4 flex flex-wrap gap-4 text-sm">
                         <span>
-                          {formData.bedrooms || '?'} {t('listings.detail.bedrooms')}
-                        </span>
-                        <span>
-                          {formData.bathrooms || '?'} {t('listings.detail.bathrooms')}
+                          {formData.bedrooms || '?'}{' '}
+                          {formData.listingType === 'roommate'
+                            ? t('listings.detail.rooms')
+                            : t('listings.detail.bedrooms')}
                         </span>
                         <span>{formData.area || '?'} m²</span>
                         <span>
