@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, MapPin } from 'lucide-react';
+import { relativeCostStyle } from '@/lib/cost-color';
 import { DistrictPositionBar } from './district-position-bar';
 import { ShareButton } from './share-button';
 import type { AreaMetric, AreaStats } from '@/lib/cost-baselines';
@@ -194,12 +195,8 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
           }
           // Thin district → simple "yours / district median" delta line.
           const pct = m.d.median > 0 ? Math.round(((value - m.d.median) / m.d.median) * 100) : 0;
-          const chipCls =
-            pct === 0
-              ? 'bg-muted text-muted-foreground'
-              : pct > 0
-                ? 'bg-red-500/10 text-red-600'
-                : 'bg-green-500/10 text-green-600';
+          const chipCls = pct === 0 ? 'bg-muted text-muted-foreground' : '';
+          const chipStyle = pct === 0 ? undefined : relativeCostStyle(pct);
           const deltaLabel =
             pct === 0
               ? t('costs.building.onPar')
@@ -219,6 +216,7 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
                 </span>
                 <span
                   className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
+                  style={chipStyle}
                 >
                   {deltaLabel}
                 </span>

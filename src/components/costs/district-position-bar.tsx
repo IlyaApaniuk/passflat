@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Equal, TrendingDown, TrendingUp } from 'lucide-react';
+import { relativeCostStyle } from '@/lib/cost-color';
 
 interface DistrictPositionBarProps {
   label: string;
@@ -66,12 +67,12 @@ export function DistrictPositionBar({
               {t('costs.building.withinRange')}
             </Badge>
           ) : status === 'cheaper' ? (
-            <Badge className="gap-1 bg-green-500/10 text-green-600">
+            <Badge className="gap-1" style={relativeCostStyle(-Math.abs(pct))}>
               <TrendingDown className="h-3 w-3" />
               {t('costs.building.percentLower', { percent: Math.abs(pct) })}
             </Badge>
           ) : (
-            <Badge className="gap-1 bg-red-500/10 text-red-500">
+            <Badge className="gap-1" style={relativeCostStyle(Math.abs(pct))}>
               <TrendingUp className="h-3 w-3" />
               {t('costs.building.percentHigher', { percent: pct })}
             </Badge>
