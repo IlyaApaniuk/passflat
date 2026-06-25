@@ -1251,6 +1251,15 @@
       "requestNew": "Poproś o nowy link",
       "successTitle": "Hasło zmienione",
       "successDescription": "Twoje hasło zostało zmienione. Przekierowujemy do logowania…"
+    },
+    "magicLink": {
+      "title": "Logowanie",
+      "description": "Podaj e-mail — wyślemy link do logowania. Hasło nie jest potrzebne.",
+      "email": "E-mail",
+      "submit": "Wyślij link",
+      "sentTitle": "Sprawdź pocztę",
+      "sentDescription": "Wysłaliśmy link do logowania. Otwórz go na tym urządzeniu, aby kontynuować.",
+      "hint": "Bez hasła — link sam Cię zaloguje."
     }
   },
   "howItWorksPage": {
@@ -2159,6 +2168,16 @@
       "body": "Jeśli coś jest teraz inne, poświęć chwilę i zaktualizuj raport. Świeże dane pomogą kolejnej osobie wynajmującej w Warszawie uniknąć niespodzianek — tak jak pomógł Twój pierwszy raport.",
       "cta": "Zaktualizuj raport",
       "footer": "Otrzymujesz tę wiadomość, ponieważ udostępniłeś dane o kosztach w Passflat."
+    },
+    "magicLink": {
+      "subject": "Twój link do logowania — Passflat",
+      "heading": "Zaloguj się do Passflat",
+      "intro": "Kliknij przycisk poniżej, aby zalogować się do konta Passflat. Hasło nie jest potrzebne.",
+      "cta": "Zaloguj się",
+      "expiryNotice": "Ten link jest ważny przez {hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}}. Po tym czasie trzeba poprosić o nowy.",
+      "fallback": "Jeśli przycisk nie działa, skopiuj i wklej ten link do przeglądarki:",
+      "ignoreNotice": "Jeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.",
+      "footer": "Otrzymujesz tę wiadomość, ponieważ ktoś poprosił o link do logowania do konta Passflat."
     }
   }
 }

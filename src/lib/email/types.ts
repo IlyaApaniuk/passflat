@@ -66,6 +66,11 @@ export interface PasswordResetEmailData {
   expiresInHours: number;
 }
 
+export interface MagicLinkEmailData {
+  magicUrl: string;
+  expiresInHours: number;
+}
+
 export interface CityNotifyConfirmationEmailData {
   cityName: string;
 }
@@ -108,6 +113,7 @@ export type EmailTemplate =
   | { template: 'payment'; data: PaymentEmailData }
   | { template: 'refund'; data: RefundEmailData }
   | { template: 'passwordReset'; data: PasswordResetEmailData }
+  | { template: 'magicLink'; data: MagicLinkEmailData }
   | {
       template: 'cityNotifyConfirmation';
       data: CityNotifyConfirmationEmailData;

@@ -1251,6 +1251,15 @@
       "requestNew": "Request a new link",
       "successTitle": "Password updated",
       "successDescription": "Your password has been changed. Redirecting you to login…"
+    },
+    "magicLink": {
+      "title": "Sign in",
+      "description": "Enter your email and we'll send you a link to sign in — no password needed.",
+      "email": "Email",
+      "submit": "Send me a link",
+      "sentTitle": "Check your email",
+      "sentDescription": "We've sent you a sign-in link. Open it on this device to continue.",
+      "hint": "No password to remember — the link signs you in."
     }
   },
   "howItWorksPage": {
@@ -2159,6 +2168,16 @@
       "body": "If anything is different now, take a minute to update your report. Fresh numbers help the next person renting in Warsaw avoid surprises — just like your first report did.",
       "cta": "Update my report",
       "footer": "You received this because you contributed cost data on Passflat."
+    },
+    "magicLink": {
+      "subject": "Your sign-in link — Passflat",
+      "heading": "Sign in to Passflat",
+      "intro": "Click the button below to sign in to your Passflat account. No password needed.",
+      "cta": "Sign in",
+      "expiryNotice": "This link is valid for {hours, plural, one {# hour} other {# hours}}. After that you'll need to request a new one.",
+      "fallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "ignoreNotice": "If you didn't request this, you can safely ignore this email.",
+      "footer": "You received this email because someone requested a sign-in link for your Passflat account."
     }
   }
 }
