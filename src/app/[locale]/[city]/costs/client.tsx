@@ -527,10 +527,16 @@ export function CostsOverviewClient({
                               district: b.district,
                               reports: b.reports,
                               avgTotal: b.medianTotal,
+                              perM2: b.medianTotalPerM2,
                               hasContributed: true,
                             }))}
                           citySlug={citySlug}
                           bounds={cityBounds}
+                          cityMedianTotal={
+                            median(
+                              filteredBuildings.map((b) => b.medianTotal).filter((v) => v > 0),
+                            ) ?? 0
+                          }
                         />
                       </div>
                     </Suspense>

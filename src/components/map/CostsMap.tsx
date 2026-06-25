@@ -13,7 +13,7 @@ import MapGL, {
 } from 'react-map-gl';
 import type { GeoJSONSource } from 'mapbox-gl';
 import type { FeatureCollection, Point } from 'geojson';
-import { Building2, MapPin, Users, X } from 'lucide-react';
+import { Building2, MapPin, Users, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import Link from 'next/link';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -26,6 +26,7 @@ export interface CostBuilding {
   district: string;
   reports: number;
   avgTotal: number;
+  perM2?: number | null;
   hasContributed: boolean;
 }
 
@@ -40,10 +41,20 @@ export interface CostsMapProps {
   buildings: CostBuilding[];
   citySlug: string;
   bounds?: Bounds;
+  /** Median monthly total across the visible buildings — the reference the
+   *  popup compares each building against ("cheaper / pricier than typical"). */
+  cityMedianTotal?: number;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const WARSAW_CENTER = { longitude: 21.0122, latitude: 52.2297 };
+
+// Abbreviated monthly total for the on-pin label, e.g. 3460 -> "3.5k".
+function pinLabel(v: number): string {
+  if (v <= 0) return '';
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  return `${Math.round(v)}`;
+}
 
 function zoomForBounds(b: Bounds, mapWidth = 800, mapHeight = 600): number {
   const WORLD_PX = 512;
@@ -83,31 +94,38 @@ const clusterCountLayer: LayerProps = {
   paint: { 'text-color': '#ffffff' },
 };
 
+// Neutral price pin — a white bubble carrying the building's median monthly
+// cost as a label. The NUMBER is the information (no cost-encoding colour, so
+// nothing to decode and no legend needed).
 const unclusteredLayer: LayerProps = {
   id: 'cost-unclustered',
   type: 'circle',
   source: 'cost-buildings',
   filter: ['!', ['has', 'point_count']],
   paint: {
-    'circle-radius': 10,
-    'circle-color': [
-      'interpolate',
-      ['linear'],
-      ['get', 'avgTotal'],
-      1500,
-      '#22c55e',
-      3000,
-      '#eab308',
-      5000,
-      '#ef4444',
-    ],
-    'circle-stroke-width': 2,
-    'circle-stroke-color': '#ffffff',
-    'circle-opacity': 0.9,
+    'circle-radius': 17,
+    'circle-color': '#ffffff',
+    'circle-stroke-width': 1.5,
+    'circle-stroke-color': '#4f46e5',
+    'circle-opacity': 1,
   },
 };
 
-export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
+const unclusteredLabelLayer: LayerProps = {
+  id: 'cost-unclustered-label',
+  type: 'symbol',
+  source: 'cost-buildings',
+  filter: ['!', ['has', 'point_count']],
+  layout: {
+    'text-field': ['get', 'label'],
+    'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
+    'text-size': 12,
+    'text-allow-overlap': true,
+  },
+  paint: { 'text-color': '#312e81' },
+};
+
+export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: CostsMapProps) {
   const t = useTranslations('costs.overview');
   const mapRef = useRef<MapRef>(null);
   const [popupInfo, setPopupInfo] = useState<CostBuilding | null>(null);
@@ -146,7 +164,9 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
           district: b.district,
           reports: b.reports,
           avgTotal: b.avgTotal,
+          perM2: b.perM2 ?? null,
           hasContributed: b.hasContributed,
+          label: pinLabel(b.avgTotal),
         },
       })),
     }),
@@ -206,6 +226,14 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
     );
   }
 
+  // Relative read for the popup: how this building compares to the typical
+  // (median) building — the "cheaper / pricier than usual" the colour scale
+  // never made clear.
+  const medianDiffPct =
+    cityMedianTotal && cityMedianTotal > 0 && popupInfo && popupInfo.avgTotal > 0
+      ? Math.round(((popupInfo.avgTotal - cityMedianTotal) / cityMedianTotal) * 100)
+      : null;
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg border">
       <MapGL
@@ -215,7 +243,7 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
         maxBounds={maxBounds}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/light-v11"
-        interactiveLayerIds={['cost-clusters', 'cost-unclustered']}
+        interactiveLayerIds={['cost-clusters', 'cost-unclustered', 'cost-unclustered-label']}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
@@ -234,6 +262,7 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
           <Layer {...clusterLayer} />
           <Layer {...clusterCountLayer} />
           <Layer {...unclusteredLayer} />
+          <Layer {...unclusteredLabelLayer} />
         </Source>
 
         {popupInfo && (
@@ -246,7 +275,7 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
             closeButton={false}
             offset={15}
           >
-            <div className="relative min-w-[200px] p-1">
+            <div className="relative min-w-[220px] p-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -275,10 +304,45 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
                     {popupInfo.reports} {t('reports')}
                   </span>
                 </div>
-                {popupInfo.hasContributed && popupInfo.avgTotal > 0 && (
-                  <p className="mt-2 text-base font-bold text-primary">
-                    {popupInfo.avgTotal.toLocaleString()} PLN/mo
-                  </p>
+
+                {popupInfo.avgTotal > 0 && (
+                  <div className="mt-2 border-t pt-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-base font-bold text-primary">
+                        {popupInfo.avgTotal.toLocaleString()} PLN
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {' '}
+                          / {t('perMonthShort')}
+                        </span>
+                      </p>
+                      {popupInfo.perM2 != null && popupInfo.perM2 > 0 && (
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {popupInfo.perM2.toLocaleString()} PLN/m²
+                        </p>
+                      )}
+                    </div>
+                    {medianDiffPct != null &&
+                      (Math.abs(medianDiffPct) < 1 ? (
+                        <p className="mt-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                          <Minus className="h-3 w-3" />
+                          {t('vsMedianEqual')}
+                        </p>
+                      ) : (
+                        <p
+                          className={`mt-1 flex items-center gap-1 text-xs font-medium ${
+                            medianDiffPct > 0 ? 'text-red-600' : 'text-green-600'
+                          }`}
+                        >
+                          {medianDiffPct > 0 ? (
+                            <TrendingUp className="h-3 w-3" />
+                          ) : (
+                            <TrendingDown className="h-3 w-3" />
+                          )}
+                          {Math.abs(medianDiffPct)}%{' '}
+                          {medianDiffPct > 0 ? t('vsMedianAbove') : t('vsMedianBelow')}
+                        </p>
+                      ))}
+                  </div>
                 )}
               </Link>
             </div>
