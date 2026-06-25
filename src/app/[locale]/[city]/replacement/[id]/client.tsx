@@ -42,6 +42,7 @@ import {
   Sparkles,
   CheckCircle,
   Info,
+  FileText,
   Users,
   Wifi,
   Zap as ZapIcon,
@@ -79,9 +80,11 @@ export interface ListingDetailData {
   title: string;
   address: string;
   district: string;
+  districtSlug: string;
   citySlug: string;
   buildingId: string;
   buildingSlug: string;
+  buildingHasCosts: boolean;
   price: number;
   adminFee: number;
   utilities: number;
@@ -259,10 +262,9 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
           year: 'numeric',
         })}`
       : listing.availableFrom
-        ? `${t('common.available')} ${new Date(listing.availableFrom).toLocaleDateString(
-            currentLocale,
-            { day: 'numeric', month: 'long', year: 'numeric' },
-          )}`
+        ? `${t('listings.create.availableFrom')} ${new Date(
+            listing.availableFrom,
+          ).toLocaleDateString(currentLocale, { day: 'numeric', month: 'long', year: 'numeric' })}`
         : null;
 
   return (
@@ -297,7 +299,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
             <div className="lg:col-span-2">
               <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card className="overflow-hidden gap-0 py-0">
-                  <div className="flex flex-wrap items-start justify-between gap-4 px-6 pb-5 pt-6">
+                  <div className="px-6 pb-5 pt-6">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         {listing.promoted && (
@@ -314,10 +316,35 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                         {listing.district && <Badge variant="secondary">{listing.district}</Badge>}
                       </div>
                       <h1 className="mt-2 text-2xl font-bold md:text-3xl">{displayTitle}</h1>
-                      <div className="mt-2 flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        {listing.address}
-                        {listing.district && `, ${listing.district}`}
+                      <div className="mt-2 flex items-center gap-1.5 text-muted-foreground">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span>
+                          {listing.buildingHasCosts ? (
+                            <Link
+                              href={`/${listing.citySlug}/building/${listing.buildingSlug}`}
+                              className="font-medium underline-offset-2 hover:text-primary hover:underline"
+                            >
+                              {listing.address}
+                            </Link>
+                          ) : (
+                            listing.address
+                          )}
+                          {listing.district && (
+                            <>
+                              {', '}
+                              {listing.districtSlug ? (
+                                <Link
+                                  href={`/${listing.citySlug}/${listing.districtSlug}`}
+                                  className="font-medium underline-offset-2 hover:text-primary hover:underline"
+                                >
+                                  {listing.district}
+                                </Link>
+                              ) : (
+                                listing.district
+                              )}
+                            </>
+                          )}
+                        </span>
                       </div>
                       <div className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5 shrink-0" />
@@ -332,54 +359,56 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                           })}
                         </span>
                       </div>
-                      {showTranslateButton && (
-                        <div className="mt-3">
-                          <TranslateButton
-                            listingId={listing.id}
-                            listingLocale={listing.locale}
-                            isTranslated={showTranslated}
-                            onTranslated={(fields) => {
-                              setTranslated(fields);
-                              setShowTranslated(true);
-                            }}
-                            onShowOriginal={() => setShowTranslated(false)}
-                          />
-                        </div>
-                      )}
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="transition-transform hover:scale-105"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(window.location.href);
-                            toast.success(t('common.linkCopied'));
-                          } catch {
-                            toast.error(t('common.copyFailed'));
-                          }
-                        }}
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                      <FavoriteButton
-                        isFavorite={isFavorite(listing.id)}
-                        onToggle={() => toggleFavorite(listing.id)}
-                      />
-                      {!isOwner && (
-                        <ReportButton
-                          targetType="listing"
-                          targetId={listing.id}
-                          isLoggedIn={isLoggedIn}
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      {showTranslateButton ? (
+                        <TranslateButton
+                          listingId={listing.id}
+                          listingLocale={listing.locale}
+                          isTranslated={showTranslated}
+                          onTranslated={(fields) => {
+                            setTranslated(fields);
+                            setShowTranslated(true);
+                          }}
+                          onShowOriginal={() => setShowTranslated(false)}
                         />
+                      ) : (
+                        <span />
                       )}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="transition-transform hover:scale-105"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(window.location.href);
+                              toast.success(t('common.linkCopied'));
+                            } catch {
+                              toast.error(t('common.copyFailed'));
+                            }
+                          }}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <FavoriteButton
+                          isFavorite={isFavorite(listing.id)}
+                          onToggle={() => toggleFavorite(listing.id)}
+                        />
+                        {!isOwner && (
+                          <ReportButton
+                            targetType="listing"
+                            targetId={listing.id}
+                            isLoggedIn={isLoggedIn}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   <div className="border-t bg-gradient-to-br from-primary/5 to-transparent px-6 py-5">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       {heroPriceValue > 0 && (
                         <div>
                           <div className="flex items-baseline gap-1">
@@ -463,7 +492,9 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                 </Card>
               </motion.div>
 
-              {displayDescription && (
+              {(displayDescription ||
+                listing.features.length > 0 ||
+                listing.thingsToKnow?.length > 0) && (
                 <motion.div
                   custom={2}
                   initial="hidden"
@@ -471,95 +502,109 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   variants={fadeUp}
                   className="mt-8"
                 >
-                  <h2 className="text-lg font-semibold">
-                    {listingType === 'roommate'
-                      ? t('listings.detail.aboutRoom')
-                      : listingType === 'sublet'
-                        ? t('listings.detail.aboutSublet')
-                        : t('listings.detail.aboutApartment')}
-                  </h2>
-                  <p className="mt-3 leading-relaxed text-muted-foreground">{displayDescription}</p>
-                </motion.div>
-              )}
+                  <Card className="transition-shadow hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileText className="h-5 w-5" />
+                        {listingType === 'roommate'
+                          ? t('listings.detail.aboutRoom')
+                          : listingType === 'sublet'
+                            ? t('listings.detail.aboutSublet')
+                            : t('listings.detail.aboutApartment')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {displayDescription && (
+                        <p className="leading-relaxed text-muted-foreground">
+                          {displayDescription}
+                        </p>
+                      )}
 
-              {listing.features.length > 0 && (
-                <motion.div
-                  custom={3}
-                  initial="hidden"
-                  animate="visible"
-                  variants={fadeUp}
-                  className="mt-8"
-                >
-                  <h2 className="text-lg font-semibold">
-                    {t('listings.detail.featuresAmenities')}
-                  </h2>
-                  {listing.registrationPossible && (
-                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
-                      <CheckCircle className="h-4 w-4" />
-                      {t('listings.registrationPossible')}
-                    </div>
-                  )}
-                  <div className="mt-4 space-y-4">
-                    {AMENITY_CATEGORIES.map((category) => {
-                      const matched = category.items.filter((item) =>
-                        listing.features.includes(item),
-                      );
-                      if (matched.length === 0) return null;
-                      return (
-                        <div key={category.categoryKey}>
-                          <p className="mb-2 text-sm font-medium text-muted-foreground">
-                            {t(category.categoryKey)}
-                          </p>
-                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                            {matched.map((feature, i) => (
-                              <motion.div
-                                key={feature}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 + i * 0.03 }}
-                                className="flex items-center gap-2"
-                              >
-                                <CheckCircle className="h-4 w-4 text-primary" />
-                                <span className="text-sm">{t(`listings.features.${feature}`)}</span>
-                              </motion.div>
-                            ))}
+                      {listing.features.length > 0 && (
+                        <div>
+                          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                            {t('listings.detail.featuresAmenities')}
+                          </h3>
+                          {listing.registrationPossible && (
+                            <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                              <CheckCircle className="h-4 w-4" />
+                              {t('listings.registrationPossible')}
+                            </div>
+                          )}
+                          <div className="space-y-4">
+                            {AMENITY_CATEGORIES.map((category) => {
+                              const matched = category.items.filter((item) =>
+                                listing.features.includes(item),
+                              );
+                              if (matched.length === 0) return null;
+                              return (
+                                <div key={category.categoryKey}>
+                                  <p className="mb-2 text-sm font-medium text-muted-foreground">
+                                    {t(category.categoryKey)}
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    {matched.map((feature, i) => (
+                                      <motion.div
+                                        key={feature}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.4 + i * 0.03 }}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <CheckCircle className="h-4 w-4 text-primary" />
+                                        <span className="text-sm">
+                                          {t(`listings.features.${feature}`)}
+                                        </span>
+                                      </motion.div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
+                      )}
 
-              {listing.thingsToKnow?.length > 0 && (
-                <motion.div
-                  custom={3.2}
-                  initial="hidden"
-                  animate="visible"
-                  variants={fadeUp}
-                  className="mt-8"
-                >
-                  <h2 className="text-lg font-semibold">{t('listings.detail.thingsToKnow')}</h2>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {listing.thingsToKnow.map((key, i) => {
-                      const sentiment = getThingsToKnowSentiment(key);
-                      return (
-                        <motion.span
-                          key={key}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.4 + i * 0.03 }}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${
-                            sentiment === 'good'
-                              ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {t(`listings.thingsToKnow.${key}`)}
-                        </motion.span>
-                      );
-                    })}
-                  </div>
+                      {listing.thingsToKnow?.length > 0 && (
+                        <div>
+                          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                            {t('listings.detail.thingsToKnow')}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {listing.thingsToKnow.map((key, i) => {
+                              const sentiment = getThingsToKnowSentiment(key);
+                              return (
+                                <motion.span
+                                  key={key}
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: 0.4 + i * 0.03 }}
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${
+                                    sentiment === 'good'
+                                      ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                                      : 'bg-muted text-muted-foreground'
+                                  }`}
+                                >
+                                  {t(`listings.thingsToKnow.${key}`)}
+                                </motion.span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="border-t pt-4">
+                        <Button variant="link" className="h-auto gap-2 p-0 text-primary" asChild>
+                          <Link href={`/${listing.citySlug}/building/${listing.buildingSlug}`}>
+                            <Building2 className="h-4 w-4" />
+                            {t('listings.detail.viewBuildingCosts')}
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               )}
 
@@ -586,7 +631,7 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     <CardContent className="space-y-3">
                       {/* Room count, room type and the flatmate count are shown in the
                           hero key-facts band / this card's title — not repeated here. */}
-                      {listing.preferredGender && listing.preferredGender !== 'any' && (
+                      {listing.preferredGender && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             {t('listings.detail.preferredGender')}
@@ -702,38 +747,6 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   </Card>
                 </motion.div>
               )}
-
-              <motion.div
-                custom={4}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                className="mt-8"
-              >
-                <Card className="transition-shadow hover:shadow-md">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Building2 className="h-5 w-5" />
-                      {t('listings.detail.buildingInfo')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4">
-                      <Info className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {t('listings.detail.buildingCostHint')}
-                        </p>
-                        <Button variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
-                          <Link href={`/${listing.citySlug}/building/${listing.buildingSlug}`}>
-                            {t('listings.detail.viewBuildingCosts')}
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
               {isDocumentTemplatesEnabled() && (
                 <motion.div
