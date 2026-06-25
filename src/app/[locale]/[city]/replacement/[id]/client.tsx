@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { PhotoGallery } from '@/components/listings/photo-gallery';
@@ -195,6 +195,9 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
   const [translated, setTranslated] = useState<TranslatedFields | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites(isLoggedIn);
+  // Floating bottom action bar appears once the price card scrolls out of view.
+  const priceCardRef = useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
   const listingType = listing.type ?? 'replacement';
   const backRoute = TYPE_ROUTE[listingType];
 
@@ -239,6 +242,20 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
           : 'direct',
     });
   }, [listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const el = priceCardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Show the bar only once the price card has scrolled above the viewport.
+        setShowStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Hero price band: headline figure + label per listing type.
   const heroPriceValue =
@@ -748,16 +765,6 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                 </motion.div>
               )}
 
-              <motion.div
-                custom={4}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                className="mt-8"
-              >
-                <LocationScore buildingId={listing.buildingId} />
-              </motion.div>
-
               {isDocumentTemplatesEnabled() && (
                 <motion.div
                   custom={5}
@@ -775,162 +782,172 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="lg:sticky lg:top-24 lg:self-start"
+              className="lg:self-start"
             >
-              <Card className="overflow-hidden shadow-lg">
-                <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-                  <CardTitle className="text-lg">
-                    {listingType === 'sublet'
-                      ? t('listings.detail.subletCosts')
-                      : listingType === 'roommate'
-                        ? t('listings.detail.costPerPerson')
-                        : t('listings.detail.monthlyCosts')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {listingType === 'sublet' ? (
-                      <>
-                        <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
-                          <span className="font-semibold">
-                            {listing.durationDays
-                              ? t('listings.card.forDays', { days: listing.durationDays })
-                              : t('listings.detail.totalPrice')}
-                          </span>
-                          <span className="text-xl font-bold text-primary">
-                            {(listing.priceTotal ?? listing.totalCost).toLocaleString()} PLN
-                          </span>
-                        </div>
-                        {listing.durationDays && listing.priceTotal ? (
-                          <div className="flex items-center justify-between px-6 py-3">
-                            <span className="text-muted-foreground">
-                              {t('listings.detail.perDay')}
+              <div ref={priceCardRef}>
+                <Card className="overflow-hidden shadow-lg">
+                  <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
+                    <CardTitle className="text-lg">
+                      {listingType === 'sublet'
+                        ? t('listings.detail.subletCosts')
+                        : listingType === 'roommate'
+                          ? t('listings.detail.costPerPerson')
+                          : t('listings.detail.monthlyCosts')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y">
+                      {listingType === 'sublet' ? (
+                        <>
+                          <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
+                            <span className="font-semibold">
+                              {listing.durationDays
+                                ? t('listings.card.forDays', { days: listing.durationDays })
+                                : t('listings.detail.totalPrice')}
                             </span>
-                            <span className="font-medium">
-                              ~
-                              {Math.round(
-                                listing.priceTotal / listing.durationDays,
-                              ).toLocaleString()}{' '}
-                              PLN
+                            <span className="text-xl font-bold text-primary">
+                              {(listing.priceTotal ?? listing.totalCost).toLocaleString()} PLN
                             </span>
                           </div>
-                        ) : null}
-                        {listing.depositAmount ? (
-                          <div className="flex items-center justify-between px-6 py-3">
-                            <span className="text-muted-foreground">
-                              {t('listings.detail.deposit')}
-                            </span>
-                            <span className="font-medium">
-                              {listing.depositAmount.toLocaleString()} PLN
-                            </span>
-                          </div>
-                        ) : null}
-                      </>
-                    ) : listingType === 'roommate' ? (
-                      <>
-                        <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.pricePerPerson')}
-                          </span>
-                          <span className="font-medium">
-                            {(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
-                          </span>
-                        </div>
-                        {listing.totalApartmentRent ? (
-                          <div className="flex items-center justify-between px-6 py-3">
-                            <span className="text-muted-foreground">
-                              {t('listings.detail.totalApartmentRent')}
-                            </span>
-                            <span className="font-medium">
-                              {listing.totalApartmentRent.toLocaleString()} PLN
-                            </span>
-                          </div>
-                        ) : null}
-                        {listing.depositAmount ? (
-                          <div className="flex items-center justify-between px-6 py-3">
-                            <span className="text-muted-foreground">
-                              {t('listings.detail.deposit')}
-                            </span>
-                            <span className="font-medium">
-                              {listing.depositAmount.toLocaleString()} PLN
-                            </span>
-                          </div>
-                        ) : null}
-                        <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
-                          <span className="font-semibold">{t('listings.detail.yourShare')}</span>
-                          <span className="text-xl font-bold text-primary">
-                            ~{(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
-                            {t('common.perMonth')}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">{t('common.rent')}</span>
-                          <span className="font-medium">{listing.price.toLocaleString()} PLN</span>
-                        </div>
-                        <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">{t('common.adminFee')}</span>
-                          <span className="font-medium">
-                            {listing.adminFee.toLocaleString()} PLN
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-6 py-3">
-                          <span className="text-muted-foreground">{t('common.utilitiesAvg')}</span>
-                          <span className="font-medium">
-                            ~{listing.utilities.toLocaleString()} PLN
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
-                          <span className="font-semibold">{t('common.totalMonthly')}</span>
-                          <span className="text-xl font-bold text-primary">
-                            ~{listing.totalCost.toLocaleString()} PLN
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  {listingType !== 'roommate' &&
-                    listing.periodicCharges &&
-                    listing.periodicCharges.length > 0 && (
-                      <div className="border-t px-6 py-4">
-                        <p className="mb-2 text-sm font-medium text-muted-foreground">
-                          {t('costs.submit.periodicSectionTitle')}
-                        </p>
-                        <div className="space-y-2">
-                          {listing.periodicCharges.map((charge) => (
-                            <div
-                              key={charge.id}
-                              className="flex items-center justify-between text-sm"
-                            >
+                          {listing.durationDays && listing.priceTotal ? (
+                            <div className="flex items-center justify-between px-6 py-3">
                               <span className="text-muted-foreground">
-                                {t(
-                                  `costs.submit.${PERIODIC_CATEGORY_LABEL_KEY[charge.category] ?? 'catOther'}`,
-                                )}
-                                {charge.note ? ` · ${charge.note}` : ''}
-                                <span className="ml-1 text-xs">
-                                  (
-                                  {t(
-                                    `costs.submit.${PERIODIC_FREQUENCY_LABEL_KEY[charge.frequency] ?? 'freqAnnual'}`,
-                                  )}
-                                  )
-                                </span>
+                                {t('listings.detail.perDay')}
                               </span>
-                              <span className="text-right font-medium">
-                                {charge.amount.toLocaleString()} PLN
-                                <span className="ml-1 block text-xs font-normal text-muted-foreground">
-                                  ≈ {charge.monthlyEquivalent.toLocaleString()} PLN/
-                                  {t('costs.submit.periodicPerMonth')}
-                                </span>
+                              <span className="font-medium">
+                                ~
+                                {Math.round(
+                                  listing.priceTotal / listing.durationDays,
+                                ).toLocaleString()}{' '}
+                                PLN
                               </span>
                             </div>
-                          ))}
+                          ) : null}
+                          {listing.depositAmount ? (
+                            <div className="flex items-center justify-between px-6 py-3">
+                              <span className="text-muted-foreground">
+                                {t('listings.detail.deposit')}
+                              </span>
+                              <span className="font-medium">
+                                {listing.depositAmount.toLocaleString()} PLN
+                              </span>
+                            </div>
+                          ) : null}
+                        </>
+                      ) : listingType === 'roommate' ? (
+                        <>
+                          <div className="flex items-center justify-between px-6 py-3">
+                            <span className="text-muted-foreground">
+                              {t('listings.detail.pricePerPerson')}
+                            </span>
+                            <span className="font-medium">
+                              {(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
+                            </span>
+                          </div>
+                          {listing.totalApartmentRent ? (
+                            <div className="flex items-center justify-between px-6 py-3">
+                              <span className="text-muted-foreground">
+                                {t('listings.detail.totalApartmentRent')}
+                              </span>
+                              <span className="font-medium">
+                                {listing.totalApartmentRent.toLocaleString()} PLN
+                              </span>
+                            </div>
+                          ) : null}
+                          {listing.depositAmount ? (
+                            <div className="flex items-center justify-between px-6 py-3">
+                              <span className="text-muted-foreground">
+                                {t('listings.detail.deposit')}
+                              </span>
+                              <span className="font-medium">
+                                {listing.depositAmount.toLocaleString()} PLN
+                              </span>
+                            </div>
+                          ) : null}
+                          <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
+                            <span className="font-semibold">{t('listings.detail.yourShare')}</span>
+                            <span className="text-xl font-bold text-primary">
+                              ~{(listing.pricePerPerson ?? listing.totalCost).toLocaleString()} PLN
+                              {t('common.perMonth')}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between px-6 py-3">
+                            <span className="text-muted-foreground">{t('common.rent')}</span>
+                            <span className="font-medium">
+                              {listing.price.toLocaleString()} PLN
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between px-6 py-3">
+                            <span className="text-muted-foreground">{t('common.adminFee')}</span>
+                            <span className="font-medium">
+                              {listing.adminFee.toLocaleString()} PLN
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between px-6 py-3">
+                            <span className="text-muted-foreground">
+                              {t('common.utilitiesAvg')}
+                            </span>
+                            <span className="font-medium">
+                              ~{listing.utilities.toLocaleString()} PLN
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between bg-primary/5 px-6 py-4">
+                            <span className="font-semibold">{t('common.totalMonthly')}</span>
+                            <span className="text-xl font-bold text-primary">
+                              ~{listing.totalCost.toLocaleString()} PLN
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {listingType !== 'roommate' &&
+                      listing.periodicCharges &&
+                      listing.periodicCharges.length > 0 && (
+                        <div className="border-t px-6 py-4">
+                          <p className="mb-2 text-sm font-medium text-muted-foreground">
+                            {t('costs.submit.periodicSectionTitle')}
+                          </p>
+                          <div className="space-y-2">
+                            {listing.periodicCharges.map((charge) => (
+                              <div
+                                key={charge.id}
+                                className="flex items-center justify-between text-sm"
+                              >
+                                <span className="text-muted-foreground">
+                                  {t(
+                                    `costs.submit.${PERIODIC_CATEGORY_LABEL_KEY[charge.category] ?? 'catOther'}`,
+                                  )}
+                                  {charge.note ? ` · ${charge.note}` : ''}
+                                  <span className="ml-1 text-xs">
+                                    (
+                                    {t(
+                                      `costs.submit.${PERIODIC_FREQUENCY_LABEL_KEY[charge.frequency] ?? 'freqAnnual'}`,
+                                    )}
+                                    )
+                                  </span>
+                                </span>
+                                <span className="text-right font-medium">
+                                  {charge.amount.toLocaleString()} PLN
+                                  <span className="ml-1 block text-xs font-normal text-muted-foreground">
+                                    ≈ {charge.monthlyEquivalent.toLocaleString()} PLN/
+                                    {t('costs.submit.periodicPerMonth')}
+                                  </span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                </CardContent>
-              </Card>
+                      )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="mt-4">
+                <LocationScore buildingId={listing.buildingId} />
+              </div>
 
               {isOwner ? (
                 <div className="mt-4 flex flex-col gap-2">
@@ -1000,6 +1017,55 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
       </main>
 
       <Footer />
+
+      {/* Solid (opaque) bg — NO backdrop-blur. backdrop-filter on a fixed
+          element re-rasterizes every scroll frame and flickers (Chrome/Safari). */}
+      <AnimatePresence>
+        {showStickyBar && !isOwner && (
+          <motion.div
+            initial={{ y: 80 }}
+            animate={{ y: 0 }}
+            exit={{ y: 80 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed inset-x-0 bottom-0 z-40 border-t bg-background shadow-lg"
+          >
+            <div className="container mx-auto flex items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                {heroPriceValue > 0 && (
+                  <p className="flex items-baseline gap-1 truncate">
+                    <span className="text-lg font-bold text-primary">
+                      ~{heroPriceValue.toLocaleString()} PLN
+                    </span>
+                    {listingType !== 'sublet' && (
+                      <span className="text-xs text-muted-foreground">{t('common.perMonth')}</span>
+                    )}
+                  </p>
+                )}
+                <p className="truncate text-xs text-muted-foreground">{heroPriceLabel}</p>
+              </div>
+              <Button
+                size="lg"
+                className="shrink-0 gap-2"
+                onClick={() => {
+                  setInterestModalOpen(true);
+                  posthog?.capture('interest_modal_opened', {
+                    listing_id: listing.id,
+                    type: listingType,
+                    source: 'sticky_bar',
+                  });
+                }}
+              >
+                <MessageSquare className="h-4 w-4" />
+                {listingType === 'roommate'
+                  ? t('listings.detail.imInterestedRoom')
+                  : listingType === 'sublet'
+                    ? t('listings.detail.imInterestedSublet')
+                    : t('listings.detail.imInterested')}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!isOwner && (
         <InterestModal
