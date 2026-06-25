@@ -14,7 +14,13 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const tokenHash = searchParams.get('token_hash');
-  const type = searchParams.get('type') as 'signup' | 'email' | 'recovery' | 'invite' | undefined;
+  const type = searchParams.get('type') as
+    | 'signup'
+    | 'email'
+    | 'recovery'
+    | 'invite'
+    | 'magiclink'
+    | undefined;
   const next = searchParams.get('next') || `/${locale}/dashboard`;
 
   const supabase = await createClient();
@@ -72,7 +78,12 @@ export async function GET(
       // (open cost form → submit → "log in to unlock" hook). Self-contained.
       await claimAnonymousReports(user.id);
 
-      const authMethod = user.app_metadata?.provider === 'google' ? 'google' : 'email';
+      const authMethod =
+        user.app_metadata?.provider === 'google'
+          ? 'google'
+          : type === 'magiclink'
+            ? 'magiclink'
+            : 'email';
 
       // First-touch referral source (set once on create). Attach as set-once
       // person properties so PostHog cohorts can split retention/contribution by

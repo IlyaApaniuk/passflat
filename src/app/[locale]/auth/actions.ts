@@ -13,6 +13,8 @@ import { localeUrl } from '@/lib/email/url';
 import { captureServerException, flushPostHog } from '@/lib/posthog-server';
 
 const RESET_EXPIRES_IN_HOURS = 1;
+// Supabase magic links / email OTPs expire after 1 hour by default.
+const MAGIC_LINK_EXPIRES_IN_HOURS = 1;
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -115,6 +117,85 @@ export async function signInWithGoogle(locale: string, next?: string) {
   }
 
   redirect(data.url);
+}
+
+/**
+ * Passwordless sign-in via emailed magic link. Used inside in-app browsers
+ * (Instagram/Facebook WebViews) where Google OAuth is blocked
+ * ("Error 403: disallowed_useragent") and asking for a password adds friction
+ * to cold social traffic. Reuses the same admin.generateLink + Resend path as
+ * signup/password-reset so branding and deliverability stay consistent.
+ *
+ * Works for both new and returning users: `magiclink` only generates a link for
+ * an existing account, so if the email is new we create the account first
+ * (email_confirm:true — the magic link itself is the verification) and retry.
+ */
+export async function signInWithMagicLink(formData: FormData) {
+  const email = (formData.get('email') as string)?.trim();
+  const locale = (formData.get('locale') as string) || 'pl';
+  const next = formData.get('next') as string | null;
+  const emailLocale = resolveEmailLocale(locale);
+
+  if (!email) {
+    return { error: 'Email is required' };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const redirectTo = `${SITE_URL}/${locale}/auth/callback`;
+
+    let { data, error } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: { redirectTo },
+    });
+
+    // No account yet (the common case for social traffic) — create it and retry.
+    // createUser is a no-op-with-error if the account already exists, which we
+    // ignore and just retry the link generation.
+    if (error) {
+      await admin.auth.admin.createUser({ email, email_confirm: true }).catch(() => {});
+      ({ data, error } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo },
+      }));
+    }
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    const hashedToken = data?.properties?.hashed_token;
+
+    if (hashedToken) {
+      // Carry `next` through so a user who started from "submit costs" lands on
+      // the submit page after the link (the callback route honours `next`).
+      const magicUrl = localeUrl(
+        emailLocale,
+        `/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=magiclink${
+          next ? `&next=${encodeURIComponent(next)}` : ''
+        }`,
+      );
+
+      await sendEmail({
+        to: email,
+        locale: emailLocale,
+        template: 'magicLink',
+        data: { magicUrl, expiresInHours: MAGIC_LINK_EXPIRES_IN_HOURS },
+      });
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[auth] Magic link request failed:', err);
+    captureServerException(err, {
+      distinctId: email,
+      properties: { source: 'auth', action: 'magic_link' },
+    });
+    await flushPostHog();
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function signOut(locale?: string) {

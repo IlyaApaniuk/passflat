@@ -12,6 +12,7 @@ import { ListingExpiringEmail } from './templates/ListingExpiringEmail';
 import { NewInquiryEmail } from './templates/NewInquiryEmail';
 import { NewMessageEmail } from './templates/NewMessageEmail';
 import { PasswordResetEmail } from './templates/PasswordResetEmail';
+import { MagicLinkEmail } from './templates/MagicLinkEmail';
 import { SignupConfirmationEmail } from './templates/SignupConfirmationEmail';
 import { PaymentEmail } from './templates/PaymentEmail';
 import { RefundEmail } from './templates/RefundEmail';
@@ -63,6 +64,11 @@ function buildEmail(
       return {
         subject: t('passwordReset.subject'),
         element: React.createElement(PasswordResetEmail, { t, data: spec.data }),
+      };
+    case 'magicLink':
+      return {
+        subject: t('magicLink.subject'),
+        element: React.createElement(MagicLinkEmail, { t, data: spec.data }),
       };
     case 'cityNotifyConfirmation':
       return {
