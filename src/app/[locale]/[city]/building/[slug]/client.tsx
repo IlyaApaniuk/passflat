@@ -40,6 +40,7 @@ import {
   BarChart3,
   type LucideIcon,
 } from 'lucide-react';
+import { relativeCostStyle } from '@/lib/cost-color';
 
 const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
 
@@ -315,13 +316,13 @@ export function BuildingCostsClient({
       );
     if (pct < 0)
       return (
-        <Badge className="gap-1 bg-green-500/10 text-green-600">
+        <Badge className="gap-1" style={relativeCostStyle(pct)}>
           <TrendingDown className="h-3 w-3" />
           {t('costs.building.percentLower', { percent: Math.abs(pct) })}
         </Badge>
       );
     return (
-      <Badge className="gap-1 bg-red-500/10 text-red-500">
+      <Badge className="gap-1" style={relativeCostStyle(pct)}>
         <TrendingUp className="h-3 w-3" />
         {t('costs.building.percentHigher', { percent: pct })}
       </Badge>

@@ -15,6 +15,7 @@ import type { GeoJSONSource } from 'mapbox-gl';
 import type { FeatureCollection, Point } from 'geojson';
 import { Building2, MapPin, Users, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import Link from 'next/link';
+import { relativeCostColor } from '@/lib/cost-color';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 export interface CostBuilding {
@@ -352,9 +353,8 @@ export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: Costs
                         </p>
                       ) : (
                         <p
-                          className={`mt-1 flex items-center gap-1 text-xs font-medium ${
-                            medianDiffPct > 0 ? 'text-red-600' : 'text-green-600'
-                          }`}
+                          className="mt-1 flex items-center gap-1 text-xs font-medium"
+                          style={{ color: relativeCostColor(medianDiffPct) }}
                         >
                           {medianDiffPct > 0 ? (
                             <TrendingUp className="h-3 w-3" />
