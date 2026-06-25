@@ -33,17 +33,31 @@ export async function GET(
     }
     authenticated = !error;
   } else if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type,
-    });
-    if (error) {
+    // Supabase looks up the one-time token by (hash, type). Tokens created via
+    // admin.generateLink({ type: 'magiclink' }) are often verifiable only under
+    // the generic 'email' OTP type, not 'magiclink' — a type mismatch surfaces
+    // as a 403 "Email link is invalid or has expired" (looks like expiry, but
+    // isn't). Try the URL's type first, then fall back to 'email'. A lookup miss
+    // doesn't consume the token, so the retry is safe.
+    const candidateTypes: Array<typeof type> =
+      type === 'magiclink' ? ['magiclink', 'email'] : [type];
+
+    let verifyError: Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['error'] = null;
+    for (const candidate of candidateTypes) {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: candidate });
+      if (!error) {
+        verifyError = null;
+        break;
+      }
+      verifyError = error;
+    }
+
+    if (verifyError) {
       console.error(
-        `[auth callback] verifyOtp failed (type=${type}, status=${error.status}):`,
-        error.message,
+        `[auth callback] verifyOtp failed (type=${type}, code=${verifyError.code}, status=${verifyError.status}): ${verifyError.message}`,
       );
     }
-    authenticated = !error;
+    authenticated = !verifyError;
   } else {
     console.error('[auth callback] no code or token_hash present in callback URL');
   }
