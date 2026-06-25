@@ -1259,7 +1259,13 @@
       "submit": "Wyślij link",
       "sentTitle": "Sprawdź pocztę",
       "sentDescription": "Wysłaliśmy link do logowania. Otwórz go na tym urządzeniu, aby kontynuować.",
-      "hint": "Bez hasła — link sam Cię zaloguje."
+      "hint": "Bez hasła — link sam Cię zaloguje.",
+      "confirmTitle": "Już prawie",
+      "confirmDescription": "Kliknij poniżej, aby dokończyć logowanie do konta Passflat.",
+      "confirmCta": "Zaloguj się",
+      "invalidTitle": "Link nieważny lub wygasł",
+      "invalidDescription": "Ten link do logowania nie jest już ważny. Poproś o nowy, aby kontynuować.",
+      "requestNew": "Poproś o nowy link"
     }
   },
   "howItWorksPage": {

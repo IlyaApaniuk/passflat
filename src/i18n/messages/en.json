@@ -1259,7 +1259,13 @@
       "submit": "Send me a link",
       "sentTitle": "Check your email",
       "sentDescription": "We've sent you a sign-in link. Open it on this device to continue.",
-      "hint": "No password to remember — the link signs you in."
+      "hint": "No password to remember — the link signs you in.",
+      "confirmTitle": "Almost there",
+      "confirmDescription": "Tap below to finish signing in to your Passflat account.",
+      "confirmCta": "Sign in",
+      "invalidTitle": "Link invalid or expired",
+      "invalidDescription": "This sign-in link is no longer valid. Request a new one to continue.",
+      "requestNew": "Request a new link"
     }
   },
   "howItWorksPage": {
