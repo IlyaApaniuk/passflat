@@ -423,6 +423,7 @@
       "bathrooms": "bathrooms",
       "floor": "Floor",
       "floorOf": "of",
+      "area": "Area",
       "aboutApartment": "About this apartment",
       "featuresAmenities": "Features & Amenities",
       "thingsToKnow": "Good to know",

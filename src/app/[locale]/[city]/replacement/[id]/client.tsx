@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
@@ -158,6 +159,27 @@ interface TranslatedFields {
   subletRules: string | null;
 }
 
+/** One key fact in the hero band: muted icon + bold value over a small label. */
+function HeroFact({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  value: ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+      <div className="flex flex-col leading-tight">
+        <span className="text-sm font-semibold">{value}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Props) {
   const t = useTranslations();
   const currentLocale = useLocale();
@@ -213,6 +235,36 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
     });
   }, [listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Hero price band: headline figure + label per listing type.
+  const heroPriceValue =
+    listingType === 'roommate'
+      ? (listing.pricePerPerson ?? listing.totalCost)
+      : listingType === 'sublet'
+        ? (listing.priceTotal ?? listing.totalCost)
+        : listing.totalCost;
+  const heroPriceLabel =
+    listingType === 'roommate'
+      ? t('listings.detail.pricePerPerson')
+      : listingType === 'sublet'
+        ? t('listings.detail.totalPrice')
+        : t('listings.detail.monthlyCosts');
+  const heroAvailability =
+    listingType === 'sublet' && listing.availableFrom && listing.availableTo
+      ? `${new Date(listing.availableFrom).toLocaleDateString(currentLocale, {
+          day: 'numeric',
+          month: 'short',
+        })} – ${new Date(listing.availableTo).toLocaleDateString(currentLocale, {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })}`
+      : listing.availableFrom
+        ? `${t('common.available')} ${new Date(listing.availableFrom).toLocaleDateString(
+            currentLocale,
+            { day: 'numeric', month: 'long', year: 'numeric' },
+          )}`
+        : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 pt-24">
@@ -243,212 +295,172 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
 
           <div className="mt-8 grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <motion.div
-                custom={0}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                className="flex flex-wrap items-start justify-between gap-4"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {listing.promoted && (
-                      <Badge className="gap-1 bg-primary">
-                        <Sparkles className="h-3 w-3" />
-                        {t('common.promoted')}
-                      </Badge>
-                    )}
-                    {listingType !== 'replacement' && (
-                      <Badge className={`border-0 ${TYPE_BADGE_STYLES[listingType]}`}>
-                        {t(`listings.types.${listingType}`)}
-                      </Badge>
-                    )}
-                    {listing.district && <Badge variant="secondary">{listing.district}</Badge>}
-                  </div>
-                  <h1 className="mt-2 text-2xl font-bold md:text-3xl">{displayTitle}</h1>
-                  <div className="mt-2 flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    {listing.address}
-                    {listing.district && `, ${listing.district}`}
-                  </div>
-                  <div className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 shrink-0" />
-                    <span>
-                      {listing.author && (
-                        <>{t('listings.detail.postedBy', { name: listing.author })} · </>
+              <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
+                <Card className="overflow-hidden gap-0 py-0">
+                  <div className="flex flex-wrap items-start justify-between gap-4 px-6 pb-5 pt-6">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {listing.promoted && (
+                          <Badge className="gap-1 bg-primary">
+                            <Sparkles className="h-3 w-3" />
+                            {t('common.promoted')}
+                          </Badge>
+                        )}
+                        {listingType !== 'replacement' && (
+                          <Badge className={`border-0 ${TYPE_BADGE_STYLES[listingType]}`}>
+                            {t(`listings.types.${listingType}`)}
+                          </Badge>
+                        )}
+                        {listing.district && <Badge variant="secondary">{listing.district}</Badge>}
+                      </div>
+                      <h1 className="mt-2 text-2xl font-bold md:text-3xl">{displayTitle}</h1>
+                      <div className="mt-2 flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        {listing.address}
+                        {listing.district && `, ${listing.district}`}
+                      </div>
+                      <div className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {listing.author && (
+                            <>{t('listings.detail.postedBy', { name: listing.author })} · </>
+                          )}
+                          {new Date(listing.createdAt).toLocaleDateString(currentLocale, {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      {showTranslateButton && (
+                        <div className="mt-3">
+                          <TranslateButton
+                            listingId={listing.id}
+                            listingLocale={listing.locale}
+                            isTranslated={showTranslated}
+                            onTranslated={(fields) => {
+                              setTranslated(fields);
+                              setShowTranslated(true);
+                            }}
+                            onShowOriginal={() => setShowTranslated(false)}
+                          />
+                        </div>
                       )}
-                      {new Date(listing.createdAt).toLocaleDateString(currentLocale, {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                  {showTranslateButton && (
-                    <div className="mt-3">
-                      <TranslateButton
-                        listingId={listing.id}
-                        listingLocale={listing.locale}
-                        isTranslated={showTranslated}
-                        onTranslated={(fields) => {
-                          setTranslated(fields);
-                          setShowTranslated(true);
-                        }}
-                        onShowOriginal={() => setShowTranslated(false)}
-                      />
                     </div>
-                  )}
-                </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="transition-transform hover:scale-105"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(window.location.href);
-                        toast.success(t('common.linkCopied'));
-                      } catch {
-                        toast.error(t('common.copyFailed'));
-                      }
-                    }}
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <FavoriteButton
-                    isFavorite={isFavorite(listing.id)}
-                    onToggle={() => toggleFavorite(listing.id)}
-                  />
-                  {!isOwner && (
-                    <ReportButton
-                      targetType="listing"
-                      targetId={listing.id}
-                      isLoggedIn={isLoggedIn}
-                    />
-                  )}
-                </div>
-              </motion.div>
-
-              <motion.div
-                custom={1}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-                className="mt-6 flex flex-wrap gap-6 rounded-lg border bg-card p-4"
-              >
-                {listing.bedrooms > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Bed className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      <span className="font-semibold">{listing.bedrooms}</span>{' '}
-                      {listing.bedrooms !== 1
-                        ? t('listings.detail.bedrooms')
-                        : t('listings.detail.bedroom')}
-                    </span>
-                  </div>
-                )}
-                {listing.area > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Maximize2 className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      <span className="font-semibold">{listing.area}</span> m²
-                    </span>
-                  </div>
-                )}
-                {listing.floor > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      {t('listings.detail.floor')}{' '}
-                      <span className="font-semibold">{listing.floor}</span>
-                      {listing.totalFloors > 0 && (
-                        <>
-                          {' '}
-                          {t('listings.detail.floorOf')} {listing.totalFloors}
-                        </>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="transition-transform hover:scale-105"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(window.location.href);
+                            toast.success(t('common.linkCopied'));
+                          } catch {
+                            toast.error(t('common.copyFailed'));
+                          }
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <FavoriteButton
+                        isFavorite={isFavorite(listing.id)}
+                        onToggle={() => toggleFavorite(listing.id)}
+                      />
+                      {!isOwner && (
+                        <ReportButton
+                          targetType="listing"
+                          targetId={listing.id}
+                          isLoggedIn={isLoggedIn}
+                        />
                       )}
-                    </span>
+                    </div>
                   </div>
-                )}
-                {listingType === 'roommate' && listing.roomType && (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold">
-                      {listing.roomType === 'private'
-                        ? t('listings.card.privateRoom')
-                        : t('listings.card.sharedRoom')}
-                    </span>
-                  </div>
-                )}
-                {listingType === 'roommate' && listing.currentRoommates != null && (
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      <span className="font-semibold">{listing.currentRoommates}</span>{' '}
-                      {t('listings.detail.roommatesLiving')}
-                    </span>
-                  </div>
-                )}
-                {listingType === 'sublet' && listing.availableFrom && listing.availableTo ? (
-                  <div className="flex items-center gap-2">
-                    <CalendarRange className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      <span className="font-semibold">
-                        {new Date(listing.availableFrom).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                        {' – '}
-                        {new Date(listing.availableTo).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                      {listing.durationDays != null && (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          ({t('listings.detail.daysCount', { count: listing.durationDays })})
+
+                  <div className="border-t bg-gradient-to-br from-primary/5 to-transparent px-6 py-5">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      {heroPriceValue > 0 && (
+                        <div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold text-primary md:text-3xl">
+                              {heroPriceValue.toLocaleString()} PLN
+                            </span>
+                            {listingType !== 'sublet' && (
+                              <span className="text-sm text-muted-foreground">
+                                {t('common.perMonth')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{heroPriceLabel}</span>
+                        </div>
+                      )}
+                      {heroAvailability && (
+                        <span className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                          <Calendar className="h-4 w-4 shrink-0" />
+                          {heroAvailability}
                         </span>
                       )}
-                    </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+                      {listing.bedrooms > 0 && (
+                        <HeroFact
+                          icon={Bed}
+                          value={listing.bedrooms}
+                          label={
+                            listingType === 'roommate'
+                              ? t('listings.detail.totalRooms')
+                              : t('listings.detail.bedrooms')
+                          }
+                        />
+                      )}
+                      {listing.area > 0 && (
+                        <HeroFact
+                          icon={Maximize2}
+                          value={`${listing.area} m²`}
+                          label={t('listings.detail.area')}
+                        />
+                      )}
+                      {listing.floor > 0 && (
+                        <HeroFact
+                          icon={Building2}
+                          value={listing.floor}
+                          label={t('listings.detail.floor')}
+                        />
+                      )}
+                      {listingType === 'roommate' && listing.roomType && (
+                        <HeroFact
+                          icon={Users}
+                          value={
+                            listing.roomType === 'private'
+                              ? t('listings.card.privateRoom')
+                              : t('listings.card.sharedRoom')
+                          }
+                          label={t('listings.detail.roomType')}
+                        />
+                      )}
+                    </div>
+
+                    {listingType === 'sublet' &&
+                      (listing.utilitiesIncluded || listing.internetIncluded) && (
+                        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                          {listing.utilitiesIncluded && (
+                            <span className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400">
+                              <ZapIcon className="h-4 w-4" />
+                              {t('listings.detail.utilitiesIncluded')}
+                            </span>
+                          )}
+                          {listing.internetIncluded && (
+                            <span className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400">
+                              <Wifi className="h-4 w-4" />
+                              {t('listings.detail.internetIncluded')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                   </div>
-                ) : listing.availableFrom ? (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <span>
-                      {t('common.available')}{' '}
-                      <span className="font-semibold">
-                        {new Date(listing.availableFrom).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </span>
-                  </div>
-                ) : null}
-                {listingType === 'sublet' && (
-                  <>
-                    {listing.utilitiesIncluded && (
-                      <div className="flex items-center gap-2">
-                        <ZapIcon className="h-5 w-5 text-green-500" />
-                        <span className="text-sm font-medium">
-                          {t('listings.detail.utilitiesIncluded')}
-                        </span>
-                      </div>
-                    )}
-                    {listing.internetIncluded && (
-                      <div className="flex items-center gap-2">
-                        <Wifi className="h-5 w-5 text-green-500" />
-                        <span className="text-sm font-medium">
-                          {t('listings.detail.internetIncluded')}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                )}
+                </Card>
               </motion.div>
 
               {displayDescription && (
@@ -564,37 +576,16 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="h-5 w-5" />
                         {t('listings.detail.roommateInfo')}
+                        {listing.currentRoommates != null && (
+                          <span className="font-normal text-muted-foreground">
+                            · {listing.currentRoommates}
+                          </span>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {listing.currentRoommates != null && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.currentRoommates')}
-                          </span>
-                          <span className="font-medium">{listing.currentRoommates}</span>
-                        </div>
-                      )}
-                      {listing.totalRooms != null && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.totalRooms')}
-                          </span>
-                          <span className="font-medium">{listing.totalRooms}</span>
-                        </div>
-                      )}
-                      {listing.roomType && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.roomType')}
-                          </span>
-                          <span className="font-medium">
-                            {listing.roomType === 'private'
-                              ? t('listings.card.privateRoom')
-                              : t('listings.card.sharedRoom')}
-                          </span>
-                        </div>
-                      )}
+                      {/* Room count, room type and the flatmate count are shown in the
+                          hero key-facts band / this card's title — not repeated here. */}
                       {listing.preferredGender && listing.preferredGender !== 'any' && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
