@@ -44,6 +44,8 @@ import {
   Info,
   FileText,
   Users,
+  User,
+  Cake,
   Wifi,
   Zap as ZapIcon,
   MessageSquare,
@@ -616,48 +618,46 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   variants={fadeUp}
                   className="mt-8"
                 >
-                  <Card>
+                  <Card className="transition-shadow hover:shadow-md">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="h-5 w-5" />
                         {t('listings.detail.roommateInfo')}
-                        {listing.currentRoommates != null && (
-                          <span className="font-normal text-muted-foreground">
-                            · {listing.currentRoommates}
-                          </span>
-                        )}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Room count, room type and the flatmate count are shown in the
-                          hero key-facts band / this card's title — not repeated here. */}
-                      {listing.preferredGender && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.preferredGender')}
-                          </span>
-                          <span className="font-medium">
-                            {t(`listings.detail.gender_${listing.preferredGender}`)}
-                          </span>
-                        </div>
-                      )}
-                      {(listing.preferredAgeMin != null || listing.preferredAgeMax != null) && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {t('listings.detail.preferredAge')}
-                          </span>
-                          <span className="font-medium">
-                            {listing.preferredAgeMin != null && listing.preferredAgeMax != null
-                              ? `${listing.preferredAgeMin} – ${listing.preferredAgeMax}`
-                              : listing.preferredAgeMax != null
-                                ? `${t('listings.detail.ageUpTo')} ${listing.preferredAgeMax}`
-                                : `${t('listings.detail.ageFrom')} ${listing.preferredAgeMin}`}
-                          </span>
-                        </div>
-                      )}
+                    <CardContent className="space-y-5">
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        {listing.currentRoommates != null && (
+                          <HeroFact
+                            icon={Users}
+                            value={listing.currentRoommates}
+                            label={t('listings.detail.currentRoommates')}
+                          />
+                        )}
+                        {listing.preferredGender && (
+                          <HeroFact
+                            icon={User}
+                            value={t(`listings.detail.gender_${listing.preferredGender}`)}
+                            label={t('listings.detail.preferredGender')}
+                          />
+                        )}
+                        {(listing.preferredAgeMin != null || listing.preferredAgeMax != null) && (
+                          <HeroFact
+                            icon={Cake}
+                            value={
+                              listing.preferredAgeMin != null && listing.preferredAgeMax != null
+                                ? `${listing.preferredAgeMin}–${listing.preferredAgeMax}`
+                                : listing.preferredAgeMax != null
+                                  ? `${t('listings.detail.ageUpTo')} ${listing.preferredAgeMax}`
+                                  : `${t('listings.detail.ageFrom')} ${listing.preferredAgeMin}`
+                            }
+                            label={t('listings.detail.preferredAge')}
+                          />
+                        )}
+                      </div>
                       {displayRoommateDescription &&
                         displayRoommateDescription !== displayDescription && (
-                          <div className="mt-2 rounded-lg bg-muted/50 p-3">
+                          <div className="rounded-lg bg-muted/50 p-3">
                             <p className="text-sm text-muted-foreground">
                               {displayRoommateDescription}
                             </p>
@@ -747,6 +747,16 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   </Card>
                 </motion.div>
               )}
+
+              <motion.div
+                custom={4}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+                className="mt-8"
+              >
+                <LocationScore buildingId={listing.buildingId} />
+              </motion.div>
 
               {isDocumentTemplatesEnabled() && (
                 <motion.div
@@ -921,10 +931,6 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     )}
                 </CardContent>
               </Card>
-
-              <div className="mt-4">
-                <LocationScore buildingId={listing.buildingId} />
-              </div>
 
               {isOwner ? (
                 <div className="mt-4 flex flex-col gap-2">
