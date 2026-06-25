@@ -28,13 +28,24 @@ export async function GET(
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error('[auth callback] exchangeCodeForSession failed:', error.message);
+    }
     authenticated = !error;
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
     });
+    if (error) {
+      console.error(
+        `[auth callback] verifyOtp failed (type=${type}, status=${error.status}):`,
+        error.message,
+      );
+    }
     authenticated = !error;
+  } else {
+    console.error('[auth callback] no code or token_hash present in callback URL');
   }
 
   if (authenticated) {

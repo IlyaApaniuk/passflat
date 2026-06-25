@@ -169,11 +169,16 @@ export async function signInWithMagicLink(formData: FormData) {
     const hashedToken = data?.properties?.hashed_token;
 
     if (hashedToken) {
-      // Carry `next` through so a user who started from "submit costs" lands on
-      // the submit page after the link (the callback route honours `next`).
+      // Point the email at an interstitial confirm page — NOT directly at the
+      // callback. Magic-link tokens are single-use, and mail scanners / link
+      // previews (Gmail, iMessage, antispam) GET links in the email body, which
+      // would consume the token on the callback's GET before the user clicks.
+      // The confirm page doesn't verify on load; the token is only spent when
+      // the user taps "sign in" there (same prefetch-safe shape as the
+      // password-reset flow). `next` is carried through to the callback.
       const magicUrl = localeUrl(
         emailLocale,
-        `/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=magiclink${
+        `/auth/magic-link/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=magiclink${
           next ? `&next=${encodeURIComponent(next)}` : ''
         }`,
       );
