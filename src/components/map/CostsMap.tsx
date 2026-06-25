@@ -181,6 +181,29 @@ export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: Costs
     }
   }, [buildings, popupInfo]);
 
+  // When a popup opens near an edge, gently pan the map so the whole card is
+  // visible (the card sits above the marker and would otherwise clip off the
+  // top/side of the viewport). Only pans when needed, by the minimal amount.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!popupInfo || !map) return;
+    const pt = map.project([popupInfo.lng, popupInfo.lat]);
+    const w = map.getContainer().clientWidth;
+    const POPUP_W = 240;
+    const POPUP_H = 210;
+    const PAD = 16;
+    const MARKER_OFFSET = 15;
+    const topEdge = pt.y - MARKER_OFFSET - POPUP_H;
+    const leftEdge = pt.x - POPUP_W / 2;
+    const rightEdge = pt.x + POPUP_W / 2;
+    let dx = 0;
+    let dy = 0;
+    if (topEdge < PAD) dy = topEdge - PAD;
+    if (leftEdge < PAD) dx = leftEdge - PAD;
+    else if (rightEdge > w - PAD) dx = rightEdge - (w - PAD);
+    if (dx !== 0 || dy !== 0) map.panBy([dx, dy], { duration: 400 });
+  }, [popupInfo]);
+
   const onMouseEnter = useCallback(() => setCursor('pointer'), []);
   const onMouseLeave = useCallback(() => setCursor('auto'), []);
 
