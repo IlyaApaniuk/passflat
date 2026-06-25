@@ -14,7 +14,9 @@ export async function queryListingDetail(slugOrId: string) {
   return prisma.listing.findFirst({
     where: listingWhere(slugOrId),
     include: {
-      building: { include: { district: true, city: true } },
+      building: {
+        include: { district: true, city: true, _count: { select: { costReports: true } } },
+      },
       author: { select: { displayName: true, createdAt: true } },
       periodicCharges: { orderBy: { createdAt: 'asc' } },
     },
@@ -34,15 +36,16 @@ export function serializeListingDetail(
     title: listing.title,
     address: listing.building.addressFull,
     district: listing.building.district?.nameKey ?? '',
+    districtSlug: listing.building.district?.slug ?? '',
     citySlug,
     buildingId: listing.building.id,
     buildingSlug: listing.building.slug,
+    buildingHasCosts: (listing.building._count?.costReports ?? 0) > 0,
     price: Number(listing.rent ?? 0),
     adminFee: Number(listing.adminFee ?? 0),
     utilities: Number(listing.utilitiesAvg ?? 0),
     totalCost: Number(listing.totalMonthly ?? 0),
     bedrooms: listing.rooms ?? 0,
-    bathrooms: 1,
     area: Number(listing.areaM2 ?? 0),
     floor: listing.floor ?? 0,
     totalFloors: 0,

@@ -129,7 +129,6 @@ export function serializeListing(l: Awaited<ReturnType<typeof queryListings>>[nu
     utilities: Number(l.utilitiesAvg ?? 0),
     totalCost: Number(l.totalMonthly ?? 0),
     bedrooms: l.rooms ?? 0,
-    bathrooms: 1,
     area: Number(l.areaM2 ?? 0),
     floor: l.floor ?? 0,
     totalFloors: 0,
