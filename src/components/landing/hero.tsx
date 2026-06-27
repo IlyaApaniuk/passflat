@@ -1,11 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useFeatureFlagEnabled, usePostHog } from 'posthog-js/react';
+import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
-import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { useIsTouch } from '@/hooks/use-reveal';
 import { Calculator, FileText, Plus, Receipt, Sparkles } from 'lucide-react';
 
@@ -14,15 +13,16 @@ const MIN_STAT_THRESHOLD = 5;
 
 interface HeroProps {
   stats?: {
-    listings: number;
-    costReports: number;
-    districts: number;
+    buildingsWithCosts: number;
+    pricePerM2: number | null;
+    expensesMonthly: number | null;
+    depositMedian: number | null;
+    depositReturnedPct: number | null;
   };
 }
 
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
-  const showStats = useFeatureFlagEnabled(FEATURE_FLAGS.SHOW_STATS);
   const posthog = usePostHog();
   const isTouch = useIsTouch();
 
@@ -35,24 +35,45 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
-  const allStats = [
-    {
-      raw: liveStats?.listings ?? 0,
-      value: liveStats ? formatStat(liveStats.listings) : '0',
-      labelKey: 'statsListings' as const,
-    },
-    {
-      raw: liveStats?.costReports ?? 0,
-      value: liveStats ? formatStat(liveStats.costReports) : '0',
-      labelKey: 'statsCostReports' as const,
-    },
-    {
-      raw: liveStats?.districts ?? 0,
-      value: liveStats ? liveStats.districts.toString() : '0',
-      labelKey: 'statsDistricts' as const,
-    },
-  ];
-  const stats = allStats.filter((s) => s.raw >= MIN_STAT_THRESHOLD);
+  // Buildings coverage — floor to tens so the "N+" suffix stays truthful, and
+  // pluralise the label to agree with the (floored) count.
+  const buildingsCount = liveStats?.buildingsWithCosts ?? 0;
+  const buildingsRounded = Math.floor(buildingsCount / 10) * 10;
+  const buildingsStat =
+    buildingsCount >= MIN_STAT_THRESHOLD
+      ? {
+          value: formatStat(buildingsRounded),
+          label: t('statsBuildings', { count: buildingsRounded }),
+        }
+      : null;
+
+  // Per-m² median (the product wedge) and the monthly "Расходы" (komunalka on
+  // top of rent) are values, not counts, so they show whenever present.
+  const pricePerM2 = liveStats?.pricePerM2 ?? null;
+  const priceStat =
+    pricePerM2 && pricePerM2 > 0
+      ? { value: `≈${pricePerM2} ${t('statsPriceUnit')}`, label: t('statsPricePerM2') }
+      : null;
+
+  const expensesMonthly = liveStats?.expensesMonthly ?? null;
+  const expensesStat =
+    expensesMonthly && expensesMonthly > 0
+      ? { value: `≈${expensesMonthly} ${t('statsExpensesUnit')}`, label: t('statsExpenses') }
+      : null;
+
+  // Deposit (upfront cash) + the share who got it back, in one block — the last
+  // piece of the "full cost of moving in" picture.
+  const depositMedian = liveStats?.depositMedian ?? null;
+  const depositReturnedPct = liveStats?.depositReturnedPct ?? null;
+  const depositStat =
+    depositMedian && depositMedian > 0 && depositReturnedPct != null
+      ? { value: `≈${depositMedian} zł`, label: t('statsDeposit', { pct: depositReturnedPct }) }
+      : null;
+
+  // Per-m² value, coverage, then the two hidden costs (monthly extras + deposit).
+  const stats = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>
+    s ? [s] : [],
+  );
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
@@ -160,21 +181,21 @@ export function Hero({ stats: liveStats }: HeroProps) {
             </Link>
           </div>
 
-          {showStats && stats.length > 0 && (
+          {stats.length > 0 && (
             <Reveal
-              className={`mx-auto mt-20 grid max-w-3xl gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : 'grid-cols-2 md:grid-cols-3'}`}
+              className={`mx-auto mt-20 grid gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : stats.length === 4 ? 'grid-cols-2 lg:grid-cols-4 max-w-6xl' : 'grid-cols-2 md:grid-cols-3 max-w-3xl'}`}
             >
               {stats.map((stat, i) => (
                 <Reveal
-                  key={stat.labelKey}
+                  key={stat.label}
                   variant="scale"
                   delay={i * 0.1}
                   className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
                 >
-                  <div className="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
-                  <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                    {t(stat.labelKey)}
+                  <div className="text-2xl font-bold text-accent sm:whitespace-nowrap sm:text-3xl">
+                    {stat.value}
                   </div>
+                  <div className="mt-1 text-xs text-muted-foreground sm:text-sm">{stat.label}</div>
                 </Reveal>
               ))}
             </Reveal>

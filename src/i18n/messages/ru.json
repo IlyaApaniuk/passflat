@@ -94,6 +94,12 @@
       "statsListings": "Объявления",
       "statsCostReports": "Отчёты о расходах",
       "statsDistricts": "Районы",
+      "statsBuildings": "{count, plural, one {дом} few {дома} many {домов} other {домов}} с ценами",
+      "statsPricePerM2": "медиана по Варшаве",
+      "statsPriceUnit": "zł/м²",
+      "statsExpenses": "расходы сверх аренды",
+      "statsExpensesUnit": "zł/мес",
+      "statsDeposit": "залог · {pct}% вернули",
       "statsAvgRating": "Ср. оценка"
     },
     "howItWorks": {

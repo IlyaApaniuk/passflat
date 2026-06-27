@@ -94,6 +94,12 @@
       "statsListings": "Оголошення",
       "statsCostReports": "Звіти про витрати",
       "statsDistricts": "Райони",
+      "statsBuildings": "{count, plural, one {будинок} few {будинки} many {будинків} other {будинків}} з цінами",
+      "statsPricePerM2": "медіана по Варшаві",
+      "statsPriceUnit": "zł/м²",
+      "statsExpenses": "витрати понад оренду",
+      "statsExpensesUnit": "zł/міс",
+      "statsDeposit": "застава · {pct}% повернули",
       "statsAvgRating": "Сер. оцінка"
     },
     "howItWorks": {

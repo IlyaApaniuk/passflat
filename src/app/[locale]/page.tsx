@@ -14,6 +14,7 @@ import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
+import { median, perAreaValues } from '@/lib/cost-stats';
 import type { ListingType } from '@/lib/listings-data';
 
 const DEFAULT_CITY = 'warsaw';
@@ -49,14 +50,89 @@ async function getFeaturedListings(): Promise<FeaturedListingData[]> {
 }
 
 async function getStats() {
-  const [listings, costReports, districts, buildings, users] = await Promise.all([
-    prisma.listing.count({ where: { status: 'active' } }),
-    prisma.costReport.count(),
-    prisma.district.count(),
-    prisma.building.count(),
-    prisma.profile.count(),
-  ]);
-  return { listings, costReports, districts, buildings, users };
+  const [listings, costReports, districts, buildings, users, buildingsWithCosts, perM2Reports] =
+    await Promise.all([
+      prisma.listing.count({ where: { status: 'active' } }),
+      prisma.costReport.count(),
+      prisma.district.count(),
+      prisma.building.count(),
+      prisma.profile.count(),
+      // "Homes with prices": buildings that carry at least one visible cost
+      // report (the dots you actually see on the /costs map), Warsaw-scoped.
+      prisma.building.count({
+        where: { city: { slug: DEFAULT_CITY }, costReports: { some: { isVisible: true } } },
+      }),
+      prisma.costReport.findMany({
+        where: {
+          building: { city: { slug: DEFAULT_CITY } },
+          isVisible: true,
+          totalMonthlyAvg: { not: null },
+        },
+        select: { totalMonthlyAvg: true, rent: true, areaM2: true },
+        take: 5000,
+      }),
+    ]);
+
+  // Deposit data lives on real reports regardless of whether they carry a
+  // monthly total, so query it separately (no totalMonthlyAvg filter).
+  const depositReports = await prisma.costReport.findMany({
+    where: { building: { city: { slug: DEFAULT_CITY } }, isVisible: true },
+    select: { depositAmount: true, depositReturned: true },
+    take: 5000,
+  });
+
+  const round10 = (n: number) => Math.round(n / 10) * 10;
+
+  // Median all-in cost per m² across Warsaw — same method as the /costs city
+  // baseline (perAreaValues + median), so the hero figure matches the tool.
+  const perM2 = median(
+    perAreaValues(
+      perM2Reports.map((r) => ({
+        value: r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg),
+        areaM2: r.areaM2 == null ? null : Number(r.areaM2),
+      })),
+    ),
+  );
+  const pricePerM2 = perM2 == null ? null : round10(perM2);
+
+  // Median monthly "Расходы" = total − rent: the komunalka/utilities paid on top
+  // of rent — the hidden cost listings never show. Same definition as the
+  // Аренда/Расходы split on /costs.
+  const expenses = median(
+    perM2Reports.map((r) =>
+      r.totalMonthlyAvg != null && r.rent != null
+        ? Number(r.totalMonthlyAvg) - Number(r.rent)
+        : null,
+    ),
+  );
+  const expensesMonthly = expenses == null ? null : round10(expenses);
+
+  // Deposit: median amount (rounded to hundreds — it's a large one-off sum) and
+  // the share of past tenants who got it back. Real reports only (scraped
+  // listings carry no deposit), so it's honest tenant data.
+  const depositAmounts = depositReports
+    .map((r) => (r.depositAmount == null ? null : Number(r.depositAmount)))
+    .filter((v): v is number => v != null && v > 0);
+  const depositMed = median(depositAmounts);
+  const depositMedian = depositMed == null ? null : Math.round(depositMed / 100) * 100;
+  const returnKnown = depositReports.filter((r) => r.depositReturned != null);
+  const returnTrue = returnKnown.filter((r) => r.depositReturned === true);
+  const depositReturnedPct = returnKnown.length
+    ? Math.round((100 * returnTrue.length) / returnKnown.length)
+    : null;
+
+  return {
+    listings,
+    costReports,
+    districts,
+    buildings,
+    users,
+    buildingsWithCosts,
+    pricePerM2,
+    expensesMonthly,
+    depositMedian,
+    depositReturnedPct,
+  };
 }
 
 // Rotate the featured cost building once per day instead of always showing the
