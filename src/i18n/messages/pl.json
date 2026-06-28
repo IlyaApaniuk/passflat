@@ -94,6 +94,12 @@
       "statsListings": "Oferty",
       "statsCostReports": "Raporty kosztów",
       "statsDistricts": "Dzielnice",
+      "statsBuildings": "{count, plural, one {dom} few {domy} many {domów} other {domów}} z cenami",
+      "statsPricePerM2": "mediana Warszawa",
+      "statsPriceUnit": "zł/m²",
+      "statsExpenses": "dodatkowe koszty",
+      "statsExpensesUnit": "zł/mies",
+      "statsDeposit": "kaucja · zwrot {pct}%",
       "statsAvgRating": "Śr. ocena"
     },
     "howItWorks": {

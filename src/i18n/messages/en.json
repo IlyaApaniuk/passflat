@@ -94,6 +94,12 @@
       "statsListings": "Listings",
       "statsCostReports": "Cost Reports",
       "statsDistricts": "Districts",
+      "statsBuildings": "{count, plural, one {home} other {homes}} with prices",
+      "statsPricePerM2": "Warsaw median",
+      "statsPriceUnit": "zł/m²",
+      "statsExpenses": "costs on top of rent",
+      "statsExpensesUnit": "zł/mo",
+      "statsDeposit": "deposit · {pct}% returned",
       "statsAvgRating": "Avg Rating"
     },
     "howItWorks": {
