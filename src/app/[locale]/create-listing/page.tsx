@@ -281,10 +281,13 @@ function PhotoOverlay({ photo }: { photo: PhotoItem }) {
   );
 }
 
+// Vertical slide only: the old x-axis slide (±20px) widened the page for 300ms
+// on every step change, flashing a horizontal overflow that visibly nudged the
+// stepper tabs left and back.
 const stepTransition = {
-  initial: { opacity: 0, x: 20 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -20 },
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -12 },
   transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
 };
 
@@ -437,6 +440,10 @@ function CreateListingForm() {
 
   useEffect(() => {
     if (!editId) posthog?.capture('create_listing_started');
+    // Fresh create flow: drop leftovers from previous attempts — the store lives
+    // in the root layout and survives client-side navigation, so stale (possibly
+    // errored) entries would otherwise silently ride into the new listing.
+    if (!editId) usePhotoUploadStore.getState().clearAll();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -617,16 +624,18 @@ function CreateListingForm() {
       return;
     }
 
-    const newItems: PhotoItem[] = accepted.map((file) => ({
-      id: crypto.randomUUID(),
+    // The store is the single owner of the File/preview; grid items share its ids
+    // so removal and URL lookup are exact (blob-URL string matching never worked —
+    // two createObjectURL calls on the same File produce different URLs).
+    const managed = photoStore.addPhotos(accepted);
+    const newItems: PhotoItem[] = managed.map((m) => ({
+      id: m.id,
       type: 'local' as const,
-      url: URL.createObjectURL(file),
-      file,
+      url: m.preview,
+      file: m.file,
     }));
 
     setPhotos((prev) => [...prev, ...newItems]);
-
-    photoStore.addPhotos(accepted);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -635,20 +644,11 @@ function CreateListingForm() {
 
   const removePhoto = useCallback(
     (id: string) => {
-      setPhotos((prev) => {
-        const item = prev.find((p) => p.id === id);
-        if (item?.type === 'local') URL.revokeObjectURL(item.url);
-        return prev.filter((p) => p.id !== id);
-      });
-
-      const managedPhoto = photoStore.photos.find(
-        (p) => p.preview === photos.find((ph) => ph.id === id)?.url,
-      );
-      if (managedPhoto) {
-        photoStore.removePhoto(managedPhoto.id);
-      }
+      setPhotos((prev) => prev.filter((p) => p.id !== id));
+      // Shared id: the store revokes the preview URL and deletes the uploaded file.
+      photoStore.removePhoto(id);
     },
-    [photos, photoStore],
+    [photoStore],
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -744,7 +744,17 @@ function CreateListingForm() {
         patchPayload.periodicCharges = serializedPeriodicCharges;
       }
 
-      const localFiles = photos.filter((p) => p.type === 'local' && p.file);
+      // Local grid items share ids with the upload store, which already uploaded
+      // (or is uploading) them in the background — reuse those URLs instead of
+      // re-uploading duplicate files. Fall back to a direct upload only for items
+      // the store doesn't know (shouldn't happen, belt-and-braces).
+      const storeById = new Map(
+        usePhotoUploadStore
+          .getState()
+          .photos.filter((m) => m.status === 'done' && m.url)
+          .map((m) => [m.id, m.url!]),
+      );
+      const localFiles = photos.filter((p) => p.type === 'local' && p.file && !storeById.has(p.id));
       const uploadedUrlMap = new Map<string, string>();
       for (const item of localFiles) {
         const fd = new FormData();
@@ -760,10 +770,13 @@ function CreateListingForm() {
         }
       }
 
-      patchPayload.photos = photos.map((p) => {
-        if (p.type === 'remote') return p.url;
-        return uploadedUrlMap.get(p.id) ?? p.url;
-      });
+      patchPayload.photos = photos
+        .map((p) => {
+          if (p.type === 'remote') return p.url;
+          // Never let a blob: preview URL leak into the database.
+          return storeById.get(p.id) ?? uploadedUrlMap.get(p.id) ?? null;
+        })
+        .filter((u): u is string => Boolean(u));
 
       try {
         const res = await fetch(`/api/listings/${editId}`, {
@@ -786,7 +799,15 @@ function CreateListingForm() {
       return;
     }
 
-    const uploadedUrls = photoStore.getUploadedUrls();
+    // Build from the GRID (order + cover + removals are user intent), resolving
+    // each item to its uploaded URL via the shared store id. Zombie store entries
+    // that are no longer in the grid must never reach the listing.
+    const storePhotos = usePhotoUploadStore.getState().photos;
+    const uploadedUrls = photos
+      .map((p) =>
+        p.type === 'remote' ? p.url : (storePhotos.find((m) => m.id === p.id)?.url ?? null),
+      )
+      .filter((u): u is string => Boolean(u));
 
     const commonPayload = {
       type: formData.listingType,
@@ -1105,44 +1126,49 @@ function CreateListingForm() {
             className="mb-8"
           >
             <div className="flex min-w-0 items-center justify-center overflow-x-auto">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex shrink-0 items-center">
-                  <motion.button
-                    whileHover={index <= currentStepIndex ? { scale: 1.05 } : {}}
-                    whileTap={index <= currentStepIndex ? { scale: 0.95 } : {}}
-                    onClick={() => {
-                      if (index <= currentStepIndex) {
-                        setCurrentStep(step.id);
-                      }
-                    }}
-                    disabled={index > currentStepIndex}
-                    className={`flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-medium transition-all sm:px-4 ${
-                      index === currentStepIndex
-                        ? 'bg-primary text-primary-foreground shadow-md'
-                        : index < currentStepIndex
-                          ? 'bg-primary/20 text-primary hover:bg-primary/30'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {index < currentStepIndex ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <step.icon className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">{step.label}</span>
-                  </motion.button>
-                  {index < steps.length - 1 && (
-                    <motion.div
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: index < currentStepIndex ? 1 : 0.3 }}
-                      transition={{ duration: 0.4 }}
-                      className={`mx-1 h-0.5 w-3 origin-left sm:mx-2 sm:w-12 ${
-                        index < currentStepIndex ? 'bg-primary' : 'bg-muted'
+              {steps.map((step, index) => {
+                // Edit mode: every section is already filled, so all tabs are
+                // freely clickable; create mode unlocks steps progressively.
+                const canJump = Boolean(editId) || index <= currentStepIndex;
+                return (
+                  <div key={step.id} className="flex shrink-0 items-center">
+                    <motion.button
+                      whileHover={canJump ? { scale: 1.05 } : {}}
+                      whileTap={canJump ? { scale: 0.95 } : {}}
+                      onClick={() => {
+                        if (canJump) {
+                          setCurrentStep(step.id);
+                        }
+                      }}
+                      disabled={!canJump}
+                      className={`flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-medium transition-all sm:px-4 ${
+                        index === currentStepIndex
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : index < currentStepIndex
+                            ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                            : 'bg-muted text-muted-foreground'
                       }`}
-                    />
-                  )}
-                </div>
-              ))}
+                    >
+                      {index < currentStepIndex ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <step.icon className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">{step.label}</span>
+                    </motion.button>
+                    {index < steps.length - 1 && (
+                      <motion.div
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: index < currentStepIndex ? 1 : 0.3 }}
+                        transition={{ duration: 0.4 }}
+                        className={`mx-1 h-0.5 w-3 origin-left sm:mx-2 sm:w-12 ${
+                          index < currentStepIndex ? 'bg-primary' : 'bg-muted'
+                        }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
 

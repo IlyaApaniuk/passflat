@@ -1,19 +1,30 @@
 'use client';
 
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { usePhotoUploadStore } from '@/stores/publish-store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Check, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function PublishSnackbar() {
+  const t = useTranslations('upload');
   const { photos } = usePhotoUploadStore();
+  const [dismissed, setDismissed] = useState(false);
 
   const uploading = photos.filter((p) => p.status === 'compressing' || p.status === 'uploading');
   const errors = photos.filter((p) => p.status === 'error');
   const done = photos.filter((p) => p.status === 'done');
 
+  // New activity (a fresh upload batch or a retry) re-surfaces a dismissed toast.
+  // State adjustment during render (guarded) — the React-endorsed alternative to
+  // a setState-in-effect cascade.
+  if (dismissed && uploading.length > 0) {
+    setDismissed(false);
+  }
+
   const hasActivity = uploading.length > 0 || errors.length > 0;
-  if (!hasActivity) return null;
+  if (!hasActivity || dismissed) return null;
 
   const total = photos.length;
   const pct = total > 0 ? (done.length / total) * 100 : 0;
@@ -41,10 +52,10 @@ export function PublishSnackbar() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">
               {uploading.length > 0
-                ? `Uploading photos ${done.length}/${total}...`
+                ? t('progress', { done: done.length, total })
                 : errors.length > 0
-                  ? `${errors.length} photo(s) failed`
-                  : 'All photos uploaded'}
+                  ? t('failed', { count: errors.length })
+                  : t('allDone')}
             </p>
 
             {uploading.length > 0 && (
@@ -58,26 +69,24 @@ export function PublishSnackbar() {
               </div>
             )}
 
-            {errors.length > 0 && (
-              <div className="mt-2 flex gap-2">
-                {errors.map((p) => (
-                  <Button
-                    key={p.id}
-                    size="sm"
-                    variant="outline"
-                    onClick={() => usePhotoUploadStore.getState().retryPhoto(p.id)}
-                  >
-                    Retry
-                  </Button>
-                ))}
+            {uploading.length === 0 && errors.length > 0 && (
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => usePhotoUploadStore.getState().retryAllFailed()}
+                >
+                  {t('retryAll', { count: errors.length })}
+                </Button>
               </div>
             )}
           </div>
 
           {uploading.length === 0 && (
             <button
-              onClick={() => {}}
+              onClick={() => setDismissed(true)}
               className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={t('dismiss')}
             >
               <X className="h-4 w-4" />
             </button>

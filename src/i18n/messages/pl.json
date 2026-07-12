@@ -72,6 +72,13 @@
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak"
   },
+  "upload": {
+    "progress": "Przesyłanie zdjęć {done}/{total}…",
+    "failed": "{count, plural, one {# zdjęcie nie zostało przesłane} few {# zdjęcia nie zostały przesłane} many {# zdjęć nie zostało przesłanych} other {# zdjęcia nie zostało przesłane}}",
+    "allDone": "Wszystkie zdjęcia przesłane",
+    "retryAll": "{count, plural, one {Ponów przesyłanie} other {Ponów wszystkie (#)}}",
+    "dismiss": "Ukryj"
+  },
   "landing": {
     "hero": {
       "badge": "Już dostępne w Warszawie",

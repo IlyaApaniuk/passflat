@@ -14,10 +14,12 @@ export interface ManagedPhoto {
 interface PhotoUploadState {
   photos: ManagedPhoto[];
 
-  addPhotos: (files: File[]) => void;
+  /** Returns the created entries so callers can link UI items by shared id. */
+  addPhotos: (files: File[]) => ManagedPhoto[];
   removePhoto: (id: string) => void;
   reorderPhotos: (fromIndex: number, toIndex: number) => void;
   retryPhoto: (id: string) => void;
+  retryAllFailed: () => void;
   clearAll: () => void;
 
   initFromRemote: (urls: string[]) => void;
@@ -94,7 +96,19 @@ export const usePhotoUploadStore = create<PhotoUploadState>((set, get) => ({
   photos: [],
 
   addPhotos: (files) => {
-    const newPhotos: ManagedPhoto[] = files.map((file) => ({
+    // Skip files already managed (same name+size+mtime) — re-selecting the same
+    // photos after a failed batch must not create duplicate uploads.
+    const existing = get().photos;
+    const isDuplicate = (f: File) =>
+      existing.some(
+        (p) =>
+          p.file.name === f.name &&
+          p.file.size === f.size &&
+          p.file.lastModified === f.lastModified,
+      );
+    const fresh = files.filter((f) => !isDuplicate(f));
+
+    const newPhotos: ManagedPhoto[] = fresh.map((file) => ({
       id: crypto.randomUUID(),
       file,
       preview: URL.createObjectURL(file),
@@ -108,6 +122,7 @@ export const usePhotoUploadStore = create<PhotoUploadState>((set, get) => ({
     for (const photo of newPhotos) {
       processPhoto(photo.id, photo.file, set);
     }
+    return newPhotos;
   },
 
   removePhoto: (id) => {
@@ -143,6 +158,13 @@ export const usePhotoUploadStore = create<PhotoUploadState>((set, get) => ({
     }));
 
     processPhoto(id, photo.file, set);
+  },
+
+  retryAllFailed: () => {
+    const failed = get().photos.filter((p) => p.status === 'error');
+    for (const photo of failed) {
+      get().retryPhoto(photo.id);
+    }
   },
 
   clearAll: () => {
