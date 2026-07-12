@@ -91,10 +91,9 @@ export function Header({ initialUser }: HeaderProps = {}) {
   const { unreadCount } = useUnreadCount(user?.id ?? null);
   const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
 
-  const navLinks = [
-    { href: `/${DEFAULT_CITY}/replacement` as const, label: t('listings.navListings') },
-    { href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') },
-  ];
+  // Listings are strategically frozen (pivot 2026-06-20): costs lead the nav,
+  // listing pages stay reachable by direct link only.
+  const navLinks = [{ href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') }];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -211,12 +210,12 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     {t('common.login')}
                   </Button>
                 </Link>
-                <Link href="/create-listing">
+                <Link href={`/${DEFAULT_CITY}/costs/submit`}>
                   <Button
                     size="sm"
                     className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
                   >
-                    {t('listings.create.title')}
+                    {t('dashboard.addCostReport')}
                   </Button>
                 </Link>
               </>
@@ -324,9 +323,12 @@ export function Header({ initialUser }: HeaderProps = {}) {
                   </>
                 ) : (
                   <>
-                    <Link href="/create-listing" onClick={() => setMobileMenuOpen(false)}>
+                    <Link
+                      href={`/${DEFAULT_CITY}/costs/submit`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
                       <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
-                        {t('listings.create.title')}
+                        {t('dashboard.addCostReport')}
                       </Button>
                     </Link>
                     <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>

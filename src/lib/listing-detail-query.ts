@@ -61,6 +61,9 @@ export function serializeListingDetail(
     locale: listing.locale ?? null,
     createdAt: listing.createdAt.toISOString(),
     author: listing.author?.displayName ?? null,
+    contactTelegram: listing.contactTelegram ?? null,
+    contactPhone: listing.contactPhone ?? null,
+    contactFacebook: listing.contactFacebook ?? null,
 
     // Roommate-specific
     pricePerPerson: listing.pricePerPerson ? Number(listing.pricePerPerson) : undefined,

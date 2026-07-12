@@ -49,6 +49,8 @@ import {
   Wifi,
   Zap as ZapIcon,
   MessageSquare,
+  Send,
+  Phone,
   Edit,
   Trash2,
 } from 'lucide-react';
@@ -107,6 +109,9 @@ export interface ListingDetailData {
   locale: string | null;
   createdAt: string;
   author: string | null;
+  contactTelegram?: string | null;
+  contactPhone?: string | null;
+  contactFacebook?: string | null;
   // Roommate-specific
   pricePerPerson?: number;
   totalApartmentRent?: number;
@@ -199,6 +204,23 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
   const priceCardRef = useRef<HTMLDivElement>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const listingType = listing.type ?? 'replacement';
+  // External contacts replace the internal-chat interest flow entirely, so messages
+  // go straight to the lister instead of the account that created the listing.
+  const telegramHref = listing.contactTelegram ? `https://t.me/${listing.contactTelegram}` : null;
+  const phoneHref = listing.contactPhone ? `tel:${listing.contactPhone}` : null;
+  const facebookHref = listing.contactFacebook ? `https://m.me/${listing.contactFacebook}` : null;
+  const hasExternalContact = Boolean(telegramHref || phoneHref || facebookHref);
+  const trackContactClick = (
+    channel: 'telegram' | 'phone' | 'facebook',
+    source: 'cta' | 'sticky_bar',
+  ) => {
+    posthog?.capture('listing_external_contact_clicked', {
+      listing_id: listing.id,
+      type: listingType,
+      channel,
+      source,
+    });
+  };
   const backRoute = TYPE_ROUTE[listingType];
 
   const showTranslateButton =
@@ -981,6 +1003,60 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     {t('listings.detail.deleteListing')}
                   </Button>
                 </div>
+              ) : hasExternalContact ? (
+                <>
+                  {telegramHref && (
+                    <Button
+                      size="lg"
+                      className="mt-4 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                      asChild
+                    >
+                      <a
+                        href={telegramHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackContactClick('telegram', 'cta')}
+                      >
+                        <Send className="h-4 w-4" />
+                        {t('listings.detail.writeTelegram')}
+                      </a>
+                    </Button>
+                  )}
+                  {phoneHref && (
+                    <Button
+                      size="lg"
+                      variant={telegramHref ? 'outline' : 'default'}
+                      className="mt-3 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                      asChild
+                    >
+                      <a href={phoneHref} onClick={() => trackContactClick('phone', 'cta')}>
+                        <Phone className="h-4 w-4" />
+                        {t('listings.detail.callPhone')}
+                      </a>
+                    </Button>
+                  )}
+                  {facebookHref && (
+                    <Button
+                      size="lg"
+                      variant={telegramHref || phoneHref ? 'outline' : 'default'}
+                      className="mt-3 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                      asChild
+                    >
+                      <a
+                        href={facebookHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackContactClick('facebook', 'cta')}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        {t('listings.detail.writeMessenger')}
+                      </a>
+                    </Button>
+                  )}
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    {t('listings.detail.externalContactHint')}
+                  </p>
+                </>
               ) : (
                 <>
                   <Button
@@ -1043,31 +1119,62 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                 )}
                 <p className="truncate text-xs text-muted-foreground">{heroPriceLabel}</p>
               </div>
-              <Button
-                size="lg"
-                className="shrink-0 gap-2"
-                onClick={() => {
-                  setInterestModalOpen(true);
-                  posthog?.capture('interest_modal_opened', {
-                    listing_id: listing.id,
-                    type: listingType,
-                    source: 'sticky_bar',
-                  });
-                }}
-              >
-                <MessageSquare className="h-4 w-4" />
-                {listingType === 'roommate'
-                  ? t('listings.detail.imInterestedRoom')
-                  : listingType === 'sublet'
-                    ? t('listings.detail.imInterestedSublet')
-                    : t('listings.detail.imInterested')}
-              </Button>
+              {hasExternalContact ? (
+                <Button size="lg" className="shrink-0 gap-2" asChild>
+                  {telegramHref ? (
+                    <a
+                      href={telegramHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackContactClick('telegram', 'sticky_bar')}
+                    >
+                      <Send className="h-4 w-4" />
+                      {t('listings.detail.writeTelegram')}
+                    </a>
+                  ) : phoneHref ? (
+                    <a href={phoneHref} onClick={() => trackContactClick('phone', 'sticky_bar')}>
+                      <Phone className="h-4 w-4" />
+                      {t('listings.detail.callPhone')}
+                    </a>
+                  ) : (
+                    <a
+                      href={facebookHref!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackContactClick('facebook', 'sticky_bar')}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      {t('listings.detail.writeMessenger')}
+                    </a>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  className="shrink-0 gap-2"
+                  onClick={() => {
+                    setInterestModalOpen(true);
+                    posthog?.capture('interest_modal_opened', {
+                      listing_id: listing.id,
+                      type: listingType,
+                      source: 'sticky_bar',
+                    });
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {listingType === 'roommate'
+                    ? t('listings.detail.imInterestedRoom')
+                    : listingType === 'sublet'
+                      ? t('listings.detail.imInterestedSublet')
+                      : t('listings.detail.imInterested')}
+                </Button>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {!isOwner && (
+      {!isOwner && !hasExternalContact && (
         <InterestModal
           open={interestModalOpen}
           onOpenChange={setInterestModalOpen}

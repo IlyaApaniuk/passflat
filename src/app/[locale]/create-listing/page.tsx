@@ -159,6 +159,10 @@ interface ListingFormData {
   utilitiesIncluded: boolean;
   internetIncluded: boolean;
   subletRules: string;
+  // External contacts (bypass internal chat when set)
+  contactTelegram: string;
+  contactPhone: string;
+  contactFacebook: string;
   // Flexible recurring charges (replacement + sublet)
   periodicCharges: PeriodicChargeRow[];
 }
@@ -184,6 +188,9 @@ const initialFormData: ListingFormData = {
   features: [],
   thingsToKnow: [],
   registrationPossible: null,
+  contactTelegram: '',
+  contactPhone: '',
+  contactFacebook: '',
   rent: '',
   adminFee: '',
   utilities: '',
@@ -372,6 +379,9 @@ function CreateListingForm() {
           features: listing.amenities ?? [],
           thingsToKnow: listing.thingsToKnow ?? [],
           registrationPossible: listing.registrationPossible ?? null,
+          contactTelegram: listing.contactTelegram ?? '',
+          contactPhone: listing.contactPhone ?? '',
+          contactFacebook: listing.contactFacebook ?? '',
           rent: listing.rent ? String(Number(listing.rent)) : '',
           adminFee: listing.adminFee ? String(Number(listing.adminFee)) : '',
           utilities: listing.utilitiesAvg ? String(Number(listing.utilitiesAvg)) : '',
@@ -703,6 +713,9 @@ function CreateListingForm() {
         amenities: formData.features,
         thingsToKnow: formData.thingsToKnow,
         registrationPossible: formData.registrationPossible,
+        contactTelegram: formData.contactTelegram,
+        contactPhone: formData.contactPhone,
+        contactFacebook: formData.contactFacebook,
       };
 
       if (formData.listingType === 'replacement') {
@@ -794,6 +807,9 @@ function CreateListingForm() {
       amenities: formData.features,
       thingsToKnow: formData.thingsToKnow,
       registrationPossible: formData.registrationPossible,
+      contactTelegram: formData.contactTelegram || undefined,
+      contactPhone: formData.contactPhone || undefined,
+      contactFacebook: formData.contactFacebook || undefined,
       citySlug,
       locale,
       photos: uploadedUrls,
@@ -1332,6 +1348,43 @@ function CreateListingForm() {
                           value={formData.description}
                           onChange={(e) => updateFormData({ description: e.target.value })}
                         />
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="contactTelegram">
+                            {t('listings.create.contactTelegram')}
+                          </Label>
+                          <Input
+                            id="contactTelegram"
+                            placeholder="@username"
+                            value={formData.contactTelegram}
+                            onChange={(e) => updateFormData({ contactTelegram: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="contactPhone">{t('listings.create.contactPhone')}</Label>
+                          <Input
+                            id="contactPhone"
+                            type="tel"
+                            placeholder="+48 600 000 000"
+                            value={formData.contactPhone}
+                            onChange={(e) => updateFormData({ contactPhone: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="contactFacebook">
+                            {t('listings.create.contactFacebook')}
+                          </Label>
+                          <Input
+                            id="contactFacebook"
+                            placeholder="facebook.com/username"
+                            value={formData.contactFacebook}
+                            onChange={(e) => updateFormData({ contactFacebook: e.target.value })}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground sm:col-span-2">
+                          {t('listings.create.contactsHint')}
+                        </p>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">

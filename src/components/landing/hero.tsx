@@ -157,6 +157,8 @@ export function Hero({ stats: liveStats }: HeroProps) {
             </Button>
           </div>
 
+          <p className="mt-4 text-sm text-muted-foreground">{t('trustLine')}</p>
+
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             <Link
               href={`/${DEFAULT_CITY}/replacement`}

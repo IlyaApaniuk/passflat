@@ -6,6 +6,71 @@ export type ListingType = (typeof LISTING_TYPES)[number];
 export const ROOM_TYPES = ['private', 'shared'] as const;
 export const PREFERRED_GENDERS = ['any', 'male', 'female'] as const;
 
+// Telegram public usernames: 5-32 chars, start with a letter, letters/digits/underscore.
+const TELEGRAM_HANDLE_RE = /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/;
+
+/**
+ * Normalizes a user-supplied Telegram contact into a bare handle (no @, no URL).
+ * Accepts "handle", "@handle", "t.me/handle", "https://t.me/handle".
+ * Empty input is valid and normalizes to null (contact removed).
+ */
+export function normalizeTelegramHandle(input: unknown): {
+  valid: boolean;
+  handle: string | null;
+} {
+  if (input === null || input === undefined || input === '') return { valid: true, handle: null };
+  if (typeof input !== 'string') return { valid: false, handle: null };
+  const bare = input
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.)?t\.me\//i, '')
+    .replace(/^@/, '');
+  if (!TELEGRAM_HANDLE_RE.test(bare)) return { valid: false, handle: null };
+  return { valid: true, handle: bare };
+}
+
+// E.164-ish: optional +, then 7-15 digits.
+const PHONE_RE = /^\+?\d{7,15}$/;
+
+/**
+ * Normalizes a user-supplied phone number: strips spaces, dashes and parentheses.
+ * Empty input is valid and normalizes to null (contact removed).
+ */
+export function normalizePhoneNumber(input: unknown): {
+  valid: boolean;
+  phone: string | null;
+} {
+  if (input === null || input === undefined || input === '') return { valid: true, phone: null };
+  if (typeof input !== 'string') return { valid: false, phone: null };
+  const bare = input.trim().replace(/[\s\-()]/g, '');
+  if (!PHONE_RE.test(bare)) return { valid: false, phone: null };
+  return { valid: true, phone: bare };
+}
+
+// Facebook usernames: letters/digits/dots (also plain numeric profile ids) — both work with m.me.
+const FACEBOOK_SLUG_RE = /^[a-zA-Z0-9.]{5,50}$/;
+
+/**
+ * Normalizes a user-supplied Facebook contact into a bare profile slug/id for m.me links.
+ * Accepts "slug", "@slug", "facebook.com/slug", "fb.com/slug", "m.me/slug" (with or without https/www).
+ * Empty input is valid and normalizes to null (contact removed).
+ */
+export function normalizeFacebookSlug(input: unknown): {
+  valid: boolean;
+  slug: string | null;
+} {
+  if (input === null || input === undefined || input === '') return { valid: true, slug: null };
+  if (typeof input !== 'string') return { valid: false, slug: null };
+  const bare = input
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.)?(facebook\.com|fb\.com|m\.me)\//i, '')
+    .replace(/^@/, '')
+    .replace(/[/?].*$/, '');
+  if (!FACEBOOK_SLUG_RE.test(bare)) return { valid: false, slug: null };
+  return { valid: true, slug: bare };
+}
+
 export function isValidListingType(type: unknown): type is ListingType {
   return typeof type === 'string' && LISTING_TYPES.includes(type as ListingType);
 }
