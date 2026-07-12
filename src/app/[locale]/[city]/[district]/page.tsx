@@ -14,7 +14,7 @@ import { ShareButton } from '@/components/costs/share-button';
 import { ArrowLeft, ArrowRight, Building2, Calculator, Plus, Users } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
-export const revalidate = 600;
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ locale: string; city: string; district: string }>;
