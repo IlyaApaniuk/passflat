@@ -4,6 +4,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import {
   validateTypeSpecificFields,
+  normalizeTelegramHandle,
+  normalizePhoneNumber,
+  normalizeFacebookSlug,
   computeExpiresAt,
   computePriceFields,
   type ListingType,
@@ -80,6 +83,9 @@ const ALLOWED_TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
 const UPDATABLE_COMMON_FIELDS = [
   'title',
   'description',
+  'contactTelegram',
+  'contactPhone',
+  'contactFacebook',
   'rooms',
   'areaM2',
   'floor',
@@ -225,6 +231,38 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (existing.isPaid && body.type && body.type !== existing.type) {
     return NextResponse.json({ error: 'Cannot change type of a paid listing' }, { status: 422 });
+  }
+
+  // Normalize external contacts before the generic field-copy loop below.
+  if ('contactTelegram' in body) {
+    const telegramContact = normalizeTelegramHandle(body.contactTelegram);
+    if (!telegramContact.valid) {
+      return NextResponse.json(
+        { error: 'Invalid Telegram username. Use 5-32 letters, digits or underscores.' },
+        { status: 400 },
+      );
+    }
+    body.contactTelegram = telegramContact.handle;
+  }
+  if ('contactPhone' in body) {
+    const phoneContact = normalizePhoneNumber(body.contactPhone);
+    if (!phoneContact.valid) {
+      return NextResponse.json(
+        { error: 'Invalid phone number. Use 7-15 digits, optionally starting with +.' },
+        { status: 400 },
+      );
+    }
+    body.contactPhone = phoneContact.phone;
+  }
+  if ('contactFacebook' in body) {
+    const facebookContact = normalizeFacebookSlug(body.contactFacebook);
+    if (!facebookContact.valid) {
+      return NextResponse.json(
+        { error: 'Invalid Facebook profile. Paste your profile link or username.' },
+        { status: 400 },
+      );
+    }
+    body.contactFacebook = facebookContact.slug;
   }
 
   const fieldKeys = Object.keys(body).filter((k) => k !== 'status');

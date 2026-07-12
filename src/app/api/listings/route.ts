@@ -7,6 +7,9 @@ import {
   isValidListingType,
   validateTypeSpecificFields,
   validateListingNumericFields,
+  normalizeTelegramHandle,
+  normalizePhoneNumber,
+  normalizeFacebookSlug,
   computeExpiresAt,
   computePriceFields,
   getPriceFieldForType,
@@ -104,6 +107,10 @@ export async function POST(request: NextRequest) {
     subletRules,
     // Flexible recurring charges (replacement + sublet)
     periodicCharges: periodicChargesInput,
+    // External contacts (bypass internal chat when set)
+    contactTelegram,
+    contactPhone,
+    contactFacebook,
     // Content language
     locale,
     // Payment-related
@@ -113,6 +120,28 @@ export async function POST(request: NextRequest) {
   if (!isValidListingType(type)) {
     return NextResponse.json(
       { error: `Invalid type. Must be one of: replacement, roommate, sublet` },
+      { status: 400 },
+    );
+  }
+
+  const telegramContact = normalizeTelegramHandle(contactTelegram);
+  if (!telegramContact.valid) {
+    return NextResponse.json(
+      { error: 'Invalid Telegram username. Use 5-32 letters, digits or underscores.' },
+      { status: 400 },
+    );
+  }
+  const phoneContact = normalizePhoneNumber(contactPhone);
+  if (!phoneContact.valid) {
+    return NextResponse.json(
+      { error: 'Invalid phone number. Use 7-15 digits, optionally starting with +.' },
+      { status: 400 },
+    );
+  }
+  const facebookContact = normalizeFacebookSlug(contactFacebook);
+  if (!facebookContact.valid) {
+    return NextResponse.json(
+      { error: 'Invalid Facebook profile. Paste your profile link or username.' },
       { status: 400 },
     );
   }
@@ -230,6 +259,9 @@ export async function POST(request: NextRequest) {
     apartmentNumber: apartmentNumber || null,
     title,
     description: description || null,
+    contactTelegram: telegramContact.handle,
+    contactPhone: phoneContact.phone,
+    contactFacebook: facebookContact.slug,
     locale: locale || null,
     currency: 'PLN',
     rooms: rooms ? parseInt(rooms, 10) : null,

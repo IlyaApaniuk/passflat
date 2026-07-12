@@ -141,6 +141,12 @@ model Listing {
   description String?
   locale      String?
 
+  // External contacts. When at least one is set, the detail page shows direct
+  // contact buttons (t.me / tel: / m.me) and the internal-chat interest flow is disabled.
+  contactTelegram String? @map("contact_telegram") // handle, stored without @
+  contactPhone    String? @map("contact_phone") // normalized digits, optional leading +
+  contactFacebook String? @map("contact_facebook") // profile slug or numeric id for m.me
+
   // --- Common pricing ---
   currency     String
   rent         Decimal?
