@@ -13,6 +13,13 @@ const nextConfig = {
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        // Prod Supabase lives behind the custom domain — without it the image
+        // optimizer 400s (INVALID_IMAGE_OPTIMIZE_REQUEST) on every listing photo.
+        protocol: 'https',
+        hostname: 'auth.passflat.com',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
   serverExternalPackages: ['@prisma/client', 'prisma'],

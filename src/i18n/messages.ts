@@ -52,4 +52,5 @@ export const SHARED_CLIENT_NAMESPACES = [
   'interest',
   'favorites',
   'share',
+  'upload',
 ] as const;

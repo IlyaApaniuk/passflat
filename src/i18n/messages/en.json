@@ -72,6 +72,13 @@
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong"
   },
+  "upload": {
+    "progress": "Uploading photos {done}/{total}…",
+    "failed": "{count, plural, one {# photo failed to upload} other {# photos failed to upload}}",
+    "allDone": "All photos uploaded",
+    "retryAll": "{count, plural, one {Retry upload} other {Retry all (#)}}",
+    "dismiss": "Dismiss"
+  },
   "landing": {
     "hero": {
       "badge": "Now live in Warsaw",
