@@ -13,7 +13,7 @@ import { pickMessages } from '@/i18n/messages';
 import { CalculatorClient, type DistrictCalcData } from './client';
 
 // ISR: pure compute over open cost data — no auth/cookies, so it is cacheable for crawlers.
-export const revalidate = 600;
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;

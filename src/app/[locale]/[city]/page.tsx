@@ -16,7 +16,7 @@ import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
 // revalidated for crawlers instead of rendering per request.
-export const revalidate = 600;
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
