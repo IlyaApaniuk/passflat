@@ -15,10 +15,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // ISR: the page reads no per-request auth — the summary ("база") is public for
 // everyone and crawlers, and the deeper per-utility detail is gated client-side
-// (useHasContributed). It renders statically and revalidates every few minutes
-// so a fresh report shows up reasonably quickly. A hard server-side withhold
-// (Phase 2 monetization) would opt it back into dynamic.
-export const revalidate = 300;
+// (useHasContributed). A hard server-side withhold (Phase 2 monetization) would
+// opt it back into dynamic.
+// 1h window: reports are rare, but bots crawl ~1100 building-page variants
+// (282 buildings x 4 locales) around the clock — the old 5-min window made every
+// crawler hit a full re-render and burned the Vercel free tier (3h39m CPU /
+// 71K ISR writes in 30 days at ~50 human visits/week).
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ locale: string; city: string; slug: string }>;
