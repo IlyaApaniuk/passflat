@@ -1541,6 +1541,13 @@ export function CostSubmitClient({
                                 {rangeWarning('adminFee', formData.adminFee)}
                               </p>
                             )}
+                            {Number(formData.adminFee) > 0 &&
+                              Number(formData.rent) > 0 &&
+                              Number(formData.adminFee) > Number(formData.rent) && (
+                                <p className="text-xs text-amber-600">
+                                  {t('costs.submit.adminFeeAboveRentWarning')}
+                                </p>
+                              )}
                             <p className="text-xs text-muted-foreground">
                               {t('costs.submit.extraBillsHint')}
                             </p>
@@ -2245,8 +2252,10 @@ export function CostSubmitClient({
                             total: coreFields.length,
                           })
                         : completeness >= 100
-                          ? t('costs.submit.completenessFull')
-                          : t('costs.submit.completenessMeter', { percent: completeness })}
+                          ? t('costs.submit.weightFull')
+                          : completeness >= 60
+                            ? t('costs.submit.weightGood')
+                            : t('costs.submit.weightLight')}
                     </span>
                     <Button type="submit" size="lg" disabled={submitting}>
                       {submitting ? (

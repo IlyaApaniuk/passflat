@@ -590,6 +590,25 @@ export function BuildingCostsClient({
             </motion.div>
           ) : (
             <div className="space-y-8">
+              {!trust.reliable && (
+                <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="font-semibold">{t('costs.building.whiteSpotTitle')}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {t('costs.building.whiteSpotDesc', { count: reports })}
+                        </p>
+                      </div>
+                      <Button className="shrink-0" asChild>
+                        <Link href={`/${citySlug}/costs/submit`}>
+                          {t('costs.overview.submitCostReport')}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
               {costs?.totalMonthlyAvg && (
                 <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card className="overflow-hidden">
