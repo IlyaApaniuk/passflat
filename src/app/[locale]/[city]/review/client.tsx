@@ -6,11 +6,11 @@ import { usePostHog } from 'posthog-js/react';
 import { AlertCircle, Loader2, MapPin, MessageSquarePlus } from 'lucide-react';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
-import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import { type PlaceResult } from '@/components/listings/address-autocomplete';
+import { AddressIntake } from '@/components/buildings/address-intake';
 import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 
 interface ResolvedBuilding {
   id: string;
@@ -115,50 +115,39 @@ export function ReviewClient({
   );
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-          <MessageSquarePlus className="h-4 w-4" />
-          {t('badge')}
-        </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{t('title')}</h1>
-        <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <AddressIntake
+        badge={t('badge')}
+        badgeIcon={MessageSquarePlus}
+        title={t('title')}
+        subtitle={t('subtitle')}
+        label={t('addressLabel')}
+        placeholder={t('addressPlaceholder')}
+        hint={t('addressHint')}
+        bounds={cityBounds ?? undefined}
+        onPlaceSelect={handlePlace}
+      >
+        {status === 'loading' && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('resolving')}
+          </p>
+        )}
 
-      <Card className="mt-8">
-        <CardContent className="px-5 sm:px-6">
-          <Label className="text-sm font-medium">{t('addressLabel')}</Label>
-          <div className="mt-2">
-            <AddressAutocomplete
-              onPlaceSelect={handlePlace}
-              placeholder={t('addressPlaceholder')}
-              bounds={cityBounds ?? undefined}
-            />
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('addressHint')}</p>
+        {status === 'outside' && (
+          <Alert className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t('outsideCity', { city: cityName })}</AlertDescription>
+          </Alert>
+        )}
 
-          {status === 'loading' && (
-            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t('resolving')}
-            </p>
-          )}
-
-          {status === 'outside' && (
-            <Alert className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{t('outsideCity', { city: cityName })}</AlertDescription>
-            </Alert>
-          )}
-
-          {status === 'error' && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{t('error')}</AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+        {status === 'error' && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{t('error')}</AlertDescription>
+          </Alert>
+        )}
+      </AddressIntake>
 
       {building && (
         <Card className="mt-4">

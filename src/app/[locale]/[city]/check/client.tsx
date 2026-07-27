@@ -36,7 +36,9 @@ import {
 import { Link } from '@/i18n/navigation';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
-import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import { type PlaceResult } from '@/components/listings/address-autocomplete';
+import { AddressIntake } from '@/components/buildings/address-intake';
+import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -602,7 +604,7 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
-  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share') => {
+  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tags') => {
     if (!analyticsConsent) return;
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
@@ -651,33 +653,18 @@ export function CheckerClient({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-          <MapPinned className="h-4 w-4" />
-          {t('badge')}
-        </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-          {t('title', { city: cityName })}
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          {t('subtitle')}
-        </p>
-      </div>
-
-      <Card className="mt-7 border-primary/20 shadow-xl shadow-primary/5">
-        <CardContent className="p-4 sm:p-6">
-          <Label className="mb-2 block text-sm font-semibold">{t('searchLabel')}</Label>
-          <div className="[&_input]:h-12 [&_input]:rounded-xl [&_input]:bg-background [&_input]:text-base">
-            <AddressAutocomplete
-              key={autocompleteKey}
-              onPlaceSelect={selectPlace}
-              placeholder={t('searchPlaceholder')}
-              defaultValue={inputDefault}
-            />
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('searchHint')}</p>
-        </CardContent>
-      </Card>
+      <AddressIntake
+        badge={t('badge')}
+        badgeIcon={MapPinned}
+        title={t('title', { city: cityName })}
+        subtitle={t('subtitle')}
+        label={t('searchLabel')}
+        placeholder={t('searchPlaceholder')}
+        hint={t('searchHint')}
+        inputKey={autocompleteKey}
+        defaultValue={inputDefault}
+        onPlaceSelect={selectPlace}
+      />
 
       <div aria-live="polite">
         {status === 'loading' && (
@@ -888,6 +875,18 @@ export function CheckerClient({
                 </CardContent>
               </Card>
             )}
+
+            <Card>
+              <CardContent className="px-4 sm:px-6">
+                <BuildingTagPicker
+                  buildingId={result.building.id}
+                  citySlug={citySlug}
+                  address={result.building.address}
+                  source="checker"
+                  onSaved={() => captureCta('tags')}
+                />
+              </CardContent>
+            </Card>
 
             {/* Rendered only when something is publishable: a block reading
                 "nobody has said anything" is what makes a product look dead. */}

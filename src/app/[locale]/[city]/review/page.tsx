@@ -70,7 +70,7 @@ export default async function ReviewPage({ params }: PageProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="relative flex-1 overflow-hidden bg-muted/30 pt-24">
+      <main className="relative flex-1 bg-muted/30 pt-24">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent" />
         <div className="relative container mx-auto px-4 py-8 sm:py-12">
           <NextIntlClientProvider messages={clientMessages}>

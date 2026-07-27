@@ -102,13 +102,18 @@ export default async function CheckerPage({ params, searchParams }: PageProps) {
 
   // `checker` is page-specific and intentionally excluded from the shared client
   // bundle. `costs` is needed by FollowBuildingButton inside the result state,
-  // and `buildingTags` labels the tenant-tag chips.
+  // and the tag namespaces serve both the chips and the picker in the result.
   const messages = await getMessages();
-  const clientMessages = pickMessages(messages, ['checker', 'costs', 'buildingTags']);
+  const clientMessages = pickMessages(messages, [
+    'checker',
+    'costs',
+    'buildingTags',
+    'buildingTagPicker',
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="relative flex-1 overflow-hidden bg-muted/30 pt-24">
+      <main className="relative flex-1 bg-muted/30 pt-24">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent" />
         <div className="relative container mx-auto px-4 py-8 sm:py-12">
           <NextIntlClientProvider messages={clientMessages}>
