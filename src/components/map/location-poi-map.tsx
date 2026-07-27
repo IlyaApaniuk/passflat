@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
 import { cn } from '@/lib/utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -132,7 +133,7 @@ export default function LocationPoiMap({
     <div className="relative h-[420px] w-full overflow-hidden rounded-xl border">
       <MapGL
         initialViewState={{ latitude: lat, longitude: lng, zoom: 15 }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={MAP_STYLE_URL}
         mapboxAccessToken={MAPBOX_TOKEN}
         attributionControl={false}
         style={{ width: '100%', height: '100%' }}
@@ -162,10 +163,17 @@ export default function LocationPoiMap({
             >
               <button
                 type="button"
-                className="rounded-full border-2 border-white bg-foreground px-2 py-1 text-[11px] font-bold tabular-nums text-background shadow-md transition-transform hover:scale-110"
+                className="flex items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-md transition-transform hover:scale-110"
+                style={{
+                  width: MAP_PIN.radius * 2,
+                  height: MAP_PIN.radius * 2,
+                  background: MAP_COLORS.pinFill,
+                  border: `${MAP_PIN.strokeWidth}px solid ${MAP_COLORS.pinStroke}`,
+                  color: MAP_COLORS.pinText,
+                }}
                 aria-label={neighbour.address}
               >
-                {neighbour.totalMedian == null ? '—' : formatMoney(neighbour.totalMedian)}
+                {neighbour.totalMedian == null ? '—' : pinLabel(neighbour.totalMedian)}
               </button>
             </Marker>
           ))}
