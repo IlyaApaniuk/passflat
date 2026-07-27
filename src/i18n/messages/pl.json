@@ -880,7 +880,15 @@
       "emptyTitle": "Nikt jeszcze nie udostępnił kosztów tego budynku. Bądź pierwszy.",
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
-      "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek."
+      "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
+      "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
+      "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
+      "insideTitle": "W pełnym rozbiciu:",
+      "inside": {
+        "utilities": "Prąd, gaz, woda, ogrzewanie i internet — osobno",
+        "deposit": "Ile wynosiła kaucja i czy wszystkim ją zwrócono",
+        "position": "Gdzie ten budynek mieści się w rozpiętości cen dzielnicy"
+      }
     },
     "map": {
       "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
@@ -920,7 +928,7 @@
     },
     "tellUs": {
       "title": "Mieszkałeś w tym budynku?",
-      "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda. Pół minuty.",
+      "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda.",
       "cta": "Opisz budynek"
     }
   },

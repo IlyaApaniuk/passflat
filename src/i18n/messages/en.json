@@ -880,7 +880,15 @@
       "emptyTitle": "No one has shared costs for this building yet. Be the first.",
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
-      "followHint": "Not ready to share? Follow the building for updates."
+      "followHint": "Not ready to share? Follow the building for updates.",
+      "cheaperThanDistrict": "{percent}% below the {district} median",
+      "pricierThanDistrict": "{percent}% above the {district} median",
+      "insideTitle": "Inside the full breakdown:",
+      "inside": {
+        "utilities": "Electricity, gas, water, heating and internet, itemised",
+        "deposit": "What the deposit was and whether everyone got it back",
+        "position": "Where this building sits in the district's spread"
+      }
     },
     "map": {
       "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
@@ -920,7 +928,7 @@
     },
     "tellUs": {
       "title": "Lived in this building?",
-      "body": "Tick what is worth knowing: sound, heating, the lift. Half a minute.",
+      "body": "Tick what is worth knowing: sound, heating, the lift.",
       "cta": "Describe it"
     }
   },

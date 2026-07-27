@@ -111,6 +111,9 @@ describe('aggregateLocationCheckerCosts', () => {
       ]),
     ).toEqual({
       totalMedian: 4_200,
+      // Filled in by the route, which knows the building's district.
+      districtMedian: null,
+      districtName: null,
       rentMedian: 3_300,
       expensesMedian: 900,
       reportCount: 3,

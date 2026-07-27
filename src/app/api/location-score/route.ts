@@ -23,6 +23,7 @@ import {
   type LocationCheckerTags,
 } from '@/lib/location-checker';
 import { aggregateTagVotes } from '@/lib/building-tags';
+import { getDistrictCostStats } from '@/lib/cost-baselines';
 import { haversineMeters, SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
 import { findNuisances } from '@/lib/nuisances';
 import { boundingBoxAround, computeLocationScoreFromDb } from '@/lib/poi-lookup';
@@ -424,12 +425,26 @@ async function findTenantTags(buildingId: string): Promise<LocationCheckerTags |
   return summary.tags.length > 0 ? summary : null;
 }
 
+/** The building's own costs, placed against its district. */
+async function summariseCosts(building: CheckerBuilding) {
+  const costs = aggregateLocationCheckerCosts(building.costReports);
+  if (!costs || !building.districtId) return costs;
+
+  const district = await getDistrictCostStats(building.districtId);
+  return {
+    ...costs,
+    districtMedian: district.total.median,
+    districtName: building.district?.nameKey ?? null,
+  };
+}
+
 function toResponse(
   building: CheckerBuilding,
   score: { overall: number; categories: Prisma.JsonValue; computedAt: Date },
   neighbours: LocationCheckerNeighbour[],
   nuisances: LocationCheckerResponse['nuisances'],
   tenantTags: LocationCheckerTags | null,
+  costs: LocationCheckerResponse['costs'],
 ): LocationCheckerResponse {
   return {
     building: {
@@ -447,7 +462,7 @@ function toResponse(
       categories: score.categories,
       computedAt: score.computedAt,
     },
-    costs: aggregateLocationCheckerCosts(building.costReports),
+    costs: costs,
     neighbours,
     nuisances,
     tenantTags,
@@ -518,17 +533,18 @@ export async function POST(request: NextRequest) {
     return jsonError('INTERNAL_ERROR', 'Could not check this address.', 500);
   }
 
-  const [score, neighbours, nuisances, tenantTags] = await Promise.all([
+  const [score, neighbours, nuisances, tenantTags, costs] = await Promise.all([
     getOrComputeScore(building),
     findNeighboursWithCosts(building),
     findBuildingNuisances(building),
     findTenantTags(building.id),
+    summariseCosts(building),
   ]);
   if (!score) {
     return jsonError('LOCATION_SCORE_UNAVAILABLE', 'Location score unavailable.', 503);
   }
 
-  return NextResponse.json(toResponse(building, score, neighbours, nuisances, tenantTags));
+  return NextResponse.json(toResponse(building, score, neighbours, nuisances, tenantTags, costs));
 }
 
 /**
@@ -564,12 +580,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const [neighbours, nuisances, tenantTags] = await Promise.all([
+  const [neighbours, nuisances, tenantTags, costs] = await Promise.all([
     findNeighboursWithCosts(building),
     findBuildingNuisances(building),
     findTenantTags(building.id),
+    summariseCosts(building),
   ]);
   return NextResponse.json(
-    toResponse(building, building.locationScore, neighbours, nuisances, tenantTags),
+    toResponse(building, building.locationScore, neighbours, nuisances, tenantTags, costs),
   );
 }

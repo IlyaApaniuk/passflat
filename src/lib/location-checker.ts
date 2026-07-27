@@ -41,6 +41,13 @@ export interface LocationCheckerCostReport {
 
 export interface LocationCheckerCosts {
   totalMedian: number | null;
+  /**
+   * The district's median, so the building's figure can be stated as a verdict
+   * rather than a number. "5 800 zł" answers nothing on its own; "12% above the
+   * district" is the thing a reader actually wanted to know.
+   */
+  districtMedian: number | null;
+  districtName: string | null;
   rentMedian: number | null;
   expensesMedian: number | null;
   reportCount: number;
@@ -320,6 +327,8 @@ export function aggregateLocationCheckerCosts(
 
   return {
     totalMedian: median(reports.map((report) => finiteNumber(report.totalMonthlyAvg))),
+    districtMedian: null,
+    districtName: null,
     rentMedian: median(reports.map((report) => finiteNumber(report.rent))),
     expensesMedian: median(
       reports.map((report) => {

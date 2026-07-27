@@ -114,6 +114,8 @@ interface CheckerPayload {
   };
   costs: null | {
     totalMedian: number | null;
+    districtMedian: number | null;
+    districtName: string | null;
     rentMedian: number | null;
     expensesMedian: number | null;
     reportCount: number;
@@ -632,6 +634,22 @@ export function CheckerClient({
     return `${distanceFormatter.format(meters / 1000)} km`;
   };
 
+  /**
+   * The building against its district, as a verdict. Withheld under 3% — at that
+   * distance "pricier" is noise dressed up as a finding.
+   */
+  const districtVerdict = (() => {
+    const costs = result?.costs;
+    if (!costs?.totalMedian || !costs.districtMedian || !costs.districtName) return null;
+    const delta = (costs.totalMedian - costs.districtMedian) / costs.districtMedian;
+    if (Math.abs(delta) < 0.03) return null;
+    return {
+      cheaper: delta < 0,
+      percent: Math.round(Math.abs(delta) * 100),
+      district: costs.districtName,
+    };
+  })();
+
   // A building with no coordinates cannot be placed on a map; its score would
   // have been unavailable anyway, so the toggle simply does not appear.
   const canShowMap = result?.building.lat != null && result?.building.lng != null;
@@ -923,6 +941,25 @@ export function CheckerClient({
                           </span>
                         </p>
                       )}
+                      {districtVerdict && (
+                        <p className="mt-1 text-sm font-medium">
+                          {districtVerdict.cheaper ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              {t('costs.cheaperThanDistrict', {
+                                percent: districtVerdict.percent,
+                                district: districtVerdict.district,
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-500">
+                              {t('costs.pricierThanDistrict', {
+                                percent: districtVerdict.percent,
+                                district: districtVerdict.district,
+                              })}
+                            </span>
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -958,7 +995,21 @@ export function CheckerClient({
                         : t('costs.sourceScraped', { count: result.costs.reportCount })}
                   </p>
 
-                  <Button asChild className="mt-5 w-full sm:w-auto">
+                  <div className="mt-4 rounded-xl border border-dashed bg-background/50 p-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t('costs.insideTitle')}
+                    </p>
+                    <ul className="mt-1.5 space-y-1 text-sm">
+                      {(['utilities', 'deposit', 'position'] as const).map((item) => (
+                        <li key={item} className="flex items-start gap-2">
+                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          {t(`costs.inside.${item}`)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Button asChild className="mt-4 w-full sm:w-auto">
                     <Link
                       href={`/${citySlug}/building/${result.building.slug}`}
                       onClick={() => captureCta('building')}
