@@ -70,7 +70,8 @@
     "no": "Nie",
     "linkCopied": "Link skopiowany do schowka",
     "copyFailed": "Nie udało się skopiować linku",
-    "error": "Coś poszło nie tak"
+    "error": "Coś poszło nie tak",
+    "checkAddress": "Sprawdź adres"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -108,7 +109,9 @@
       "statsExpenses": "dodatkowe koszty",
       "statsExpensesUnit": "zł/mies",
       "statsDeposit": "kaucja · zwrot {pct}%",
-      "statsAvgRating": "Śr. ocena"
+      "statsAvgRating": "Śr. ocena",
+      "submitCostsCta": "Dodaj swoje koszty",
+      "checkAddressCta": "Sprawdź adres"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
@@ -318,6 +321,29 @@
       "systemsOperational": "Wszystkie systemy działają",
       "betaStatus": "Otwarta beta — Warszawa",
       "followUs": "Obserwuj nas"
+    },
+    "checkAddress": {
+      "badge": "Za darmo, bez rejestracji",
+      "title": "Sprawdź adres,",
+      "titleHighlight": "zanim podpiszesz umowę.",
+      "subtitle": "Wpisz adres w Warszawie — pokażemy, co jest w okolicy, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
+      "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
+      "cta": "Sprawdź",
+      "pointTransit": "Transport i metro",
+      "pointAmenities": "Sklepy, apteki, parki",
+      "pointCosts": "Realne koszty najemców",
+      "free": "Za darmo · bez konta · 15 sekund"
+    },
+    "tools": {
+      "title": "Narzędzia",
+      "titleHighlight": "dla najemcy",
+      "subtitle": "Policz pełny koszt i sfinalizuj umowę na gotowych dokumentach.",
+      "calculatorTitle": "Kalkulator kosztów",
+      "calculatorDescription": "Policz pełny koszt najmu w dzielnicy: czynsz, opłaty i kaucja — zanim podpiszesz umowę.",
+      "calculatorCta": "Policz",
+      "templatesTitle": "Wzory dokumentów",
+      "templatesDescription": "Umowa najmu, protokół zdawczo-odbiorczy i wypowiedzenie — gotowe wzory po polsku.",
+      "templatesCta": "Otwórz wzory"
     }
   },
   "breadcrumbs": {
@@ -780,7 +806,7 @@
     "metaDescription": "Sprawdź dowolny adres w mieście {city}: zobacz bezpłatną ocenę lokalizacji oraz odległości do sklepów, transportu, szkół, parków i usług.",
     "badge": "Bezpłatna ocena lokalizacji",
     "title": "Sprawdź adres: {city}",
-    "subtitle": "Zobacz, co znajduje się w pobliżu, jak wygodna jest lokalizacja i czy mamy już dane o realnych miesięcznych kosztach w tym budynku.",
+    "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
     "searchLabel": "Adres budynku",
     "searchPlaceholder": "Zacznij wpisywać adres…",
     "searchHint": "Wybierz pełny adres z numerem budynku. Checker obejmuje obecnie Warszawę.",

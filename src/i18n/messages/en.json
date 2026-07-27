@@ -70,7 +70,8 @@
     "no": "No",
     "linkCopied": "Link copied to clipboard",
     "copyFailed": "Failed to copy link",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "checkAddress": "Check an address"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -108,7 +109,9 @@
       "statsExpenses": "costs on top of rent",
       "statsExpensesUnit": "zł/mo",
       "statsDeposit": "deposit · {pct}% returned",
-      "statsAvgRating": "Avg Rating"
+      "statsAvgRating": "Avg Rating",
+      "submitCostsCta": "Add your costs",
+      "checkAddressCta": "Check an address"
     },
     "howItWorks": {
       "title": "How Passflat Works",
@@ -318,6 +321,29 @@
       "systemsOperational": "All systems operational",
       "betaStatus": "Open beta — Warsaw",
       "followUs": "Follow us"
+    },
+    "checkAddress": {
+      "badge": "Free, no sign-up",
+      "title": "Check the address",
+      "titleHighlight": "before you sign the lease.",
+      "subtitle": "Enter any Warsaw address — see what's nearby, how convenient the location is, and what tenants actually pay in that building.",
+      "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
+      "cta": "Check",
+      "pointTransit": "Transit and metro",
+      "pointAmenities": "Shops, pharmacies, parks",
+      "pointCosts": "What tenants really pay",
+      "free": "Free · no account · 15 seconds"
+    },
+    "tools": {
+      "title": "Tools",
+      "titleHighlight": "for renting",
+      "subtitle": "Work out the full cost and close the deal with ready-made documents.",
+      "calculatorTitle": "Cost calculator",
+      "calculatorDescription": "Estimate the full cost of renting in a district: rent, utilities and deposit — before you sign.",
+      "calculatorCta": "Calculate",
+      "templatesTitle": "Document templates",
+      "templatesDescription": "Lease agreement, handover protocol and termination notice — ready-made templates in Polish and English.",
+      "templatesCta": "Open templates"
     }
   },
   "breadcrumbs": {
@@ -780,7 +806,7 @@
     "metaDescription": "Check any address in {city}: see a free location score and distances to shops, transport, schools, parks and everyday services.",
     "badge": "Free location score",
     "title": "Check an address: {city}",
-    "subtitle": "See what is nearby, how convenient the location is and whether we already have real monthly cost data for the building.",
+    "subtitle": "See what's nearby, how convenient the location is and what tenants really pay in this building.",
     "searchLabel": "Building address",
     "searchPlaceholder": "Start typing an address…",
     "searchHint": "Choose a complete address with a building number. The checker currently covers Warsaw.",

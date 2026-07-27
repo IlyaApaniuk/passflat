@@ -6,7 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { Calculator, FileText, Plus, Receipt, Sparkles } from 'lucide-react';
+import { MapPinned, Receipt, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -30,7 +30,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
   // then. The current headline is the loss-aversion framing.)
-  const onCtaClick = (cta: 'costs' | 'calculator' | 'templates' | 'listing') =>
+  const onCtaClick = (cta: 'submit_costs' | 'check_address') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
@@ -110,49 +110,30 @@ export function Hero({ stats: liveStats }: HeroProps) {
             {t('subtitle')}
           </p>
 
+          {/* Two of the three transparency actions. Reviews (pillar 2) take the
+              third slot once built; the calculator and document templates moved
+              to their own section so the hero states actions, not the toolbox. */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            {/* Primary CTA — cost data is the product wedge. Data is open to all,
-                so this always lands on the cost map (no contribution gate). */}
+            {/* Primary CTA — the contribution that powers the whole dataset. */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
-              <Link href={`/${DEFAULT_CITY}/costs`} onClick={() => onCtaClick('costs')}>
+              <Link
+                href={`/${DEFAULT_CITY}/costs/submit`}
+                onClick={() => onCtaClick('submit_costs')}
+              >
                 <Receipt className="mr-2 h-4 w-4" />
-                {t('costsCta')}
+                {t('submitCostsCta')}
               </Link>
             </Button>
-            {/* Secondary CTA — the cost calculator (a strong data-first hook). */}
+            {/* Secondary CTA — the free probe: instant value before any ask. */}
             <Button
               size="lg"
               variant="outline"
               className="group h-12 rounded-full px-8 text-base"
               asChild
             >
-              <Link href={`/${DEFAULT_CITY}/calculator`} onClick={() => onCtaClick('calculator')}>
-                <Calculator className="mr-2 h-4 w-4" />
-                {t('calculatorCta')}
-              </Link>
-            </Button>
-            {/* Document templates — close the deal once the costs are known. */}
-            <Button
-              size="lg"
-              variant="outline"
-              className="group h-12 rounded-full px-8 text-base"
-              asChild
-            >
-              <Link href="/resources" onClick={() => onCtaClick('templates')}>
-                <FileText className="mr-2 h-4 w-4" />
-                {t('templatesCta')}
-              </Link>
-            </Button>
-            {/* Tertiary CTA — post a listing. */}
-            <Button
-              size="lg"
-              variant="outline"
-              className="group h-12 rounded-full px-8 text-base"
-              asChild
-            >
-              <Link href="/create-listing" onClick={() => onCtaClick('listing')}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('addCta')}
+              <Link href={`/${DEFAULT_CITY}/check`} onClick={() => onCtaClick('check_address')}>
+                <MapPinned className="mr-2 h-4 w-4" />
+                {t('checkAddressCta')}
               </Link>
             </Button>
           </div>
