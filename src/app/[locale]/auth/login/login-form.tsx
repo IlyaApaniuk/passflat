@@ -54,7 +54,13 @@ export function LoginForm({ next, error: initialError }: { next?: string; error?
       trigger: next ? 'required' : 'voluntary',
       // Which gated flow forced the login wall — lets the funnel isolate the
       // cost-contribution login drop from other required-auth flows.
-      next_kind: next ? (next.includes('/costs/submit') ? 'cost_submit' : 'other') : 'none',
+      next_kind: next
+        ? next.includes('/costs/submit')
+          ? 'cost_submit'
+          : next.includes('/check')
+            ? 'checker_follow'
+            : 'other'
+        : 'none',
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

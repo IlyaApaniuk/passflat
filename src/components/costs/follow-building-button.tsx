@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Bell, BellRing, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, usePathname } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
+import { routing } from '@/i18n/routing';
 
 // Only surface the follower count once it's meaningful social proof — a lone
 // "1 following" reads as empty on cold-start.
@@ -22,11 +23,15 @@ const FOLLOWER_COUNT_MIN = 3;
 export function FollowBuildingButton({
   buildingId,
   citySlug,
+  returnTo,
 }: {
   buildingId: string;
   citySlug: string;
+  /** Internal path to restore after login (including a checker query string). */
+  returnTo?: string;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const posthog = usePostHog();
@@ -68,10 +73,22 @@ export function FollowBuildingButton({
         method: next ? 'POST' : 'DELETE',
       });
       if (res.status === 401) {
-        // Not logged in — bounce to login and come back to this building.
+        // Not logged in — bounce to login and restore the exact checker/building
+        // result afterwards. Reject protocol-relative/external destinations.
         setFollowing(false);
         setFollowerCount((c) => Math.max(0, c - 1)); // undo the optimistic bump
-        router.push(`/auth/login?next=${pathname}` as never);
+        const requestedReturn =
+          returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : pathname;
+        const alreadyLocalized = routing.locales.some(
+          (supportedLocale) =>
+            requestedReturn === `/${supportedLocale}` ||
+            requestedReturn.startsWith(`/${supportedLocale}/`),
+        );
+        const localizedReturn =
+          locale !== routing.defaultLocale && !alreadyLocalized
+            ? `/${locale}${requestedReturn}`
+            : requestedReturn;
+        router.push(`/auth/login?next=${encodeURIComponent(localizedReturn)}` as never);
         return;
       }
       if (!res.ok) throw new Error('follow request failed');
