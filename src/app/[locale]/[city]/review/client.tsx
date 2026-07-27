@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { AlertCircle, Loader2, MapPin, MessageSquarePlus } from 'lucide-react';
+import { AlertCircle, Loader2, MessageSquarePlus } from 'lucide-react';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
 import { BUILDING_TAGS } from '@/lib/building-tags';
@@ -212,11 +212,6 @@ export function ReviewClient({
 
       {building && (
         <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-1.5 px-1 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 shrink-0" />
-            {building.address}
-          </div>
-
           {/* When others have already spoken their chips lead: they deliver the
               page's promise and double as a prompt, which makes recalling your
               own experience easier than facing a blank list of 22. */}

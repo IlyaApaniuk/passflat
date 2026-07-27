@@ -697,10 +697,15 @@ export function CheckerClient({
                   <MapPin className="h-4 w-4 shrink-0" />
                   {t('result.checkedAddress')}
                 </p>
-                <h2 className="mt-1 truncate text-lg font-semibold">{result.building.address}</h2>
-                {result.building.district && (
-                  <p className="text-sm text-muted-foreground">{result.building.district}</p>
-                )}
+                <h2 className="mt-1 truncate text-lg font-semibold">
+                  {result.building.address}
+                  {result.building.district && (
+                    <span className="font-normal text-muted-foreground">
+                      {' · '}
+                      {result.building.district}
+                    </span>
+                  )}
+                </h2>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={share}>
                 <Share2 className="h-4 w-4" />

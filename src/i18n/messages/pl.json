@@ -2396,7 +2396,7 @@
   },
   "buildingTagPicker": {
     "title": "Co warto wiedzieć o tym budynku?",
-    "subtitle": "Zaznacz, co zauważyłeś mieszkając przy {address}. Zajmie pół minuty.",
+    "subtitle": "Zaznacz, co zauważyłeś mieszkając przy {address}.",
     "submit": "{count, plural, =0 {Zaznacz co najmniej jedno} one {Wyślij # uwagę} few {Wyślij # uwagi} many {Wyślij # uwag} other {Wyślij # uwag}}",
     "privacy": "Bez imienia i bez konta.",
     "savedTitle": "Dzięki, zapisane",
