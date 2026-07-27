@@ -53,4 +53,9 @@ export const SHARED_CLIENT_NAMESPACES = [
   'favorites',
   'share',
   'upload',
+  // Building tags are picked on the cost-submit thank-you screen, the review
+  // page and the checker; ~35 short strings, so a scoped provider on each of
+  // those surfaces would cost more plumbing than the bytes it saves.
+  'buildingTags',
+  'buildingTagPicker',
 ] as const;

@@ -8,6 +8,12 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
+  Ambulance,
+  Beer,
+  Flame,
+  TrainTrack,
+  Music,
+  Users,
   Bus,
   CheckCircle2,
   GraduationCap,
@@ -73,6 +79,21 @@ interface Neighbour {
   reportCount: number;
 }
 
+interface Nuisance {
+  key: string;
+  nearestM: number;
+  name: string | null;
+  count: number;
+  report: 'nearest' | 'count';
+}
+
+interface TenantTag {
+  key: string;
+  sentiment: 'good' | 'neutral' | 'bad';
+  votes: number;
+  costReportVotes: number;
+}
+
 interface CheckerPayload {
   building: {
     id: string;
@@ -98,6 +119,12 @@ interface CheckerPayload {
     sourceKind: 'tenant' | 'mixed' | 'scraped';
   };
   neighbours?: Neighbour[];
+  nuisances?: Nuisance[];
+  tenantTags?: {
+    tags: TenantTag[];
+    voters: number;
+    costReportVoters: number;
+  } | null;
 }
 
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
@@ -117,6 +144,20 @@ interface CheckerClientProps {
   cityBounds: CityBounds | null;
   initialPlaceId: string | null;
 }
+
+const NUISANCE_ICONS: Record<string, LucideIcon> = {
+  fireStation: Flame,
+  hospital: Ambulance,
+  railway: TrainTrack,
+  nightclub: Music,
+  bars: Beer,
+};
+
+const TAG_SENTIMENT_STYLES: Record<string, string> = {
+  good: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  neutral: 'border-border bg-muted/40 text-foreground',
+  bad: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-500',
+};
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   supermarket: ShoppingBasket,
@@ -808,6 +849,90 @@ export function CheckerClient({
                 {t('result.poweredBy')}
               </p>
             </Card>
+
+            {/* Noise sources. Needs no tenant input, so unlike the tag block
+                below it has something to say on the very first check. */}
+            {result.nuisances && result.nuisances.length > 0 && (
+              <Card>
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-lg">{t('nuisances.title')}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{t('nuisances.subtitle')}</p>
+                </CardHeader>
+                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
+                  {result.nuisances.map((nuisance) => {
+                    const Icon = NUISANCE_ICONS[nuisance.key] ?? AlertCircle;
+                    return (
+                      <div
+                        key={nuisance.key}
+                        className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3.5"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                          <Icon className="h-[18px] w-[18px] text-amber-600 dark:text-amber-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{t(`nuisances.${nuisance.key}`)}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            {nuisance.report === 'count'
+                              ? t('nuisances.count', {
+                                  count: nuisance.count,
+                                  distance: formatDistance(nuisance.nearestM),
+                                })
+                              : `${nuisance.name ? `${nuisance.name} · ` : ''}${formatDistance(nuisance.nearestM)}`}
+                            {' · '}
+                            {t(`nuisances.${nuisance.key}Note`)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Rendered only when something is publishable: a block reading
+                "nobody has said anything" is what makes a product look dead. */}
+            {result.tenantTags && result.tenantTags.tags.length > 0 && (
+              <Card>
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-lg">{t('tenantTags.title')}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {result.tenantTags.voters === 1
+                      ? t('tenantTags.singleVoter')
+                      : t('tenantTags.voters', {
+                          count: result.tenantTags.voters,
+                          confirmed: result.tenantTags.costReportVoters,
+                        })}
+                  </p>
+                </CardHeader>
+                <CardContent className="px-4 sm:px-6">
+                  <div className="flex flex-wrap gap-2">
+                    {result.tenantTags.tags.map((tag) => (
+                      <span
+                        key={tag.key}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm',
+                          TAG_SENTIMENT_STYLES[tag.sentiment] ?? TAG_SENTIMENT_STYLES.neutral,
+                        )}
+                      >
+                        {t(`buildingTags.tags.${tag.key}`)}
+                        {tag.votes > 1 && (
+                          <span className="text-xs tabular-nums opacity-70">{tag.votes}</span>
+                        )}
+                        {tag.costReportVotes > 0 && (
+                          <span
+                            title={t('tenantTags.confirmedHint')}
+                            className="inline-flex items-center gap-0.5 rounded-full bg-background/60 px-1.5 text-[10px] font-medium"
+                          >
+                            <Users className="h-3 w-3" />
+                            {t('tenantTags.confirmedChip')}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {result.costs ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">

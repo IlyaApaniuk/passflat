@@ -20,6 +20,7 @@ import {
   categorizeTags,
   type BoundingBox,
 } from '../src/lib/location-score';
+import { NUISANCES, categorizeNuisanceTags } from '../src/lib/nuisances';
 
 const prisma = new PrismaClient();
 
@@ -111,7 +112,9 @@ function toRows(citySlug: string, elements: OverpassElement[]): PoiRow[] {
     if (lat == null || lng == null) continue;
 
     const tags = element.tags ?? {};
-    for (const category of categorizeTags(tags)) {
+    // Scoring categories and nuisances share the table; `scoreCategorizedPois`
+    // only ever looks at its own keys, so the extra rows are inert for the score.
+    for (const category of [...categorizeTags(tags), ...categorizeNuisanceTags(tags)]) {
       rows.push({
         citySlug,
         osmType: element.type,
@@ -182,7 +185,9 @@ async function main() {
   // Warsaw bbox reliably 504s on the public instances; split up, each part
   // answers in seconds. Each filter is written as soon as it lands, so a run
   // that dies halfway still leaves the database better off than it found it.
-  const filters = [...new Set(CATEGORIES.flatMap((category) => category.filters))];
+  const filters = [
+    ...new Set([...CATEGORIES, ...NUISANCES].flatMap((category) => category.filters)),
+  ];
   const importedAt = new Date();
   const failed: string[] = [];
   const written: Record<string, number> = {};

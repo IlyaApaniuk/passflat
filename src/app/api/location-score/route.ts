@@ -20,8 +20,11 @@ import {
   placeIdSlugSuffix,
   type LocationCheckerInput,
   type LocationCheckerResponse,
+  type LocationCheckerTags,
 } from '@/lib/location-checker';
+import { aggregateTagVotes } from '@/lib/building-tags';
 import { haversineMeters, SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
+import { findNuisances } from '@/lib/nuisances';
 import { boundingBoxAround, computeLocationScoreFromDb } from '@/lib/poi-lookup';
 import { prisma } from '@/lib/prisma';
 import { generateBuildingSlug } from '@/lib/slugify';
@@ -397,10 +400,36 @@ async function findNeighboursWithCosts(
     .slice(0, NEIGHBOUR_LIMIT);
 }
 
+/** What tenants reported, or null when nothing clears the publishing rules. */
+async function findTenantTags(buildingId: string): Promise<LocationCheckerTags | null> {
+  const votes = await prisma.buildingTag.findMany({
+    where: { buildingId, isVisible: true },
+    select: { tagKey: true, source: true, voterKey: true },
+  });
+  if (votes.length === 0) return null;
+
+  const costReportVoters = new Set(
+    votes.filter((v) => v.source === 'cost_report').map((v) => v.voterKey),
+  );
+  const summary = aggregateTagVotes(
+    votes.map((v) => ({ tagKey: v.tagKey, fromCostReport: v.source === 'cost_report' })),
+    {
+      total: new Set(votes.map((v) => v.voterKey)).size,
+      fromCostReports: costReportVoters.size,
+    },
+  );
+
+  // Everything the voters said may still be held back — a lone negative, for
+  // instance — and a block with no chips is worse than no block.
+  return summary.tags.length > 0 ? summary : null;
+}
+
 function toResponse(
   building: CheckerBuilding,
   score: { overall: number; categories: Prisma.JsonValue; computedAt: Date },
   neighbours: LocationCheckerNeighbour[],
+  nuisances: LocationCheckerResponse['nuisances'],
+  tenantTags: LocationCheckerTags | null,
 ): LocationCheckerResponse {
   return {
     building: {
@@ -420,7 +449,17 @@ function toResponse(
     },
     costs: aggregateLocationCheckerCosts(building.costReports),
     neighbours,
+    nuisances,
+    tenantTags,
   };
+}
+
+/** Nuisances need coordinates; a building without them has no score either. */
+async function findBuildingNuisances(building: CheckerBuilding) {
+  if (building.lat == null || building.lng == null) return [];
+  const origin = { lat: Number(building.lat), lng: Number(building.lng) };
+  if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return [];
+  return findNuisances(building.city.slug, origin);
 }
 
 export async function POST(request: NextRequest) {
@@ -479,15 +518,17 @@ export async function POST(request: NextRequest) {
     return jsonError('INTERNAL_ERROR', 'Could not check this address.', 500);
   }
 
-  const [score, neighbours] = await Promise.all([
+  const [score, neighbours, nuisances, tenantTags] = await Promise.all([
     getOrComputeScore(building),
     findNeighboursWithCosts(building),
+    findBuildingNuisances(building),
+    findTenantTags(building.id),
   ]);
   if (!score) {
     return jsonError('LOCATION_SCORE_UNAVAILABLE', 'Location score unavailable.', 503);
   }
 
-  return NextResponse.json(toResponse(building, score, neighbours));
+  return NextResponse.json(toResponse(building, score, neighbours, nuisances, tenantTags));
 }
 
 /**
@@ -523,7 +564,12 @@ export async function GET(request: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
+  const [neighbours, nuisances, tenantTags] = await Promise.all([
+    findNeighboursWithCosts(building),
+    findBuildingNuisances(building),
+    findTenantTags(building.id),
+  ]);
   return NextResponse.json(
-    toResponse(building, building.locationScore, await findNeighboursWithCosts(building)),
+    toResponse(building, building.locationScore, neighbours, nuisances, tenantTags),
   );
 }

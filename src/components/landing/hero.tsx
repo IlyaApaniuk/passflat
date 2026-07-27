@@ -6,7 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { MapPinned, Receipt, Sparkles } from 'lucide-react';
+import { MapPinned, MessageSquarePlus, Receipt, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -30,7 +30,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
   // then. The current headline is the loss-aversion framing.)
-  const onCtaClick = (cta: 'submit_costs' | 'check_address') =>
+  const onCtaClick = (cta: 'submit_costs' | 'check_address' | 'reviews') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
@@ -110,9 +110,9 @@ export function Hero({ stats: liveStats }: HeroProps) {
             {t('subtitle')}
           </p>
 
-          {/* Two of the three transparency actions. Reviews (pillar 2) take the
-              third slot once built; the calculator and document templates moved
-              to their own section so the hero states actions, not the toolbox. */}
+          {/* The three transparency actions. The calculator and document
+              templates live in their own section so the hero states actions,
+              not the toolbox. */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             {/* Primary CTA — the contribution that powers the whole dataset. */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
@@ -134,6 +134,18 @@ export function Hero({ stats: liveStats }: HeroProps) {
               <Link href={`/${DEFAULT_CITY}/check`} onClick={() => onCtaClick('check_address')}>
                 <MapPinned className="mr-2 h-4 w-4" />
                 {t('checkAddressCta')}
+              </Link>
+            </Button>
+            {/* Pillar 2 — building facts from the people who lived there. */}
+            <Button
+              size="lg"
+              variant="outline"
+              className="group h-12 rounded-full px-8 text-base"
+              asChild
+            >
+              <Link href={`/${DEFAULT_CITY}/review`} onClick={() => onCtaClick('reviews')}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                {t('reviewsCta')}
               </Link>
             </Button>
           </div>

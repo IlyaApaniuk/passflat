@@ -60,6 +60,27 @@ export interface LocationCheckerNeighbour {
   reportCount: number;
 }
 
+export interface LocationCheckerNuisance {
+  key: string;
+  nearestM: number;
+  name: string | null;
+  count: number;
+  report: 'nearest' | 'count';
+}
+
+export interface LocationCheckerTag {
+  key: string;
+  sentiment: 'good' | 'neutral' | 'bad';
+  votes: number;
+  costReportVotes: number;
+}
+
+export interface LocationCheckerTags {
+  tags: LocationCheckerTag[];
+  voters: number;
+  costReportVoters: number;
+}
+
 export interface LocationCheckerResponse {
   building: {
     id: string;
@@ -84,6 +105,14 @@ export interface LocationCheckerResponse {
    * pay around here".
    */
   neighbours: LocationCheckerNeighbour[];
+  /** Noise sources nearby. Always computed — needs no tenant input. */
+  nuisances: LocationCheckerNuisance[];
+  /**
+   * What tenants reported about this building, or null when nothing is
+   * publishable yet. Null rather than an empty list so the client can drop the
+   * block entirely: an empty shelf reads as a dead product.
+   */
+  tenantTags: LocationCheckerTags | null;
 }
 
 export type LocationCheckerValidation =
