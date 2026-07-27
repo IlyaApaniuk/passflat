@@ -5,6 +5,7 @@ import {
   CENTER_IDEAL_M,
   CENTER_MAX_M,
   CENTER_WEIGHT,
+  DENSITY_WEIGHT,
   NEARBY_LIMIT,
   buildOverpassBboxQuery,
   categorizeTags,
@@ -76,14 +77,38 @@ describe('scoreCategorizedPois', () => {
     }
   });
 
-  it('picks the nearest POI per category and gives perfect score when all are at origin (no center)', () => {
+  it('reports the nearest POI per category and full proximity when all sit at the origin', () => {
     const result = scoreCategorizedPois(origin, poisAtOrigin(origin, true));
-    expect(result.overall).toBe(100);
     for (const c of result.categories) {
-      expect(c.score).toBe(100);
       expect(c.nearestM).toBe(0);
       expect(c.name).toBe(c.key);
     }
+  });
+
+  it('does not award a perfect category score to a single lone POI at the door', () => {
+    // One shop on the doorstep is not the same as a well-served street, so the
+    // density share of the score stays unearned.
+    const [withDensity] = CATEGORIES.filter((c) => c.densityRadiusM && c.densityTarget);
+    const lone = scoreCategorizedPois(origin, [
+      { ...origin, category: withDensity.key, name: 'only one' },
+    ]).categories.find((c) => c.key === withDensity.key)!;
+
+    expect(lone.score).toBeLessThan(100);
+    expect(lone.score).toBeGreaterThan(100 * (1 - DENSITY_WEIGHT) - 1);
+  });
+
+  it('reaches 100 for a category once the density target is met at the door', () => {
+    const [withDensity] = CATEGORIES.filter((c) => c.densityRadiusM && c.densityTarget);
+    const crowded = Array.from({ length: withDensity.densityTarget! }, (_, i) => ({
+      ...origin,
+      category: withDensity.key,
+      name: `poi-${i}`,
+    }));
+
+    const result = scoreCategorizedPois(origin, crowded).categories.find(
+      (c) => c.key === withDensity.key,
+    )!;
+    expect(result.score).toBe(100);
   });
 
   it('includes center category when centerCoord is provided', () => {
@@ -140,21 +165,21 @@ describe('scoreCategorizedPois', () => {
     expect([...distances].sort((a, b) => a - b)).toEqual(distances);
   });
 
-  it('center category weight affects overall score', () => {
+  it('a far city center drags the overall below the POI-only ceiling', () => {
     const farCenter = { lat: origin.lat + 0.2, lng: origin.lng };
-    const result = scoreCategorizedPois(origin, poisAtOrigin(origin), farCenter);
+    const near = scoreCategorizedPois(origin, poisAtOrigin(origin), origin).overall;
+    const far = scoreCategorizedPois(origin, poisAtOrigin(origin), farCenter).overall;
 
     const totalWeight = CATEGORIES.reduce((s, c) => s + c.weight, 0) + CENTER_WEIGHT;
     const poiWeight = CATEGORIES.reduce((s, c) => s + c.weight, 0);
-    const expectedMax = Math.round((100 * poiWeight) / totalWeight);
-    expect(result.overall).toBeLessThanOrEqual(expectedMax);
-    expect(result.overall).toBeGreaterThan(expectedMax - 2);
+    expect(far).toBeLessThan(near);
+    expect(far).toBeLessThanOrEqual(Math.round((100 * poiWeight) / totalWeight));
   });
 });
 
 describe('center scoring constants', () => {
   it('has expected ideal and max distances', () => {
-    expect(CENTER_IDEAL_M).toBe(2000);
+    expect(CENTER_IDEAL_M).toBe(1000);
     expect(CENTER_MAX_M).toBe(10000);
     expect(CENTER_WEIGHT).toBe(10);
   });

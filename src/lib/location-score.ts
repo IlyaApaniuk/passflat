@@ -18,6 +18,13 @@ export const SCORE_VERSION = 3;
 /** How many named neighbours each category keeps for the human-readable summary. */
 export const NEARBY_LIMIT = 3;
 
+/**
+ * Share of a category's score that comes from density rather than proximity.
+ * Warsaw is dense enough that proximity alone put 88% of addresses above 80,
+ * which tells a visitor nothing about whether one address beats another.
+ */
+export const DENSITY_WEIGHT = 0.45;
+
 export interface Coord {
   lat: number;
   lng: number;
@@ -30,10 +37,18 @@ export interface CategoryConfig {
   /** Predicate that decides whether a POI's tags belong to this category. */
   match: (tags: Record<string, string>) => boolean;
   weight: number;
-  /** Distance (m) at or below which the category scores 100. */
+  /** Distance (m) at or below which proximity scores 100. */
   idealM: number;
-  /** Distance (m) at or above which the category scores 0. */
+  /** Distance (m) at or above which proximity scores 0. */
   maxM: number;
+  /**
+   * Optional density component. Proximity alone cannot tell a street with one
+   * lone shop from one with ten, and in a dense city almost every address has
+   * *something* close by — which is what flattened the old scores. Where these
+   * are set, `densityTarget` POIs within `densityRadiusM` earn full marks.
+   */
+  densityRadiusM?: number;
+  densityTarget?: number;
 }
 
 export interface NearbyPoi {
@@ -68,24 +83,28 @@ export const CATEGORIES: CategoryConfig[] = [
     filters: ['["shop"="supermarket"]'],
     match: (t) => has(t, 'shop', ['supermarket']),
     weight: 20,
-    idealM: 300,
-    maxM: 1500,
+    idealM: 150,
+    maxM: 1000,
+    densityRadiusM: 1000,
+    densityTarget: 5,
   },
   {
     key: 'transitRail',
     filters: ['["railway"~"^(station|halt)$"]', '["station"="subway"]'],
     match: (t) => has(t, 'railway', ['station', 'halt']) || has(t, 'station', ['subway']),
     weight: 15,
-    idealM: 400,
-    maxM: 2000,
+    idealM: 250,
+    maxM: 1500,
   },
   {
     key: 'pharmacy',
     filters: ['["amenity"="pharmacy"]'],
     match: (t) => has(t, 'amenity', ['pharmacy']),
     weight: 12,
-    idealM: 300,
-    maxM: 1200,
+    idealM: 150,
+    maxM: 900,
+    densityRadiusM: 800,
+    densityTarget: 5,
   },
   {
     key: 'transitBasic',
@@ -99,46 +118,56 @@ export const CATEGORIES: CategoryConfig[] = [
       has(t, 'railway', ['tram_stop']) ||
       has(t, 'public_transport', ['station']),
     weight: 10,
-    idealM: 150,
-    maxM: 600,
+    idealM: 80,
+    maxM: 400,
+    densityRadiusM: 500,
+    densityTarget: 12,
   },
   {
     key: 'convenience',
     filters: ['["shop"~"^(convenience|grocery|greengrocer)$"]'],
     match: (t) => has(t, 'shop', ['convenience', 'grocery', 'greengrocer']),
     weight: 10,
-    idealM: 200,
-    maxM: 800,
+    idealM: 100,
+    maxM: 500,
+    densityRadiusM: 600,
+    densityTarget: 10,
   },
   {
     key: 'dining',
     filters: ['["amenity"~"^(cafe|restaurant|bar|fast_food)$"]'],
     match: (t) => has(t, 'amenity', ['cafe', 'restaurant', 'bar', 'fast_food']),
     weight: 8,
-    idealM: 250,
-    maxM: 1000,
+    idealM: 100,
+    maxM: 600,
+    densityRadiusM: 800,
+    densityTarget: 30,
   },
   {
     key: 'education',
     filters: ['["amenity"~"^(school|kindergarten)$"]'],
     match: (t) => has(t, 'amenity', ['school', 'kindergarten']),
     weight: 8,
-    idealM: 500,
-    maxM: 2000,
+    idealM: 250,
+    maxM: 1500,
+    densityRadiusM: 1200,
+    densityTarget: 6,
   },
   {
     key: 'parks',
     filters: ['["leisure"~"^(park|garden)$"]'],
     match: (t) => has(t, 'leisure', ['park', 'garden']),
     weight: 7,
-    idealM: 300,
-    maxM: 1200,
+    idealM: 150,
+    maxM: 800,
+    densityRadiusM: 1000,
+    densityTarget: 6,
   },
 ];
 
 /** Weight for the "center" virtual category (not in CATEGORIES because it has no Overpass query). */
 export const CENTER_WEIGHT = 10;
-export const CENTER_IDEAL_M = 2000;
+export const CENTER_IDEAL_M = 1000;
 export const CENTER_MAX_M = 10000;
 
 const EARTH_RADIUS_M = 6_371_000;
@@ -175,6 +204,20 @@ export interface CategorizedPoi extends Coord {
   name: string | null;
 }
 
+/** Mixes the density component into a category's proximity score. */
+function blendDensity(
+  category: CategoryConfig,
+  proximity: number,
+  matches: Array<{ distanceM: number }>,
+): number {
+  const { densityRadiusM, densityTarget } = category;
+  if (!densityRadiusM || !densityTarget) return proximity;
+
+  const within = matches.filter((match) => match.distanceM <= densityRadiusM).length;
+  const density = Math.min(100, (within / densityTarget) * 100);
+  return Math.round(proximity * (1 - DENSITY_WEIGHT) + density * DENSITY_WEIGHT);
+}
+
 function scoreOneCategory(
   origin: Coord,
   category: CategoryConfig,
@@ -186,13 +229,14 @@ function scoreOneCategory(
     .sort((a, b) => a.distanceM - b.distanceM);
 
   const nearest = matches[0];
+  const proximity =
+    nearest === undefined
+      ? 0
+      : scoreFromDistance(nearest.distanceM, category.idealM, category.maxM);
 
   return {
     key: category.key,
-    score:
-      nearest === undefined
-        ? 0
-        : scoreFromDistance(nearest.distanceM, category.idealM, category.maxM),
+    score: blendDensity(category, proximity, matches),
     nearestM: nearest === undefined ? null : Math.round(nearest.distanceM),
     name: nearest?.name ?? null,
     nearby: matches
