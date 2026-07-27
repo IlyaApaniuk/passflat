@@ -875,6 +875,22 @@
       "emptyDescription": "Поділися своїми витратами й відкрий детальні розбивки по всьому місту {city}.",
       "contribute": "Поділитися витратами й відкрити деталі",
       "followHint": "Ще не готовий ділитися? Стеж за оновленнями будинку."
+    },
+    "map": {
+      "title": "Що навколо адреси",
+      "subtitle": "Основні об’єкти поруч на карті.",
+      "subtitleWithCosts": "Об’єкти поруч і {count, plural, one {# будинок} few {# будинки} many {# будинків} other {# будинків}} поблизу, де відомо, скільки платять.",
+      "reports": "{count, plural, one {# звіт} few {# звіти} many {# звітів} other {# звітів}}",
+      "openBuilding": "Дивитися витрати →",
+      "attribution": "© Mapbox · OpenStreetMap",
+      "layers": {
+        "costs": "Витрати",
+        "transit": "Транспорт",
+        "shops": "Магазини",
+        "dining": "Їжа",
+        "education": "Школи",
+        "parks": "Парки"
+      }
     }
   },
   "calculator": {

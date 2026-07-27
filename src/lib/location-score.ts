@@ -12,8 +12,8 @@
  * Distances are straight-line (haversine); results are cached per building.
  */
 
-/** 3: POIs now come from the local import, and categories carry named `nearby`. */
-export const SCORE_VERSION = 3;
+/** 4: `nearby` carries coordinates so the result can be drawn on a map. */
+export const SCORE_VERSION = 4;
 
 /** How many named neighbours each category keeps for the human-readable summary. */
 export const NEARBY_LIMIT = 3;
@@ -51,7 +51,7 @@ export interface CategoryConfig {
   densityTarget?: number;
 }
 
-export interface NearbyPoi {
+export interface NearbyPoi extends Coord {
   name: string;
   distanceM: number;
 }
@@ -225,7 +225,12 @@ function scoreOneCategory(
 ): CategoryResult {
   const matches = pois
     .filter((poi) => poi.category === category.key)
-    .map((poi) => ({ name: poi.name, distanceM: haversineMeters(origin, poi) }))
+    .map((poi) => ({
+      name: poi.name,
+      lat: poi.lat,
+      lng: poi.lng,
+      distanceM: haversineMeters(origin, poi),
+    }))
     .sort((a, b) => a.distanceM - b.distanceM);
 
   const nearest = matches[0];
@@ -240,9 +245,14 @@ function scoreOneCategory(
     nearestM: nearest === undefined ? null : Math.round(nearest.distanceM),
     name: nearest?.name ?? null,
     nearby: matches
-      .filter((match): match is { name: string; distanceM: number } => Boolean(match.name))
+      .filter((match): match is NearbyPoi & { name: string } => Boolean(match.name))
       .slice(0, NEARBY_LIMIT)
-      .map((match) => ({ name: match.name, distanceM: Math.round(match.distanceM) })),
+      .map((match) => ({
+        name: match.name,
+        lat: match.lat,
+        lng: match.lng,
+        distanceM: Math.round(match.distanceM),
+      })),
   };
 }
 

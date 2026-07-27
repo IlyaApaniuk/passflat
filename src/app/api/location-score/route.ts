@@ -6,6 +6,7 @@ import { normalizeAddress } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import {
   aggregateLocationCheckerCosts,
+  type LocationCheckerNeighbour,
   getLocationCheckIp,
   isInsideCityBounds,
   isLocationCheckRateLimited,
@@ -20,8 +21,8 @@ import {
   type LocationCheckerInput,
   type LocationCheckerResponse,
 } from '@/lib/location-checker';
-import { SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
-import { computeLocationScoreFromDb } from '@/lib/poi-lookup';
+import { haversineMeters, SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
+import { boundingBoxAround, computeLocationScoreFromDb } from '@/lib/poi-lookup';
 import { prisma } from '@/lib/prisma';
 import { generateBuildingSlug } from '@/lib/slugify';
 
@@ -330,9 +331,76 @@ async function getOrComputeScore(building: CheckerBuilding): Promise<CheckerScor
   }
 }
 
+/** How far out a neighbour still says something useful about this address. */
+const NEIGHBOUR_RADIUS_M = 1_000;
+const NEIGHBOUR_LIMIT = 12;
+
+/**
+ * Nearby buildings that already carry visible cost reports. Read straight from
+ * the database on every check: the set changes whenever anyone submits, and it
+ * is a single indexed bounding-box query.
+ */
+async function findNeighboursWithCosts(
+  building: CheckerBuilding,
+): Promise<LocationCheckerNeighbour[]> {
+  if (building.lat == null || building.lng == null) return [];
+  const origin = { lat: Number(building.lat), lng: Number(building.lng) };
+  if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return [];
+
+  const box = boundingBoxAround(origin, NEIGHBOUR_RADIUS_M);
+  const rows = await prisma.building.findMany({
+    where: {
+      cityId: building.cityId,
+      id: { not: building.id },
+      lat: { gte: box.minLat, lte: box.maxLat },
+      lng: { gte: box.minLng, lte: box.maxLng },
+      costReports: { some: { isVisible: true } },
+    },
+    select: {
+      id: true,
+      slug: true,
+      addressFull: true,
+      lat: true,
+      lng: true,
+      costReports: {
+        where: { isVisible: true },
+        select: { source: true, totalMonthlyAvg: true, rent: true },
+      },
+    },
+  });
+
+  return rows
+    .flatMap((row) => {
+      if (row.lat == null || row.lng == null) return [];
+      const coord = { lat: Number(row.lat), lng: Number(row.lng) };
+      const distanceM = haversineMeters(origin, coord);
+      // The box is a superset of the circle, so trim the corners.
+      if (distanceM > NEIGHBOUR_RADIUS_M) return [];
+
+      const costs = aggregateLocationCheckerCosts(row.costReports);
+      if (!costs || costs.totalMedian == null) return [];
+
+      return [
+        {
+          id: row.id,
+          slug: row.slug,
+          address: row.addressFull,
+          lat: coord.lat,
+          lng: coord.lng,
+          distanceM: Math.round(distanceM),
+          totalMedian: costs.totalMedian,
+          reportCount: costs.reportCount,
+        },
+      ];
+    })
+    .sort((a, b) => a.distanceM - b.distanceM)
+    .slice(0, NEIGHBOUR_LIMIT);
+}
+
 function toResponse(
   building: CheckerBuilding,
   score: { overall: number; categories: Prisma.JsonValue; computedAt: Date },
+  neighbours: LocationCheckerNeighbour[],
 ): LocationCheckerResponse {
   return {
     building: {
@@ -342,6 +410,8 @@ function toResponse(
       district: building.district?.nameKey ?? null,
       citySlug: building.city.slug,
       placeId: building.placeId,
+      lat: building.lat == null ? null : Number(building.lat),
+      lng: building.lng == null ? null : Number(building.lng),
     },
     score: {
       overall: score.overall,
@@ -349,6 +419,7 @@ function toResponse(
       computedAt: score.computedAt,
     },
     costs: aggregateLocationCheckerCosts(building.costReports),
+    neighbours,
   };
 }
 
@@ -408,12 +479,15 @@ export async function POST(request: NextRequest) {
     return jsonError('INTERNAL_ERROR', 'Could not check this address.', 500);
   }
 
-  const score = await getOrComputeScore(building);
+  const [score, neighbours] = await Promise.all([
+    getOrComputeScore(building),
+    findNeighboursWithCosts(building),
+  ]);
   if (!score) {
     return jsonError('LOCATION_SCORE_UNAVAILABLE', 'Location score unavailable.', 503);
   }
 
-  return NextResponse.json(toResponse(building, score));
+  return NextResponse.json(toResponse(building, score, neighbours));
 }
 
 /**
@@ -449,5 +523,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  return NextResponse.json(toResponse(building, building.locationScore));
+  return NextResponse.json(
+    toResponse(building, building.locationScore, await findNeighboursWithCosts(building)),
+  );
 }

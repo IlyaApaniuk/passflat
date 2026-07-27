@@ -875,6 +875,22 @@
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek."
+    },
+    "map": {
+      "title": "Co jest wokół adresu",
+      "subtitle": "Najważniejsze miejsca w okolicy na mapie.",
+      "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
+      "reports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
+      "openBuilding": "Zobacz koszty →",
+      "attribution": "© Mapbox · OpenStreetMap",
+      "layers": {
+        "costs": "Koszty",
+        "transit": "Transport",
+        "shops": "Sklepy",
+        "dining": "Jedzenie",
+        "education": "Szkoły",
+        "parks": "Parki"
+      }
     }
   },
   "calculator": {

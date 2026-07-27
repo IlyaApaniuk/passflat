@@ -48,6 +48,18 @@ export interface LocationCheckerCosts {
   sourceKind: 'tenant' | 'mixed' | 'scraped';
 }
 
+/** A neighbour with known costs, for the map layer only its own pages can show. */
+export interface LocationCheckerNeighbour {
+  id: string;
+  slug: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distanceM: number;
+  totalMedian: number | null;
+  reportCount: number;
+}
+
 export interface LocationCheckerResponse {
   building: {
     id: string;
@@ -56,6 +68,8 @@ export interface LocationCheckerResponse {
     district: string | null;
     citySlug: string;
     placeId: string | null;
+    lat: number | null;
+    lng: number | null;
   };
   score: {
     overall: number;
@@ -63,6 +77,13 @@ export interface LocationCheckerResponse {
     computedAt: Date;
   };
   costs: LocationCheckerCosts | null;
+  /**
+   * Buildings nearby that already have cost reports. Almost every checked
+   * address has none of its own, so without these the result would end on a
+   * dead "nobody has shared yet" — with them it still answers "what do people
+   * pay around here".
+   */
+  neighbours: LocationCheckerNeighbour[];
 }
 
 export type LocationCheckerValidation =

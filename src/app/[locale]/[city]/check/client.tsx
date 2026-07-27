@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
@@ -39,10 +39,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MapSkeleton } from '@/components/map/map-skeleton';
 import { cn } from '@/lib/utils';
+
+// Mapbox is a heavy WebGL bundle and every mounted map counts against the
+// Mapbox load quota, so the chunk is split and only mounted once the block is
+// actually scrolled into view.
+const LocationPoiMap = lazy(() => import('@/components/map/location-poi-map'));
 
 interface NearbyPoi {
   name: string;
+  lat: number;
+  lng: number;
   distanceM: number;
 }
 
@@ -54,6 +62,17 @@ interface CategoryResult {
   nearby?: NearbyPoi[];
 }
 
+interface Neighbour {
+  id: string;
+  slug: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distanceM: number;
+  totalMedian: number | null;
+  reportCount: number;
+}
+
 interface CheckerPayload {
   building: {
     id: string;
@@ -62,6 +81,8 @@ interface CheckerPayload {
     district: string | null;
     citySlug: string;
     placeId: string;
+    lat: number | null;
+    lng: number | null;
   };
   score: {
     overall: number;
@@ -76,6 +97,30 @@ interface CheckerPayload {
     tenantReportCount: number;
     sourceKind: 'tenant' | 'mixed' | 'scraped';
   };
+  neighbours?: Neighbour[];
+}
+
+/** Mounts its children the first time they scroll into view, then stays mounted. */
+function WhenVisible({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Without IntersectionObserver there is nothing to wait for, so start mounted.
+  const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined');
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || visible) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => entries.some((entry) => entry.isIntersecting) && setVisible(true),
+      { rootMargin: '200px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <div ref={ref}>{visible ? children : <MapSkeleton className="h-[420px] rounded-xl" />}</div>
+  );
 }
 
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
@@ -729,6 +774,44 @@ export function CheckerClient({
                 {t('result.poweredBy')}
               </p>
             </Card>
+
+            {/* A building with no coordinates cannot be placed, and the score
+                would have been unavailable for it anyway. */}
+            {result.building.lat != null && result.building.lng != null && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">{t('map.title')}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {result.neighbours && result.neighbours.length > 0
+                      ? t('map.subtitleWithCosts', { count: result.neighbours.length })
+                      : t('map.subtitle')}
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+                  <WhenVisible>
+                    <Suspense fallback={<MapSkeleton className="h-[420px] rounded-xl" />}>
+                      <LocationPoiMap
+                        citySlug={citySlug}
+                        lat={result.building.lat}
+                        lng={result.building.lng}
+                        pois={result.score.categories.flatMap((category) =>
+                          (category.nearby ?? []).map((poi) => ({
+                            category: category.key,
+                            name: poi.name,
+                            lat: poi.lat,
+                            lng: poi.lng,
+                            distanceM: poi.distanceM,
+                          })),
+                        )}
+                        neighbours={result.neighbours ?? []}
+                        formatDistance={(meters) => formatDistance(meters)}
+                        formatMoney={(amount) => `${numberFormatter.format(amount)} zł`}
+                      />
+                    </Suspense>
+                  </WhenVisible>
+                </CardContent>
+              </Card>
+            )}
 
             {result.costs ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">

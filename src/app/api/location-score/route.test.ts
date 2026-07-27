@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   buildingCount: vi.fn(),
   scoreUpsert: vi.fn(),
   computeScore: vi.fn(),
+  buildingFindMany: vi.fn(),
   getTranslations: vi.fn(),
 }));
 
@@ -18,6 +19,7 @@ vi.mock('@/lib/prisma', () => ({
     city: { findUnique: h.cityFindUnique },
     building: {
       findFirst: h.buildingFindFirst,
+      findMany: h.buildingFindMany,
       findUnique: h.buildingFindUnique,
       update: h.buildingUpdate,
       create: h.buildingCreate,
@@ -29,7 +31,10 @@ vi.mock('@/lib/prisma', () => ({
 
 // Only the scoring source is faked; the category table and math stay real so a
 // change to either still has to keep this route's contract working.
-vi.mock('@/lib/poi-lookup', () => ({
+vi.mock('@/lib/poi-lookup', async (importOriginal) => ({
+  // Only the scoring source is faked. boundingBoxAround is pure geometry and
+  // the neighbours query depends on it, so it stays real.
+  ...(await importOriginal<typeof import('@/lib/poi-lookup')>()),
   computeLocationScoreFromDb: h.computeScore,
 }));
 
@@ -117,6 +122,8 @@ beforeEach(() => {
   h.cityFindUnique.mockResolvedValue(activeCity);
   h.buildingFindFirst.mockResolvedValue(null);
   h.buildingFindUnique.mockResolvedValue(null);
+  // No neighbours with costs unless a test says otherwise.
+  h.buildingFindMany.mockResolvedValue([]);
   h.buildingCount.mockResolvedValue(0);
   h.getTranslations.mockResolvedValue((key: string) => (key === 'city.warsaw' ? 'Warszawa' : key));
   h.computeScore.mockResolvedValue({
@@ -162,6 +169,62 @@ describe('POST /api/location-score', () => {
     const response = await POST(postRequest());
     expect(response.status).toBe(429);
     expect(h.cityFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns nearby buildings with costs, trimmed to the radius and nearest first', async () => {
+    const existing = building();
+    h.buildingFindFirst.mockResolvedValue(existing);
+    h.buildingUpdate.mockResolvedValue(existing);
+    h.buildingFindMany.mockResolvedValue([
+      // ~780m east — inside the 1km circle.
+      {
+        id: 'b-far',
+        slug: 'far',
+        addressFull: 'Far 2',
+        lat: 52.23,
+        lng: 21.0215,
+        costReports: [{ source: 'user', totalMonthlyAvg: 5_000, rent: 4_000 }],
+      },
+      // ~110m north — nearest, so it must come first.
+      {
+        id: 'b-near',
+        slug: 'near',
+        addressFull: 'Near 1',
+        lat: 52.231,
+        lng: 21.01,
+        costReports: [{ source: 'user', totalMonthlyAvg: 4_000, rent: 3_100 }],
+      },
+      // Inside the bounding box corner but ~1.2km away, so outside the circle.
+      {
+        id: 'b-corner',
+        slug: 'corner',
+        addressFull: 'Corner 3',
+        lat: 52.2375,
+        lng: 21.0195,
+        costReports: [{ source: 'user', totalMonthlyAvg: 9_000, rent: 8_000 }],
+      },
+      // No usable median — nothing to show on a pin.
+      {
+        id: 'b-empty',
+        slug: 'empty',
+        addressFull: 'Empty 4',
+        lat: 52.2305,
+        lng: 21.0105,
+        costReports: [{ source: 'user', totalMonthlyAvg: null, rent: null }],
+      },
+    ]);
+
+    const response = await POST(postRequest());
+    const body = await response.json();
+
+    expect(body.neighbours.map((n: { id: string }) => n.id)).toEqual(['b-near', 'b-far']);
+    expect(body.neighbours[0]).toMatchObject({
+      slug: 'near',
+      address: 'Near 1',
+      totalMedian: 4_000,
+      reportCount: 1,
+    });
+    expect(body.neighbours[0].distanceM).toBeLessThan(body.neighbours[1].distanceM);
   });
 
   it('uses a fresh cache, increments the check and returns source-aware costs', async () => {

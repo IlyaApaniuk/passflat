@@ -159,7 +159,7 @@ describe('scoreCategorizedPois', () => {
       (c) => c.key === 'supermarket',
     );
     expect(supermarket!.nearby).toHaveLength(NEARBY_LIMIT);
-    expect(supermarket!.nearby![0]).toEqual({ name: 'near', distanceM: 0 });
+    expect(supermarket!.nearby![0]).toEqual({ name: 'near', distanceM: 0, ...origin });
     expect(supermarket!.nearby!.map((n) => n.name)).not.toContain(null);
     const distances = supermarket!.nearby!.map((n) => n.distanceM);
     expect([...distances].sort((a, b) => a - b)).toEqual(distances);

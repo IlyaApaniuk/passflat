@@ -875,6 +875,22 @@
       "emptyDescription": "Поделись своими расходами и открой детальные разбивки по всему городу {city}.",
       "contribute": "Поделиться расходами и открыть детали",
       "followHint": "Пока не готов делиться? Следи за обновлениями дома."
+    },
+    "map": {
+      "title": "Что вокруг адреса",
+      "subtitle": "Основные объекты рядом на карте.",
+      "subtitleWithCosts": "Объекты рядом и {count, plural, one {# дом} few {# дома} many {# домов} other {# домов}} поблизости, где известно, сколько платят.",
+      "reports": "{count, plural, one {# отчёт} few {# отчёта} many {# отчётов} other {# отчётов}}",
+      "openBuilding": "Смотреть расходы →",
+      "attribution": "© Mapbox · OpenStreetMap",
+      "layers": {
+        "costs": "Расходы",
+        "transit": "Транспорт",
+        "shops": "Магазины",
+        "dining": "Еда",
+        "education": "Школы",
+        "parks": "Парки"
+      }
     }
   },
   "calculator": {
