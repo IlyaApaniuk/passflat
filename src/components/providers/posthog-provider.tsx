@@ -51,6 +51,26 @@ function PostHogPageView() {
         ph.register_once({ ref: rawRef, ref_type });
       }
 
+      // Persist first-touch campaign parameters as super-properties as well.
+      // A checker ad lands on /check, while the conversion happens on the cost
+      // form after a navigation; keeping the UTM values on the PostHog client
+      // makes the later `cost_form_started` event attributable without copying
+      // every query parameter into every internal link.
+      const campaignProperties: Record<string, string> = {};
+      for (const key of [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'utm_term',
+      ] as const) {
+        const value = searchParams.get(key)?.trim();
+        if (value && value.length <= 200) campaignProperties[key] = value;
+      }
+      if (Object.keys(campaignProperties).length > 0) {
+        ph.register_once(campaignProperties);
+      }
+
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + '?' + searchParams.toString();

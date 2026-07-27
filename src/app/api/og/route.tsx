@@ -14,6 +14,11 @@ export async function GET(request: NextRequest) {
   const stat = searchParams.get('stat');
   const statLabel = searchParams.get('statLabel');
   const split = searchParams.get('split');
+  const rawScoreParam = searchParams.get('score');
+  const rawScore = rawScoreParam == null ? Number.NaN : Number(rawScoreParam);
+  const score = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
+  const scoreLabel = searchParams.get('scoreLabel') ?? 'Location score';
+  const scoreCircumference = 2 * Math.PI * 60;
 
   return new ImageResponse(
     <div
@@ -68,7 +73,7 @@ export async function GET(request: NextRequest) {
       <div
         style={{
           display: 'flex',
-          fontSize: stat ? '52px' : '64px',
+          fontSize: stat || score != null ? '52px' : '64px',
           fontWeight: 800,
           color: 'white',
           lineHeight: 1.15,
@@ -133,6 +138,77 @@ export async function GET(request: NextRequest) {
               {split}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {score != null ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '32px',
+            marginTop: '34px',
+            padding: '20px 30px 20px 20px',
+            borderRadius: '20px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '160px',
+              height: '160px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle
+                cx="80"
+                cy="80"
+                r="60"
+                fill="none"
+                stroke="rgba(148,163,184,0.22)"
+                strokeWidth="14"
+              />
+              <circle
+                cx="80"
+                cy="80"
+                r="60"
+                fill="none"
+                stroke="#8bde54"
+                strokeWidth="14"
+                strokeLinecap="round"
+                strokeDasharray={`${scoreCircumference} ${scoreCircumference}`}
+                strokeDashoffset={scoreCircumference * (1 - score / 100)}
+                transform="rotate(-90 80 80)"
+              />
+            </svg>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#8bde54',
+                fontSize: '54px',
+                fontWeight: 800,
+              }}
+            >
+              {score}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', color: '#f8fafc', fontSize: '32px', fontWeight: 700 }}>
+              {scoreLabel}
+            </div>
+            <div style={{ display: 'flex', color: '#94a3b8', fontSize: '23px', marginTop: '8px' }}>
+              0–100
+            </div>
+          </div>
         </div>
       ) : null}
     </div>,

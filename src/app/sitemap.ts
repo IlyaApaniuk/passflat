@@ -4,6 +4,7 @@ import { routing } from '@/i18n/routing';
 import { getAllPosts } from '@/lib/blog';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 import { SITE_URL as baseUrl } from '@/lib/site-url';
+import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
 
 function buildAlternates(pathname: string) {
   return Object.fromEntries(
@@ -64,6 +65,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     cityPages = cities.flatMap((c) => [
       entry(`/${c.slug}`, 'weekly', 0.8),
       entry(`/${c.slug}/costs`, 'weekly', 0.8),
+      ...(c.slug === LOCATION_CHECKER_CITY_SLUG ? [entry(`/${c.slug}/check`, 'weekly', 0.8)] : []),
       entry(`/${c.slug}/calculator`, 'weekly', 0.7),
       entry(`/${c.slug}/replacement`, 'weekly', 0.7),
       entry(`/${c.slug}/sublet`, 'weekly', 0.5),

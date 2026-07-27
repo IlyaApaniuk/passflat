@@ -37,6 +37,7 @@ import { MonthYearPicker } from '@/components/costs/month-year-picker';
 import { ShareButton } from '@/components/costs/share-button';
 import type { CityBounds } from '@/lib/listings-data';
 import { FIELD_RANGES } from '@/lib/cost-validation';
+import { useAnalyticsConsent } from '@/lib/consent';
 import {
   PERIODIC_CATEGORIES,
   PERIODIC_FREQUENCIES,
@@ -113,6 +114,17 @@ interface ExistingReport {
   periodicCharges: PeriodicChargeRow[];
 }
 
+export interface CostFormPrefill {
+  buildingId: string;
+  street: string;
+  buildingNumber: string;
+  district: string;
+  placeId: string;
+  lat: number;
+  lng: number;
+  addressFull: string;
+}
+
 interface PeriodicChargeRow {
   category: PeriodicCategory;
   amount: string;
@@ -150,6 +162,8 @@ interface CostSubmitClientProps {
   userId: string | null;
   editMode?: boolean;
   existingReport?: ExistingReport | null;
+  prefill?: CostFormPrefill | null;
+  source?: 'checker';
   canFillOnBehalf?: boolean;
   adminImportMode?: AdminImportMode;
 }
@@ -201,6 +215,20 @@ function makeEmptyForm() {
   };
 }
 
+function makePrefilledForm(prefill: CostFormPrefill | null) {
+  const empty = makeEmptyForm();
+  if (!prefill) return empty;
+  return {
+    ...empty,
+    street: prefill.street,
+    buildingNumber: prefill.buildingNumber,
+    district: prefill.district,
+    placeId: prefill.placeId,
+    lat: prefill.lat,
+    lng: prefill.lng,
+  };
+}
+
 export function CostSubmitClient({
   citySlug,
   cityName,
@@ -209,12 +237,15 @@ export function CostSubmitClient({
   userId,
   editMode = false,
   existingReport = null,
+  prefill = null,
+  source,
   canFillOnBehalf = false,
   adminImportMode = 'fill_on_behalf',
 }: CostSubmitClientProps) {
   const t = useTranslations();
   const locale = useLocale();
   const posthog = usePostHog();
+  const analyticsConsent = useAnalyticsConsent();
   // Logged-out visitor: the report is submitted anonymously and the success card
   // shows the "log in to unlock full stats" hook (the claim loop).
   const isAnonymous = !userId;
@@ -236,7 +267,7 @@ export function CostSubmitClient({
     if (n > r.max) return t('costs.submit.warnMax', { max: r.max });
     return null;
   };
-  const placeCityRef = useRef('');
+  const placeCityRef = useRef(prefill ? cityCanonicalName : '');
   // Admin-only import controls, available only for new submissions (never edits).
   // ADMIN_IMPORT_MODE (server) decides which one is shown:
   //   fill_on_behalf — owner email links the report to that account on login.
@@ -280,7 +311,7 @@ export function CostSubmitClient({
   const addressRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState(
-    existingReport ? { ...existingReport } : makeEmptyForm(),
+    existingReport ? { ...existingReport } : makePrefilledForm(prefill),
   );
   const [draftRestored, setDraftRestored] = useState(false);
 
@@ -324,6 +355,10 @@ export function CostSubmitClient({
       const raw = localStorage.getItem(draftKey);
       if (raw) {
         const draft = JSON.parse(raw);
+        // A checker deep-link is an explicit address choice. Keep a draft only
+        // when it belongs to that exact Google place; a stale draft for another
+        // home must never silently replace the address the visitor just checked.
+        if (prefill && draft.placeId !== prefill.placeId) return;
         // One-time hydration from a saved draft (external store → state) PLUS
         // syncing the progressive-disclosure toggles to the restored values.
         // Without this, restored data in a collapsed section (e.g. a stale
@@ -331,7 +366,20 @@ export function CostSubmitClient({
         // is still submitted — the phantom-data bug. Mirrors how existingReport
         // drives these toggles.
         /* eslint-disable react-hooks/set-state-in-effect */
-        setFormData((prev) => ({ ...prev, ...draft }));
+        setFormData((prev) => ({
+          ...prev,
+          ...draft,
+          ...(prefill
+            ? {
+                street: prefill.street,
+                buildingNumber: prefill.buildingNumber,
+                district: prefill.district,
+                placeId: prefill.placeId,
+                lat: prefill.lat,
+                lng: prefill.lng,
+              }
+            : {}),
+        }));
         setDraftRestored(true);
         if (draft.isCurrentTenant === false || draft.livedFrom || draft.depositReturned)
           setShowTenancy(true);
@@ -355,13 +403,24 @@ export function CostSubmitClient({
     }
   }, [formData, editMode, draftKey]);
 
-  // Funnel: form opened (new submissions only). Pairs with the client submit
-  // events below so we can see the landing → start → submit drop-off.
+  // Funnel: form opened (new submissions only). Consent can be granted after
+  // mount, so wait for it and capture once at that moment instead of losing the
+  // first-view event. Address text is intentionally excluded from analytics.
+  const formStartedCapturedRef = useRef(false);
   useEffect(() => {
-    if (editMode) return;
-    posthog?.capture('cost_form_started', { city: citySlug });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (editMode || !analyticsConsent || !posthog || formStartedCapturedRef.current) return;
+    formStartedCapturedRef.current = true;
+    posthog.capture('cost_form_started', {
+      city: citySlug,
+      source: source ?? 'direct',
+      ...(prefill
+        ? {
+            building_id: prefill.buildingId,
+            place_id: prefill.placeId,
+          }
+        : {}),
+    });
+  }, [analyticsConsent, citySlug, editMode, posthog, prefill, source]);
 
   const discardDraft = () => {
     try {
@@ -369,7 +428,7 @@ export function CostSubmitClient({
     } catch {
       /* ignore */
     }
-    setFormData(makeEmptyForm());
+    setFormData(makePrefilledForm(prefill));
     setShowDetailedUtilities(false);
     setShowElectricitySeasonal(false);
     setShowHeatingSeasonal(false);
@@ -378,7 +437,7 @@ export function CostSubmitClient({
     setDraftRestored(false);
     setUtilitiesError(false);
     setRentalTypeError(false);
-    placeCityRef.current = '';
+    placeCityRef.current = prefill ? cityCanonicalName : '';
   };
 
   const addPeriodicRow = () => {
@@ -1267,6 +1326,7 @@ export function CostSubmitClient({
                         <AddressAutocomplete
                           onPlaceSelect={handlePlaceSelect}
                           placeholder={t('listings.create.addressPlaceholder')}
+                          defaultValue={prefill?.addressFull}
                           bounds={cityBounds}
                         />
                         {addressError ? (

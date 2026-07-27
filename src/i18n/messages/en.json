@@ -775,6 +775,82 @@
     "ctaDistricts": "Browse by district",
     "backToBlog": "← Blog"
   },
+  "checker": {
+    "metaTitle": "Address location score in {city}",
+    "metaDescription": "Check any address in {city}: see a free location score and distances to shops, transport, schools, parks and everyday services.",
+    "badge": "Free location score",
+    "title": "Check an address: {city}",
+    "subtitle": "See what is nearby, how convenient the location is and whether we already have real monthly cost data for the building.",
+    "searchLabel": "Building address",
+    "searchPlaceholder": "Start typing an address…",
+    "searchHint": "Choose a complete address with a building number. The checker currently covers Warsaw.",
+    "loading": "Checking shops, transport and services nearby… The first check may take a little longer.",
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareError": "Couldn't copy the link. Please try again.",
+    "errors": {
+      "title": "We couldn't check this address",
+      "generic": "The location data is temporarily unavailable. Please try again in a moment.",
+      "rateLimited": "There have been too many checks recently. Please wait a minute and try again.",
+      "notFound": "This shared address is no longer available. Search for it again above.",
+      "completeAddress": "Choose a complete building address, including its street number.",
+      "retry": "Try again"
+    },
+    "outside": {
+      "title": "This address is outside our current coverage",
+      "description": "The checker currently covers Warsaw. Leave your email and we'll tell you when Passflat launches in this city.",
+      "selectedCity": "Selected city: {city}",
+      "emailPlaceholder": "Your email",
+      "consent": "I agree to the processing of my personal data",
+      "consentRequired": "You must agree to the processing of your personal data.",
+      "submit": "Notify me",
+      "successTitle": "You're on the list",
+      "successBody": "We'll let you know when Passflat arrives in this city.",
+      "error": "Something went wrong. Please try again.",
+      "privacy": "<privacyLink>Privacy Policy</privacyLink>"
+    },
+    "result": {
+      "checkedAddress": "Checked address",
+      "locationScore": "Location score",
+      "outOf100": "out of 100",
+      "scoreAria": "Location score: {score} out of 100",
+      "scoreDescription": "Based on straight-line proximity to everyday places and transport.",
+      "breakdownTitle": "What's nearby",
+      "noneNearby": "none nearby",
+      "poweredBy": "Distances are straight-line estimates based on OpenStreetMap data.",
+      "level": {
+        "excellent": "Excellent location",
+        "good": "Convenient location",
+        "fair": "Average convenience",
+        "poor": "Limited convenience"
+      },
+      "categories": {
+        "supermarket": "Supermarkets",
+        "transitRail": "Metro & rail",
+        "pharmacy": "Pharmacies",
+        "transitBasic": "Bus & tram stops",
+        "convenience": "Convenience stores",
+        "dining": "Cafes & restaurants",
+        "education": "Schools & kindergartens",
+        "parks": "Parks & greenery",
+        "center": "City center"
+      }
+    },
+    "costs": {
+      "availableTitle": "We have monthly cost data for this building",
+      "month": "month",
+      "rent": "Rent",
+      "expenses": "Utilities & charges",
+      "sourceTenant": "Tenant reports: {count}",
+      "sourceMixed": "Tenant reports: {tenantCount} · listing data: {listingCount}",
+      "sourceScraped": "Listing data points: {count}",
+      "viewBuilding": "See the full breakdown",
+      "emptyTitle": "No one has shared costs for this building yet. Be the first.",
+      "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
+      "contribute": "Share costs and unlock details",
+      "followHint": "Not ready to share? Follow the building for updates."
+    }
+  },
   "calculator": {
     "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",
     "metaDescription": "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities based on Warsaw tariffs — admin fee (czynsz), heating, electricity, water, garbage, internet.",

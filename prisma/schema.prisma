@@ -61,22 +61,24 @@ model District {
 // --- Buildings ---
 
 model Building {
-  id                    String   @id @default(uuid()) @db.Uuid
+  id                    String    @id @default(uuid()) @db.Uuid
   slug                  String
-  cityId                String   @map("city_id") @db.Uuid
-  districtId            String?  @map("district_id") @db.Uuid
+  cityId                String    @map("city_id") @db.Uuid
+  districtId            String?   @map("district_id") @db.Uuid
   street                String
-  buildingNumber        String   @map("building_number")
-  addressFull           String   @map("address_full")
-  addressNormalized     String   @map("address_normalized")
+  buildingNumber        String    @map("building_number")
+  addressFull           String    @map("address_full")
+  addressNormalized     String    @map("address_normalized")
   lat                   Decimal?
   lng                   Decimal?
-  placeId               String?  @map("place_id")
-  postalCode            String?  @map("postal_code")
-  totalApartmentsApprox Int?     @map("total_apartments_approx")
-  buildingType          String?  @map("building_type")
-  yearBuilt             Int?     @map("year_built")
-  createdAt             DateTime @default(now()) @map("created_at")
+  placeId               String?   @map("place_id")
+  postalCode            String?   @map("postal_code")
+  totalApartmentsApprox Int?      @map("total_apartments_approx")
+  buildingType          String?   @map("building_type")
+  yearBuilt             Int?      @map("year_built")
+  checksCount           Int       @default(0) @map("checks_count")
+  lastCheckedAt         DateTime? @map("last_checked_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
 
   city          City                   @relation(fields: [cityId], references: [id])
   district      District?              @relation(fields: [districtId], references: [id])
@@ -88,6 +90,8 @@ model Building {
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
   @@index([districtId])
+  @@index([placeId])
+  @@index([createdAt])
   @@map("buildings")
 }
 

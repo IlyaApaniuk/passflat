@@ -76,3 +76,25 @@ export function getCostOgImage(opts: {
     type: 'image/png',
   };
 }
+
+/** Dynamic checker share-card. The score is already cached in Postgres before
+ * a share URL is produced, so metadata rendering never calls Overpass. */
+export function getScoreOgImage(opts: {
+  title: string;
+  subtitle?: string;
+  score: number;
+  scoreLabel: string;
+}) {
+  const params = new URLSearchParams({
+    title: opts.title,
+    score: String(Math.max(0, Math.min(100, Math.round(opts.score)))),
+    scoreLabel: opts.scoreLabel,
+  });
+  if (opts.subtitle) params.set('subtitle', opts.subtitle);
+  return {
+    url: `${baseUrl}/api/og?${params.toString()}`,
+    width: 1200,
+    height: 630,
+    type: 'image/png',
+  };
+}
