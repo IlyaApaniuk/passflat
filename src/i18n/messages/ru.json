@@ -876,19 +876,14 @@
       "sourceTenant": "На основе {count, plural, one {# отчёта} other {# отчётов}} от жильцов",
       "sourceMixed": "На основе {tenantCount, plural, one {# отчёта} other {# отчётов}} от жильцов и {listingCount, plural, one {# объявления} other {# объявлений}}",
       "sourceScraped": "На основе {count, plural, one {# объявления} other {# объявлений}}",
-      "viewBuilding": "Посмотреть полный разбор",
+      "viewBuilding": "Смотреть разбор по счетам",
       "emptyTitle": "По этому дому ещё никто не поделился расходами. Стань первым.",
       "emptyDescription": "Поделись своими расходами и открой детальные разбивки по всему городу {city}.",
       "contribute": "Поделиться расходами и открыть детали",
       "followHint": "Пока не готов делиться? Следи за обновлениями дома.",
       "cheaperThanDistrict": "На {percent}% дешевле медианы по району {district}",
       "pricierThanDistrict": "На {percent}% дороже медианы по району {district}",
-      "insideTitle": "В полном разборе:",
-      "inside": {
-        "utilities": "Свет, газ, вода, отопление и интернет — по отдельности",
-        "deposit": "Сколько просили депозита и всем ли его вернули",
-        "position": "Где этот дом в разбросе цен района"
-      }
+      "depositReturned": "депозит вернули {returned} из {answered}"
     },
     "map": {
       "subtitleWithCosts": "Объекты рядом и {count, plural, one {# дом} few {# дома} many {# домов} other {# домов}} поблизости, где известно, сколько платят.",

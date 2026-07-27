@@ -55,7 +55,7 @@ const checkerBuildingSelect = {
   },
   costReports: {
     where: { isVisible: true },
-    select: { source: true, totalMonthlyAvg: true, rent: true },
+    select: { source: true, totalMonthlyAvg: true, rent: true, depositReturned: true },
   },
 } satisfies Prisma.BuildingSelect;
 
@@ -368,7 +368,7 @@ async function findNeighboursWithCosts(
       lng: true,
       costReports: {
         where: { isVisible: true },
-        select: { source: true, totalMonthlyAvg: true, rent: true },
+        select: { source: true, totalMonthlyAvg: true, rent: true, depositReturned: true },
       },
     },
   });

@@ -121,6 +121,8 @@ interface CheckerPayload {
     reportCount: number;
     tenantReportCount: number;
     sourceKind: 'tenant' | 'mixed' | 'scraped';
+    depositReturned: number;
+    depositAnswered: number;
   };
   neighbours?: Neighbour[];
   nuisances?: Nuisance[];
@@ -993,21 +995,18 @@ export function CheckerClient({
                             listingCount: result.costs.reportCount - result.costs.tenantReportCount,
                           })
                         : t('costs.sourceScraped', { count: result.costs.reportCount })}
+                    {result.costs.depositAnswered > 0 && (
+                      <>
+                        {' · '}
+                        <span className="font-medium text-foreground">
+                          {t('costs.depositReturned', {
+                            returned: result.costs.depositReturned,
+                            answered: result.costs.depositAnswered,
+                          })}
+                        </span>
+                      </>
+                    )}
                   </p>
-
-                  <div className="mt-4 rounded-xl border border-dashed bg-background/50 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t('costs.insideTitle')}
-                    </p>
-                    <ul className="mt-1.5 space-y-1 text-sm">
-                      {(['utilities', 'deposit', 'position'] as const).map((item) => (
-                        <li key={item} className="flex items-start gap-2">
-                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                          {t(`costs.inside.${item}`)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
 
                   <Button asChild className="mt-4 w-full sm:w-auto">
                     <Link

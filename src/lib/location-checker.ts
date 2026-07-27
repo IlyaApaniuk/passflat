@@ -37,6 +37,8 @@ export interface LocationCheckerCostReport {
   source: string;
   totalMonthlyAvg: unknown;
   rent: unknown;
+  /** null when the tenancy is still running, so it says nothing either way. */
+  depositReturned?: boolean | null;
 }
 
 export interface LocationCheckerCosts {
@@ -53,6 +55,12 @@ export interface LocationCheckerCosts {
   reportCount: number;
   tenantReportCount: number;
   sourceKind: 'tenant' | 'mixed' | 'scraped';
+  /**
+   * Deposits returned out of tenancies that ended. The single fact no listing
+   * will ever print, which is why it earns the one line the card can spare.
+   */
+  depositReturned: number;
+  depositAnswered: number;
 }
 
 /** A neighbour with known costs, for the map layer only its own pages can show. */
@@ -340,6 +348,8 @@ export function aggregateLocationCheckerCosts(
     reportCount: reports.length,
     tenantReportCount,
     sourceKind,
+    depositReturned: reports.filter((report) => report.depositReturned === true).length,
+    depositAnswered: reports.filter((report) => report.depositReturned != null).length,
   };
 }
 

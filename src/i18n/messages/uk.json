@@ -876,19 +876,14 @@
       "sourceTenant": "На основі {count, plural, one {# звіту} other {# звітів}} від мешканців",
       "sourceMixed": "На основі {tenantCount, plural, one {# звіту} other {# звітів}} від мешканців і {listingCount, plural, one {# оголошення} other {# оголошень}}",
       "sourceScraped": "На основі {count, plural, one {# оголошення} other {# оголошень}}",
-      "viewBuilding": "Переглянути повний розбір",
+      "viewBuilding": "Дивитися розбір по рахунках",
       "emptyTitle": "Для цього будинку ще ніхто не поділився витратами. Стань першим.",
       "emptyDescription": "Поділися своїми витратами й відкрий детальні розбивки по всьому місту {city}.",
       "contribute": "Поділитися витратами й відкрити деталі",
       "followHint": "Ще не готовий ділитися? Стеж за оновленнями будинку.",
       "cheaperThanDistrict": "На {percent}% дешевше за медіану по району {district}",
       "pricierThanDistrict": "На {percent}% дорожче за медіану по району {district}",
-      "insideTitle": "У повному розборі:",
-      "inside": {
-        "utilities": "Світло, газ, вода, опалення та інтернет — окремо",
-        "deposit": "Скільки просили застави і чи всім її повернули",
-        "position": "Де цей будинок у розкиді цін району"
-      }
+      "depositReturned": "заставу повернули {returned} з {answered}"
     },
     "map": {
       "subtitleWithCosts": "Об’єкти поруч і {count, plural, one {# будинок} few {# будинки} many {# будинків} other {# будинків}} поблизу, де відомо, скільки платять.",

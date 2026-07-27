@@ -876,19 +876,14 @@
       "sourceTenant": "Based on {count, plural, one {# tenant report} other {# tenant reports}}",
       "sourceMixed": "Based on {tenantCount, plural, one {# tenant report} other {# tenant reports}} and {listingCount, plural, one {# listing} other {# listings}}",
       "sourceScraped": "Based on {count, plural, one {# listing} other {# listings}}",
-      "viewBuilding": "See the full breakdown",
+      "viewBuilding": "See the bill-by-bill breakdown",
       "emptyTitle": "No one has shared costs for this building yet. Be the first.",
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
       "followHint": "Not ready to share? Follow the building for updates.",
       "cheaperThanDistrict": "{percent}% below the {district} median",
       "pricierThanDistrict": "{percent}% above the {district} median",
-      "insideTitle": "Inside the full breakdown:",
-      "inside": {
-        "utilities": "Electricity, gas, water, heating and internet, itemised",
-        "deposit": "What the deposit was and whether everyone got it back",
-        "position": "Where this building sits in the district's spread"
-      }
+      "depositReturned": "deposit returned to {returned} of {answered}"
     },
     "map": {
       "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
