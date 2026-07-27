@@ -71,7 +71,8 @@
     "linkCopied": "Link copied to clipboard",
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong",
-    "checkAddress": "Check an address"
+    "checkAddress": "Check an address",
+    "buildingReviews": "Building reviews"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -112,7 +113,7 @@
       "statsAvgRating": "Avg Rating",
       "submitCostsCta": "Add your costs",
       "checkAddressCta": "Check an address",
-      "reviewsCta": "Building reviews"
+      "reviewsCta": "Describe a building"
     },
     "howItWorks": {
       "title": "How Passflat Works",
@@ -916,6 +917,11 @@
       "voters": "{count} tenants reported, {confirmed} of them also confirmed costs.",
       "confirmedChip": "with costs",
       "confirmedHint": "This tenant also submitted a cost report for this building"
+    },
+    "tellUs": {
+      "title": "Lived in this building?",
+      "body": "Tick what is worth knowing: sound, heating, the lift. Half a minute.",
+      "cta": "Describe it"
     }
   },
   "calculator": {
@@ -2403,12 +2409,14 @@
     "metaDescription": "Tell people what living in your building is like, and see what others reported. No account needed.",
     "badge": "Building reviews",
     "title": "Tell us about your building",
-    "subtitle": "Not a star rating — the specifics: sound, heating, the lift, how repairs get handled. The things a listing will never mention.",
+    "subtitle": "See what tenants say and describe your own building: sound, heating, the lift, how repairs get handled. The things a listing never mentions.",
     "addressLabel": "Building address",
     "addressPlaceholder": "Start typing an address…",
     "addressHint": "Pick the full address with a building number. Warsaw for now.",
     "resolving": "Finding the building…",
     "outsideCity": "We only take reviews in {city} for now.",
-    "error": "That didn't work. Pick an address from the suggestions and try again."
+    "error": "That didn't work. Pick an address from the suggestions and try again.",
+    "previewIntro": "We ask in tick boxes, not essays. Like these:",
+    "othersSaid": "What people said"
   }
 }

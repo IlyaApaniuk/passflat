@@ -71,7 +71,8 @@
     "linkCopied": "Link skopiowany do schowka",
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak",
-    "checkAddress": "Sprawdź adres"
+    "checkAddress": "Sprawdź adres",
+    "buildingReviews": "Opinie o budynkach"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -112,7 +113,7 @@
       "statsAvgRating": "Śr. ocena",
       "submitCostsCta": "Dodaj swoje koszty",
       "checkAddressCta": "Sprawdź adres",
-      "reviewsCta": "Opinie o budynkach"
+      "reviewsCta": "Opisz budynek"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
@@ -916,6 +917,11 @@
       "voters": "Zaznaczyło {count} najemców, z czego {confirmed} potwierdziło koszty.",
       "confirmedChip": "z kosztami",
       "confirmedHint": "Ten najemca przesłał również zgłoszenie kosztów dla tego budynku"
+    },
+    "tellUs": {
+      "title": "Mieszkałeś w tym budynku?",
+      "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda. Pół minuty.",
+      "cta": "Opisz budynek"
     }
   },
   "calculator": {
@@ -2403,12 +2409,14 @@
     "metaDescription": "Opowiedz, jak mieszka się w Twoim budynku, i zobacz, co napisali inni. Bez konta.",
     "badge": "Opinie o budynkach",
     "title": "Opowiedz o swoim budynku",
-    "subtitle": "Nie ocena w gwiazdkach, tylko konkrety: słyszalność, ogrzewanie, winda, jak naprawiane są usterki. To, czego nie ma w ogłoszeniu.",
+    "subtitle": "Zobacz, co mówią najemcy, i opisz swój budynek: słyszalność, ogrzewanie, windę, jak naprawiane są usterki. To, czego nie ma w ogłoszeniu.",
     "addressLabel": "Adres budynku",
     "addressPlaceholder": "Zacznij wpisywać adres…",
     "addressHint": "Wybierz pełny adres z numerem budynku. Na razie Warszawa.",
     "resolving": "Szukamy budynku…",
     "outsideCity": "Na razie przyjmujemy opinie tylko w mieście {city}.",
-    "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie."
+    "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie.",
+    "previewIntro": "Pytamy przez zaznaczenia, nie wypracowania. O takie rzeczy:",
+    "othersSaid": "Co już napisano"
   }
 }

@@ -92,13 +92,14 @@ export function Header({ initialUser }: HeaderProps = {}) {
   const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
 
   // Listings are strategically frozen (pivot 2026-06-20): costs lead the nav,
-  // listing pages stay reachable by direct link only. Building reviews (pillar 2)
-  // join this list once they exist.
+  // listing pages stay reachable by direct link only. The nav carries nouns —
+  // people browsing, not acting; the hero carries the verbs.
   const navLinks = [
     { href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') },
     // `common`, not `checker`: the checker namespace is deliberately kept out of
     // the shared client bundle, and the header ships on every page.
     { href: `/${DEFAULT_CITY}/check` as const, label: t('common.checkAddress') },
+    { href: `/${DEFAULT_CITY}/review` as const, label: t('common.buildingReviews') },
   ];
 
   return (

@@ -13,6 +13,7 @@ import { ReviewClient } from './client';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
+  searchParams: Promise<{ p?: string | string[] }>;
 }
 
 const getCity = cache((slug: string) =>
@@ -28,7 +29,7 @@ const getCity = cache((slug: string) =>
   }),
 );
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: Pick<PageProps, 'params'>): Promise<Metadata> {
   const { locale, city } = await params;
   setRequestLocale(locale);
   if (city !== LOCATION_CHECKER_CITY_SLUG) return { title: 'Not found' };
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ReviewPage({ params }: PageProps) {
+export default async function ReviewPage({ params, searchParams }: PageProps) {
   const { locale, city } = await params;
   setRequestLocale(locale);
 
@@ -65,6 +66,10 @@ export default async function ReviewPage({ params }: PageProps) {
 
   // `review` is page-specific and deliberately out of the shared client bundle;
   // the tag namespaces travel with it so the picker works inside this subtree.
+  // Carried over from the checker so the address is never typed twice.
+  const { p } = await searchParams;
+  const initialPlaceId = typeof p === 'string' && p.length <= 300 ? p : null;
+
   const messages = await getMessages();
   const clientMessages = pickMessages(messages, ['review', 'buildingTags', 'buildingTagPicker']);
 
@@ -79,6 +84,7 @@ export default async function ReviewPage({ params }: PageProps) {
               cityName={t(cityRecord.nameKey)}
               cityCanonicalName={canonicalTranslations(cityRecord.nameKey)}
               cityBounds={(cityRecord.bounds as CityBounds | null) ?? null}
+              initialPlaceId={initialPlaceId}
             />
           </NextIntlClientProvider>
         </div>

@@ -12,8 +12,8 @@ import {
   Beer,
   Flame,
   TrainTrack,
+  MessageSquarePlus,
   Music,
-  Users,
   Bus,
   CheckCircle2,
   GraduationCap,
@@ -38,7 +38,7 @@ import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
-import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
+import { TenantTags } from '@/components/buildings/tenant-tags';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -153,12 +153,6 @@ const NUISANCE_ICONS: Record<string, LucideIcon> = {
   railway: TrainTrack,
   nightclub: Music,
   bars: Beer,
-};
-
-const TAG_SENTIMENT_STYLES: Record<string, string> = {
-  good: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  neutral: 'border-border bg-muted/40 text-foreground',
-  bad: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-500',
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -604,7 +598,7 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
-  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tags') => {
+  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us') => {
     if (!analyticsConsent) return;
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
@@ -877,14 +871,20 @@ export function CheckerClient({
             )}
 
             <Card>
-              <CardContent className="px-4 sm:px-6">
-                <BuildingTagPicker
-                  buildingId={result.building.id}
-                  citySlug={citySlug}
-                  address={result.building.address}
-                  source="checker"
-                  onSaved={() => captureCta('tags')}
-                />
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="font-medium">{t('tellUs.title')}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{t('tellUs.body')}</p>
+                </div>
+                <Button variant="outline" className="rounded-full" asChild>
+                  <Link
+                    href={`/${citySlug}/review?p=${encodeURIComponent(result.building.placeId)}`}
+                    onClick={() => captureCta('tell_us')}
+                  >
+                    <MessageSquarePlus className="h-4 w-4" />
+                    {t('tellUs.cta')}
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
@@ -894,41 +894,9 @@ export function CheckerClient({
               <Card>
                 <CardHeader className="pb-0">
                   <CardTitle className="text-lg">{t('tenantTags.title')}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {result.tenantTags.voters === 1
-                      ? t('tenantTags.singleVoter')
-                      : t('tenantTags.voters', {
-                          count: result.tenantTags.voters,
-                          confirmed: result.tenantTags.costReportVoters,
-                        })}
-                  </p>
                 </CardHeader>
                 <CardContent className="px-4 sm:px-6">
-                  <div className="flex flex-wrap gap-2">
-                    {result.tenantTags.tags.map((tag) => (
-                      <span
-                        key={tag.key}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm',
-                          TAG_SENTIMENT_STYLES[tag.sentiment] ?? TAG_SENTIMENT_STYLES.neutral,
-                        )}
-                      >
-                        {t(`buildingTags.tags.${tag.key}`)}
-                        {tag.votes > 1 && (
-                          <span className="text-xs tabular-nums opacity-70">{tag.votes}</span>
-                        )}
-                        {tag.costReportVotes > 0 && (
-                          <span
-                            title={t('tenantTags.confirmedHint')}
-                            className="inline-flex items-center gap-0.5 rounded-full bg-background/60 px-1.5 text-[10px] font-medium"
-                          >
-                            <Users className="h-3 w-3" />
-                            {t('tenantTags.confirmedChip')}
-                          </span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
+                  <TenantTags summary={result.tenantTags} />
                 </CardContent>
               </Card>
             )}

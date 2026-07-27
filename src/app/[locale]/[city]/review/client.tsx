@@ -6,11 +6,13 @@ import { usePostHog } from 'posthog-js/react';
 import { AlertCircle, Loader2, MapPin, MessageSquarePlus } from 'lucide-react';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
+import { BUILDING_TAGS } from '@/lib/building-tags';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
 import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
+import { TenantTags, type TenantTagsSummary } from '@/components/buildings/tenant-tags';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ResolvedBuilding {
   id: string;
@@ -23,7 +25,19 @@ interface ReviewClientProps {
   cityName: string;
   cityCanonicalName: string;
   cityBounds: CityBounds | null;
+  /** Arrives from the checker, so the address is never typed twice. */
+  initialPlaceId: string | null;
 }
+
+/** A taste of what we ask, so the cold first screen answers "what do you want from me?". */
+const PREVIEW_TAGS = [
+  'neighborsAudible',
+  'warmInWinter',
+  'elevatorBreaks',
+  'repairsHandledFast',
+  'highHumidity',
+  'greenYard',
+].filter((key) => BUILDING_TAGS.some((tag) => tag.key === key));
 
 function normalizeCity(value: string) {
   return value
@@ -34,33 +48,69 @@ function normalizeCity(value: string) {
 }
 
 /**
- * Standalone entry for describing a building.
+ * Where a building gets described.
  *
  * It deliberately does not repeat the checker: no score, no map, no nearby
- * breakdown. The address is resolved through the same endpoint only to get a
- * building to attach tags to, and the score becomes a follow-up hook rather
- * than the headline. Its own job is the review framing the hero button
- * promises.
+ * breakdown. Its question is "what do people say about this building"; the
+ * checker's is "what is this location like".
  */
 export function ReviewClient({
   citySlug,
   cityName,
   cityCanonicalName,
   cityBounds,
+  initialPlaceId,
 }: ReviewClientProps) {
   const t = useTranslations('review');
+  const tTags = useTranslations('buildingTags');
   const posthog = usePostHog();
   const analyticsConsent = useAnalyticsConsent();
   const viewCaptured = useRef(false);
 
   const [building, setBuilding] = useState<ResolvedBuilding | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'outside'>('idle');
+  const [tenantTags, setTenantTags] = useState<TenantTagsSummary | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'outside'>(
+    initialPlaceId ? 'loading' : 'idle',
+  );
 
   useEffect(() => {
     if (!analyticsConsent || !posthog || viewCaptured.current) return;
     viewCaptured.current = true;
-    posthog.capture('review_page_viewed', { city: citySlug });
-  }, [analyticsConsent, citySlug, posthog]);
+    posthog.capture('review_page_viewed', {
+      city: citySlug,
+      from_checker: Boolean(initialPlaceId),
+    });
+  }, [analyticsConsent, citySlug, initialPlaceId, posthog]);
+
+  const applyPayload = useCallback((payload: unknown) => {
+    const data = payload as {
+      building: ResolvedBuilding;
+      tenantTags: TenantTagsSummary | null;
+    };
+    setBuilding(data.building);
+    setTenantTags(data.tenantTags ?? null);
+    setStatus('idle');
+  }, []);
+
+  // Arriving from the checker: the building already exists, so this is a read.
+  useEffect(() => {
+    if (!initialPlaceId) return;
+    let active = true;
+
+    fetch(`/api/location-score?city=${citySlug}&p=${encodeURIComponent(initialPlaceId)}`)
+      .then(async (response) => {
+        if (!active) return;
+        if (!response.ok) throw new Error('lookup failed');
+        applyPayload(await response.json());
+      })
+      .catch(() => {
+        if (active) setStatus('error');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [applyPayload, citySlug, initialPlaceId]);
 
   const handlePlace = useCallback(
     async (place: PlaceResult) => {
@@ -95,23 +145,16 @@ export function ReviewClient({
           body: JSON.stringify({ citySlug, place }),
         });
         if (!response.ok) throw new Error('resolve failed');
-        const payload = (await response.json()) as {
-          building: { id: string; address: string; placeId: string | null };
-        };
+        applyPayload(await response.json());
 
-        setBuilding(payload.building);
-        setStatus('idle');
         if (analyticsConsent) {
-          posthog?.capture('review_address_resolved', {
-            city: citySlug,
-            building_id: payload.building.id,
-          });
+          posthog?.capture('review_address_resolved', { city: citySlug });
         }
       } catch {
         setStatus('error');
       }
     },
-    [analyticsConsent, cityBounds, cityCanonicalName, citySlug, posthog],
+    [analyticsConsent, applyPayload, cityBounds, cityCanonicalName, citySlug, posthog],
   );
 
   return (
@@ -149,14 +192,47 @@ export function ReviewClient({
         )}
       </AddressIntake>
 
+      {/* Cold visitor: show what we ask instead of describing it. Seeing the
+          chips makes the cost obvious — ticks, not an essay. */}
+      {!building && status !== 'loading' && (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground">{t('previewIntro')}</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {PREVIEW_TAGS.map((key) => (
+              <span
+                key={key}
+                className="rounded-full border border-dashed px-3 py-1.5 text-sm text-muted-foreground"
+              >
+                {tTags(`tags.${key}`)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {building && (
-        <Card className="mt-4">
-          <CardContent className="px-5 sm:px-6">
-            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0" />
-              {building.address}
-            </p>
-            <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center gap-1.5 px-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 shrink-0" />
+            {building.address}
+          </div>
+
+          {/* When others have already spoken their chips lead: they deliver the
+              page's promise and double as a prompt, which makes recalling your
+              own experience easier than facing a blank list of 22. */}
+          {tenantTags && tenantTags.tags.length > 0 && (
+            <Card>
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg">{t('othersSaid')}</CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 sm:px-6">
+                <TenantTags summary={tenantTags} />
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardContent className="px-5 sm:px-6">
               <BuildingTagPicker
                 buildingId={building.id}
                 citySlug={citySlug}
@@ -165,9 +241,9 @@ export function ReviewClient({
                 showCostHook
                 placeId={building.placeId}
               />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
