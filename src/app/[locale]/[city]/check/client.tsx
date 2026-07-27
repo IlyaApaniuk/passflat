@@ -8,6 +8,12 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
+  Ambulance,
+  Beer,
+  Flame,
+  TrainTrack,
+  MessageSquarePlus,
+  Music,
   Bus,
   CheckCircle2,
   GraduationCap,
@@ -30,7 +36,8 @@ import {
 import { Link } from '@/i18n/navigation';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
-import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import { type PlaceResult } from '@/components/listings/address-autocomplete';
+import { AddressIntake } from '@/components/buildings/address-intake';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -73,6 +80,21 @@ interface Neighbour {
   reportCount: number;
 }
 
+interface Nuisance {
+  key: string;
+  nearestM: number;
+  name: string | null;
+  count: number;
+  report: 'nearest' | 'count';
+}
+
+interface TenantTag {
+  key: string;
+  sentiment: 'good' | 'neutral' | 'bad';
+  votes: number;
+  costReportVotes: number;
+}
+
 interface CheckerPayload {
   building: {
     id: string;
@@ -91,13 +113,23 @@ interface CheckerPayload {
   };
   costs: null | {
     totalMedian: number | null;
+    districtMedian: number | null;
+    districtName: string | null;
     rentMedian: number | null;
     expensesMedian: number | null;
     reportCount: number;
     tenantReportCount: number;
     sourceKind: 'tenant' | 'mixed' | 'scraped';
+    depositReturned: number;
+    depositAnswered: number;
   };
   neighbours?: Neighbour[];
+  nuisances?: Nuisance[];
+  tenantTags?: {
+    tags: TenantTag[];
+    voters: number;
+    costReportVoters: number;
+  } | null;
 }
 
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
@@ -117,6 +149,14 @@ interface CheckerClientProps {
   cityBounds: CityBounds | null;
   initialPlaceId: string | null;
 }
+
+const NUISANCE_ICONS: Record<string, LucideIcon> = {
+  fireStation: Flame,
+  hospital: Ambulance,
+  railway: TrainTrack,
+  nightclub: Music,
+  bars: Beer,
+};
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   supermarket: ShoppingBasket,
@@ -561,7 +601,7 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
-  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share') => {
+  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us') => {
     if (!analyticsConsent) return;
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
@@ -595,6 +635,22 @@ export function CheckerClient({
     return `${distanceFormatter.format(meters / 1000)} km`;
   };
 
+  /**
+   * The building against its district, as a verdict. Withheld under 3% — at that
+   * distance "pricier" is noise dressed up as a finding.
+   */
+  const districtVerdict = (() => {
+    const costs = result?.costs;
+    if (!costs?.totalMedian || !costs.districtMedian || !costs.districtName) return null;
+    const delta = (costs.totalMedian - costs.districtMedian) / costs.districtMedian;
+    if (Math.abs(delta) < 0.03) return null;
+    return {
+      cheaper: delta < 0,
+      percent: Math.round(Math.abs(delta) * 100),
+      district: costs.districtName,
+    };
+  })();
+
   // A building with no coordinates cannot be placed on a map; its score would
   // have been unavailable anyway, so the toggle simply does not appear.
   const canShowMap = result?.building.lat != null && result?.building.lng != null;
@@ -610,33 +666,18 @@ export function CheckerClient({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-          <MapPinned className="h-4 w-4" />
-          {t('badge')}
-        </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-          {t('title', { city: cityName })}
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          {t('subtitle')}
-        </p>
-      </div>
-
-      <Card className="mt-7 border-primary/20 shadow-xl shadow-primary/5">
-        <CardContent className="p-4 sm:p-6">
-          <Label className="mb-2 block text-sm font-semibold">{t('searchLabel')}</Label>
-          <div className="[&_input]:h-12 [&_input]:rounded-xl [&_input]:bg-background [&_input]:text-base">
-            <AddressAutocomplete
-              key={autocompleteKey}
-              onPlaceSelect={selectPlace}
-              placeholder={t('searchPlaceholder')}
-              defaultValue={inputDefault}
-            />
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('searchHint')}</p>
-        </CardContent>
-      </Card>
+      <AddressIntake
+        badge={t('badge')}
+        badgeIcon={MapPinned}
+        title={t('title', { city: cityName })}
+        subtitle={t('subtitle')}
+        label={t('searchLabel')}
+        placeholder={t('searchPlaceholder')}
+        hint={t('searchHint')}
+        inputKey={autocompleteKey}
+        defaultValue={inputDefault}
+        onPlaceSelect={selectPlace}
+      />
 
       <div aria-live="polite">
         {status === 'loading' && (
@@ -675,10 +716,15 @@ export function CheckerClient({
                   <MapPin className="h-4 w-4 shrink-0" />
                   {t('result.checkedAddress')}
                 </p>
-                <h2 className="mt-1 truncate text-lg font-semibold">{result.building.address}</h2>
-                {result.building.district && (
-                  <p className="text-sm text-muted-foreground">{result.building.district}</p>
-                )}
+                <h2 className="mt-1 truncate text-lg font-semibold">
+                  {result.building.address}
+                  {result.building.district && (
+                    <span className="font-normal text-muted-foreground">
+                      {' · '}
+                      {result.building.district}
+                    </span>
+                  )}
+                </h2>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={share}>
                 <Share2 className="h-4 w-4" />
@@ -809,6 +855,67 @@ export function CheckerClient({
               </p>
             </Card>
 
+            {/* Noise sources. Needs no tenant input, so unlike the tag block
+                below it has something to say on the very first check. */}
+            {result.nuisances && result.nuisances.length > 0 && (
+              <Card>
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-lg">{t('nuisances.title')}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{t('nuisances.subtitle')}</p>
+                </CardHeader>
+                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
+                  {result.nuisances.map((nuisance) => {
+                    const Icon = NUISANCE_ICONS[nuisance.key] ?? AlertCircle;
+                    return (
+                      <div
+                        key={nuisance.key}
+                        className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3.5"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                          <Icon className="h-[18px] w-[18px] text-amber-600 dark:text-amber-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{t(`nuisances.${nuisance.key}`)}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            {nuisance.report === 'count'
+                              ? t('nuisances.count', {
+                                  count: nuisance.count,
+                                  distance: formatDistance(nuisance.nearestM),
+                                })
+                              : `${nuisance.name ? `${nuisance.name} · ` : ''}${formatDistance(nuisance.nearestM)}`}
+                            {' · '}
+                            {t(`nuisances.${nuisance.key}Note`)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="font-medium">{t('tellUs.title')}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {result.tenantTags && result.tenantTags.voters > 0
+                      ? t('tellUs.existing', { count: result.tenantTags.voters })
+                      : t('tellUs.body')}
+                  </p>
+                </div>
+                <Button variant="outline" className="rounded-full" asChild>
+                  <Link
+                    href={`/${citySlug}/review?p=${encodeURIComponent(result.building.placeId)}`}
+                    onClick={() => captureCta('tell_us')}
+                  >
+                    <MessageSquarePlus className="h-4 w-4" />
+                    {t('tellUs.cta')}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
             {result.costs ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
                 <CardContent className="p-5 sm:p-6">
@@ -824,6 +931,25 @@ export function CheckerClient({
                           <span className="ml-1 text-sm font-medium text-muted-foreground">
                             / {t('costs.month')}
                           </span>
+                        </p>
+                      )}
+                      {districtVerdict && (
+                        <p className="mt-1 text-sm font-medium">
+                          {districtVerdict.cheaper ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              {t('costs.cheaperThanDistrict', {
+                                percent: districtVerdict.percent,
+                                district: districtVerdict.district,
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-500">
+                              {t('costs.pricierThanDistrict', {
+                                percent: districtVerdict.percent,
+                                district: districtVerdict.district,
+                              })}
+                            </span>
+                          )}
                         </p>
                       )}
                     </div>
@@ -859,9 +985,20 @@ export function CheckerClient({
                             listingCount: result.costs.reportCount - result.costs.tenantReportCount,
                           })
                         : t('costs.sourceScraped', { count: result.costs.reportCount })}
+                    {result.costs.depositAnswered > 0 && (
+                      <>
+                        {' · '}
+                        <span className="font-medium text-foreground">
+                          {t('costs.depositReturned', {
+                            returned: result.costs.depositReturned,
+                            answered: result.costs.depositAnswered,
+                          })}
+                        </span>
+                      </>
+                    )}
                   </p>
 
-                  <Button asChild className="mt-5 w-full sm:w-auto">
+                  <Button asChild className="mt-4 w-full sm:w-auto">
                     <Link
                       href={`/${citySlug}/building/${result.building.slug}`}
                       onClick={() => captureCta('building')}

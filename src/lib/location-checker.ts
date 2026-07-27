@@ -37,15 +37,30 @@ export interface LocationCheckerCostReport {
   source: string;
   totalMonthlyAvg: unknown;
   rent: unknown;
+  /** null when the tenancy is still running, so it says nothing either way. */
+  depositReturned?: boolean | null;
 }
 
 export interface LocationCheckerCosts {
   totalMedian: number | null;
+  /**
+   * The district's median, so the building's figure can be stated as a verdict
+   * rather than a number. "5 800 zł" answers nothing on its own; "12% above the
+   * district" is the thing a reader actually wanted to know.
+   */
+  districtMedian: number | null;
+  districtName: string | null;
   rentMedian: number | null;
   expensesMedian: number | null;
   reportCount: number;
   tenantReportCount: number;
   sourceKind: 'tenant' | 'mixed' | 'scraped';
+  /**
+   * Deposits returned out of tenancies that ended. The single fact no listing
+   * will ever print, which is why it earns the one line the card can spare.
+   */
+  depositReturned: number;
+  depositAnswered: number;
 }
 
 /** A neighbour with known costs, for the map layer only its own pages can show. */
@@ -58,6 +73,27 @@ export interface LocationCheckerNeighbour {
   distanceM: number;
   totalMedian: number | null;
   reportCount: number;
+}
+
+export interface LocationCheckerNuisance {
+  key: string;
+  nearestM: number;
+  name: string | null;
+  count: number;
+  report: 'nearest' | 'count';
+}
+
+export interface LocationCheckerTag {
+  key: string;
+  sentiment: 'good' | 'neutral' | 'bad';
+  votes: number;
+  costReportVotes: number;
+}
+
+export interface LocationCheckerTags {
+  tags: LocationCheckerTag[];
+  voters: number;
+  costReportVoters: number;
 }
 
 export interface LocationCheckerResponse {
@@ -84,6 +120,14 @@ export interface LocationCheckerResponse {
    * pay around here".
    */
   neighbours: LocationCheckerNeighbour[];
+  /** Noise sources nearby. Always computed — needs no tenant input. */
+  nuisances: LocationCheckerNuisance[];
+  /**
+   * What tenants reported about this building, or null when nothing is
+   * publishable yet. Null rather than an empty list so the client can drop the
+   * block entirely: an empty shelf reads as a dead product.
+   */
+  tenantTags: LocationCheckerTags | null;
 }
 
 export type LocationCheckerValidation =
@@ -291,6 +335,8 @@ export function aggregateLocationCheckerCosts(
 
   return {
     totalMedian: median(reports.map((report) => finiteNumber(report.totalMonthlyAvg))),
+    districtMedian: null,
+    districtName: null,
     rentMedian: median(reports.map((report) => finiteNumber(report.rent))),
     expensesMedian: median(
       reports.map((report) => {
@@ -302,6 +348,8 @@ export function aggregateLocationCheckerCosts(
     reportCount: reports.length,
     tenantReportCount,
     sourceKind,
+    depositReturned: reports.filter((report) => report.depositReturned === true).length,
+    depositAnswered: reports.filter((report) => report.depositReturned != null).length,
   };
 }
 

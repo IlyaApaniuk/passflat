@@ -102,6 +102,18 @@ describe('location checker rate limiter', () => {
 });
 
 describe('aggregateLocationCheckerCosts', () => {
+  it('counts deposit outcomes only where the tenancy actually ended', () => {
+    // A running tenancy says nothing either way, so it must not dilute the ratio.
+    expect(
+      aggregateLocationCheckerCosts([
+        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: true },
+        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: false },
+        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: null },
+        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000 },
+      ]),
+    ).toMatchObject({ depositReturned: 1, depositAnswered: 2 });
+  });
+
   it('returns source-aware medians from visible reports supplied by the caller', () => {
     expect(
       aggregateLocationCheckerCosts([
@@ -111,11 +123,16 @@ describe('aggregateLocationCheckerCosts', () => {
       ]),
     ).toEqual({
       totalMedian: 4_200,
+      // Filled in by the route, which knows the building's district.
+      districtMedian: null,
+      districtName: null,
       rentMedian: 3_300,
       expensesMedian: 900,
       reportCount: 3,
       tenantReportCount: 2,
       sourceKind: 'mixed',
+      depositReturned: 0,
+      depositAnswered: 0,
     });
   });
 

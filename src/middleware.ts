@@ -39,7 +39,10 @@ export default async function middleware(request: NextRequest) {
   // CDN to bypass the ISR cache for the whole site (every new visitor and every
   // bot then paid a ~2s SSR). The id is only read at submit/claim time, so
   // minting it when the form page loads is exactly as good.
-  if (request.nextUrl.pathname.includes('/costs/submit')) {
+  if (
+    request.nextUrl.pathname.includes('/costs/submit') ||
+    request.nextUrl.pathname.includes('/review')
+  ) {
     captureAnonIdFromRequest(request, response);
   }
 

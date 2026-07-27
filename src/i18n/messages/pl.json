@@ -71,7 +71,8 @@
     "linkCopied": "Link skopiowany do schowka",
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak",
-    "checkAddress": "Sprawdź adres"
+    "checkAddress": "Sprawdź adres",
+    "buildingReviews": "Opinie o budynkach"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -111,7 +112,8 @@
       "statsDeposit": "kaucja · zwrot {pct}%",
       "statsAvgRating": "Śr. ocena",
       "submitCostsCta": "Dodaj swoje koszty",
-      "checkAddressCta": "Sprawdź adres"
+      "checkAddressCta": "Sprawdź adres",
+      "reviewsCta": "Opisz budynek"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
@@ -874,11 +876,14 @@
       "sourceTenant": "Na podstawie {count, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców",
       "sourceMixed": "Na podstawie {tenantCount, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców i {listingCount, plural, one {# ogłoszenia} other {# ogłoszeń}}",
       "sourceScraped": "Na podstawie {count, plural, one {# ogłoszenia} other {# ogłoszeń}}",
-      "viewBuilding": "Zobacz pełny rozkład",
+      "viewBuilding": "Zobacz rozbicie na rachunki",
       "emptyTitle": "Nikt jeszcze nie udostępnił kosztów tego budynku. Bądź pierwszy.",
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
-      "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek."
+      "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
+      "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
+      "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
+      "depositReturned": "kaucję zwrócono {returned} z {answered}"
     },
     "map": {
       "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
@@ -893,6 +898,27 @@
         "education": "Szkoły",
         "parks": "Parki"
       }
+    },
+    "nuisances": {
+      "title": "Na co zwrócić uwagę",
+      "subtitle": "W pobliżu są źródła hałasu. Podajemy fakt i odległość — ocena należy do Ciebie.",
+      "fireStation": "Straż pożarna",
+      "fireStationNote": "możliwe syreny w nocy",
+      "hospital": "Szpital",
+      "hospitalNote": "możliwe syreny karetek",
+      "railway": "Kolej",
+      "railwayNote": "hałas pociągów",
+      "nightclub": "Klub nocny",
+      "nightclubNote": "hałas w nocy",
+      "bars": "Bary i puby",
+      "barsNote": "głośno wieczorami",
+      "count": "{count, plural, one {# lokal} few {# lokale} many {# lokali} other {# lokali}} w pobliżu, najbliższy {distance}"
+    },
+    "tellUs": {
+      "title": "Mieszkałeś w tym budynku?",
+      "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda.",
+      "cta": "Opisz budynek",
+      "existing": "{count, plural, one {# najemca już opisał} few {# najemców już opisało} many {# najemców już opisało} other {# najemców już opisało}} ten budynek. Dodaj swoje."
     }
   },
   "calculator": {
@@ -2331,5 +2357,70 @@
       "ignoreNotice": "Jeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.",
       "footer": "Otrzymujesz tę wiadomość, ponieważ ktoś poprosił o link do logowania do konta Passflat."
     }
+  },
+  "buildingTags": {
+    "sections": {
+      "noise": "Hałas i cisza",
+      "climate": "Ciepło i wilgoć",
+      "condition": "Stan budynku",
+      "management": "Jak zarządzany jest budynek",
+      "outside": "Podwórko i parking"
+    },
+    "tags": {
+      "quietBuilding": "Cichy budynek",
+      "neighborsAudible": "Słychać sąsiadów",
+      "streetAudible": "Słychać ulicę",
+      "thinFloors": "Cienkie stropy",
+      "warmInWinter": "Ciepło zimą",
+      "coldInWinter": "Zimno zimą",
+      "hotInSummer": "Gorąco latem",
+      "highHumidity": "Wilgoć",
+      "poorVentilation": "Słaba wentylacja",
+      "workingElevator": "Winda działa",
+      "noElevator": "Brak windy",
+      "elevatorBreaks": "Winda często się psuje",
+      "tidyEntrance": "Czysta klatka",
+      "neglectedEntrance": "Zaniedbana klatka",
+      "oldPlumbing": "Stara instalacja",
+      "repairsHandledFast": "Usterki naprawiane szybko",
+      "repairsIgnored": "Usterki ignorowane",
+      "intercomWorks": "Domofon działa",
+      "binsOverflowing": "Przepełnione śmietniki",
+      "easyParking": "Łatwo zaparkować",
+      "hardParking": "Trudno zaparkować",
+      "greenYard": "Zielone podwórko"
+    },
+    "summary": {
+      "title": "Co mówią najemcy",
+      "singleVoter": "Jeden najemca opisał ten budynek.",
+      "voters": "Zaznaczyło {count} najemców, z czego {confirmed} potwierdziło koszty.",
+      "confirmedChip": "z kosztami",
+      "confirmedHint": "Ten najemca przesłał również zgłoszenie kosztów dla tego budynku"
+    }
+  },
+  "buildingTagPicker": {
+    "title": "Co warto wiedzieć o tym budynku?",
+    "subtitle": "Zaznacz, co zauważyłeś mieszkając przy {address}.",
+    "submit": "{count, plural, =0 {Zaznacz co najmniej jedno} one {Wyślij # uwagę} few {Wyślij # uwagi} many {Wyślij # uwag} other {Wyślij # uwag}}",
+    "privacy": "Bez imienia i bez konta.",
+    "savedTitle": "Dzięki, zapisane",
+    "savedBody": "{count, plural, one {# uwaga pojawi się} few {# uwagi pojawią się} many {# uwag pojawi się} other {# uwag pojawi się}} na stronie budynku.",
+    "costHook": "A ile płaciłeś? Dodaj koszty",
+    "error": "Nie udało się zapisać. Spróbuj ponownie."
+  },
+  "review": {
+    "metaTitle": "Opinie o budynkach: {city} — co mówią najemcy",
+    "metaDescription": "Opowiedz, jak mieszka się w Twoim budynku, i zobacz, co napisali inni. Bez konta.",
+    "badge": "Opinie o budynkach",
+    "title": "Opowiedz o swoim budynku",
+    "subtitle": "Zobacz, co mówią najemcy, i opisz swój budynek: słyszalność, ogrzewanie, windę, jak naprawiane są usterki. To, czego nie ma w ogłoszeniu.",
+    "addressLabel": "Adres budynku",
+    "addressPlaceholder": "Zacznij wpisywać adres…",
+    "addressHint": "Wybierz pełny adres z numerem budynku. Na razie Warszawa.",
+    "resolving": "Szukamy budynku…",
+    "outsideCity": "Na razie przyjmujemy opinie tylko w mieście {city}.",
+    "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie.",
+    "othersSaid": "Co już napisano",
+    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać"
   }
 }

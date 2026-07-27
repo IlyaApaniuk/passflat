@@ -16,6 +16,7 @@ import type { FeatureCollection, Point } from 'geojson';
 import { Building2, MapPin, Users, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { relativeCostColor } from '@/lib/cost-color';
+import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 export interface CostBuilding {
@@ -51,12 +52,6 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const WARSAW_CENTER = { longitude: 21.0122, latitude: 52.2297 };
 
 // Abbreviated monthly total for the on-pin label, e.g. 3460 -> "3.5k".
-function pinLabel(v: number): string {
-  if (v <= 0) return '';
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
-  return `${Math.round(v)}`;
-}
-
 function zoomForBounds(b: Bounds, mapWidth = 800, mapHeight = 600): number {
   const WORLD_PX = 512;
   const lngSpan = b.east - b.west;
@@ -75,7 +70,15 @@ const clusterLayer: LayerProps = {
   source: 'cost-buildings',
   filter: ['has', 'point_count'],
   paint: {
-    'circle-color': ['step', ['get', 'point_count'], '#6366f1', 5, '#4f46e5', 10, '#4338ca'],
+    'circle-color': [
+      'step',
+      ['get', 'point_count'],
+      MAP_COLORS.cluster[0],
+      5,
+      MAP_COLORS.cluster[1],
+      10,
+      MAP_COLORS.cluster[2],
+    ],
     'circle-radius': ['step', ['get', 'point_count'], 20, 5, 26, 10, 32],
     'circle-stroke-width': 2,
     'circle-stroke-color': '#ffffff',
@@ -92,7 +95,7 @@ const clusterCountLayer: LayerProps = {
     'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
     'text-size': 13,
   },
-  paint: { 'text-color': '#ffffff' },
+  paint: { 'text-color': MAP_COLORS.clusterText },
 };
 
 // Neutral price pin — a white bubble carrying the building's median monthly
@@ -104,10 +107,10 @@ const unclusteredLayer: LayerProps = {
   source: 'cost-buildings',
   filter: ['!', ['has', 'point_count']],
   paint: {
-    'circle-radius': 17,
-    'circle-color': '#ffffff',
-    'circle-stroke-width': 1.5,
-    'circle-stroke-color': '#4f46e5',
+    'circle-radius': MAP_PIN.radius,
+    'circle-color': MAP_COLORS.pinFill,
+    'circle-stroke-width': MAP_PIN.strokeWidth,
+    'circle-stroke-color': MAP_COLORS.pinStroke,
     'circle-opacity': 1,
   },
 };
@@ -120,10 +123,10 @@ const unclusteredLabelLayer: LayerProps = {
   layout: {
     'text-field': ['get', 'label'],
     'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
-    'text-size': 12,
+    'text-size': MAP_PIN.textSize,
     'text-allow-overlap': true,
   },
-  paint: { 'text-color': '#312e81' },
+  paint: { 'text-color': MAP_COLORS.pinText },
 };
 
 export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: CostsMapProps) {
@@ -266,7 +269,7 @@ export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: Costs
         initialViewState={initialViewState}
         maxBounds={maxBounds}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle={MAP_STYLE_URL}
         interactiveLayerIds={['cost-clusters', 'cost-unclustered', 'cost-unclustered-label']}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

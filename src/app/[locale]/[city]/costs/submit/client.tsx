@@ -33,6 +33,7 @@ import {
   Save,
 } from 'lucide-react';
 import { AddressAutocomplete, type PlaceResult } from '@/components/listings/address-autocomplete';
+import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
 import { MonthYearPicker } from '@/components/costs/month-year-picker';
 import { ShareButton } from '@/components/costs/share-button';
 import type { CityBounds } from '@/lib/listings-data';
@@ -284,6 +285,9 @@ export function CostSubmitClient({
   const [submitted, setSubmitted] = useState(false);
   const [wasFlagged, setWasFlagged] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
+  // The building the report landed on, so the thank-you screen can ask what
+  // else is worth knowing about it.
+  const [submittedBuildingId, setSubmittedBuildingId] = useState<string | null>(null);
   const [submittedComparison, setSubmittedComparison] = useState<{
     userTotal: number | null;
     buildingReportCount: number;
@@ -686,8 +690,9 @@ export function CostSubmitClient({
         throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
       }
 
-      const costReport = data.costReport as { id?: string } | undefined;
+      const costReport = data.costReport as { id?: string; buildingId?: string } | undefined;
       setSubmittedReportId(costReport?.id ?? null);
+      setSubmittedBuildingId(costReport?.buildingId ?? null);
       setSubmittedComparison((data.comparison as typeof submittedComparison) ?? null);
       setWasFlagged((data.wasFlagged as boolean) ?? false);
       setSubmitted(true);
@@ -863,6 +868,16 @@ export function CostSubmitClient({
                 <p className="mt-2 text-muted-foreground">
                   {editMode ? t('costs.submit.editThankYouDesc') : t('costs.submit.thankYouDesc')}
                 </p>
+                {!editMode && submittedBuildingId && (
+                  <div className="mt-6 border-t pt-6 text-left">
+                    <BuildingTagPicker
+                      buildingId={submittedBuildingId}
+                      citySlug={citySlug}
+                      address={`${formData.street} ${formData.buildingNumber}`.trim()}
+                      source="cost_submit"
+                    />
+                  </div>
+                )}
                 {submittedComparison && (
                   <div className="mt-5 space-y-4 text-left">
                     {/* You vs your district — the personal hook that makes the

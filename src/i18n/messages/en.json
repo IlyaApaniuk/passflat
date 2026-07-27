@@ -71,7 +71,8 @@
     "linkCopied": "Link copied to clipboard",
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong",
-    "checkAddress": "Check an address"
+    "checkAddress": "Check an address",
+    "buildingReviews": "Building reviews"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -111,7 +112,8 @@
       "statsDeposit": "deposit · {pct}% returned",
       "statsAvgRating": "Avg Rating",
       "submitCostsCta": "Add your costs",
-      "checkAddressCta": "Check an address"
+      "checkAddressCta": "Check an address",
+      "reviewsCta": "Describe a building"
     },
     "howItWorks": {
       "title": "How Passflat Works",
@@ -874,11 +876,14 @@
       "sourceTenant": "Based on {count, plural, one {# tenant report} other {# tenant reports}}",
       "sourceMixed": "Based on {tenantCount, plural, one {# tenant report} other {# tenant reports}} and {listingCount, plural, one {# listing} other {# listings}}",
       "sourceScraped": "Based on {count, plural, one {# listing} other {# listings}}",
-      "viewBuilding": "See the full breakdown",
+      "viewBuilding": "See the bill-by-bill breakdown",
       "emptyTitle": "No one has shared costs for this building yet. Be the first.",
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
-      "followHint": "Not ready to share? Follow the building for updates."
+      "followHint": "Not ready to share? Follow the building for updates.",
+      "cheaperThanDistrict": "{percent}% below the {district} median",
+      "pricierThanDistrict": "{percent}% above the {district} median",
+      "depositReturned": "deposit returned to {returned} of {answered}"
     },
     "map": {
       "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
@@ -893,6 +898,27 @@
         "education": "Schools",
         "parks": "Parks"
       }
+    },
+    "nuisances": {
+      "title": "Worth knowing",
+      "subtitle": "There are noise sources nearby. We state the fact and the distance — the call is yours.",
+      "fireStation": "Fire station",
+      "fireStationNote": "sirens at night are likely",
+      "hospital": "Hospital",
+      "hospitalNote": "ambulance sirens are likely",
+      "railway": "Railway",
+      "railwayNote": "train noise",
+      "nightclub": "Nightclub",
+      "nightclubNote": "noise at night",
+      "bars": "Bars and pubs",
+      "barsNote": "noisy in the evenings",
+      "count": "{count, plural, one {# venue} other {# venues}} nearby, closest {distance}"
+    },
+    "tellUs": {
+      "title": "Lived in this building?",
+      "body": "Tick what is worth knowing: sound, heating, the lift.",
+      "cta": "Describe it",
+      "existing": "{count, plural, one {# tenant has already described} other {# tenants have already described}} this building. Add yours."
     }
   },
   "calculator": {
@@ -2331,5 +2357,70 @@
       "ignoreNotice": "If you didn't request this, you can safely ignore this email.",
       "footer": "You received this email because someone requested a sign-in link for your Passflat account."
     }
+  },
+  "buildingTags": {
+    "sections": {
+      "noise": "Noise and quiet",
+      "climate": "Warmth and damp",
+      "condition": "Building condition",
+      "management": "How the building is run",
+      "outside": "Yard and parking"
+    },
+    "tags": {
+      "quietBuilding": "Quiet building",
+      "neighborsAudible": "You hear the neighbours",
+      "streetAudible": "You hear the street",
+      "thinFloors": "Thin floors",
+      "warmInWinter": "Warm in winter",
+      "coldInWinter": "Cold in winter",
+      "hotInSummer": "Hot in summer",
+      "highHumidity": "Damp",
+      "poorVentilation": "Poor ventilation",
+      "workingElevator": "Lift works",
+      "noElevator": "No lift",
+      "elevatorBreaks": "Lift breaks often",
+      "tidyEntrance": "Tidy entrance",
+      "neglectedEntrance": "Neglected entrance",
+      "oldPlumbing": "Old plumbing",
+      "repairsHandledFast": "Repairs handled fast",
+      "repairsIgnored": "Repairs ignored",
+      "intercomWorks": "Intercom works",
+      "binsOverflowing": "Bins overflowing",
+      "easyParking": "Easy parking",
+      "hardParking": "Hard to park",
+      "greenYard": "Green yard"
+    },
+    "summary": {
+      "title": "What tenants say",
+      "singleVoter": "One tenant has described this building.",
+      "voters": "{count} tenants reported, {confirmed} of them also confirmed costs.",
+      "confirmedChip": "with costs",
+      "confirmedHint": "This tenant also submitted a cost report for this building"
+    }
+  },
+  "buildingTagPicker": {
+    "title": "What should people know about this building?",
+    "subtitle": "Tick what you noticed while living at {address}.",
+    "submit": "{count, plural, =0 {Pick at least one} one {Send # note} other {Send # notes}}",
+    "privacy": "No name, no account.",
+    "savedTitle": "Thanks — saved",
+    "savedBody": "{count, plural, one {# note will appear} other {# notes will appear}} on the building page.",
+    "costHook": "What did you pay? Add your costs",
+    "error": "Couldn't save. Please try again."
+  },
+  "review": {
+    "metaTitle": "Building reviews: {city} — what tenants say",
+    "metaDescription": "Tell people what living in your building is like, and see what others reported. No account needed.",
+    "badge": "Building reviews",
+    "title": "Tell us about your building",
+    "subtitle": "See what tenants say and describe your own building: sound, heating, the lift, how repairs get handled. The things a listing never mentions.",
+    "addressLabel": "Building address",
+    "addressPlaceholder": "Start typing an address…",
+    "addressHint": "Pick the full address with a building number. Warsaw for now.",
+    "resolving": "Finding the building…",
+    "outsideCity": "We only take reviews in {city} for now.",
+    "error": "That didn't work. Pick an address from the suggestions and try again.",
+    "othersSaid": "What people said",
+    "effort": "5 groups of tick boxes · no account · nothing to write"
   }
 }

@@ -11,6 +11,9 @@ const h = vi.hoisted(() => ({
   scoreUpsert: vi.fn(),
   computeScore: vi.fn(),
   buildingFindMany: vi.fn(),
+  poiFindMany: vi.fn(),
+  costReportFindMany: vi.fn(),
+  buildingTagFindMany: vi.fn(),
   getTranslations: vi.fn(),
 }));
 
@@ -26,6 +29,10 @@ vi.mock('@/lib/prisma', () => ({
       count: h.buildingCount,
     },
     buildingLocationScore: { upsert: h.scoreUpsert },
+    poi: { findMany: h.poiFindMany },
+    // The district baseline the cost card compares against.
+    costReport: { findMany: h.costReportFindMany },
+    buildingTag: { findMany: h.buildingTagFindMany },
   },
 }));
 
@@ -122,8 +129,11 @@ beforeEach(() => {
   h.cityFindUnique.mockResolvedValue(activeCity);
   h.buildingFindFirst.mockResolvedValue(null);
   h.buildingFindUnique.mockResolvedValue(null);
-  // No neighbours with costs unless a test says otherwise.
+  // No neighbours, nuisances or tenant tags unless a test says otherwise.
   h.buildingFindMany.mockResolvedValue([]);
+  h.poiFindMany.mockResolvedValue([]);
+  h.costReportFindMany.mockResolvedValue([]);
+  h.buildingTagFindMany.mockResolvedValue([]);
   h.buildingCount.mockResolvedValue(0);
   h.getTranslations.mockResolvedValue((key: string) => (key === 'city.warsaw' ? 'Warszawa' : key));
   h.computeScore.mockResolvedValue({

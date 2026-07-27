@@ -8,7 +8,12 @@
  * fine — this script can be slow and retry as much as it likes.
  *
  * Usage:
- *   npx tsx prisma/import-osm-pois.ts [citySlug]     # default: warsaw
+ *   npx tsx prisma/import-osm-pois.ts [citySlug]              # every filter
+ *   npx tsx prisma/import-osm-pois.ts warsaw bar fire_station # only matching
+ *
+ * The second form exists because the public instances routinely drop a filter
+ * or two per run: this run prints exactly which ones failed, and those can then
+ * be re-fetched on their own instead of paying for a full pass again.
  *
  * Re-running is safe: rows are keyed by (osmType, osmId, category) and
  * upserted, then POIs that disappeared from OSM are pruned.
@@ -20,6 +25,7 @@ import {
   categorizeTags,
   type BoundingBox,
 } from '../src/lib/location-score';
+import { NUISANCES, categorizeNuisanceTags } from '../src/lib/nuisances';
 
 const prisma = new PrismaClient();
 
@@ -111,7 +117,9 @@ function toRows(citySlug: string, elements: OverpassElement[]): PoiRow[] {
     if (lat == null || lng == null) continue;
 
     const tags = element.tags ?? {};
-    for (const category of categorizeTags(tags)) {
+    // Scoring categories and nuisances share the table; `scoreCategorizedPois`
+    // only ever looks at its own keys, so the extra rows are inert for the score.
+    for (const category of [...categorizeTags(tags), ...categorizeNuisanceTags(tags)]) {
       rows.push({
         citySlug,
         osmType: element.type,
@@ -160,6 +168,7 @@ async function writeRows(citySlug: string, rows: PoiRow[], importedAt: Date) {
 
 async function main() {
   const citySlug = (process.argv[2] ?? 'warsaw').toLowerCase();
+  const only = process.argv.slice(3).filter((arg) => !arg.startsWith('-'));
 
   const city = await prisma.city.findUnique({
     where: { slug: citySlug },
@@ -182,7 +191,23 @@ async function main() {
   // Warsaw bbox reliably 504s on the public instances; split up, each part
   // answers in seconds. Each filter is written as soon as it lands, so a run
   // that dies halfway still leaves the database better off than it found it.
-  const filters = [...new Set(CATEGORIES.flatMap((category) => category.filters))];
+  const allFilters = [
+    ...new Set([...CATEGORIES, ...NUISANCES].flatMap((category) => category.filters)),
+  ];
+  const filters =
+    only.length > 0
+      ? allFilters.filter((filter) => only.some((needle) => filter.includes(needle)))
+      : allFilters;
+
+  if (filters.length === 0) {
+    throw new Error(
+      `No filter matches ${only.join(', ')}. Available:\n  ${allFilters.join('\n  ')}`,
+    );
+  }
+  if (only.length > 0) {
+    // A partial pass has no business deciding what is stale.
+    console.log(`  partial run: ${filters.length}/${allFilters.length} filters, prune skipped`);
+  }
   const importedAt = new Date();
   const failed: string[] = [];
   const written: Record<string, number> = {};
@@ -214,7 +239,9 @@ async function main() {
     console.log(`    ${category.padEnd(14)} ${count}`);
   }
 
-  if (failed.length > 0) {
+  if (only.length > 0) {
+    console.log('\n  Partial run — nothing pruned.');
+  } else if (failed.length > 0) {
     console.warn(
       `\n  ${failed.length}/${filters.length} filters failed — skipping the prune so existing ` +
         `POIs survive. Re-run to complete:\n    ${failed.join('\n    ')}`,
