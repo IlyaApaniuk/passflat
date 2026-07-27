@@ -100,29 +100,6 @@ interface CheckerPayload {
   neighbours?: Neighbour[];
 }
 
-/** Mounts its children the first time they scroll into view, then stays mounted. */
-function WhenVisible({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  // Without IntersectionObserver there is nothing to wait for, so start mounted.
-  const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined');
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || visible) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => entries.some((entry) => entry.isIntersecting) && setVisible(true),
-      { rootMargin: '200px' },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [visible]);
-
-  return (
-    <div ref={ref}>{visible ? children : <MapSkeleton className="h-[420px] rounded-xl" />}</div>
-  );
-}
-
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
 type LastAttempt = { kind: 'get'; placeId: string } | { kind: 'post'; place: PlaceResult };
 
@@ -416,6 +393,8 @@ export function CheckerClient({
   );
   const [result, setResult] = useState<CheckerPayload | null>(null);
   const [outsideCity, setOutsideCity] = useState<string | null>(null);
+  // List first: the map chunk is heavy and every mounted map costs a Mapbox load.
+  const [view, setView] = useState<'list' | 'map'>('list');
   const [errorKind, setErrorKind] = useState<ErrorKind>('generic');
   const [canRetry, setCanRetry] = useState(false);
   const [inputDefault, setInputDefault] = useState('');
@@ -616,6 +595,10 @@ export function CheckerClient({
     return `${distanceFormatter.format(meters / 1000)} km`;
   };
 
+  // A building with no coordinates cannot be placed on a map; its score would
+  // have been unavailable anyway, so the toggle simply does not appear.
+  const canShowMap = result?.building.lat != null && result?.building.lng != null;
+
   /**
    * "Żabka 42 m · Biedronka 210 m" — naming what is actually there beats a bare
    * distance, and the names ship with the POI import at no extra cost.
@@ -720,98 +703,111 @@ export function CheckerClient({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-1">
-                <CardTitle className="text-lg">{t('result.breakdownTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6">
-                {result.score.categories.map((category) => {
-                  const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
-                  const categoryTier = tier(category.score);
-                  const label = t.has(`result.categories.${category.key}`)
-                    ? t(`result.categories.${category.key}`)
-                    : category.key;
-
-                  return (
-                    <div key={category.key} className="rounded-xl border bg-muted/20 p-3.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <div
-                            className={cn(
-                              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                              categoryTier.bg,
-                            )}
-                          >
-                            <Icon className={cn('h-[18px] w-[18px]', categoryTier.text)} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{label}</p>
-                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                              {nearbySummary(category) ?? formatDistance(category.nearestM)}
-                            </p>
-                          </div>
-                        </div>
-                        <span className={cn('text-sm font-bold tabular-nums', categoryTier.text)}>
-                          {category.score}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex items-center gap-3">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn('h-full rounded-full', categoryTier.bar)}
-                            style={{ width: `${Math.max(0, Math.min(100, category.score))}%` }}
-                          />
-                        </div>
-                        <span className="min-w-14 text-right text-xs tabular-nums text-muted-foreground">
-                          {formatDistance(category.nearestM)}
-                        </span>
-                      </div>
+            <Card className="gap-4">
+              <CardHeader className="pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <CardTitle className="text-lg">{t('result.breakdownTitle')}</CardTitle>
+                  {canShowMap && (
+                    <div className="flex rounded-lg bg-muted p-0.5">
+                      {(['list', 'map'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setView(mode)}
+                          aria-pressed={view === mode}
+                          className={cn(
+                            'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                            view === mode
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {t(`result.view.${mode}`)}
+                        </button>
+                      ))}
                     </div>
-                  );
-                })}
-              </CardContent>
-              <p className="border-t px-6 py-3 text-[10px] text-muted-foreground">
+                  )}
+                </div>
+              </CardHeader>
+              {view === 'map' && canShowMap ? (
+                <CardContent className="px-4 sm:px-6">
+                  <Suspense fallback={<MapSkeleton className="h-[420px] rounded-xl" />}>
+                    <LocationPoiMap
+                      citySlug={citySlug}
+                      lat={result.building.lat!}
+                      lng={result.building.lng!}
+                      pois={result.score.categories.flatMap((category) =>
+                        (category.nearby ?? []).map((poi) => ({
+                          category: category.key,
+                          name: poi.name,
+                          lat: poi.lat,
+                          lng: poi.lng,
+                          distanceM: poi.distanceM,
+                        })),
+                      )}
+                      neighbours={result.neighbours ?? []}
+                      formatDistance={(meters) => formatDistance(meters)}
+                      formatMoney={(amount) => `${numberFormatter.format(amount)} zł`}
+                    />
+                  </Suspense>
+                  {(result.neighbours?.length ?? 0) > 0 && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {t('map.subtitleWithCosts', { count: result.neighbours!.length })}
+                    </p>
+                  )}
+                </CardContent>
+              ) : (
+                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
+                  {result.score.categories.map((category) => {
+                    const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
+                    const categoryTier = tier(category.score);
+                    const label = t.has(`result.categories.${category.key}`)
+                      ? t(`result.categories.${category.key}`)
+                      : category.key;
+
+                    return (
+                      <div key={category.key} className="rounded-xl border bg-muted/20 p-3.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div
+                              className={cn(
+                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                                categoryTier.bg,
+                              )}
+                            >
+                              <Icon className={cn('h-[18px] w-[18px]', categoryTier.text)} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{label}</p>
+                              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                                {nearbySummary(category) ?? formatDistance(category.nearestM)}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={cn('text-sm font-bold tabular-nums', categoryTier.text)}>
+                            {category.score}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn('h-full rounded-full', categoryTier.bar)}
+                              style={{ width: `${Math.max(0, Math.min(100, category.score))}%` }}
+                            />
+                          </div>
+                          <span className="min-w-14 text-right text-xs tabular-nums text-muted-foreground">
+                            {formatDistance(category.nearestM)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              )}
+              <p className="border-t px-6 pt-3 text-[10px] text-muted-foreground">
                 {t('result.poweredBy')}
               </p>
             </Card>
-
-            {/* A building with no coordinates cannot be placed, and the score
-                would have been unavailable for it anyway. */}
-            {result.building.lat != null && result.building.lng != null && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">{t('map.title')}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {result.neighbours && result.neighbours.length > 0
-                      ? t('map.subtitleWithCosts', { count: result.neighbours.length })
-                      : t('map.subtitle')}
-                  </p>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-                  <WhenVisible>
-                    <Suspense fallback={<MapSkeleton className="h-[420px] rounded-xl" />}>
-                      <LocationPoiMap
-                        citySlug={citySlug}
-                        lat={result.building.lat}
-                        lng={result.building.lng}
-                        pois={result.score.categories.flatMap((category) =>
-                          (category.nearby ?? []).map((poi) => ({
-                            category: category.key,
-                            name: poi.name,
-                            lat: poi.lat,
-                            lng: poi.lng,
-                            distanceM: poi.distanceM,
-                          })),
-                        )}
-                        neighbours={result.neighbours ?? []}
-                        formatDistance={(meters) => formatDistance(meters)}
-                        formatMoney={(amount) => `${numberFormatter.format(amount)} zł`}
-                      />
-                    </Suspense>
-                  </WhenVisible>
-                </CardContent>
-              </Card>
-            )}
 
             {result.costs ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
