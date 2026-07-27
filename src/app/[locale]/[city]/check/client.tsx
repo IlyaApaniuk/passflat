@@ -38,7 +38,6 @@ import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
-import { TenantTags } from '@/components/buildings/tenant-tags';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -899,7 +898,11 @@ export function CheckerClient({
               <CardContent className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
                 <div className="min-w-0">
                   <p className="font-medium">{t('tellUs.title')}</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{t('tellUs.body')}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {result.tenantTags && result.tenantTags.voters > 0
+                      ? t('tellUs.existing', { count: result.tenantTags.voters })
+                      : t('tellUs.body')}
+                  </p>
                 </div>
                 <Button variant="outline" className="rounded-full" asChild>
                   <Link
@@ -912,19 +915,6 @@ export function CheckerClient({
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Rendered only when something is publishable: a block reading
-                "nobody has said anything" is what makes a product look dead. */}
-            {result.tenantTags && result.tenantTags.tags.length > 0 && (
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle className="text-lg">{t('tenantTags.title')}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 sm:px-6">
-                  <TenantTags summary={result.tenantTags} />
-                </CardContent>
-              </Card>
-            )}
 
             {result.costs ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">

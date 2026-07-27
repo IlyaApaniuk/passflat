@@ -914,17 +914,11 @@
       "barsNote": "głośno wieczorami",
       "count": "{count, plural, one {# lokal} few {# lokale} many {# lokali} other {# lokali}} w pobliżu, najbliższy {distance}"
     },
-    "tenantTags": {
-      "title": "Co mówią najemcy",
-      "singleVoter": "Jeden najemca opisał ten budynek.",
-      "voters": "Zaznaczyło {count} najemców, z czego {confirmed} potwierdziło koszty.",
-      "confirmedChip": "z kosztami",
-      "confirmedHint": "Ten najemca przesłał również zgłoszenie kosztów dla tego budynku"
-    },
     "tellUs": {
       "title": "Mieszkałeś w tym budynku?",
       "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda.",
-      "cta": "Opisz budynek"
+      "cta": "Opisz budynek",
+      "existing": "{count, plural, one {# najemca już opisał} few {# najemców już opisało} many {# najemców już opisało} other {# najemców już opisało}} ten budynek. Dodaj swoje."
     }
   },
   "calculator": {
@@ -2395,6 +2389,13 @@
       "easyParking": "Łatwo zaparkować",
       "hardParking": "Trudno zaparkować",
       "greenYard": "Zielone podwórko"
+    },
+    "summary": {
+      "title": "Co mówią najemcy",
+      "singleVoter": "Jeden najemca opisał ten budynek.",
+      "voters": "Zaznaczyło {count} najemców, z czego {confirmed} potwierdziło koszty.",
+      "confirmedChip": "z kosztami",
+      "confirmedHint": "Ten najemca przesłał również zgłoszenie kosztów dla tego budynku"
     }
   },
   "buildingTagPicker": {

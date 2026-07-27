@@ -914,17 +914,11 @@
       "barsNote": "noisy in the evenings",
       "count": "{count, plural, one {# venue} other {# venues}} nearby, closest {distance}"
     },
-    "tenantTags": {
-      "title": "What tenants say",
-      "singleVoter": "One tenant has described this building.",
-      "voters": "{count} tenants reported, {confirmed} of them also confirmed costs.",
-      "confirmedChip": "with costs",
-      "confirmedHint": "This tenant also submitted a cost report for this building"
-    },
     "tellUs": {
       "title": "Lived in this building?",
       "body": "Tick what is worth knowing: sound, heating, the lift.",
-      "cta": "Describe it"
+      "cta": "Describe it",
+      "existing": "{count, plural, one {# tenant has already described} other {# tenants have already described}} this building. Add yours."
     }
   },
   "calculator": {
@@ -2395,6 +2389,13 @@
       "easyParking": "Easy parking",
       "hardParking": "Hard to park",
       "greenYard": "Green yard"
+    },
+    "summary": {
+      "title": "What tenants say",
+      "singleVoter": "One tenant has described this building.",
+      "voters": "{count} tenants reported, {confirmed} of them also confirmed costs.",
+      "confirmedChip": "with costs",
+      "confirmedHint": "This tenant also submitted a cost report for this building"
     }
   },
   "buildingTagPicker": {

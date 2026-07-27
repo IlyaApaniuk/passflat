@@ -32,14 +32,14 @@ const SENTIMENT_STYLES: Record<string, string> = {
  * opinion up as an aggregate.
  */
 export function TenantTags({ summary }: { summary: TenantTagsSummary }) {
-  const t = useTranslations();
+  const t = useTranslations('buildingTags');
 
   return (
     <div>
       <p className="text-sm text-muted-foreground">
         {summary.voters === 1
-          ? t('checker.tenantTags.singleVoter')
-          : t('checker.tenantTags.voters', {
+          ? t('summary.singleVoter')
+          : t('summary.voters', {
               count: summary.voters,
               confirmed: summary.costReportVoters,
             })}
@@ -53,15 +53,15 @@ export function TenantTags({ summary }: { summary: TenantTagsSummary }) {
               SENTIMENT_STYLES[tag.sentiment] ?? SENTIMENT_STYLES.neutral,
             )}
           >
-            {t(`buildingTags.tags.${tag.key}`)}
+            {t(`tags.${tag.key}`)}
             {tag.votes > 1 && <span className="text-xs tabular-nums opacity-70">{tag.votes}</span>}
             {tag.costReportVotes > 0 && (
               <span
-                title={t('checker.tenantTags.confirmedHint')}
+                title={t('summary.confirmedHint')}
                 className="inline-flex items-center gap-0.5 rounded-full bg-background/60 px-1.5 text-[10px] font-medium"
               >
                 <Users className="h-3 w-3" />
-                {t('checker.tenantTags.confirmedChip')}
+                {t('summary.confirmedChip')}
               </span>
             )}
           </span>
