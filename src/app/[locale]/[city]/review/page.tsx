@@ -1,11 +1,13 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
+import { pickMessages } from '@/i18n/messages';
 import { Footer } from '@/components/landing/footer';
 import { ReviewClient } from './client';
 
@@ -61,17 +63,24 @@ export default async function ReviewPage({ params }: PageProps) {
     locale: cityRecord.country.defaultLocale,
   });
 
+  // `review` is page-specific and deliberately out of the shared client bundle;
+  // the tag namespaces travel with it so the picker works inside this subtree.
+  const messages = await getMessages();
+  const clientMessages = pickMessages(messages, ['review', 'buildingTags', 'buildingTagPicker']);
+
   return (
     <div className="flex min-h-screen flex-col">
       <main className="relative flex-1 overflow-hidden bg-muted/30 pt-24">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent" />
         <div className="relative container mx-auto px-4 py-8 sm:py-12">
-          <ReviewClient
-            citySlug={cityRecord.slug}
-            cityName={t(cityRecord.nameKey)}
-            cityCanonicalName={canonicalTranslations(cityRecord.nameKey)}
-            cityBounds={(cityRecord.bounds as CityBounds | null) ?? null}
-          />
+          <NextIntlClientProvider messages={clientMessages}>
+            <ReviewClient
+              citySlug={cityRecord.slug}
+              cityName={t(cityRecord.nameKey)}
+              cityCanonicalName={canonicalTranslations(cityRecord.nameKey)}
+              cityBounds={(cityRecord.bounds as CityBounds | null) ?? null}
+            />
+          </NextIntlClientProvider>
         </div>
       </main>
       <Footer />

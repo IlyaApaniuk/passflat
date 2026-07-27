@@ -2399,10 +2399,10 @@
     "error": "Nie udało się zapisać. Spróbuj ponownie."
   },
   "review": {
-    "metaTitle": "Opinie o budynkach w {city} — co mówią najemcy",
+    "metaTitle": "Opinie o budynkach: {city} — co mówią najemcy",
     "metaDescription": "Opowiedz, jak mieszka się w Twoim budynku, i zobacz, co napisali inni. Bez konta.",
     "badge": "Opinie o budynkach",
-    "title": "Opowiedz o swoim budynku w {city}",
+    "title": "Opowiedz o swoim budynku",
     "subtitle": "Nie ocena w gwiazdkach, tylko konkrety: słyszalność, ogrzewanie, winda, jak naprawiane są usterki. To, czego nie ma w ogłoszeniu.",
     "addressLabel": "Adres budynku",
     "addressPlaceholder": "Zacznij wpisywać adres…",

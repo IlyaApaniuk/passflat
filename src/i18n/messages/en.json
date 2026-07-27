@@ -2399,10 +2399,10 @@
     "error": "Couldn't save. Please try again."
   },
   "review": {
-    "metaTitle": "Building reviews in {city} — what tenants say",
+    "metaTitle": "Building reviews: {city} — what tenants say",
     "metaDescription": "Tell people what living in your building is like, and see what others reported. No account needed.",
     "badge": "Building reviews",
-    "title": "Tell us about your building in {city}",
+    "title": "Tell us about your building",
     "subtitle": "Not a star rating — the specifics: sound, heating, the lift, how repairs get handled. The things a listing will never mention.",
     "addressLabel": "Building address",
     "addressPlaceholder": "Start typing an address…",

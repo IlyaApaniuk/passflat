@@ -121,9 +121,7 @@ export function ReviewClient({
           <MessageSquarePlus className="h-4 w-4" />
           {t('badge')}
         </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-          {t('title', { city: cityName })}
-        </h1>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{t('title')}</h1>
         <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t('subtitle')}</p>
       </div>
 

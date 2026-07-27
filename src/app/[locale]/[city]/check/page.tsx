@@ -101,9 +101,10 @@ export default async function CheckerPage({ params, searchParams }: PageProps) {
   const initialPlaceId = typeof p === 'string' && p.length <= 300 ? p : null;
 
   // `checker` is page-specific and intentionally excluded from the shared client
-  // bundle. `costs` is needed by FollowBuildingButton inside the result state.
+  // bundle. `costs` is needed by FollowBuildingButton inside the result state,
+  // and `buildingTags` labels the tenant-tag chips.
   const messages = await getMessages();
-  const clientMessages = pickMessages(messages, ['checker', 'costs']);
+  const clientMessages = pickMessages(messages, ['checker', 'costs', 'buildingTags']);
 
   return (
     <div className="flex min-h-screen flex-col">
