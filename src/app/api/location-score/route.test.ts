@@ -27,9 +27,10 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
-vi.mock('@/lib/location-score', () => ({
-  SCORE_VERSION: 2,
-  computeLocationScore: h.computeScore,
+// Only the scoring source is faked; the category table and math stay real so a
+// change to either still has to keep this route's contract working.
+vi.mock('@/lib/poi-lookup', () => ({
+  computeLocationScoreFromDb: h.computeScore,
 }));
 
 vi.mock('@/lib/geo/district', () => ({
@@ -41,6 +42,7 @@ vi.mock('next-intl/server', () => ({
 }));
 
 import { isLocationCheckRateLimited, resetLocationCheckRateLimit } from '@/lib/location-checker';
+import { SCORE_VERSION } from '@/lib/location-score';
 import { GET, POST } from './route';
 
 const input = {
@@ -74,7 +76,7 @@ const cachedScore = {
   overall: 78,
   categories: [{ key: 'supermarket', score: 90, nearestM: 120, name: 'Shop' }],
   computedAt: new Date('2026-07-26T10:00:00.000Z'),
-  version: 2,
+  version: SCORE_VERSION,
 };
 
 function building(overrides: Record<string, unknown> = {}) {
@@ -125,7 +127,7 @@ beforeEach(() => {
     overall: 81,
     categories: [{ key: 'supermarket', score: 100, nearestM: 50, name: null }],
     computedAt: new Date('2026-07-26T11:00:00.000Z'),
-    version: 2,
+    version: SCORE_VERSION,
   });
 });
 
@@ -233,8 +235,8 @@ describe('POST /api/location-score', () => {
     expect(h.scoreUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { buildingId: 'building-1' },
-        create: expect.objectContaining({ version: 2 }),
-        update: expect.objectContaining({ version: 2 }),
+        create: expect.objectContaining({ version: SCORE_VERSION }),
+        update: expect.objectContaining({ version: SCORE_VERSION }),
       }),
     );
   });

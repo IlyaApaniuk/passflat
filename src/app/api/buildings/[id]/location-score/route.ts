@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import {
-  computeLocationScore,
-  SCORE_VERSION,
-  type LocationScoreResult,
-} from '@/lib/location-score';
+import { SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
+import { computeLocationScoreFromDb } from '@/lib/poi-lookup';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,7 +13,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       lat: true,
       lng: true,
       locationScore: true,
-      city: { select: { lat: true, lng: true } },
+      city: { select: { slug: true, lat: true, lng: true } },
     },
   });
 
@@ -42,10 +39,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       ? { lat: Number(building.city.lat), lng: Number(building.city.lng) }
       : undefined;
 
-  let result: LocationScoreResult;
+  let result: LocationScoreResult | null;
   try {
-    result = await computeLocationScore(origin, centerCoord);
+    result = await computeLocationScoreFromDb(building.city.slug, origin, centerCoord);
   } catch {
+    return NextResponse.json({ error: 'Location score unavailable' }, { status: 503 });
+  }
+  if (!result) {
     return NextResponse.json({ error: 'Location score unavailable' }, { status: 503 });
   }
 

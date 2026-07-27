@@ -127,6 +127,30 @@ model BuildingLocationScore {
   @@map("building_location_scores")
 }
 
+/// OpenStreetMap points of interest, imported per city by
+/// `prisma/import-osm-pois.ts`. Scoring reads this table instead of querying a
+/// public Overpass instance at request time: the public endpoints answer in
+/// 15-20s when they answer at all, cap concurrency at two slots per IP, and are
+/// explicitly not for production traffic. One OSM object can belong to several
+/// categories (a railway station is also public transport), so the row is keyed
+/// by object *and* category.
+model Poi {
+  id         String   @id @default(uuid()) @db.Uuid
+  citySlug   String   @map("city_slug")
+  osmType    String   @map("osm_type")
+  osmId      BigInt   @map("osm_id")
+  category   String
+  name       String?
+  lat        Decimal
+  lng        Decimal
+  importedAt DateTime @default(now()) @map("imported_at")
+
+  @@unique([osmType, osmId, category])
+  @@index([citySlug, lat, lng])
+  @@index([citySlug, category])
+  @@map("pois")
+}
+
 // --- Listings ---
 
 model Listing {

@@ -2,12 +2,21 @@
  * Location score: rates how convenient a building's surroundings are based on
  * proximity to everyday infrastructure (shops, transit, pharmacies, etc.).
  *
- * POIs come from OpenStreetMap via the public Overpass API. Distances are
- * straight-line (haversine). The result is cached per building in the DB, so
- * this only runs once per building (Overpass is not hit on every page view).
+ * POIs come from OpenStreetMap, imported into our own `pois` table by
+ * `prisma/import-osm-pois.ts`. Scoring therefore runs as a local bounding-box
+ * query rather than a request-time call to a public Overpass instance: those
+ * answer in 15-20s when they answer at all, allow two concurrent slots per IP,
+ * and are explicitly not meant for production traffic. Overpass is still the
+ * import source, but only offline, where slowness and retries are free.
+ *
+ * Distances are straight-line (haversine); results are cached per building.
  */
 
-export const SCORE_VERSION = 2;
+/** 3: POIs now come from the local import, and categories carry named `nearby`. */
+export const SCORE_VERSION = 3;
+
+/** How many named neighbours each category keeps for the human-readable summary. */
+export const NEARBY_LIMIT = 3;
 
 export interface Coord {
   lat: number;
@@ -27,20 +36,27 @@ export interface CategoryConfig {
   maxM: number;
 }
 
+export interface NearbyPoi {
+  name: string;
+  distanceM: number;
+}
+
 export interface CategoryResult {
   key: string;
   score: number;
   nearestM: number | null;
   name: string | null;
+  /**
+   * Closest named neighbours, for the human-readable summary ("Żabka 42 m,
+   * Biedronka 210 m"). Unnamed POIs still drive the score but cannot be
+   * mentioned by name, so they never appear here.
+   */
+  nearby?: NearbyPoi[];
 }
 
 export interface LocationScoreResult {
   overall: number;
   categories: CategoryResult[];
-}
-
-interface Poi extends Coord {
-  tags: Record<string, string>;
 }
 
 const has = (tags: Record<string, string>, key: string, values: string[]) =>
@@ -148,36 +164,66 @@ export function scoreFromDistance(meters: number, idealM: number, maxM: number):
   return Math.round((100 * (maxM - meters)) / (maxM - idealM));
 }
 
+/** Every category an OSM object belongs to — a rail station is also transit. */
+export function categorizeTags(tags: Record<string, string>): string[] {
+  return CATEGORIES.filter((category) => category.match(tags)).map((category) => category.key);
+}
+
+/** A POI already resolved to one of our categories (the shape stored in `pois`). */
+export interface CategorizedPoi extends Coord {
+  category: string;
+  name: string | null;
+}
+
+function scoreOneCategory(
+  origin: Coord,
+  category: CategoryConfig,
+  pois: CategorizedPoi[],
+): CategoryResult {
+  const matches = pois
+    .filter((poi) => poi.category === category.key)
+    .map((poi) => ({ name: poi.name, distanceM: haversineMeters(origin, poi) }))
+    .sort((a, b) => a.distanceM - b.distanceM);
+
+  const nearest = matches[0];
+
+  return {
+    key: category.key,
+    score:
+      nearest === undefined
+        ? 0
+        : scoreFromDistance(nearest.distanceM, category.idealM, category.maxM),
+    nearestM: nearest === undefined ? null : Math.round(nearest.distanceM),
+    name: nearest?.name ?? null,
+    nearby: matches
+      .filter((match): match is { name: string; distanceM: number } => Boolean(match.name))
+      .slice(0, NEARBY_LIMIT)
+      .map((match) => ({ name: match.name, distanceM: Math.round(match.distanceM) })),
+  };
+}
+
 /**
- * Computes per-category scores and a weighted overall from nearby POIs.
- * If `centerCoord` is provided, an additional "center" category is included
- * based on straight-line distance to the city center.
+ * Computes per-category scores and a weighted overall from already-categorized
+ * POIs (the local `pois` table). If `centerCoord` is provided, an additional
+ * "center" category is included based on distance to the city center.
  */
-export function scorePois(origin: Coord, pois: Poi[], centerCoord?: Coord): LocationScoreResult {
-  const categories = CATEGORIES.map<CategoryResult>((category) => {
-    let nearestM: number | null = null;
-    let name: string | null = null;
+export function scoreCategorizedPois(
+  origin: Coord,
+  pois: CategorizedPoi[],
+  centerCoord?: Coord,
+): LocationScoreResult {
+  return finalizeScore(
+    origin,
+    CATEGORIES.map((category) => scoreOneCategory(origin, category, pois)),
+    centerCoord,
+  );
+}
 
-    for (const poi of pois) {
-      if (!category.match(poi.tags)) continue;
-      const d = haversineMeters(origin, poi);
-      if (nearestM === null || d < nearestM) {
-        nearestM = d;
-        name = poi.tags.name ?? null;
-      }
-    }
-
-    const score =
-      nearestM === null ? 0 : scoreFromDistance(nearestM, category.idealM, category.maxM);
-
-    return {
-      key: category.key,
-      score,
-      nearestM: nearestM === null ? null : Math.round(nearestM),
-      name,
-    };
-  });
-
+function finalizeScore(
+  origin: Coord,
+  categories: CategoryResult[],
+  centerCoord?: Coord,
+): LocationScoreResult {
   let totalWeight = CATEGORIES.reduce((sum, c) => sum + c.weight, 0);
   let weighted = categories.reduce(
     (sum, result, i) => sum + result.score * CATEGORIES[i].weight,
@@ -202,75 +248,28 @@ export function scorePois(origin: Coord, pois: Poi[], centerCoord?: Coord): Loca
   return { overall, categories };
 }
 
-const OVERPASS_ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-];
-
-const SEARCH_RADIUS_M = Math.max(...CATEGORIES.map((c) => c.maxM));
-
-export function buildOverpassQuery(origin: Coord, radiusM = SEARCH_RADIUS_M): string {
-  const around = `(around:${radiusM},${origin.lat},${origin.lng})`;
-  const parts = CATEGORIES.flatMap((c) => c.filters).map((filter) => `nwr${filter}${around};`);
-  return `[out:json][timeout:25];(${parts.join('')});out center tags;`;
-}
-
-interface OverpassElement {
-  type: 'node' | 'way' | 'relation';
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
-}
-
-function toPois(elements: OverpassElement[]): Poi[] {
-  const pois: Poi[] = [];
-  for (const el of elements) {
-    const lat = el.lat ?? el.center?.lat;
-    const lng = el.lon ?? el.center?.lon;
-    if (lat == null || lng == null) continue;
-    pois.push({ lat, lng, tags: el.tags ?? {} });
-  }
-  return pois;
-}
-
-async function fetchOverpass(query: string): Promise<Poi[]> {
-  let lastError: unknown;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25_000);
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Passflat/1.0 (location-score)',
-        },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeout));
-
-      if (!res.ok) {
-        lastError = new Error(`Overpass ${endpoint} responded ${res.status}`);
-        continue;
-      }
-      const json = (await res.json()) as { elements?: OverpassElement[] };
-      return toPois(json.elements ?? []);
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Overpass request failed');
+/** Rectangle covering a city, used to import that city's POIs in one pass. */
+export interface BoundingBox {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
 }
 
 /**
- * Fetches nearby POIs and computes the location score for a coordinate.
- * Pass `centerCoord` (the city center) for the center-distance category.
+ * An Overpass query over a whole city, for the given tag filters (all category
+ * filters by default). Only the offline import runs this.
+ *
+ * The import splits filters across separate requests: asking for every category
+ * over the Warsaw bbox in one go makes the public instances time out with a
+ * 504, while one filter at a time answers comfortably.
  */
-export async function computeLocationScore(
-  origin: Coord,
-  centerCoord?: Coord,
-): Promise<LocationScoreResult> {
-  const pois = await fetchOverpass(buildOverpassQuery(origin));
-  return scorePois(origin, pois, centerCoord);
+export function buildOverpassBboxQuery(
+  bbox: BoundingBox,
+  filters: string[] = CATEGORIES.flatMap((c) => c.filters),
+  timeoutS = 180,
+): string {
+  const area = `(${bbox.south},${bbox.west},${bbox.north},${bbox.east})`;
+  const parts = filters.map((filter) => `nwr${filter}${area};`);
+  return `[out:json][timeout:${timeoutS}];(${parts.join('')});out center tags;`;
 }

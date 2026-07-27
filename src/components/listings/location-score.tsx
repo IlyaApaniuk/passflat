@@ -19,11 +19,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface NearbyPoi {
+  name: string;
+  distanceM: number;
+}
+
 interface CategoryResult {
   key: string;
   score: number;
   nearestM: number | null;
   name: string | null;
+  nearby?: NearbyPoi[];
 }
 
 interface LocationScoreResponse {
@@ -85,6 +91,15 @@ function levelKey(overall: number): 'excellent' | 'good' | 'fair' | 'poor' {
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${meters} m`;
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+/**
+ * "Żabka 42 m · Biedronka 210 m" — naming what is actually there reads far more
+ * concretely than a bare distance, and the names come free with the POI import.
+ */
+function nearbySummary(nearby: NearbyPoi[] | undefined): string | null {
+  if (!nearby || nearby.length === 0) return null;
+  return nearby.map((poi) => `${poi.name} ${formatDistance(poi.distanceM)}`).join(' · ');
 }
 
 const RING_SIZE = 48;
@@ -227,19 +242,29 @@ export function LocationScore({
           {data.categories.map((category) => {
             const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
             const catTier = tierStyles(category.score);
+            const summary = nearbySummary(category.nearby);
             return (
-              <div key={category.key} className="flex items-center justify-between px-6 py-3.5">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${catTier.bg}`}
-                  >
-                    <Icon className={`h-[18px] w-[18px] ${catTier.text}`} />
+              <div key={category.key} className="px-6 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${catTier.bg}`}
+                    >
+                      <Icon className={`h-[18px] w-[18px] ${catTier.text}`} />
+                    </div>
+                    <span className="truncate text-sm font-medium">
+                      {t(`categories.${category.key}`)}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium">{t(`categories.${category.key}`)}</span>
+                  <span className="flex-shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {category.nearestM === null ? t('none') : formatDistance(category.nearestM)}
+                  </span>
                 </div>
-                <span className="text-sm tabular-nums text-muted-foreground">
-                  {category.nearestM === null ? t('none') : formatDistance(category.nearestM)}
-                </span>
+                {summary && (
+                  <p className="mt-1.5 pl-12 text-xs leading-relaxed text-muted-foreground">
+                    {summary}
+                  </p>
+                )}
               </div>
             );
           })}

@@ -41,11 +41,17 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
+interface NearbyPoi {
+  name: string;
+  distanceM: number;
+}
+
 interface CategoryResult {
   key: string;
   score: number;
   nearestM: number | null;
   name: string | null;
+  nearby?: NearbyPoi[];
 }
 
 interface CheckerPayload {
@@ -378,7 +384,7 @@ export function CheckerClient({
   useEffect(() => {
     if (!analyticsConsent || !posthog || viewCapturedRef.current) return;
     viewCapturedRef.current = true;
-    posthog.capture('checker_view', { city: citySlug });
+    posthog.capture('checker_viewed', { city: citySlug });
   }, [analyticsConsent, citySlug, posthog]);
 
   // A first-time Overpass lookup can finish before the visitor answers the
@@ -533,7 +539,7 @@ export function CheckerClient({
 
   const captureCta = (cta: 'form' | 'follow' | 'building' | 'share') => {
     if (!analyticsConsent) return;
-    posthog?.capture('cta_click', {
+    posthog?.capture('checker_cta_clicked', {
       source: 'checker',
       city: citySlug,
       building_id: result?.building.id,
@@ -563,6 +569,15 @@ export function CheckerClient({
     if (meters === null) return t('result.noneNearby');
     if (meters < 1000) return `${numberFormatter.format(meters)} m`;
     return `${distanceFormatter.format(meters / 1000)} km`;
+  };
+
+  /**
+   * "Żabka 42 m · Biedronka 210 m" — naming what is actually there beats a bare
+   * distance, and the names ship with the POI import at no extra cost.
+   */
+  const nearbySummary = (category: CategoryResult) => {
+    if (!category.nearby || category.nearby.length === 0) return null;
+    return category.nearby.map((poi) => `${poi.name} ${formatDistance(poi.distanceM)}`).join(' · ');
   };
 
   return (
@@ -686,8 +701,8 @@ export function CheckerClient({
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">{label}</p>
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                              {category.name || formatDistance(category.nearestM)}
+                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                              {nearbySummary(category) ?? formatDistance(category.nearestM)}
                             </p>
                           </div>
                         </div>

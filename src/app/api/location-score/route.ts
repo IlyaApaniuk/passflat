@@ -20,11 +20,8 @@ import {
   type LocationCheckerInput,
   type LocationCheckerResponse,
 } from '@/lib/location-checker';
-import {
-  computeLocationScore,
-  SCORE_VERSION,
-  type LocationScoreResult,
-} from '@/lib/location-score';
+import { SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
+import { computeLocationScoreFromDb } from '@/lib/poi-lookup';
 import { prisma } from '@/lib/prisma';
 import { generateBuildingSlug } from '@/lib/slugify';
 
@@ -276,12 +273,17 @@ async function computeAndCacheScore(building: CheckerBuilding): Promise<CheckerS
   const origin = { lat: Number(building.lat), lng: Number(building.lng) };
   if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return null;
 
-  let result: LocationScoreResult;
+  let result: LocationScoreResult | null;
   try {
-    result = await computeLocationScore(origin, centerCoordinate(building));
+    result = await computeLocationScoreFromDb(
+      building.city.slug,
+      origin,
+      centerCoordinate(building),
+    );
   } catch {
     return null;
   }
+  if (!result) return null;
 
   return prisma.buildingLocationScore.upsert({
     where: { buildingId: building.id },
