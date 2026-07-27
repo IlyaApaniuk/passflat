@@ -860,6 +860,10 @@
         "education": "Szkoły i przedszkola",
         "parks": "Parki i zieleń",
         "center": "Centrum miasta"
+      },
+      "view": {
+        "list": "Lista",
+        "map": "Mapa"
       }
     },
     "costs": {
@@ -877,8 +881,6 @@
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek."
     },
     "map": {
-      "title": "Co jest wokół adresu",
-      "subtitle": "Najważniejsze miejsca w okolicy na mapie.",
       "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
       "reports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
       "openBuilding": "Zobacz koszty →",

@@ -860,6 +860,10 @@
         "education": "Schools & kindergartens",
         "parks": "Parks & greenery",
         "center": "City center"
+      },
+      "view": {
+        "list": "List",
+        "map": "Map"
       }
     },
     "costs": {
@@ -877,8 +881,6 @@
       "followHint": "Not ready to share? Follow the building for updates."
     },
     "map": {
-      "title": "What's around this address",
-      "subtitle": "The main places nearby, on the map.",
       "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
       "reports": "{count, plural, one {# report} other {# reports}}",
       "openBuilding": "See the costs →",
