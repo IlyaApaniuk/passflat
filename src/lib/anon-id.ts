@@ -38,6 +38,8 @@ const COOKIE_OPTIONS = {
   maxAge: ANON_COOKIE_MAX_AGE,
   httpOnly: true,
   sameSite: 'lax' as const,
+  // HTTPS-only in production; off locally so `next dev` over http still sets it.
+  secure: process.env.NODE_ENV === 'production',
   path: '/',
 };
 

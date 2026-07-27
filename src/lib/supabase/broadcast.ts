@@ -5,19 +5,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+/**
+ * Realtime channels here are public: anyone holding the (public) anon key can
+ * subscribe to `chat:<conversationId>` or `chat:notifications:<userId>` without
+ * being a participant. So a broadcast is only ever a "something changed" ping —
+ * never message content or sender names. Subscribers re-fetch the actual data
+ * through the authenticated `/api/conversations` routes, which check membership.
+ *
+ * `senderId` stays because the client needs it to ignore its own echo, and user
+ * ids are already public via listings.
+ */
 interface BroadcastMessage {
   id: string;
-  content: string;
   senderId: string;
-  senderName: string;
   createdAt: string;
   conversationId: string;
 }
 
-export async function broadcastNewMessage(
-  conversationId: string,
-  message: BroadcastMessage,
-) {
+export async function broadcastNewMessage(conversationId: string, message: BroadcastMessage) {
   const channel = supabase.channel(`chat:${conversationId}`);
   await channel.send({
     type: 'broadcast',
@@ -27,10 +32,7 @@ export async function broadcastNewMessage(
   await supabase.removeChannel(channel);
 }
 
-export async function broadcastUnread(
-  recipientUserId: string,
-  message: BroadcastMessage,
-) {
+export async function broadcastUnread(recipientUserId: string, message: BroadcastMessage) {
   const channel = supabase.channel(`chat:notifications:${recipientUserId}`);
   await channel.send({
     type: 'broadcast',

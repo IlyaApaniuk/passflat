@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/broadcast';
 import { localeUrl } from '@/lib/email/url';
 import { resolveEmailLocale } from '@/lib/email/types';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 async function getUser() {
   const supabase = await createClient();
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
   }
 
   const body = await request.json();
@@ -130,9 +134,7 @@ export async function POST(request: NextRequest) {
 
   const broadcastPayload = {
     id: createdMessage.id,
-    content: createdMessage.content,
     senderId: createdMessage.senderId,
-    senderName: senderDisplayName,
     createdAt: createdMessage.createdAt.toISOString(),
     conversationId,
   };

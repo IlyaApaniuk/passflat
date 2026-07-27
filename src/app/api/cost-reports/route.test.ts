@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 const h = vi.hoisted(() => ({
   user: null as null | { id: string; email: string },
   count: vi.fn(),
+  findProfile: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({
@@ -18,7 +19,7 @@ vi.mock('@supabase/ssr', () => ({
 }));
 
 vi.mock('@/lib/prisma', () => ({
-  prisma: { costReport: { count: h.count } },
+  prisma: { costReport: { count: h.count }, profile: { findUnique: h.findProfile } },
 }));
 
 vi.mock('@/lib/posthog-server', () => ({
@@ -37,6 +38,8 @@ function req(body?: unknown): NextRequest {
 beforeEach(() => {
   h.user = null;
   h.count.mockReset();
+  // Live account by default; the soft-deleted case is asserted separately.
+  h.findProfile.mockReset().mockResolvedValue({ deletedAt: null });
 });
 
 describe('POST /api/cost-reports — auth & rate-limit guards', () => {
@@ -77,5 +80,16 @@ describe('POST /api/cost-reports — auth & rate-limit guards', () => {
     const res = await POST(req({}));
     expect(res.status).not.toBe(429);
     expect(h.count).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a soft-deleted account before any rate-limit work', async () => {
+    // The session survives the 30-day soft delete, so the route — not just the
+    // middleware, which only guards page navigations — has to say no.
+    h.user = { id: 'u1', email: 'tenant@example.com' };
+    h.findProfile.mockResolvedValue({ deletedAt: new Date() });
+    const res = await POST(req({}));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toMatchObject({ code: 'ACCOUNT_DELETED' });
+    expect(h.count).not.toHaveBeenCalled();
   });
 });

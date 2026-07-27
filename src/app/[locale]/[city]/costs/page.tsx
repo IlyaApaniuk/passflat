@@ -109,7 +109,13 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
   const cityBounds = city.bounds as CityBounds | null;
 
   const districtFilter = typeof search.district === 'string' ? search.district : undefined;
-  const searchQuery = typeof search.q === 'string' ? search.q : undefined;
+  // Normalised before it reaches getBuildingsData: `q` is part of that function's
+  // cache key, so unbounded distinct values would mint unbounded cache entries,
+  // each backed by a full building+reports join.
+  const searchQuery =
+    typeof search.q === 'string'
+      ? search.q.trim().slice(0, 64).toLowerCase() || undefined
+      : undefined;
 
   // Cached, request-independent. The auth-specific state is streamed separately
   // below so this (and the rendered cost table) never blocks on it.

@@ -4,16 +4,15 @@ import { prisma } from '@/lib/prisma';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 import { trackServerEvent } from '@/lib/posthog-server';
 import { DELETED_AUTHOR_ID, DELETED_AUTHOR_DISPLAY_NAME } from '@/lib/import-constants';
+import { requireCronAuth } from '@/lib/admin-auth';
 
 // Cap work per run so a large backlog drains across runs instead of OOM/timeout.
 // Account deletion is heavier (storage + auth calls), so a smaller batch.
 const BATCH = 100;
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

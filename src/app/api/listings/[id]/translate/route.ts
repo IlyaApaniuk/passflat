@@ -2,13 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { translateTexts } from '@/lib/deepl';
 import { captureServerException, flushPostHog } from '@/lib/posthog-server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const SUPPORTED_LOCALES = ['en', 'pl', 'ru', 'uk'];
 
+// Listing ids are public and there are three foreign locales per listing, so an
+// unmetered endpoint is a free way to burn the DeepL quota. Only cache misses
+// are charged against this budget (see below), so reading listings that were
+// already translated stays free — including for logged-out visitors, which is
+// who the translate button is for.
+const TRANSLATE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const TRANSLATE_RATE_LIMIT_MAX = 10;
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await request.json();
-  const { targetLocale } = body;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { targetLocale } = body as { targetLocale?: string };
 
   if (!targetLocale || !SUPPORTED_LOCALES.includes(targetLocale)) {
     return NextResponse.json(
@@ -85,6 +100,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       subletRules: null,
       fromCache: false,
     });
+  }
+
+  // Everything above is served from the database; only what follows costs money.
+  const ip = getClientIp(request.headers);
+  const { allowed, retryAfterSeconds } = checkRateLimit({
+    key: `listing-translate:${ip}`,
+    limit: TRANSLATE_RATE_LIMIT_MAX,
+    windowMs: TRANSLATE_RATE_LIMIT_WINDOW_MS,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many translation requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
+    );
   }
 
   try {

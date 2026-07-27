@@ -3,12 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
 import { localeUrl } from '@/lib/email/url';
 import { resolveEmailLocale } from '@/lib/email/types';
+import { requireCronAuth } from '@/lib/admin-auth';
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   let body: Record<string, unknown>;
   try {

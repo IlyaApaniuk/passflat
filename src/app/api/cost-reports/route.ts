@@ -5,7 +5,7 @@ import { getOrCreateProfile } from '@/lib/profile';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
-import { validateCostReport } from '@/lib/cost-validation';
+import { validateCostReport, capFreeText } from '@/lib/cost-validation';
 import { median, perAreaValues } from '@/lib/cost-stats';
 import { classifyRef } from '@/lib/referral';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
@@ -23,6 +23,7 @@ import {
   getAdminImportMode,
 } from '@/lib/import-constants';
 import { ensureAnonId } from '@/lib/anon-id';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 // Submit rate limit (anti-spam): at most N reports per rolling window per user.
 // Generous enough for someone genuinely filling several flats in one sitting,
@@ -67,6 +68,9 @@ async function getUser() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getUser();
+    if (user && (await isAccountDeleted(user.id))) {
+      return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
+    }
     // The cost form is open to logged-out visitors. An anonymous submission is
     // owned by the system ANON_AUTHOR_ID profile and tagged with a per-browser id
     // so it can be claimed on the visitor's first login (see lib/anon-id.ts).
@@ -505,9 +509,9 @@ export async function POST(request: NextRequest) {
         water: water ? parseFloat(water) : null,
         waterIncluded: waterIncluded ?? null,
         internet: internet ? parseFloat(internet) : null,
-        internetProvider: internetProvider || null,
+        internetProvider: capFreeText(internetProvider),
         otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-        otherCostsNote: otherCostsNote || null,
+        otherCostsNote: capFreeText(otherCostsNote),
         utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
         totalMonthlyAvg: totalMonthlyAvg || null,
         rooms: rooms ? parseInt(rooms, 10) : null,
@@ -637,12 +641,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/** Buildings returned by GET. Bounded because this endpoint is public and
+ *  uncached, and its per-building join grows with every report we collect. */
+const GET_BUILDINGS_LIMIT = 200;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const citySlug = searchParams.get('city') || 'warsaw';
   const district = searchParams.get('district');
-  const search = searchParams.get('search');
+  const search = searchParams.get('search')?.trim().slice(0, 64) || null;
 
   const city = await prisma.city.findUnique({
     where: { slug: citySlug },
@@ -686,6 +694,7 @@ export async function GET(request: NextRequest) {
       },
     },
     orderBy: { costReports: { _count: 'desc' } },
+    take: GET_BUILDINGS_LIMIT,
   });
 
   const result = buildings.map((b) => {

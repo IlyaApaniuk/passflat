@@ -21,6 +21,7 @@ import { normalizeAddress } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import { FREE_LISTING_LIMIT } from '@/lib/stripe';
 import { sanitizePeriodicCharges } from '@/lib/periodic-charges';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
   }
 
   // Guarantee a profile exists before any write that FKs to author_id.
@@ -364,8 +368,12 @@ export async function GET(request: NextRequest) {
   const areaMin = searchParams.get('areaMin');
   const areaMax = searchParams.get('areaMax');
   const sort = searchParams.get('sort') || 'newest';
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '20', 10);
+  // Clamped: `limit` feeds Prisma `take` and `page` feeds `skip`, so an
+  // unbounded value is a free full-table read and a negative one a 500.
+  const rawPage = parseInt(searchParams.get('page') || '1', 10);
+  const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+  const page = Number.isFinite(rawPage) ? Math.max(1, rawPage) : 1;
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(1, rawLimit), 100) : 20;
 
   // Roommate-specific filters
   const roomType = searchParams.get('roomType');

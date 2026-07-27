@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { validateCostReport } from '@/lib/cost-validation';
+import { validateCostReport, capFreeText } from '@/lib/cost-validation';
 import { sanitizePeriodicCharges, periodicChargesMonthlyTotal } from '@/lib/periodic-charges';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -57,6 +58,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
   }
 
   const { id } = await params;
@@ -173,9 +177,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       water: waterIncluded ? null : water ? parseFloat(water) : null,
       waterIncluded: waterIncluded ?? null,
       internet: internet ? parseFloat(internet) : null,
-      internetProvider: internetProvider || null,
+      internetProvider: capFreeText(internetProvider),
       otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-      otherCostsNote: otherCostsNote || null,
+      otherCostsNote: capFreeText(otherCostsNote),
       utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
       totalMonthlyAvg: totalMonthlyAvg || null,
       rooms: rooms ? parseInt(rooms, 10) : null,

@@ -38,6 +38,18 @@ export const FIELD_RANGES: Record<string, { min?: number; max: number }> = {
   ...Object.fromEntries(Object.entries(SOFT_FIELDS).map(([k, v]) => [k, { min: 0, max: v.max }])),
 };
 
+/**
+ * Free-text notes (`otherCostsNote`, `internetProvider`) land in unbounded
+ * `text` columns on a route open to anonymous submitters, so cap what we store.
+ */
+const FREE_TEXT_MAX = 500;
+
+export function capFreeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, FREE_TEXT_MAX) : null;
+}
+
 export interface ValidationResult {
   valid: boolean;
   hardErrors: { field: string; message: string }[];

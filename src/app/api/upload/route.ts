@@ -5,6 +5,28 @@ import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 
 const BUCKET = 'listing-photos';
 
+/**
+ * Accepted image types → the extension we store under, plus the file-header
+ * signature we require. The bucket is public, so neither the client-declared
+ * MIME type nor the original filename is trusted: the extension comes from this
+ * table and the bytes have to actually look like that format.
+ */
+const ALLOWED_IMAGES: Record<string, { ext: string; matches: (head: Uint8Array) => boolean }> = {
+  'image/jpeg': { ext: 'jpg', matches: (h) => startsWith(h, [0xff, 0xd8, 0xff]) },
+  'image/png': { ext: 'png', matches: (h) => startsWith(h, [0x89, 0x50, 0x4e, 0x47]) },
+  'image/webp': {
+    // "RIFF" .... "WEBP"
+    ext: 'webp',
+    matches: (h) =>
+      startsWith(h, [0x52, 0x49, 0x46, 0x46]) &&
+      startsWith(h.subarray(8), [0x57, 0x45, 0x42, 0x50]),
+  },
+};
+
+function startsWith(bytes: Uint8Array, signature: number[]): boolean {
+  return signature.every((byte, i) => bytes[i] === byte);
+}
+
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -47,16 +69,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
+  const imageType = ALLOWED_IMAGES[file.type];
+  if (!imageType) {
     return NextResponse.json(
       { error: 'Invalid file type. Use JPEG, PNG, or WebP' },
       { status: 400 },
     );
   }
 
-  const ext = file.name.split('.').pop() ?? 'jpg';
-  const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  // Verify the declared type against the actual file header (12 bytes covers the
+  // longest signature, WebP's RIFF....WEBP).
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!imageType.matches(head)) {
+    return NextResponse.json(
+      { error: 'Invalid file type. Use JPEG, PNG, or WebP' },
+      { status: 400 },
+    );
+  }
+
+  const path = `${user.id}/${crypto.randomUUID()}.${imageType.ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)

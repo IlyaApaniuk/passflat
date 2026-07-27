@@ -6,6 +6,7 @@ import { trackServerEvent } from '@/lib/posthog-server';
 import { broadcastNewMessage, broadcastUnread, broadcastRead } from '@/lib/supabase/broadcast';
 import { localeUrl } from '@/lib/email/url';
 import { resolveEmailLocale } from '@/lib/email/types';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 async function getUser() {
   const supabase = await createClient();
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
+  }
 
   const { id: conversationId } = await params;
   const body = await request.json();
@@ -148,19 +152,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
-  const senderProfile = await prisma.profile.findUnique({
-    where: { id: user.id },
-    select: { displayName: true },
-  });
-
-  const senderDisplayName =
-    senderProfile?.displayName || user.user_metadata?.display_name || user.email || 'User';
-
   const broadcastPayload = {
     id: message.id,
-    content: message.content,
     senderId: message.senderId,
-    senderName: senderDisplayName,
     createdAt: message.createdAt.toISOString(),
     conversationId,
   };
