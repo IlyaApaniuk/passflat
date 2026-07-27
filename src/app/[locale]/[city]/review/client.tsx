@@ -6,7 +6,6 @@ import { usePostHog } from 'posthog-js/react';
 import { AlertCircle, Loader2, MessageSquarePlus } from 'lucide-react';
 import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
-import { BUILDING_TAGS } from '@/lib/building-tags';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
 import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
@@ -28,16 +27,6 @@ interface ReviewClientProps {
   /** Arrives from the checker, so the address is never typed twice. */
   initialPlaceId: string | null;
 }
-
-/** A taste of what we ask, so the cold first screen answers "what do you want from me?". */
-const PREVIEW_TAGS = [
-  'neighborsAudible',
-  'warmInWinter',
-  'elevatorBreaks',
-  'repairsHandledFast',
-  'highHumidity',
-  'greenYard',
-].filter((key) => BUILDING_TAGS.some((tag) => tag.key === key));
 
 function normalizeCity(value: string) {
   return value
@@ -62,7 +51,6 @@ export function ReviewClient({
   initialPlaceId,
 }: ReviewClientProps) {
   const t = useTranslations('review');
-  const tTags = useTranslations('buildingTags');
   const posthog = usePostHog();
   const analyticsConsent = useAnalyticsConsent();
   const viewCaptured = useRef(false);
@@ -167,6 +155,7 @@ export function ReviewClient({
         label={t('addressLabel')}
         placeholder={t('addressPlaceholder')}
         hint={t('addressHint')}
+        note={t('effort')}
         bounds={cityBounds ?? undefined}
         onPlaceSelect={handlePlace}
       >
@@ -191,24 +180,6 @@ export function ReviewClient({
           </Alert>
         )}
       </AddressIntake>
-
-      {/* Cold visitor: show what we ask instead of describing it. Seeing the
-          chips makes the cost obvious — ticks, not an essay. */}
-      {!building && status !== 'loading' && (
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">{t('previewIntro')}</p>
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {PREVIEW_TAGS.map((key) => (
-              <span
-                key={key}
-                className="rounded-full border border-dashed px-3 py-1.5 text-sm text-muted-foreground"
-              >
-                {tTags(`tags.${key}`)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {building && (
         <div className="mt-4 space-y-4">

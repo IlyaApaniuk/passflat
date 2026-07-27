@@ -13,6 +13,8 @@ interface AddressIntakeProps {
   label: string;
   placeholder: string;
   hint: string;
+  /** Optional second line: what filling this in will actually cost the visitor. */
+  note?: string;
   bounds?: { north: number; south: number; east: number; west: number };
   /** Remounts the autocomplete, e.g. to reset it after a completed check. */
   inputKey?: string;
@@ -38,6 +40,7 @@ export function AddressIntake({
   label,
   placeholder,
   hint,
+  note,
   bounds,
   inputKey,
   defaultValue,
@@ -70,6 +73,7 @@ export function AddressIntake({
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
+          {note && <p className="mt-1 text-xs font-medium text-primary">{note}</p>}
           {children}
         </CardContent>
       </Card>

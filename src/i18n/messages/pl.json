@@ -2420,7 +2420,7 @@
     "resolving": "Szukamy budynku…",
     "outsideCity": "Na razie przyjmujemy opinie tylko w mieście {city}.",
     "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie.",
-    "previewIntro": "Pytamy przez zaznaczenia, nie wypracowania. O takie rzeczy:",
-    "othersSaid": "Co już napisano"
+    "othersSaid": "Co już napisano",
+    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać"
   }
 }

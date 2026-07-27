@@ -2420,7 +2420,7 @@
     "resolving": "Finding the building…",
     "outsideCity": "We only take reviews in {city} for now.",
     "error": "That didn't work. Pick an address from the suggestions and try again.",
-    "previewIntro": "We ask in tick boxes, not essays. Like these:",
-    "othersSaid": "What people said"
+    "othersSaid": "What people said",
+    "effort": "5 groups of tick boxes · no account · nothing to write"
   }
 }
