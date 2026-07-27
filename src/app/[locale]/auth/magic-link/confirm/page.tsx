@@ -1,4 +1,5 @@
 import { MagicLinkConfirm } from './confirm-client';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 /**
  * Interstitial page for the magic-link email. It deliberately does NOT verify
@@ -12,6 +13,7 @@ export default async function MagicLinkConfirmPage(props: {
 }) {
   const searchParams = await props.searchParams;
   const tokenHash = searchParams.type === 'magiclink' ? searchParams.token_hash : undefined;
+  const next = safeNextPath(searchParams.next) ?? undefined;
 
-  return <MagicLinkConfirm tokenHash={tokenHash} next={searchParams.next} />;
+  return <MagicLinkConfirm tokenHash={tokenHash} next={next} />;
 }

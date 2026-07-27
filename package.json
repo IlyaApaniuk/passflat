@@ -31,6 +31,7 @@
     "db:push": "prisma db push",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:import-pois": "tsx prisma/import-osm-pois.ts",
     "postinstall": "prisma generate",
     "db:studio": "prisma studio",
     "prepare": "husky"

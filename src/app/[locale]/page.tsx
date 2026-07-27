@@ -2,10 +2,10 @@ import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
 import { setRequestLocale } from 'next-intl/server';
 import { Hero } from '@/components/landing/hero';
+import { CheckAddress } from '@/components/landing/check-address';
 import { Districts } from '@/components/landing/districts';
 import { BentoGrid } from '@/components/landing/bento-grid';
-import { FeaturedListings } from '@/components/landing/featured-listings';
-import type { FeaturedListingData } from '@/components/landing/featured-listings';
+import { Tools } from '@/components/landing/tools';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { CostTransparency } from '@/components/landing/cost-transparency';
 import { ForWhom } from '@/components/landing/for-whom';
@@ -15,39 +15,8 @@ import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
 import { median, perAreaValues } from '@/lib/cost-stats';
-import type { ListingType } from '@/lib/listings-data';
 
 const DEFAULT_CITY = 'warsaw';
-
-async function getFeaturedListings(): Promise<FeaturedListingData[]> {
-  const promoted = await prisma.listing.findMany({
-    where: { status: 'active', isPromoted: true },
-    orderBy: { createdAt: 'desc' },
-    take: 6,
-    include: { building: { include: { district: true } } },
-  });
-
-  if (promoted.length < 3) return [];
-
-  return promoted.map((listing) => ({
-    id: listing.id,
-    slug: listing.slug ?? listing.id,
-    type: (listing.type as ListingType) ?? 'replacement',
-    title: listing.title,
-    address: listing.building.addressFull,
-    totalCost: Number(listing.totalMonthly ?? 0),
-    bedrooms: listing.rooms ?? 0,
-    area: Number(listing.areaM2 ?? 0),
-    image: listing.photos[0] ?? '/placeholder.jpg',
-    promoted: listing.isPromoted,
-    availableFrom: listing.availableFrom?.toISOString() ?? '',
-    pricePerPerson: listing.pricePerPerson ? Number(listing.pricePerPerson) : undefined,
-    currentRoommates: listing.currentRoommates ?? undefined,
-    roomType: (listing.roomType as 'private' | 'shared') ?? undefined,
-    availableTo: listing.availableTo?.toISOString() ?? undefined,
-    priceTotal: listing.priceTotal ? Number(listing.priceTotal) : undefined,
-  }));
-}
 
 async function getStats() {
   const [listings, costReports, districts, buildings, users, buildingsWithCosts, perM2Reports] =
@@ -200,9 +169,6 @@ async function getTopBuildingCostData() {
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
-const getFeaturedListingsCached = unstable_cache(getFeaturedListings, ['home-featured-listings'], {
-  revalidate: 300,
-});
 const getStatsCached = unstable_cache(getStats, ['home-stats'], { revalidate: 300 });
 const getTopBuildingCostDataCached = unstable_cache(
   getTopBuildingCostData,
@@ -240,26 +206,28 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [featuredResult, statsResult, costResult] = await Promise.allSettled([
-    getFeaturedListingsCached(),
+  const [statsResult, costResult] = await Promise.allSettled([
     getStatsCached(),
     getTopBuildingCostDataCached(),
   ]);
 
-  const featuredListings = featuredResult.status === 'fulfilled' ? featuredResult.value : [];
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
       <LandingContent>
+        {/* Free probe first (check an address), then the data, then the ask.
+            Listings stay frozen per the 2026-06-20 pivot, so the landing no
+            longer showcases them; their pages remain reachable by direct link. */}
         <main className="flex-1">
           <Hero stats={heroStats} />
+          <CheckAddress citySlug={DEFAULT_CITY} />
           <Districts />
           <BentoGrid />
-          <FeaturedListings listings={featuredListings} citySlug={DEFAULT_CITY} />
           <HowItWorks />
           <CostTransparency buildingData={costBuildingData} />
+          <Tools citySlug={DEFAULT_CITY} />
           <ForWhom />
           <CityNotify />
           <FAQ />

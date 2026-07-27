@@ -11,6 +11,7 @@ import { sendEmail } from '@/lib/email/send';
 import { resolveEmailLocale } from '@/lib/email/types';
 import { localeUrl } from '@/lib/email/url';
 import { captureServerException, flushPostHog } from '@/lib/posthog-server';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 const RESET_EXPIRES_IN_HOURS = 1;
 // Supabase magic links / email OTPs expire after 1 hour by default.
@@ -21,7 +22,7 @@ export async function login(formData: FormData) {
 
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  const next = formData.get('next') as string | null;
+  const next = safeNextPath(formData.get('next'));
   const locale = (formData.get('locale') as string) || 'pl';
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -48,7 +49,7 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = (formData.get('locale') as string) || 'pl';
-  const next = formData.get('next') as string | null;
+  const next = safeNextPath(formData.get('next'));
   const emailLocale = resolveEmailLocale(locale);
 
   try {
@@ -101,9 +102,10 @@ export async function signup(formData: FormData) {
 
 export async function signInWithGoogle(locale: string, next?: string) {
   const supabase = await createClient();
+  const safeNext = safeNextPath(next);
 
   const callbackUrl = new URL(`/${locale}/auth/callback`, SITE_URL);
-  if (next) callbackUrl.searchParams.set('next', next);
+  if (safeNext) callbackUrl.searchParams.set('next', safeNext);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -133,7 +135,7 @@ export async function signInWithGoogle(locale: string, next?: string) {
 export async function signInWithMagicLink(formData: FormData) {
   const email = (formData.get('email') as string)?.trim();
   const locale = (formData.get('locale') as string) || 'pl';
-  const next = formData.get('next') as string | null;
+  const next = safeNextPath(formData.get('next'));
   const emailLocale = resolveEmailLocale(locale);
 
   if (!email) {

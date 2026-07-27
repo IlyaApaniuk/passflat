@@ -70,7 +70,8 @@
     "no": "No",
     "linkCopied": "Link copied to clipboard",
     "copyFailed": "Failed to copy link",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "checkAddress": "Check an address"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -108,7 +109,9 @@
       "statsExpenses": "costs on top of rent",
       "statsExpensesUnit": "zł/mo",
       "statsDeposit": "deposit · {pct}% returned",
-      "statsAvgRating": "Avg Rating"
+      "statsAvgRating": "Avg Rating",
+      "submitCostsCta": "Add your costs",
+      "checkAddressCta": "Check an address"
     },
     "howItWorks": {
       "title": "How Passflat Works",
@@ -318,6 +321,29 @@
       "systemsOperational": "All systems operational",
       "betaStatus": "Open beta — Warsaw",
       "followUs": "Follow us"
+    },
+    "checkAddress": {
+      "badge": "Free, no sign-up",
+      "title": "Check the address",
+      "titleHighlight": "before you sign the lease.",
+      "subtitle": "Enter any Warsaw address — see what's nearby, how convenient the location is, and what tenants actually pay in that building.",
+      "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
+      "cta": "Check",
+      "pointTransit": "Transit and metro",
+      "pointAmenities": "Shops, pharmacies, parks",
+      "pointCosts": "What tenants really pay",
+      "free": "Free · no account · 15 seconds"
+    },
+    "tools": {
+      "title": "Tools",
+      "titleHighlight": "for renting",
+      "subtitle": "Work out the full cost and close the deal with ready-made documents.",
+      "calculatorTitle": "Cost calculator",
+      "calculatorDescription": "Estimate the full cost of renting in a district: rent, utilities and deposit — before you sign.",
+      "calculatorCta": "Calculate",
+      "templatesTitle": "Document templates",
+      "templatesDescription": "Lease agreement, handover protocol and termination notice — ready-made templates in Polish and English.",
+      "templatesCta": "Open templates"
     }
   },
   "breadcrumbs": {
@@ -774,6 +800,98 @@
     "ctaSubmit": "Add your costs",
     "ctaDistricts": "Browse by district",
     "backToBlog": "← Blog"
+  },
+  "checker": {
+    "metaTitle": "Address location score in {city}",
+    "metaDescription": "Check any address in {city}: see a free location score and distances to shops, transport, schools, parks and everyday services.",
+    "badge": "Free location score",
+    "title": "Check an address: {city}",
+    "subtitle": "See what's nearby, how convenient the location is and what tenants really pay in this building.",
+    "searchLabel": "Building address",
+    "searchPlaceholder": "Start typing an address…",
+    "searchHint": "Choose a complete address with a building number. The checker currently covers Warsaw.",
+    "loading": "Checking shops, transport and services nearby… The first check may take a little longer.",
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareError": "Couldn't copy the link. Please try again.",
+    "errors": {
+      "title": "We couldn't check this address",
+      "generic": "The location data is temporarily unavailable. Please try again in a moment.",
+      "rateLimited": "There have been too many checks recently. Please wait a minute and try again.",
+      "notFound": "This shared address is no longer available. Search for it again above.",
+      "completeAddress": "Choose a complete building address, including its street number.",
+      "retry": "Try again"
+    },
+    "outside": {
+      "title": "This address is outside our current coverage",
+      "description": "The checker currently covers Warsaw. Leave your email and we'll tell you when Passflat launches in this city.",
+      "selectedCity": "Selected city: {city}",
+      "emailPlaceholder": "Your email",
+      "consent": "I agree to the processing of my personal data",
+      "consentRequired": "You must agree to the processing of your personal data.",
+      "submit": "Notify me",
+      "successTitle": "You're on the list",
+      "successBody": "We'll let you know when Passflat arrives in this city.",
+      "error": "Something went wrong. Please try again.",
+      "privacy": "<privacyLink>Privacy Policy</privacyLink>"
+    },
+    "result": {
+      "checkedAddress": "Checked address",
+      "locationScore": "Location score",
+      "outOf100": "out of 100",
+      "scoreAria": "Location score: {score} out of 100",
+      "scoreDescription": "Based on straight-line proximity to everyday places and transport.",
+      "breakdownTitle": "What's nearby",
+      "noneNearby": "none nearby",
+      "poweredBy": "Distances are straight-line estimates based on OpenStreetMap data.",
+      "level": {
+        "excellent": "Excellent location",
+        "good": "Convenient location",
+        "fair": "Average convenience",
+        "poor": "Limited convenience"
+      },
+      "categories": {
+        "supermarket": "Supermarkets",
+        "transitRail": "Metro & rail",
+        "pharmacy": "Pharmacies",
+        "transitBasic": "Bus & tram stops",
+        "convenience": "Convenience stores",
+        "dining": "Cafes & restaurants",
+        "education": "Schools & kindergartens",
+        "parks": "Parks & greenery",
+        "center": "City center"
+      }
+    },
+    "costs": {
+      "availableTitle": "We have monthly cost data for this building",
+      "month": "month",
+      "rent": "Rent",
+      "expenses": "Utilities & charges",
+      "sourceTenant": "Based on {count, plural, one {# tenant report} other {# tenant reports}}",
+      "sourceMixed": "Based on {tenantCount, plural, one {# tenant report} other {# tenant reports}} and {listingCount, plural, one {# listing} other {# listings}}",
+      "sourceScraped": "Based on {count, plural, one {# listing} other {# listings}}",
+      "viewBuilding": "See the full breakdown",
+      "emptyTitle": "No one has shared costs for this building yet. Be the first.",
+      "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
+      "contribute": "Share costs and unlock details",
+      "followHint": "Not ready to share? Follow the building for updates."
+    },
+    "map": {
+      "title": "What's around this address",
+      "subtitle": "The main places nearby, on the map.",
+      "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
+      "reports": "{count, plural, one {# report} other {# reports}}",
+      "openBuilding": "See the costs →",
+      "attribution": "© Mapbox · OpenStreetMap",
+      "layers": {
+        "costs": "Costs",
+        "transit": "Transit",
+        "shops": "Shops",
+        "dining": "Food",
+        "education": "Schools",
+        "parks": "Parks"
+      }
+    }
   },
   "calculator": {
     "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",

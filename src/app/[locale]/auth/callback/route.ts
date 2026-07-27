@@ -5,6 +5,7 @@ import { getOrCreateProfile } from '@/lib/profile';
 import { trackServerEvent, identifyUser } from '@/lib/posthog-server';
 import { classifyRef } from '@/lib/referral';
 import { claimAnonymousReports } from '@/lib/claim-reports';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
     | 'invite'
     | 'magiclink'
     | undefined;
-  const next = searchParams.get('next') || `/${locale}/dashboard`;
+  const next = safeNextPath(searchParams.get('next')) ?? `/${locale}/dashboard`;
 
   const supabase = await createClient();
   let authenticated = false;

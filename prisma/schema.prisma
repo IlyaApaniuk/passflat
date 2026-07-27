@@ -61,22 +61,24 @@ model District {
 // --- Buildings ---
 
 model Building {
-  id                    String   @id @default(uuid()) @db.Uuid
+  id                    String    @id @default(uuid()) @db.Uuid
   slug                  String
-  cityId                String   @map("city_id") @db.Uuid
-  districtId            String?  @map("district_id") @db.Uuid
+  cityId                String    @map("city_id") @db.Uuid
+  districtId            String?   @map("district_id") @db.Uuid
   street                String
-  buildingNumber        String   @map("building_number")
-  addressFull           String   @map("address_full")
-  addressNormalized     String   @map("address_normalized")
+  buildingNumber        String    @map("building_number")
+  addressFull           String    @map("address_full")
+  addressNormalized     String    @map("address_normalized")
   lat                   Decimal?
   lng                   Decimal?
-  placeId               String?  @map("place_id")
-  postalCode            String?  @map("postal_code")
-  totalApartmentsApprox Int?     @map("total_apartments_approx")
-  buildingType          String?  @map("building_type")
-  yearBuilt             Int?     @map("year_built")
-  createdAt             DateTime @default(now()) @map("created_at")
+  placeId               String?   @map("place_id")
+  postalCode            String?   @map("postal_code")
+  totalApartmentsApprox Int?      @map("total_apartments_approx")
+  buildingType          String?   @map("building_type")
+  yearBuilt             Int?      @map("year_built")
+  checksCount           Int       @default(0) @map("checks_count")
+  lastCheckedAt         DateTime? @map("last_checked_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
 
   city          City                   @relation(fields: [cityId], references: [id])
   district      District?              @relation(fields: [districtId], references: [id])
@@ -88,6 +90,8 @@ model Building {
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
   @@index([districtId])
+  @@index([placeId])
+  @@index([createdAt])
   @@map("buildings")
 }
 
@@ -121,6 +125,30 @@ model BuildingLocationScore {
   building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
 
   @@map("building_location_scores")
+}
+
+/// OpenStreetMap points of interest, imported per city by
+/// `prisma/import-osm-pois.ts`. Scoring reads this table instead of querying a
+/// public Overpass instance at request time: the public endpoints answer in
+/// 15-20s when they answer at all, cap concurrency at two slots per IP, and are
+/// explicitly not for production traffic. One OSM object can belong to several
+/// categories (a railway station is also public transport), so the row is keyed
+/// by object *and* category.
+model Poi {
+  id         String   @id @default(uuid()) @db.Uuid
+  citySlug   String   @map("city_slug")
+  osmType    String   @map("osm_type")
+  osmId      BigInt   @map("osm_id")
+  category   String
+  name       String?
+  lat        Decimal
+  lng        Decimal
+  importedAt DateTime @default(now()) @map("imported_at")
+
+  @@unique([osmType, osmId, category])
+  @@index([citySlug, lat, lng])
+  @@index([citySlug, category])
+  @@map("pois")
 }
 
 // --- Listings ---

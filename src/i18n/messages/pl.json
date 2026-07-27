@@ -70,7 +70,8 @@
     "no": "Nie",
     "linkCopied": "Link skopiowany do schowka",
     "copyFailed": "Nie udało się skopiować linku",
-    "error": "Coś poszło nie tak"
+    "error": "Coś poszło nie tak",
+    "checkAddress": "Sprawdź adres"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -108,7 +109,9 @@
       "statsExpenses": "dodatkowe koszty",
       "statsExpensesUnit": "zł/mies",
       "statsDeposit": "kaucja · zwrot {pct}%",
-      "statsAvgRating": "Śr. ocena"
+      "statsAvgRating": "Śr. ocena",
+      "submitCostsCta": "Dodaj swoje koszty",
+      "checkAddressCta": "Sprawdź adres"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
@@ -318,6 +321,29 @@
       "systemsOperational": "Wszystkie systemy działają",
       "betaStatus": "Otwarta beta — Warszawa",
       "followUs": "Obserwuj nas"
+    },
+    "checkAddress": {
+      "badge": "Za darmo, bez rejestracji",
+      "title": "Sprawdź adres,",
+      "titleHighlight": "zanim podpiszesz umowę.",
+      "subtitle": "Wpisz adres w Warszawie — pokażemy, co jest w okolicy, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
+      "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
+      "cta": "Sprawdź",
+      "pointTransit": "Transport i metro",
+      "pointAmenities": "Sklepy, apteki, parki",
+      "pointCosts": "Realne koszty najemców",
+      "free": "Za darmo · bez konta · 15 sekund"
+    },
+    "tools": {
+      "title": "Narzędzia",
+      "titleHighlight": "dla najemcy",
+      "subtitle": "Policz pełny koszt i sfinalizuj umowę na gotowych dokumentach.",
+      "calculatorTitle": "Kalkulator kosztów",
+      "calculatorDescription": "Policz pełny koszt najmu w dzielnicy: czynsz, opłaty i kaucja — zanim podpiszesz umowę.",
+      "calculatorCta": "Policz",
+      "templatesTitle": "Wzory dokumentów",
+      "templatesDescription": "Umowa najmu, protokół zdawczo-odbiorczy i wypowiedzenie — gotowe wzory po polsku.",
+      "templatesCta": "Otwórz wzory"
     }
   },
   "breadcrumbs": {
@@ -774,6 +800,98 @@
     "ctaSubmit": "Dodaj swoje koszty",
     "ctaDistricts": "Przeglądaj według dzielnic",
     "backToBlog": "← Blog"
+  },
+  "checker": {
+    "metaTitle": "Ocena lokalizacji adresu w mieście {city}",
+    "metaDescription": "Sprawdź dowolny adres w mieście {city}: zobacz bezpłatną ocenę lokalizacji oraz odległości do sklepów, transportu, szkół, parków i usług.",
+    "badge": "Bezpłatna ocena lokalizacji",
+    "title": "Sprawdź adres: {city}",
+    "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
+    "searchLabel": "Adres budynku",
+    "searchPlaceholder": "Zacznij wpisywać adres…",
+    "searchHint": "Wybierz pełny adres z numerem budynku. Checker obejmuje obecnie Warszawę.",
+    "loading": "Sprawdzamy sklepy, transport i usługi w pobliżu… Pierwsze sprawdzenie może potrwać trochę dłużej.",
+    "share": "Udostępnij",
+    "shareCopied": "Link skopiowany",
+    "shareError": "Nie udało się skopiować linku. Spróbuj ponownie.",
+    "errors": {
+      "title": "Nie udało się sprawdzić tego adresu",
+      "generic": "Dane o lokalizacji są chwilowo niedostępne. Spróbuj ponownie za moment.",
+      "rateLimited": "Ostatnio wykonano zbyt wiele sprawdzeń. Poczekaj minutę i spróbuj ponownie.",
+      "notFound": "Ten udostępniony adres nie jest już dostępny. Wyszukaj go ponownie powyżej.",
+      "completeAddress": "Wybierz pełny adres budynku wraz z numerem.",
+      "retry": "Spróbuj ponownie"
+    },
+    "outside": {
+      "title": "Ten adres jest poza obecnym obszarem działania",
+      "description": "Checker obejmuje teraz Warszawę. Zostaw e-mail, a damy Ci znać, gdy Passflat wystartuje w tym mieście.",
+      "selectedCity": "Wybrane miasto: {city}",
+      "emailPlaceholder": "Twój e-mail",
+      "consent": "Zgadzam się na przetwarzanie moich danych osobowych",
+      "consentRequired": "Musisz wyrazić zgodę na przetwarzanie danych osobowych.",
+      "submit": "Powiadom mnie",
+      "successTitle": "Jesteś na liście",
+      "successBody": "Damy Ci znać, gdy Passflat pojawi się w tym mieście.",
+      "error": "Coś poszło nie tak. Spróbuj ponownie.",
+      "privacy": "<privacyLink>Polityka prywatności</privacyLink>"
+    },
+    "result": {
+      "checkedAddress": "Sprawdzony adres",
+      "locationScore": "Ocena lokalizacji",
+      "outOf100": "na 100",
+      "scoreAria": "Ocena lokalizacji: {score} na 100",
+      "scoreDescription": "Na podstawie odległości w linii prostej do codziennych miejsc i transportu.",
+      "breakdownTitle": "Co jest w pobliżu",
+      "noneNearby": "brak w pobliżu",
+      "poweredBy": "Odległości są szacowane w linii prostej na podstawie danych OpenStreetMap.",
+      "level": {
+        "excellent": "Doskonała lokalizacja",
+        "good": "Wygodna lokalizacja",
+        "fair": "Przeciętna wygoda",
+        "poor": "Ograniczona wygoda"
+      },
+      "categories": {
+        "supermarket": "Supermarkety",
+        "transitRail": "Metro i kolej",
+        "pharmacy": "Apteki",
+        "transitBasic": "Autobusy i tramwaje",
+        "convenience": "Sklepy osiedlowe",
+        "dining": "Kawiarnie i restauracje",
+        "education": "Szkoły i przedszkola",
+        "parks": "Parki i zieleń",
+        "center": "Centrum miasta"
+      }
+    },
+    "costs": {
+      "availableTitle": "Mamy dane o miesięcznych kosztach w tym budynku",
+      "month": "mies.",
+      "rent": "Czynsz najmu",
+      "expenses": "Media i opłaty",
+      "sourceTenant": "Na podstawie {count, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców",
+      "sourceMixed": "Na podstawie {tenantCount, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców i {listingCount, plural, one {# ogłoszenia} other {# ogłoszeń}}",
+      "sourceScraped": "Na podstawie {count, plural, one {# ogłoszenia} other {# ogłoszeń}}",
+      "viewBuilding": "Zobacz pełny rozkład",
+      "emptyTitle": "Nikt jeszcze nie udostępnił kosztów tego budynku. Bądź pierwszy.",
+      "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
+      "contribute": "Dodaj koszty i odblokuj szczegóły",
+      "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek."
+    },
+    "map": {
+      "title": "Co jest wokół adresu",
+      "subtitle": "Najważniejsze miejsca w okolicy na mapie.",
+      "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
+      "reports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
+      "openBuilding": "Zobacz koszty →",
+      "attribution": "© Mapbox · OpenStreetMap",
+      "layers": {
+        "costs": "Koszty",
+        "transit": "Transport",
+        "shops": "Sklepy",
+        "dining": "Jedzenie",
+        "education": "Szkoły",
+        "parks": "Parki"
+      }
+    }
   },
   "calculator": {
     "metaTitle": "Kalkulator wynajmu w {city} — ile naprawdę kosztuje (czynsz najmu + media)",

@@ -16,6 +16,14 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   const search = await searchParams;
   const isEditMode = search.edit === 'true';
   const reportId = typeof search.id === 'string' ? search.id : undefined;
+  // Only the checker is a supported attribution source. Never pass arbitrary
+  // query-string values through to PostHog event properties.
+  const source = search.source === 'checker' ? ('checker' as const) : undefined;
+  const rawPlaceId = typeof search.p === 'string' ? search.p.trim() : '';
+  const checkerPlaceId =
+    !isEditMode && source === 'checker' && rawPlaceId.length > 0 && rawPlaceId.length <= 255
+      ? rawPlaceId
+      : undefined;
 
   const city = await prisma.city.findUnique({
     where: { slug: citySlug },
@@ -42,6 +50,37 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   // a system profile and claimed on first login (no auth wall before data entry).
   const canFillOnBehalf = isCostImportAdmin(user?.email);
   const adminImportMode = getAdminImportMode();
+
+  // The checker persists a building before linking here, so prefill can be
+  // reconstructed server-side from the opaque Google place id. Scope the
+  // lookup to the route city to prevent a crafted URL prefilling another city.
+  const prefillBuilding = checkerPlaceId
+    ? await prisma.building.findFirst({
+        where: { cityId: city.id, placeId: checkerPlaceId },
+        select: {
+          id: true,
+          street: true,
+          buildingNumber: true,
+          addressFull: true,
+          placeId: true,
+          lat: true,
+          lng: true,
+          district: { select: { slug: true } },
+        },
+      })
+    : null;
+  const prefill = prefillBuilding
+    ? {
+        buildingId: prefillBuilding.id,
+        street: prefillBuilding.street,
+        buildingNumber: prefillBuilding.buildingNumber,
+        district: prefillBuilding.district?.slug ?? '',
+        placeId: prefillBuilding.placeId ?? checkerPlaceId ?? '',
+        lat: prefillBuilding.lat == null ? 0 : Number(prefillBuilding.lat),
+        lng: prefillBuilding.lng == null ? 0 : Number(prefillBuilding.lng),
+        addressFull: prefillBuilding.addressFull,
+      }
+    : null;
 
   let existingReport = null;
   // Editing an existing report is a logged-in action (matched by authorId); an
@@ -128,6 +167,8 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
       userId={user?.id ?? null}
       editMode={isEditMode && existingReport != null}
       existingReport={existingReport}
+      prefill={prefill}
+      source={source}
       canFillOnBehalf={canFillOnBehalf}
       adminImportMode={adminImportMode}
     />
