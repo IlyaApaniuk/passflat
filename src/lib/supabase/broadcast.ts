@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { PRIVATE_CHANNEL } from './realtime';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -6,14 +7,17 @@ const supabase = createClient(
 );
 
 /**
- * Realtime channels here are public: anyone holding the (public) anon key can
- * subscribe to `chat:<conversationId>` or `chat:notifications:<userId>` without
- * being a participant. So a broadcast is only ever a "something changed" ping —
- * never message content or sender names. Subscribers re-fetch the actual data
- * through the authenticated `/api/conversations` routes, which check membership.
+ * Server-side fan-out for chat. Every channel is private (see ./realtime): the
+ * service-role key bypasses RLS on the send side, while subscribers are held to
+ * the `realtime.messages` policies.
  *
- * `senderId` stays because the client needs it to ignore its own echo, and user
- * ids are already public via listings.
+ * The payload stays a "something changed" ping — no message body, no sender
+ * name. Subscribers re-fetch through the authenticated `/api/conversations`
+ * routes, which check membership in application code. That keeps a mistake in a
+ * channel policy from turning into a content leak, and means a participant who
+ * forged a broadcast still cannot put words in anyone's mouth.
+ *
+ * `senderId` stays because the client needs it to ignore its own echo.
  */
 interface BroadcastMessage {
   id: string;
@@ -23,7 +27,7 @@ interface BroadcastMessage {
 }
 
 export async function broadcastNewMessage(conversationId: string, message: BroadcastMessage) {
-  const channel = supabase.channel(`chat:${conversationId}`);
+  const channel = supabase.channel(`chat:${conversationId}`, PRIVATE_CHANNEL);
   await channel.send({
     type: 'broadcast',
     event: 'new_message',
@@ -33,7 +37,7 @@ export async function broadcastNewMessage(conversationId: string, message: Broad
 }
 
 export async function broadcastUnread(recipientUserId: string, message: BroadcastMessage) {
-  const channel = supabase.channel(`chat:notifications:${recipientUserId}`);
+  const channel = supabase.channel(`chat:notifications:${recipientUserId}`, PRIVATE_CHANNEL);
   await channel.send({
     type: 'broadcast',
     event: 'new_message',
@@ -43,7 +47,7 @@ export async function broadcastUnread(recipientUserId: string, message: Broadcas
 }
 
 export async function broadcastNewConversation(recipientUserId: string) {
-  const channel = supabase.channel(`chat:notifications:${recipientUserId}`);
+  const channel = supabase.channel(`chat:notifications:${recipientUserId}`, PRIVATE_CHANNEL);
   await channel.send({
     type: 'broadcast',
     event: 'new_conversation',
@@ -53,7 +57,7 @@ export async function broadcastNewConversation(recipientUserId: string) {
 }
 
 export async function broadcastRead(userId: string) {
-  const channel = supabase.channel(`chat:notifications:${userId}`);
+  const channel = supabase.channel(`chat:notifications:${userId}`, PRIVATE_CHANNEL);
   await channel.send({
     type: 'broadcast',
     event: 'messages_read',

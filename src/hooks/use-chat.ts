@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ChatMessage {
@@ -87,7 +88,7 @@ export function useChat(
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat:${conversationId}`)
+      .channel(`chat:${conversationId}`, PRIVATE_CHANNEL)
       .on('broadcast', { event: 'new_message' }, ({ payload }) => {
         const ping = payload as { senderId?: string };
         if (ping.senderId === currentUserId) return;
