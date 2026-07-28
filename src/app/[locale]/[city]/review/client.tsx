@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { AlertCircle, Loader2, MessageSquarePlus } from 'lucide-react';
+import { AlertCircle, ArrowRight, Loader2, MessageSquarePlus } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 import type { CityBounds } from '@/lib/listings-data';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ResolvedBuilding {
   id: string;
+  slug: string;
   address: string;
   placeId: string | null;
 }
@@ -189,6 +191,16 @@ export function ReviewClient({
               </CardHeader>
               <CardContent className="px-5 sm:px-6">
                 <TenantTags summary={tenantTags} />
+                {/* The page told you what tenants said and then dead-ended:
+                    everything else known about this address — the real costs —
+                    lives one link away and was unreachable from here. */}
+                <Link
+                  href={`/${citySlug}/building/${building.slug}`}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  {t('openBuilding')}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </CardContent>
             </Card>
           )}

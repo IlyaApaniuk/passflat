@@ -15,6 +15,65 @@
 /** 4: `nearby` carries coordinates so the result can be drawn on a map. */
 export const SCORE_VERSION = 4;
 
+/** The four bands a score is read as. Also the i18n key for the level label. */
+export type ScoreLevel = 'excellent' | 'good' | 'fair' | 'poor';
+
+/** How a score band is drawn, wherever a score is drawn. */
+export interface ScoreTier {
+  level: ScoreLevel;
+  /** Foreground token. Carries its own dark-theme variant. */
+  text: string;
+  /** Tinted surface behind a category icon. */
+  bg: string;
+  /** Raw colour for the SVG ring — `stroke` takes no Tailwind class. */
+  stroke: string;
+}
+
+/**
+ * Score → tier, in one place: the checker and the building page had drifted to
+ * different thresholds' worth of colour (red vs rose, and the building page had
+ * no dark-theme variants at all, so its score lit up in light tokens on a dark
+ * background). The checker's palette is the reference, so adopting this changes
+ * nothing there.
+ *
+ * Ordered high to low; `scoreTier` takes the first band the score reaches.
+ */
+export const SCORE_TIERS: ReadonlyArray<{ min: number } & ScoreTier> = [
+  {
+    min: 80,
+    level: 'excellent',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    stroke: '#059669',
+  },
+  {
+    min: 60,
+    level: 'good',
+    text: 'text-lime-600 dark:text-lime-400',
+    bg: 'bg-lime-500/10',
+    stroke: '#65a30d',
+  },
+  {
+    min: 40,
+    level: 'fair',
+    text: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-500/10',
+    stroke: '#d97706',
+  },
+  {
+    min: 0,
+    level: 'poor',
+    text: 'text-rose-600 dark:text-rose-400',
+    bg: 'bg-rose-500/10',
+    stroke: '#e11d48',
+  },
+];
+
+/** The band a 0-100 score falls into. Scores below 0 still read as "poor". */
+export function scoreTier(score: number): ScoreTier {
+  return SCORE_TIERS.find((tier) => score >= tier.min) ?? SCORE_TIERS[SCORE_TIERS.length - 1];
+}
+
 /** How many named neighbours each category keeps for the human-readable summary. */
 export const NEARBY_LIMIT = 3;
 

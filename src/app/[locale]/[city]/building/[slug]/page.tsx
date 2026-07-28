@@ -118,6 +118,10 @@ const buildingQuery = {
     addressFull: true,
     cityId: true,
     districtId: true,
+    // Centre of the location-score map. Null on buildings that were never
+    // geocoded, which is what hides the map toggle client-side.
+    lat: true,
+    lng: true,
     // Deep-links the "tell us about this building" CTA straight into /review
     // with the address already resolved. Null on buildings that were never
     // created from a Places result (e.g. the scraped import).
@@ -611,6 +615,8 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   // (older algorithm — e.g. renamed category keys) would render raw i18n keys,
   // so we pass null instead and let the component fetch a fresh, recomputed
   // score from the API (which recomputes when version < SCORE_VERSION).
+  // Coordinates ride along so the map tab can centre without a second request
+  // (Decimal → number, which is what crosses the server/client boundary).
   const initialLocationScore =
     building.locationScore && building.locationScore.version >= SCORE_VERSION
       ? {
@@ -620,7 +626,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
             score: number;
             nearestM: number | null;
             name: string | null;
+            nearby?: Array<{ name: string; lat: number; lng: number; distanceM: number }>;
           }>,
+          lat: building.lat == null ? null : Number(building.lat),
+          lng: building.lng == null ? null : Number(building.lng),
         }
       : null;
 

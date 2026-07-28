@@ -105,7 +105,7 @@ export default function LocationPoiMap({
   formatDistance,
   formatMoney,
 }: LocationPoiMapProps) {
-  const t = useTranslations('checker.map');
+  const t = useTranslations('map');
   const [active, setActive] = useState<string[]>(() => LAYERS.map((layer) => layer.key));
   const [selected, setSelected] = useState<Selection | null>(null);
 

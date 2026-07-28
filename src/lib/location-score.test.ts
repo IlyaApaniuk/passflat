@@ -7,12 +7,15 @@ import {
   CENTER_WEIGHT,
   DENSITY_WEIGHT,
   NEARBY_LIMIT,
+  SCORE_TIERS,
   buildOverpassBboxQuery,
   categorizeTags,
   haversineMeters,
   scoreCategorizedPois,
   scoreFromDistance,
+  scoreTier,
   type CategorizedPoi,
+  type ScoreLevel,
 } from './location-score';
 
 describe('haversineMeters', () => {
@@ -40,6 +43,39 @@ describe('scoreFromDistance', () => {
 
   it('decays linearly in between', () => {
     expect(scoreFromDistance(900, 300, 1500)).toBe(50);
+  });
+});
+
+describe('scoreTier', () => {
+  it('maps each band to its level, inclusive at the threshold', () => {
+    expect(scoreTier(100).level).toBe('excellent');
+    expect(scoreTier(80).level).toBe('excellent');
+    expect(scoreTier(79).level).toBe('good');
+    expect(scoreTier(60).level).toBe('good');
+    expect(scoreTier(59).level).toBe('fair');
+    expect(scoreTier(40).level).toBe('fair');
+    expect(scoreTier(39).level).toBe('poor');
+    expect(scoreTier(0).level).toBe('poor');
+  });
+
+  it('never falls through, even on an out-of-range score', () => {
+    expect(scoreTier(-1).level).toBe('poor');
+  });
+
+  // The building page used to carry its own copy of this table without any
+  // `dark:` variants, so the score lit up in light tokens on a dark background.
+  it('gives every tier a dark-theme variant and a ring colour', () => {
+    for (const tier of SCORE_TIERS) {
+      expect(tier.text).toMatch(/\bdark:text-/);
+      expect(tier.stroke).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  // Each level doubles as an i18n key (`…level.excellent`), so a typo here
+  // would render the raw key path on the page.
+  it('covers the four levels exactly once', () => {
+    const levels: ScoreLevel[] = ['excellent', 'good', 'fair', 'poor'];
+    expect(SCORE_TIERS.map((tier) => tier.level)).toEqual(levels);
   });
 });
 

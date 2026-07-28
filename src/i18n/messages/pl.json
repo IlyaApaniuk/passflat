@@ -472,29 +472,6 @@
       "buildingInfo": "Informacje o budynku",
       "buildingCostHint": "Chcesz zobaczyć rzeczywiste koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
-      "locationScore": {
-        "title": "Ocena lokalizacji",
-        "subtitle": "Jak wygodne jest otoczenie",
-        "level": {
-          "excellent": "Doskonała lokalizacja",
-          "good": "Dobra lokalizacja",
-          "fair": "Przyzwoita lokalizacja",
-          "poor": "Mało udogodnień w pobliżu"
-        },
-        "categories": {
-          "supermarket": "Supermarkety",
-          "transitRail": "Metro i kolej",
-          "pharmacy": "Apteki",
-          "transitBasic": "Autobusy i tramwaje",
-          "convenience": "Sklepy osiedlowe",
-          "dining": "Kawiarnie i restauracje",
-          "education": "Szkoły i przedszkola",
-          "parks": "Parki i zieleń",
-          "center": "Centrum miasta"
-        },
-        "none": "Nic w pobliżu",
-        "poweredBy": "Na podstawie danych OpenStreetMap"
-      },
       "monthlyCosts": "Koszty miesięczne",
       "imInterested": "Napisz do najemcy",
       "contactHint": "Wyślij wiadomość do obecnego najemcy, aby umówić się na oględziny lub zadać pytania",
@@ -838,35 +815,7 @@
       "privacy": "<privacyLink>Polityka prywatności</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Sprawdzony adres",
-      "locationScore": "Ocena lokalizacji",
-      "outOf100": "na 100",
-      "scoreAria": "Ocena lokalizacji: {score} na 100",
-      "scoreDescription": "Na podstawie odległości w linii prostej do codziennych miejsc i transportu.",
-      "breakdownTitle": "Co jest w pobliżu",
-      "noneNearby": "brak w pobliżu",
-      "poweredBy": "Odległości są szacowane w linii prostej na podstawie danych OpenStreetMap.",
-      "level": {
-        "excellent": "Doskonała lokalizacja",
-        "good": "Wygodna lokalizacja",
-        "fair": "Przeciętna wygoda",
-        "poor": "Ograniczona wygoda"
-      },
-      "categories": {
-        "supermarket": "Supermarkety",
-        "transitRail": "Metro i kolej",
-        "pharmacy": "Apteki",
-        "transitBasic": "Autobusy i tramwaje",
-        "convenience": "Sklepy osiedlowe",
-        "dining": "Kawiarnie i restauracje",
-        "education": "Szkoły i przedszkola",
-        "parks": "Parki i zieleń",
-        "center": "Centrum miasta"
-      },
-      "view": {
-        "list": "Lista",
-        "map": "Mapa"
-      }
+      "checkedAddress": "Sprawdzony adres"
     },
     "costs": {
       "availableTitle": "Mamy dane o miesięcznych kosztach w tym budynku",
@@ -884,20 +833,6 @@
       "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
       "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
       "depositReturned": "kaucję zwrócono {returned} z {answered}"
-    },
-    "map": {
-      "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy.",
-      "reports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
-      "openBuilding": "Zobacz koszty →",
-      "attribution": "© Mapbox · OpenStreetMap",
-      "layers": {
-        "costs": "Koszty",
-        "transit": "Transport",
-        "shops": "Sklepy",
-        "dining": "Jedzenie",
-        "education": "Szkoły",
-        "parks": "Parki"
-      }
     },
     "nuisances": {
       "title": "Na co zwrócić uwagę",
@@ -919,6 +854,50 @@
       "body": "Zaznacz, co warto wiedzieć: słyszalność, ogrzewanie, winda.",
       "cta": "Opisz budynek",
       "existing": "{count, plural, one {# najemca już opisał} few {# najemców już opisało} many {# najemców już opisało} other {# najemców już opisało}} ten budynek. Dodaj swoje."
+    }
+  },
+  "locationScore": {
+    "title": "Ocena lokalizacji",
+    "outOf100": "na 100",
+    "scoreAria": "Ocena lokalizacji: {score} na 100",
+    "scoreDescription": "Na podstawie odległości w linii prostej do codziennych miejsc i transportu.",
+    "breakdownTitle": "Co jest w pobliżu",
+    "noneNearby": "brak w pobliżu",
+    "poweredBy": "Odległości są szacowane w linii prostej na podstawie danych OpenStreetMap.",
+    "level": {
+      "excellent": "Doskonała lokalizacja",
+      "good": "Wygodna lokalizacja",
+      "fair": "Przeciętna wygoda",
+      "poor": "Ograniczona wygoda"
+    },
+    "categories": {
+      "supermarket": "Supermarkety",
+      "transitRail": "Metro i kolej",
+      "pharmacy": "Apteki",
+      "transitBasic": "Autobusy i tramwaje",
+      "convenience": "Sklepy osiedlowe",
+      "dining": "Kawiarnie i restauracje",
+      "education": "Szkoły i przedszkola",
+      "parks": "Parki i zieleń",
+      "center": "Centrum miasta"
+    },
+    "view": {
+      "list": "Lista",
+      "map": "Mapa"
+    },
+    "subtitleWithCosts": "Miejsca w okolicy oraz {count, plural, one {# budynek} few {# budynki} many {# budynków} other {# budynków}} w pobliżu, w których wiemy, ile płacą najemcy."
+  },
+  "map": {
+    "reports": "{count, plural, one {# zgłoszenie} few {# zgłoszenia} many {# zgłoszeń} other {# zgłoszeń}}",
+    "openBuilding": "Zobacz koszty →",
+    "attribution": "© Mapbox · OpenStreetMap",
+    "layers": {
+      "costs": "Koszty",
+      "transit": "Transport",
+      "shops": "Sklepy",
+      "dining": "Jedzenie",
+      "education": "Szkoły",
+      "parks": "Parki"
     }
   },
   "calculator": {
@@ -1276,7 +1255,7 @@
     },
     "building": {
       "whiteSpotTitle": "Temu budynkowi brakuje raportów",
-      "whiteSpotDesc": "{count, plural, one {Na razie tylko # raport najemcy. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą realne dla kolejnych najemców.} few {Na razie # raporty najemców. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze dla kolejnych najemców.} many {Na razie # raportów najemców. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze dla kolejnych najemców.} other {Na razie # raportu. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze.}}",
+      "whiteSpotDesc": "{count, plural, one {Na razie # zgłoszenie z pięciu, po których dom dostaje status „wiarygodne”.} few {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.} many {Na razie # zgłoszeń z pięciu, po których dom dostaje status „wiarygodne”.} other {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.}}",
       "follow": "Obserwuj",
       "following": "Obserwujesz",
       "followToast": "Obserwujesz — wyślemy e-mail przy nowych raportach.",
@@ -1318,7 +1297,7 @@
       "emptyTagsTitle": "Jak się mieszka w tym budynku?",
       "emptyTagsDesc": "Słyszalność, ciepło zimą, winda, jak szybko naprawiane są usterki — tego nie ma w ogłoszeniu. Zaznacz w minutę, bez konta.",
       "tagsCta": "Opisz ten budynek",
-      "tagsAddCta": "Dodaj, co wiesz",
+      "tagsAddCta": "Dodaj swoją opinię",
       "thisBuilding": "Ten budynek",
       "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
@@ -2435,6 +2414,7 @@
     "outsideCity": "Na razie przyjmujemy opinie tylko w mieście {city}.",
     "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie.",
     "othersSaid": "Co już napisano",
-    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać"
+    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać",
+    "openBuilding": "Otwórz stronę budynku"
   }
 }

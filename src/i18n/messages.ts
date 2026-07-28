@@ -53,6 +53,12 @@ export const SHARED_CLIENT_NAMESPACES = [
   'favorites',
   'share',
   'upload',
+  // The location-score block and the POI map inside it are shared by the
+  // checker, the building page and the listing pages, so their strings live in
+  // their own top-level namespaces rather than under `checker` (which is
+  // deliberately kept off every other route). ~35 short strings together.
+  'locationScore',
+  'map',
   // Building tags are picked on the cost-submit thank-you screen, the review
   // page and the checker; ~35 short strings, so a scoped provider on each of
   // those surfaces would cost more plumbing than the bytes it saves.

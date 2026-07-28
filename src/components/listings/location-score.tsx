@@ -1,158 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { motion } from 'framer-motion';
 import {
-  MapPinned,
-  Store,
-  ShoppingBasket,
-  Bus,
-  TrainFront,
-  Pill,
-  Utensils,
-  GraduationCap,
-  Trees,
-  Navigation,
-  type LucideIcon,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-
-interface NearbyPoi {
-  name: string;
-  distanceM: number;
-}
-
-interface CategoryResult {
-  key: string;
-  score: number;
-  nearestM: number | null;
-  name: string | null;
-  nearby?: NearbyPoi[];
-}
+  LocationScoreBlock,
+  LocationScoreSkeleton,
+} from '@/components/buildings/location-score-block';
+import type { CategoryResult } from '@/lib/location-score';
 
 interface LocationScoreResponse {
   overall: number;
   categories: CategoryResult[];
-}
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  supermarket: ShoppingBasket,
-  transitRail: TrainFront,
-  pharmacy: Pill,
-  transitBasic: Bus,
-  convenience: Store,
-  dining: Utensils,
-  education: GraduationCap,
-  parks: Trees,
-  center: Navigation,
-};
-
-interface TierStyle {
-  text: string;
-  bg: string;
-  stroke: string;
-}
-
-function tierStyles(score: number): TierStyle {
-  if (score >= 80)
-    return {
-      text: 'text-emerald-600',
-      bg: 'bg-emerald-50',
-      stroke: '#059669',
-    };
-  if (score >= 60)
-    return {
-      text: 'text-lime-600',
-      bg: 'bg-lime-50',
-      stroke: '#65a30d',
-    };
-  if (score >= 40)
-    return {
-      text: 'text-amber-600',
-      bg: 'bg-amber-50',
-      stroke: '#d97706',
-    };
-  return {
-    text: 'text-red-600',
-    bg: 'bg-red-50',
-    stroke: '#dc2626',
-  };
-}
-
-function levelKey(overall: number): 'excellent' | 'good' | 'fair' | 'poor' {
-  if (overall >= 80) return 'excellent';
-  if (overall >= 60) return 'good';
-  if (overall >= 40) return 'fair';
-  return 'poor';
-}
-
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${meters} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
+  /** The building itself — the map has nothing to centre on without it. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 /**
- * "Żabka 42 m · Biedronka 210 m" — naming what is actually there reads far more
- * concretely than a bare distance, and the names come free with the POI import.
+ * The location score of a building on a page that is *about* that building:
+ * fetches the score when the server could not hand one over, then renders the
+ * same block the address checker does.
  */
-function nearbySummary(nearby: NearbyPoi[] | undefined): string | null {
-  if (!nearby || nearby.length === 0) return null;
-  return nearby.map((poi) => `${poi.name} ${formatDistance(poi.distanceM)}`).join(' · ');
-}
-
-const RING_SIZE = 48;
-const RING_STROKE = 4;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-function ScoreRing({ score, tier }: { score: number; tier: TierStyle }) {
-  const offset = RING_CIRCUMFERENCE * (1 - score / 100);
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
-      <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90">
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={RING_STROKE}
-          className="text-muted/40"
-        />
-        <motion.circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          fill="none"
-          stroke={tier.stroke}
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          strokeDasharray={RING_CIRCUMFERENCE}
-          initial={{ strokeDashoffset: RING_CIRCUMFERENCE }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-        />
-      </svg>
-      <span
-        className={`absolute inset-0 flex items-center justify-center text-sm font-bold tabular-nums ${tier.text}`}
-      >
-        {score}
-      </span>
-    </div>
-  );
-}
-
 export function LocationScore({
   buildingId,
+  citySlug,
   initialData,
 }: {
   buildingId: string;
+  /** Passed through to the block; without it the map tab stays hidden. */
+  citySlug?: string;
   initialData?: LocationScoreResponse | null;
 }) {
-  const t = useTranslations('listings.detail.locationScore');
   const [data, setData] = useState<LocationScoreResponse | null>(initialData ?? null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(
     initialData ? 'ready' : 'loading',
@@ -183,97 +60,22 @@ export function LocationScore({
     };
   }, [buildingId, initialData]);
 
-  const overallTier = data ? tierStyles(data.overall) : null;
-
+  // Buildings with no coordinates (the scraped import has plenty) never get a
+  // score. Nothing to say beats an empty card.
   if (status === 'unavailable') return null;
 
-  if (status === 'loading' || !data || !overallTier) {
-    return (
-      <Card className="overflow-hidden shadow-lg">
-        <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MapPinned className="h-5 w-5" />
-            {t('title')}
-          </CardTitle>
-          <CardDescription>{t('subtitle')}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            <div className="flex items-center gap-4 bg-primary/5 px-6 py-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between px-6 py-3.5">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-9 w-9 rounded-lg" />
-                  <Skeleton className="h-3.5 w-24" />
-                </div>
-                <Skeleton className="h-3.5 w-12" />
-              </div>
-            ))}
-          </div>
-          <div className="border-t px-6 py-3">
-            <Skeleton className="h-3 w-40" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (status === 'loading' || !data) return <LocationScoreSkeleton />;
 
   return (
-    <Card className="overflow-hidden shadow-lg">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <MapPinned className="h-5 w-5" />
-          {t('title')}
-        </CardTitle>
-        <CardDescription>{t('subtitle')}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y">
-          <div className="flex items-center gap-4 bg-primary/5 px-6 py-4">
-            <ScoreRing score={data.overall} tier={overallTier} />
-            <span className={`text-sm font-semibold ${overallTier.text}`}>
-              {t(`level.${levelKey(data.overall)}`)}
-            </span>
-          </div>
-
-          {data.categories.map((category) => {
-            const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
-            const catTier = tierStyles(category.score);
-            const summary = nearbySummary(category.nearby);
-            return (
-              <div key={category.key} className="px-6 py-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${catTier.bg}`}
-                    >
-                      <Icon className={`h-[18px] w-[18px] ${catTier.text}`} />
-                    </div>
-                    <span className="truncate text-sm font-medium">
-                      {t(`categories.${category.key}`)}
-                    </span>
-                  </div>
-                  <span className="flex-shrink-0 text-sm tabular-nums text-muted-foreground">
-                    {category.nearestM === null ? t('none') : formatDistance(category.nearestM)}
-                  </span>
-                </div>
-                {summary && (
-                  <p className="mt-1.5 pl-12 text-xs leading-relaxed text-muted-foreground">
-                    {summary}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="border-t px-6 py-3">
-          <p className="text-[10px] text-muted-foreground">{t('poweredBy')}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <LocationScoreBlock
+      overall={data.overall}
+      categories={data.categories}
+      citySlug={citySlug}
+      lat={data.lat}
+      lng={data.lng}
+      // No "buildings nearby with known costs" query stands behind these pages,
+      // so the costs layer stays empty and the map hides its chip on its own.
+      neighbours={[]}
+    />
   );
 }

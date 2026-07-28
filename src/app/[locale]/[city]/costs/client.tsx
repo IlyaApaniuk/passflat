@@ -281,20 +281,9 @@ export function CostsOverviewClient({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
-                className="mt-8 space-y-4"
+                className="mt-8"
               >
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t('costs.overview.searchPlaceholder')}
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-
-                {/* Single source of truth for the access affordance — full
-                    width, matching the search field above. */}
+                {/* Single source of truth for the access affordance. */}
                 <CostAccessCard access={access} citySlug={citySlug} />
               </motion.div>
             </motion.div>
@@ -335,6 +324,21 @@ export function CostsOverviewClient({
               </CardContent>
             </Card>
           </Link>
+        </div>
+
+        {/* Search sits with the data, not in the hero: above the fold it pushed
+            the numbers people came for off a phone screen, and it only ever
+            filters the list below it. */}
+        <div className="container mx-auto px-4 pt-8">
+          <div className="relative mx-auto max-w-2xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t('costs.overview.searchPlaceholder')}
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="container mx-auto px-4 py-8">
