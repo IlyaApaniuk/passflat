@@ -50,9 +50,25 @@ export function capFreeText(value: unknown): string | null {
   return trimmed ? trimmed.slice(0, FREE_TEXT_MAX) : null;
 }
 
+/**
+ * A rejected value, described structurally so the caller can build its own
+ * (translated) sentence: the API returns `{ error: 'VALIDATION_FAILED', errors }`
+ * and the form renders `field`/`min`/`max` in the visitor's language.
+ *
+ * `message` is the English fallback kept for logs and debugging only — it is
+ * deliberately NOT what a visitor sees.
+ */
+export interface CostValidationError {
+  field: string;
+  /** Inclusive bounds the value had to satisfy. */
+  min: number;
+  max: number;
+  message: string;
+}
+
 export interface ValidationResult {
   valid: boolean;
-  hardErrors: { field: string; message: string }[];
+  hardErrors: CostValidationError[];
   shouldFlag: boolean;
   flaggedFields: string[];
 }
@@ -60,7 +76,7 @@ export interface ValidationResult {
 export function validateCostReport(
   data: Record<string, string | number | null | undefined>,
 ): ValidationResult {
-  const hardErrors: { field: string; message: string }[] = [];
+  const hardErrors: CostValidationError[] = [];
   const flaggedFields: string[] = [];
 
   for (const [field, config] of Object.entries(STRICT_FIELDS)) {
@@ -71,6 +87,8 @@ export function validateCostReport(
     if (value < config.range.min || value > config.range.max) {
       hardErrors.push({
         field,
+        min: config.range.min,
+        max: config.range.max,
         message: `${field} must be between ${config.range.min} and ${config.range.max}`,
       });
     }
@@ -84,7 +102,15 @@ export function validateCostReport(
     // A negative utility/cost is garbage (it would understate the total) — reject
     // it outright; only an implausibly LARGE value is a soft flag.
     if (value < 0) {
-      hardErrors.push({ field, message: `${field} cannot be negative` });
+      // Reported with the same {min, max} shape as a strict field (and the same
+      // bounds the form already shows via FIELD_RANGES), so the client needs one
+      // translated sentence for every rejected value, not two.
+      hardErrors.push({
+        field,
+        min: 0,
+        max: config.max,
+        message: `${field} cannot be negative`,
+      });
     } else if (value > config.max) {
       flaggedFields.push(field);
     }

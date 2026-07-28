@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
+import { usePostHog } from 'posthog-js/react';
 import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,11 @@ export function Header({ initialUser }: HeaderProps = {}) {
   );
   const [loading, setLoading] = useState(!serverResolved);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const posthog = usePostHog();
+
+  // Which header slot actually sends people to the form — the desktop button,
+  // the new mobile pill, or the hamburger menu.
+  const trackCta = (placement: string) => () => posthog?.capture('cta_click', { placement });
 
   useEffect(() => {
     const supabase = createClient();
@@ -217,7 +223,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     {t('common.login')}
                   </Button>
                 </Link>
-                <Link href={`/${DEFAULT_CITY}/costs/submit`}>
+                <Link href={`/${DEFAULT_CITY}/costs/submit`} onClick={trackCta('header_desktop')}>
                   <Button
                     size="sm"
                     className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
@@ -233,7 +239,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
             {/* The one action we want on every page. Without it the north-star
                 CTA is only reachable through the hamburger on mobile — i.e.
                 invisible to the social traffic the site is built for. */}
-            <Link href={`/${DEFAULT_CITY}/costs/submit`}>
+            <Link href={`/${DEFAULT_CITY}/costs/submit`} onClick={trackCta('header_mobile')}>
               <Button
                 size="sm"
                 className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
@@ -346,7 +352,10 @@ export function Header({ initialUser }: HeaderProps = {}) {
                   <>
                     <Link
                       href={`/${DEFAULT_CITY}/costs/submit`}
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={() => {
+                        trackCta('header_menu')();
+                        setMobileMenuOpen(false);
+                      }}
                     >
                       <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
                         {t('dashboard.addCostReport')}

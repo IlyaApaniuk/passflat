@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Link } from '@/i18n/navigation';
+import { TrackedLink } from '@/components/analytics/tracked-link';
 import { Reveal } from '@/components/ui/reveal';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { TRUST_THRESHOLDS } from '@/lib/cost-stats';
@@ -143,7 +143,9 @@ export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }
         <div className="mx-auto grid max-w-6xl grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
           {districts.map((district, i) => (
             <Reveal key={district.key} delay={i * 0.05} className="h-full">
-              <Link
+              <TrackedLink
+                placement="district_card"
+                properties={{ district: DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key }}
                 href={`/${DEFAULT_CITY}/costs?district=${DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key}`}
                 className={`group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br p-4 backdrop-blur-sm transition-all hover:scale-[1.02] sm:p-5 ${district.color}`}
               >
@@ -179,7 +181,7 @@ export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }
                   {t('explore')}
                   <ArrowRight className="h-3 w-3" />
                 </div>
-              </Link>
+              </TrackedLink>
             </Reveal>
           ))}
         </div>

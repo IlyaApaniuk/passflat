@@ -38,7 +38,6 @@ import { MonthYearPicker } from '@/components/costs/month-year-picker';
 import { ShareButton } from '@/components/costs/share-button';
 import type { CityBounds } from '@/lib/listings-data';
 import { FIELD_RANGES } from '@/lib/cost-validation';
-import { useAnalyticsConsent } from '@/lib/consent';
 import {
   PERIODIC_CATEGORIES,
   PERIODIC_FREQUENCIES,
@@ -73,6 +72,80 @@ const FREQUENCY_LABEL_KEY: Record<PeriodicFrequency, string> = {
 
 const selectClass =
   'h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+
+/**
+ * Stable error codes the cost-report API answers with. Everything the client
+ * shows after a failed submit is derived from these — the server's `message` is
+ * an English developer fallback and must never reach a RU/UK/PL visitor who has
+ * just spent minutes filling the form.
+ */
+const SUBMIT_ERROR_CODES = [
+  'ADDRESS_OUTSIDE_CITY',
+  'rate_limited',
+  'ALREADY_EXISTS',
+  'MISSING_FIELDS',
+  'VALIDATION_FAILED',
+  'ACCOUNT_DELETED',
+] as const;
+
+type SubmitErrorCode = (typeof SUBMIT_ERROR_CODES)[number] | 'UNKNOWN';
+
+interface SubmitError {
+  code: SubmitErrorCode;
+  /** Already localized — rendered as-is. */
+  message: string;
+  /** ALREADY_EXISTS only: the report the visitor should be sent to edit. */
+  reportId?: string;
+}
+
+/**
+ * API field name → the key of the label this form already shows for it, so a
+ * server-side MISSING_FIELDS / VALIDATION_FAILED can name the field exactly the
+ * way the visitor saw it, in their language. Deliberately a pointer into the
+ * existing labels rather than a second dictionary that would drift from the UI.
+ */
+const API_FIELD_LABEL_KEY: Record<string, string> = {
+  street: 'street',
+  buildingNumber: 'buildingNo',
+  rentalType: 'rentalType',
+  leaseType: 'leaseType',
+  areaM2: 'size',
+  rooms: 'rooms',
+  floor: 'floor',
+  rent: 'rent',
+  adminFee: 'adminFeeCzynsz',
+  deposit: 'deposit',
+  electricity: 'electricity',
+  gas: 'gas',
+  heating: 'heating',
+  water: 'water',
+  internet: 'internet',
+  otherCosts: 'other',
+  livedFrom: 'livedFrom',
+  livedUntil: 'livedUntil',
+  depositReturnedAmount: 'depositReturnedAmount',
+  depositReturnDays: 'depositReturnDays',
+};
+
+/**
+ * Reads the stable code out of a failed response. Accepts it under `error` (the
+ * documented contract) or `code`, and falls back to the HTTP status, so a
+ * response shape that hasn't been normalized yet still produces a translated
+ * message instead of leaking English.
+ */
+function readErrorCode(data: Record<string, unknown>, status: number): SubmitErrorCode {
+  for (const candidate of [data.error, data.code]) {
+    if (
+      typeof candidate === 'string' &&
+      (SUBMIT_ERROR_CODES as readonly string[]).includes(candidate)
+    ) {
+      return candidate as SubmitErrorCode;
+    }
+  }
+  if (status === 429) return 'rate_limited';
+  if (status === 409) return 'ALREADY_EXISTS';
+  return 'UNKNOWN';
+}
 
 interface ExistingReport {
   id: string;
@@ -174,6 +247,12 @@ function isInsideBounds(lat: number, lng: number, bounds: CityBounds): boolean {
   return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
 }
 
+/** Whole seconds since `startedAt` (0 until the open time has been stamped).
+ *  Module scope so reading the clock stays out of the component's render path. */
+function secondsSince(startedAt: number): number {
+  return startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
+}
+
 // Blank form — used for a fresh submission and to reset when discarding a draft.
 function makeEmptyForm() {
   return {
@@ -247,7 +326,6 @@ export function CostSubmitClient({
   const t = useTranslations();
   const locale = useLocale();
   const posthog = usePostHog();
-  const analyticsConsent = useAnalyticsConsent();
   // Logged-out visitor: the report is submitted anonymously and the success card
   // shows the "log in to unlock full stats" hook (the claim loop).
   const isAnonymous = !userId;
@@ -303,7 +381,7 @@ export function CostSubmitClient({
     districtMedianTotalPerM2: number | null;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<SubmitError | null>(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
   const rentalTypeRef = useRef<HTMLDivElement>(null);
   const [leaseTypeError, setLeaseTypeError] = useState(false);
@@ -319,6 +397,36 @@ export function CostSubmitClient({
     existingReport ? { ...existingReport } : makePrefilledForm(prefill),
   );
   const [draftRestored, setDraftRestored] = useState(false);
+
+  // --- Abandonment instrumentation state -------------------------------------
+  // Everything below feeds `cost_form_abandoned`. It is deliberately all refs:
+  // the unload listeners are registered once, and refs let them read a current
+  // value without re-registering on every keystroke.
+  /** When the form was opened, for `seconds_open`. Stamped in an effect — the
+   *  clock must not be read during render. */
+  const openedAtRef = useRef(0);
+  /** Did the visitor actually enter anything? No input → not an abandonment. */
+  const touchedRef = useRef(false);
+  /** Name of the last field the visitor changed — the "where did they stall"
+   *  signal. A field NAME only; values never leave the browser. */
+  const lastFieldRef = useRef<string | null>(null);
+  /** How many times they pressed submit (a failed last step reads very
+   *  differently from walking away mid-form). */
+  const submitAttemptsRef = useRef(0);
+  /** Code of the last failed submit, so a drop-off can be attributed to it. */
+  const lastErrorCodeRef = useRef<string | null>(null);
+  /** Whether the autosaved draft actually made it to localStorage — false means
+   *  their typing is NOT recoverable (private mode / quota). */
+  const draftSavedRef = useRef(false);
+  /** Fire-once guards + a mirror of `submitted` for the unload listeners. */
+  const abandonSentRef = useRef(false);
+  const submittedRef = useRef(false);
+  const draftRestoredCapturedRef = useRef(false);
+  /** True once the form has survived past its first tick — the gate on the
+   *  unmount-based departure below. */
+  const settledRef = useRef(false);
+  /** Section-level fill state, refreshed after every commit (see the effect). */
+  const progressRef = useRef<Record<string, unknown>>({});
 
   const [showDetailedUtilities, setShowDetailedUtilities] = useState(
     () => !!(existingReport && hasDetailedUtilities(existingReport)),
@@ -344,6 +452,12 @@ export function CostSubmitClient({
   );
 
   const updateFormData = (updates: Partial<typeof formData>) => {
+    // Single choke point for every field edit in this form, which makes it the
+    // one place that can record "they typed something" and "this was the last
+    // field they touched" without instrumenting ~30 inputs by hand.
+    touchedRef.current = true;
+    const [firstKey] = Object.keys(updates);
+    if (firstKey) lastFieldRef.current = firstKey;
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
@@ -386,6 +500,9 @@ export function CostSubmitClient({
             : {}),
         }));
         setDraftRestored(true);
+        // A restored draft is prior input: leaving now is an abandonment of
+        // work already done, not a bounce off an untouched form.
+        touchedRef.current = true;
         if (draft.isCurrentTenant === false || draft.livedFrom || draft.depositReturned)
           setShowTenancy(true);
         if (hasDetailedUtilities(draft)) setShowDetailedUtilities(true);
@@ -403,17 +520,38 @@ export function CostSubmitClient({
     if (editMode) return;
     try {
       localStorage.setItem(draftKey, JSON.stringify(formData));
+      draftSavedRef.current = true;
     } catch {
-      /* ignore quota errors */
+      // Private mode / quota: the draft is NOT recoverable. Reported as
+      // `draft_saved: false` on abandonment so a silent loss is visible.
+      draftSavedRef.current = false;
     }
   }, [formData, editMode, draftKey]);
 
-  // Funnel: form opened (new submissions only). Consent can be granted after
-  // mount, so wait for it and capture once at that moment instead of losing the
-  // first-view event. Address text is intentionally excluded from analytics.
+  useEffect(() => {
+    openedAtRef.current = Date.now();
+  }, []);
+
+  // Marks the form as "really on screen", one tick after mount. React's dev-mode
+  // StrictMode double-invoke tears an effect down and re-runs it synchronously
+  // in the same commit, so its teardown must not be mistaken for the visitor
+  // leaving: a restored draft marks the form touched during mount, which would
+  // otherwise fire a phantom `unmount` abandonment in dev AND burn the
+  // fire-once guard, hiding the real departure. A timer cannot have fired
+  // inside that synchronous window; by any real unmount it long since has.
+  // Declared before the listener effect so React runs this cleanup first.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      settledRef.current = true;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Funnel: form opened (new submissions only). Address text is intentionally
+  // excluded from analytics.
   const formStartedCapturedRef = useRef(false);
   useEffect(() => {
-    if (editMode || !analyticsConsent || !posthog || formStartedCapturedRef.current) return;
+    if (editMode || !posthog || formStartedCapturedRef.current) return;
     formStartedCapturedRef.current = true;
     posthog.capture('cost_form_started', {
       city: citySlug,
@@ -425,9 +563,13 @@ export function CostSubmitClient({
           }
         : {}),
     });
-  }, [analyticsConsent, citySlug, editMode, posthog, prefill, source]);
+  }, [citySlug, editMode, posthog, prefill, source]);
 
   const discardDraft = () => {
+    posthog?.capture('cost_form_draft_discarded', {
+      ...progressRef.current,
+      seconds_open: secondsSince(openedAtRef.current),
+    });
     try {
       localStorage.removeItem(draftKey);
     } catch {
@@ -446,6 +588,8 @@ export function CostSubmitClient({
   };
 
   const addPeriodicRow = () => {
+    touchedRef.current = true;
+    lastFieldRef.current = 'periodicCharges';
     setShowPeriodic(true);
     setFormData((prev) => ({
       ...prev,
@@ -457,6 +601,8 @@ export function CostSubmitClient({
   };
 
   const updatePeriodicRow = (index: number, patch: Partial<PeriodicChargeRow>) => {
+    touchedRef.current = true;
+    lastFieldRef.current = 'periodicCharges';
     setFormData((prev) => ({
       ...prev,
       periodicCharges: prev.periodicCharges.map((row, i) =>
@@ -492,6 +638,7 @@ export function CostSubmitClient({
       // can't be submitted with an out-of-city pick.
       setAddressError(t('costs.submit.addressOutsideCity', { city: cityName }));
       updateFormData({ street: '', buildingNumber: '', district: '', placeId: '', lat: 0, lng: 0 });
+      lastFieldRef.current = 'address';
       return;
     }
     setAddressError(null);
@@ -505,7 +652,58 @@ export function CostSubmitClient({
       lat: place.lat,
       lng: place.lng,
     });
+    lastFieldRef.current = 'address';
     posthog?.capture('cost_form_address_selected', { city: citySlug });
+  };
+
+  /** The form's own translated label for an API field name (see
+   *  API_FIELD_LABEL_KEY); falls back to the raw name for anything unmapped. */
+  const fieldLabel = (field: unknown): string => {
+    if (typeof field !== 'string') return '';
+    const key = API_FIELD_LABEL_KEY[field];
+    return key ? t(`costs.submit.${key}`) : field;
+  };
+
+  /** Stable error code → a message in the visitor's language. Unknown codes get
+   *  the generic fallback, never the server's English string. */
+  const errorMessage = (code: SubmitErrorCode, data: Record<string, unknown>): string => {
+    switch (code) {
+      case 'ADDRESS_OUTSIDE_CITY':
+        return t('costs.submit.addressOutsideCity', { city: cityName });
+      case 'rate_limited':
+        return t('costs.submit.rateLimited');
+      case 'ACCOUNT_DELETED':
+        return t('costs.submit.errorAccountDeleted');
+      case 'ALREADY_EXISTS':
+        // An anonymous visitor cannot edit anything until they log in, so the
+        // two audiences get different next steps (rendered as a card below).
+        return isAnonymous ? t('costs.submit.duplicateAnonDesc') : t('costs.submit.duplicateDesc');
+      case 'MISSING_FIELDS': {
+        const fields = Array.isArray(data.fields)
+          ? data.fields.map(fieldLabel).filter(Boolean)
+          : [];
+        return fields.length
+          ? t('costs.submit.errorMissingFields', { fields: fields.join(', ') })
+          : t('costs.submit.errorGeneric');
+      }
+      case 'VALIDATION_FAILED': {
+        const first = Array.isArray(data.errors)
+          ? (data.errors[0] as Record<string, unknown> | undefined)
+          : undefined;
+        const label = fieldLabel(first?.field);
+        if (!label) return t('costs.submit.errorGeneric');
+        // The bounds are the same constants the inline warnings already use, so
+        // fall back to them when the response doesn't carry min/max.
+        const range = typeof first?.field === 'string' ? FIELD_RANGES[first.field] : undefined;
+        const min = typeof first?.min === 'number' ? first.min : range?.min;
+        const max = typeof first?.max === 'number' ? first.max : range?.max;
+        return min != null && max != null
+          ? t('costs.submit.errorValidationRange', { field: label, min, max })
+          : t('costs.submit.errorValidationField', { field: label });
+      }
+      default:
+        return t('costs.submit.errorGeneric');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -552,6 +750,23 @@ export function CostSubmitClient({
 
     setSubmitting(true);
     setError(null);
+    submitAttemptsRef.current += 1;
+
+    // The single place a failed submit becomes a TRANSLATED, actionable state.
+    const fail = (code: SubmitErrorCode, data: Record<string, unknown>, status: number) => {
+      lastErrorCodeRef.current = code;
+      posthog?.capture('cost_form_submit_error', {
+        city: citySlug,
+        edit: editMode,
+        code,
+        status,
+      });
+      setError({
+        code,
+        message: errorMessage(code, data),
+        reportId: typeof data.reportId === 'string' ? data.reportId : undefined,
+      });
+    };
 
     try {
       const url =
@@ -686,17 +901,14 @@ export function CostSubmitClient({
       try {
         data = JSON.parse(responseText);
       } catch {
-        throw new Error(`Server error (${response.status})`);
+        // A non-JSON body (proxy/HTML error page) carries nothing translatable.
+        fail('UNKNOWN', {}, response.status);
+        return;
       }
 
       if (!response.ok) {
-        if (data.error === 'ADDRESS_OUTSIDE_CITY') {
-          throw new Error(t('costs.submit.addressOutsideCity', { city: cityName }));
-        }
-        if (response.status === 429 || data.error === 'rate_limited') {
-          throw new Error(t('costs.submit.rateLimited'));
-        }
-        throw new Error((data.message as string) || (data.error as string) || 'Failed to submit');
+        fail(readErrorCode(data, response.status), data, response.status);
+        return;
       }
 
       const costReport = data.costReport as { id?: string; buildingId?: string } | undefined;
@@ -717,9 +929,10 @@ export function CostSubmitClient({
           /* ignore */
         }
       }
-    } catch (err) {
-      posthog?.capture('cost_form_submit_error', { city: citySlug });
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } catch {
+      // Only unexpected throws land here (the request never completed) — a
+      // dropped connection, a blocked request. Nothing to localize per-case.
+      fail('UNKNOWN', {}, 0);
     } finally {
       setSubmitting(false);
     }
@@ -814,6 +1027,115 @@ export function CostSubmitClient({
       : completeness >= 60
         ? t('costs.submit.weightGood')
         : t('costs.submit.weightLight');
+
+  // ---------------------------------------------------------------------------
+  // Abandonment funnel
+  //
+  // Between `cost_form_started` and `cost_form_submit_attempt` the funnel was
+  // blind: someone who filled four fields and quit looked exactly like someone
+  // who never engaged. `cost_form_abandoned` reports, at the moment the page
+  // goes away, HOW FAR they got — per section, as booleans/counters. No raw
+  // values ever leave the browser (no address, no amounts): the only free-form
+  // string is `last_field`, a field NAME from this form's own fixed set.
+  // ---------------------------------------------------------------------------
+  const tenancyAnswered =
+    !!formData.livedFrom || !formData.isCurrentTenant || !!formData.depositReturned;
+
+  // Refreshed after every commit so the listeners below — registered once —
+  // always read a current snapshot instead of a stale closure.
+  useEffect(() => {
+    progressRef.current = {
+      city: citySlug,
+      source: source ?? 'direct',
+      is_anonymous: isAnonymous,
+      has_address: !!(formData.street && formData.buildingNumber),
+      has_rental_type: !!formData.rentalType,
+      has_lease_type: !!formData.leaseType,
+      has_rent: !!formData.rent,
+      has_area: !!formData.areaM2,
+      // The kaucja amount (a quality signal, not a required field). The
+      // deposit-RETURN question lives under `tenancy_answered`.
+      deposit_answered: !!formData.deposit,
+      utilities_answered: utilitiesAnswered,
+      tenancy_answered: tenancyAnswered,
+      detailed_utilities_open: showDetailedUtilities,
+      periodic_rows: formData.periodicCharges.length,
+      // Same counter the sticky bar shows as "Основное: 3/5" — one definition of
+      // "core", reused, so the event and the UI can never disagree. `core_total`
+      // travels with it because it is 4 for a room and 5 for an apartment.
+      core_filled_count: coreFilled,
+      core_total: coreFields.length,
+      core_complete: coreComplete,
+      completeness,
+      draft_restored: draftRestored,
+    };
+    submittedRef.current = submitted;
+  });
+
+  useEffect(() => {
+    if (!draftRestored || !posthog || draftRestoredCapturedRef.current) return;
+    draftRestoredCapturedRef.current = true;
+    // Carries the same progress snapshot, so "how much work did autosave save"
+    // is answerable, not just "how often does the banner appear".
+    posthog.capture('cost_form_draft_restored', { ...progressRef.current });
+  }, [draftRestored, posthog]);
+
+  useEffect(() => {
+    // Edit mode is excluded to keep the funnel arithmetic honest: the opener
+    // event (`cost_form_started`) is new-submissions-only.
+    if (editMode || !posthog) return;
+
+    const send = (reason: 'pagehide' | 'visibilitychange' | 'unmount') => {
+      // Fire at most once per form session, so a `visibilitychange` followed by
+      // `pagehide` (the normal tab-close sequence) is one event, not two.
+      if (abandonSentRef.current || submittedRef.current || !touchedRef.current) return;
+      abandonSentRef.current = true;
+      posthog.capture(
+        'cost_form_abandoned',
+        {
+          ...progressRef.current,
+          // Read live: these are ref-only and must not lag a render behind.
+          last_field: lastFieldRef.current,
+          submit_attempts: submitAttemptsRef.current,
+          last_error_code: lastErrorCodeRef.current,
+          draft_saved: draftSavedRef.current,
+          seconds_open: secondsSince(openedAtRef.current),
+          reason,
+        },
+        // Batching is the risk every path shares — an event parked in the queue
+        // dies with the tab — so none of them use it (`send_instantly`).
+        // The transport differs by what happens to the document:
+        //   unload  → it is being destroyed, and only a beacon outlives it.
+        //   unmount → the page is alive (client-side route change), so the
+        //             normal transport is strictly better: it sees the response
+        //             and can retry, neither of which fire-and-forget beacons
+        //             do. A beacon here would buy nothing and give up both.
+        // (`transport` / `send_instantly` are posthog-js CaptureOptions.)
+        reason === 'unmount'
+          ? { send_instantly: true }
+          : { transport: 'sendBeacon', send_instantly: true },
+      );
+    };
+
+    // `pagehide` covers the desktop close/navigate case; `visibilitychange` →
+    // hidden is the only reliable signal on mobile, where a tab is usually
+    // backgrounded (app switch, home button) and never formally unloaded.
+    const onPageHide = () => send('pagehide');
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') send('visibilitychange');
+    };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      // Leaving by client-side navigation — the header logo, "back to costs" —
+      // unmounts the form without ever firing `pagehide`, and on mobile that is
+      // the likelier way out of the two. Same guards, same fire-once dedupe;
+      // `reason` keeps "navigated away" separable from "closed the tab".
+      if (settledRef.current) send('unmount');
+    };
+  }, [editMode, posthog]);
 
   if (submitted && wasFlagged) {
     return (
@@ -1229,10 +1551,59 @@ export function CostSubmitClient({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-6 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
                 >
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  {error}
+                  {/* A duplicate is not a failure, it's a fork in the road: this
+                      person already reported this building, so the only useful
+                      next step is opening that report. For an anonymous
+                      submitter that requires logging in first — the report is
+                      attached to their browser (pf_anon) and is claimed on
+                      login, so `next` lands them straight in the editor instead
+                      of on an empty form. Without this they hit a dead end:
+                      "edit your existing one" with nothing to click. */}
+                  {error.code === 'ALREADY_EXISTS' ? (
+                    <div className="mb-6 rounded-md border border-primary/30 bg-primary/5 px-4 py-4">
+                      <p className="flex items-center gap-2 font-semibold">
+                        <Pencil className="h-4 w-4 shrink-0 text-primary" />
+                        {t('costs.submit.duplicateTitle')}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
+                      <Button asChild className="mt-4 w-full sm:w-auto">
+                        {isAnonymous ? (
+                          <Link
+                            href={{
+                              pathname: '/auth/login',
+                              query: {
+                                next: `/${locale}/${citySlug}/costs/submit?edit=true${
+                                  error.reportId ? `&id=${error.reportId}` : ''
+                                }`,
+                              },
+                            }}
+                            onClick={() =>
+                              posthog?.capture('anon_duplicate_edit_cta_clicked', {
+                                city: citySlug,
+                                has_report_id: !!error.reportId,
+                              })
+                            }
+                          >
+                            {t('costs.submit.duplicateLoginCta')}
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/${citySlug}/costs/submit?edit=true${
+                              error.reportId ? `&id=${error.reportId}` : ''
+                            }`}
+                          >
+                            {t('costs.submit.editReport')}
+                          </Link>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mb-6 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      {error.message}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -2123,7 +2494,13 @@ export function CostSubmitClient({
                     {!showTenancy ? (
                       <button
                         type="button"
-                        onClick={() => setShowTenancy(true)}
+                        onClick={() => {
+                          // The one engagement that never routes through
+                          // updateFormData, so mark it explicitly.
+                          touchedRef.current = true;
+                          lastFieldRef.current = 'tenancy';
+                          setShowTenancy(true);
+                        }}
                         className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
                       >
                         <Plus className="h-4 w-4" />

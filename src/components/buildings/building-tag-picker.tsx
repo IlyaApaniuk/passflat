@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Check, Loader2, MessageSquarePlus } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
-import { useAnalyticsConsent } from '@/lib/consent';
 import { BUILDING_TAG_SECTIONS, conflictingTagKeys, type TagSentiment } from '@/lib/building-tags';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -47,7 +46,6 @@ export function BuildingTagPicker({
 }: BuildingTagPickerProps) {
   const t = useTranslations();
   const posthog = usePostHog();
-  const analyticsConsent = useAnalyticsConsent();
   const [selected, setSelected] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -74,14 +72,12 @@ export function BuildingTagPicker({
       if (!response.ok) throw new Error('save failed');
 
       setStatus('saved');
-      if (analyticsConsent) {
-        posthog?.capture('building_tags_submitted', {
-          city: citySlug,
-          building_id: buildingId,
-          source,
-          count: selected.length,
-        });
-      }
+      posthog?.capture('building_tags_submitted', {
+        city: citySlug,
+        building_id: buildingId,
+        source,
+        count: selected.length,
+      });
       onSaved?.(selected.length);
     } catch {
       setStatus('error');
@@ -103,7 +99,6 @@ export function BuildingTagPicker({
             <Link
               href={`/${citySlug}/costs/submit${placeId ? `?p=${encodeURIComponent(placeId)}&source=review` : ''}`}
               onClick={() =>
-                analyticsConsent &&
                 posthog?.capture('review_to_costs_clicked', {
                   city: citySlug,
                   building_id: buildingId,

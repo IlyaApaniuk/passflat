@@ -34,7 +34,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
-import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
@@ -421,7 +420,6 @@ export function CheckerClient({
   const t = useTranslations('checker');
   const locale = useLocale();
   const posthog = usePostHog();
-  const analyticsConsent = useAnalyticsConsent();
   const viewCapturedRef = useRef(false);
   const capturedCheckSequenceRef = useRef(0);
   const requestSequenceRef = useRef(0);
@@ -446,17 +444,16 @@ export function CheckerClient({
   const [successfulCheck, setSuccessfulCheck] = useState<SuccessfulCheck | null>(null);
 
   useEffect(() => {
-    if (!analyticsConsent || !posthog || viewCapturedRef.current) return;
+    if (!posthog || viewCapturedRef.current) return;
     viewCapturedRef.current = true;
     posthog.capture('checker_viewed', { city: citySlug });
-  }, [analyticsConsent, citySlug, posthog]);
+  }, [citySlug, posthog]);
 
   // A first-time Overpass lookup can finish before the visitor answers the
   // analytics-consent banner. Keep the completed check pending and capture it
   // once consent becomes available instead of silently losing the funnel step.
   useEffect(() => {
     if (
-      !analyticsConsent ||
       !posthog ||
       !successfulCheck ||
       capturedCheckSequenceRef.current === successfulCheck.sequence
@@ -470,7 +467,7 @@ export function CheckerClient({
       has_data: successfulCheck.hasData,
       source: successfulCheck.source,
     });
-  }, [analyticsConsent, citySlug, posthog, successfulCheck]);
+  }, [citySlug, posthog, successfulCheck]);
 
   const updateUrl = useCallback((placeId: string | null) => {
     const url = new URL(window.location.href);
@@ -566,14 +563,12 @@ export function CheckerClient({
       setStatus('idle');
       setOutsideCity(place.city || place.formattedAddress);
       updateUrl(null);
-      if (analyticsConsent) {
-        posthog?.capture('address_checked', {
-          city: citySlug,
-          selected_city: place.city || null,
-          has_data: false,
-          outside_city: true,
-        });
-      }
+      posthog?.capture('address_checked', {
+        city: citySlug,
+        selected_city: place.city || null,
+        has_data: false,
+        outside_city: true,
+      });
       return;
     }
 
@@ -602,7 +597,6 @@ export function CheckerClient({
   };
 
   const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us') => {
-    if (!analyticsConsent) return;
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
       city: citySlug,

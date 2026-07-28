@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { AlertCircle, Loader2, MessageSquarePlus } from 'lucide-react';
-import { useAnalyticsConsent } from '@/lib/consent';
 import type { CityBounds } from '@/lib/listings-data';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
@@ -52,7 +51,6 @@ export function ReviewClient({
 }: ReviewClientProps) {
   const t = useTranslations('review');
   const posthog = usePostHog();
-  const analyticsConsent = useAnalyticsConsent();
   const viewCaptured = useRef(false);
 
   const [building, setBuilding] = useState<ResolvedBuilding | null>(null);
@@ -62,13 +60,13 @@ export function ReviewClient({
   );
 
   useEffect(() => {
-    if (!analyticsConsent || !posthog || viewCaptured.current) return;
+    if (!posthog || viewCaptured.current) return;
     viewCaptured.current = true;
     posthog.capture('review_page_viewed', {
       city: citySlug,
       from_checker: Boolean(initialPlaceId),
     });
-  }, [analyticsConsent, citySlug, initialPlaceId, posthog]);
+  }, [citySlug, initialPlaceId, posthog]);
 
   const applyPayload = useCallback((payload: unknown) => {
     const data = payload as {
@@ -135,14 +133,12 @@ export function ReviewClient({
         if (!response.ok) throw new Error('resolve failed');
         applyPayload(await response.json());
 
-        if (analyticsConsent) {
-          posthog?.capture('review_address_resolved', { city: citySlug });
-        }
+        posthog?.capture('review_address_resolved', { city: citySlug });
       } catch {
         setStatus('error');
       }
     },
-    [analyticsConsent, applyPayload, cityBounds, cityCanonicalName, citySlug, posthog],
+    [applyPayload, cityBounds, cityCanonicalName, citySlug, posthog],
   );
 
   return (
