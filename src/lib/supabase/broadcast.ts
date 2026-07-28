@@ -26,42 +26,32 @@ interface BroadcastMessage {
   conversationId: string;
 }
 
-export async function broadcastNewMessage(conversationId: string, message: BroadcastMessage) {
-  const channel = supabase.channel(`chat:${conversationId}`, PRIVATE_CHANNEL);
-  await channel.send({
-    type: 'broadcast',
-    event: 'new_message',
-    payload: message,
-  });
+/**
+ * Publishes without joining the channel. `send()` on an unsubscribed channel
+ * does the same thing by silently falling back to REST, but that fallback is
+ * deprecated, so ask for HTTP delivery explicitly.
+ */
+async function publish(topic: string, event: string, payload: object) {
+  const channel = supabase.channel(topic, PRIVATE_CHANNEL);
+  const result = await channel.httpSend(event, payload);
   await supabase.removeChannel(channel);
+  if (!result.success) {
+    console.error(`[broadcast] ${event} on ${topic} failed: ${result.status} ${result.error}`);
+  }
+}
+
+export async function broadcastNewMessage(conversationId: string, message: BroadcastMessage) {
+  await publish(`chat:${conversationId}`, 'new_message', message);
 }
 
 export async function broadcastUnread(recipientUserId: string, message: BroadcastMessage) {
-  const channel = supabase.channel(`chat:notifications:${recipientUserId}`, PRIVATE_CHANNEL);
-  await channel.send({
-    type: 'broadcast',
-    event: 'new_message',
-    payload: message,
-  });
-  await supabase.removeChannel(channel);
+  await publish(`chat:notifications:${recipientUserId}`, 'new_message', message);
 }
 
 export async function broadcastNewConversation(recipientUserId: string) {
-  const channel = supabase.channel(`chat:notifications:${recipientUserId}`, PRIVATE_CHANNEL);
-  await channel.send({
-    type: 'broadcast',
-    event: 'new_conversation',
-    payload: {},
-  });
-  await supabase.removeChannel(channel);
+  await publish(`chat:notifications:${recipientUserId}`, 'new_conversation', {});
 }
 
 export async function broadcastRead(userId: string) {
-  const channel = supabase.channel(`chat:notifications:${userId}`, PRIVATE_CHANNEL);
-  await channel.send({
-    type: 'broadcast',
-    event: 'messages_read',
-    payload: {},
-  });
-  await supabase.removeChannel(channel);
+  await publish(`chat:notifications:${userId}`, 'messages_read', {});
 }
