@@ -8,7 +8,9 @@
  * browser subscriber have to pass this same config or messages are silently
  * dropped. Hence one shared constant rather than an option repeated per call.
  *
- * Requires "Allow public access" to be off in the project's Realtime settings —
- * otherwise the same topic is still joinable as a public channel.
+ * Joining is authorized by the policies in
+ * supabase/snippets/realtime-authorization.sql, and closing the public route to
+ * the same topics needs "Channel Restrictions" set to private-only under
+ * Project Settings → Realtime Settings.
  */
 export const PRIVATE_CHANNEL = { config: { private: true } } as const;
