@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Pick<PageProps, 'params'>): P
   return {
     title,
     description,
-    alternates: getAlternates(`/${city}/review`),
+    alternates: getAlternates(`/${city}/review`, await getLocale()),
     openGraph: { title, description, images: [getOgImage(title, description)] },
   };
 }

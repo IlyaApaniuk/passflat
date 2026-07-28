@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    alternates: getAlternates(`/${city}/replacement`),
+    alternates: getAlternates(`/${city}/replacement`, await getLocale()),
     openGraph: {
       title,
       description,

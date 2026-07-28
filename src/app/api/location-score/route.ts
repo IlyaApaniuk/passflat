@@ -22,7 +22,7 @@ import {
   type LocationCheckerResponse,
   type LocationCheckerTags,
 } from '@/lib/location-checker';
-import { aggregateTagVotes } from '@/lib/building-tags';
+import { summarizeTagVotes } from '@/lib/building-tags';
 import { getDistrictCostStats } from '@/lib/cost-baselines';
 import { haversineMeters, SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
 import { findNuisances } from '@/lib/nuisances';
@@ -407,22 +407,7 @@ async function findTenantTags(buildingId: string): Promise<LocationCheckerTags |
     where: { buildingId, isVisible: true },
     select: { tagKey: true, source: true, voterKey: true },
   });
-  if (votes.length === 0) return null;
-
-  const costReportVoters = new Set(
-    votes.filter((v) => v.source === 'cost_report').map((v) => v.voterKey),
-  );
-  const summary = aggregateTagVotes(
-    votes.map((v) => ({ tagKey: v.tagKey, fromCostReport: v.source === 'cost_report' })),
-    {
-      total: new Set(votes.map((v) => v.voterKey)).size,
-      fromCostReports: costReportVoters.size,
-    },
-  );
-
-  // Everything the voters said may still be held back — a lone negative, for
-  // instance — and a block with no chips is worse than no block.
-  return summary.tags.length > 0 ? summary : null;
+  return summarizeTagVotes(votes);
 }
 
 /** The building's own costs, placed against its district. */

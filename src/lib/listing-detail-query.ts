@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import type { ListingType } from '@/lib/listings-data';
 import { monthlyEquivalent, isPeriodicFrequency } from '@/lib/periodic-charges';
 import { getAlternates } from '@/lib/seo';
+import { getLocale } from 'next-intl/server';
 
 // A listing is addressed by slug; old UUID links still resolve (the page then
 // 301s them to the canonical slug URL).
@@ -148,7 +149,10 @@ export async function generateListingMetadata(
     description:
       listing.description?.slice(0, 160) ??
       `${listing.title} in ${listing.building.district?.nameKey ?? 'Warsaw'}`,
-    alternates: getAlternates(`/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`),
+    alternates: getAlternates(
+      `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`,
+      await getLocale(),
+    ),
     openGraph: {
       title: listing.title,
       description: listing.description?.slice(0, 160) ?? undefined,

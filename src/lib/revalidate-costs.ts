@@ -49,6 +49,25 @@ export function revalidateCostSurfaces(target?: {
 }
 
 /**
+ * Drop just one building's page.
+ *
+ * For changes that touch a single building and no aggregate — a tenant tag
+ * vote. Expiring the whole `costs` tag would throw away every city and district
+ * roll-up for one checkbox, so this stays deliberately narrow. Without it a tag
+ * shows up an hour later, which breaks the same "I contributed → I see it" loop
+ * the cost flow was fixed for.
+ */
+export function revalidateBuildingPage(citySlug: string, buildingSlug: string): void {
+  try {
+    for (const path of localeVariants(`/${citySlug}/building/${buildingSlug}`)) {
+      revalidatePath(path);
+    }
+  } catch (err) {
+    console.error('[revalidate-costs] building revalidation failed', err);
+  }
+}
+
+/**
  * Every URL one page is cached under. `localePrefix: 'as-needed'` means the
  * default locale is served without a prefix but rewritten to the prefixed path
  * internally, so both spellings are revalidated.

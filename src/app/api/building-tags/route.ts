@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureAnonId } from '@/lib/anon-id';
 import { BUILDING_TAGS, isBuildingTagKey, findTagConflict } from '@/lib/building-tags';
 import { prisma } from '@/lib/prisma';
+import { revalidateBuildingPage } from '@/lib/revalidate-costs';
 import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
   const building = await prisma.building.findUnique({
     where: { id: input.buildingId },
-    select: { id: true },
+    select: { id: true, slug: true, city: { select: { slug: true } } },
   });
   if (!building) return jsonError('NOT_FOUND', 404);
 
@@ -152,6 +153,10 @@ export async function POST(request: NextRequest) {
       }),
     ),
   ]);
+
+  // The building page is ISR-cached for an hour; without this the voter's own
+  // tags are missing when they land on it.
+  revalidateBuildingPage(building.city.slug, building.slug);
 
   return NextResponse.json({ saved: input.tagKeys.length, source });
 }

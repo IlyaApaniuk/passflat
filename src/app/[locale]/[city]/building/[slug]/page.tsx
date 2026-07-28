@@ -2,13 +2,14 @@ import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getLocale, getTranslations, setRequestLocale } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import { SCORE_VERSION } from '@/lib/location-score';
+import { summarizeTagVotes } from '@/lib/building-tags';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -117,6 +118,10 @@ const buildingQuery = {
     addressFull: true,
     cityId: true,
     districtId: true,
+    // Deep-links the "tell us about this building" CTA straight into /review
+    // with the address already resolved. Null on buildings that were never
+    // created from a Places result (e.g. the scraped import).
+    placeId: true,
     district: { select: { nameKey: true, slug: true } },
     city: { select: { nameKey: true } },
     locationScore: { select: { overall: true, categories: true, version: true } },
@@ -124,6 +129,12 @@ const buildingQuery = {
       where: { isVisible: true },
       orderBy: { createdAt: 'desc' as const },
       select: costReportSelect,
+    },
+    // Moderated-out votes stop counting without losing the row, so the filter
+    // has to happen here — the aggregate below trusts what it is handed.
+    tags: {
+      where: { isVisible: true },
+      select: { tagKey: true, source: true, voterKey: true },
     },
   },
 } as const;
@@ -338,7 +349,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    alternates: getAlternates(`/${city}/building/${building.slug}`),
+    alternates: getAlternates(`/${city}/building/${building.slug}`, await getLocale()),
     openGraph: {
       title,
       description,
@@ -360,7 +371,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   if (!building) notFound();
 
   if (UUID_RE.test(slug)) {
-    redirect(`/${citySlug}/building/${building.slug}`);
+    redirect(`/${locale}/${citySlug}/building/${building.slug}`);
   }
 
   const t = await getTranslations();
@@ -539,6 +550,17 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     return { dominant, count: counts[dominant], total: reportCount };
   })();
 
+  // What tenants said about the building itself — the second pillar next to the
+  // numbers. Which of those votes may be shown is a product+legal decision
+  // (positives publish on the first voice, negatives wait for a second one —
+  // art. 212 k.k.), so it stays in `aggregateTagVotes`; this only shapes the
+  // rows and counts the distinct voters behind them, the same way the checker
+  // endpoint does.
+  const tenantTags = (() => {
+    // Null → the invitation renders instead of a card with no chips.
+    return summarizeTagVotes(building.tags);
+  })();
+
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
 
   // Parallel: district + city baselines (independent of each other). No auth
@@ -626,6 +648,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           district: building.district?.nameKey ?? '',
           districtSlug: building.district?.slug ?? '',
           city: t(building.city.nameKey),
+          placeId: building.placeId,
         }}
         reports={reportCount}
         lastUpdated={lastUpdated}
@@ -646,6 +669,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         utilitiesUnknown={utilitiesUnknown}
         leaseType={leaseTypeAgg}
         citySlug={citySlug}
+        tenantTags={tenantTags}
         initialLocationScore={initialLocationScore}
       />
     </>

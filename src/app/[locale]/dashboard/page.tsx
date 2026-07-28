@@ -14,7 +14,12 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/login?next=/dashboard');
+    // Both the redirect and the `next` it carries must keep the locale:
+    // an unprefixed path is re-resolved by next-intl from the browser's
+    // Accept-Language, which drops a RU reader onto the English site.
+    redirect(
+      `/${currentLocale}/auth/login?next=${encodeURIComponent(`/${currentLocale}/dashboard`)}`,
+    );
   }
 
   const [listings, savedListings, costReports, buildingFollows, profile] = await Promise.all([

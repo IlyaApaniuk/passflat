@@ -26,19 +26,37 @@ export const robotsMeta: Metadata['robots'] = isIndexable
       googleBot: { index: false, follow: false },
     };
 
-export function getAlternates(pathname: string) {
+/** The absolute URL a path is served at in one locale. `localePrefix:
+ *  'as-needed'` means the default locale carries no prefix. */
+function localeUrl(locale: string, pathname: string): string {
+  return locale === routing.defaultLocale
+    ? `${baseUrl}${pathname}`
+    : `${baseUrl}/${locale}${pathname}`;
+}
+
+/**
+ * `canonical` + `hreflang` for one page.
+ *
+ * The canonical MUST be the caller's own locale. Returning the default-locale
+ * URL for every locale — as this did — tells Google that the Polish page is the
+ * original and the ru/uk/en ones are duplicates of it, so it indexes only the
+ * Polish URL and drops the rest. That contradicted the hreflang set emitted
+ * right next to it, and it suppressed exactly the RU/UA pages the product is
+ * built around.
+ *
+ * `locale` is required on purpose: an optional one would silently fall back to
+ * the default locale, which is the bug this replaces.
+ */
+export function getAlternates(pathname: string, locale: string) {
   const languages: Record<string, string> = {};
 
-  for (const locale of routing.locales) {
-    languages[locale] =
-      locale === routing.defaultLocale
-        ? `${baseUrl}${pathname}`
-        : `${baseUrl}/${locale}${pathname}`;
+  for (const l of routing.locales) {
+    languages[l] = localeUrl(l, pathname);
   }
 
-  languages['x-default'] = `${baseUrl}${pathname}`;
+  languages['x-default'] = localeUrl(routing.defaultLocale, pathname);
 
-  return { canonical: `${baseUrl}${pathname}`, languages };
+  return { canonical: localeUrl(locale, pathname), languages };
 }
 
 export function getOgImage(title: string, subtitle?: string) {

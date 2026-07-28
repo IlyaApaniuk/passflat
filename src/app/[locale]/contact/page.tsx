@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
 import { ContactClient } from './client';
@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: m('contactDescription'),
-    alternates: getAlternates('/contact'),
+    alternates: getAlternates('/contact', await getLocale()),
     openGraph: {
       title: t('title'),
       description: m('contactDescription'),

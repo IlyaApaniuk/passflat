@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { CostsOverviewClient, type CostAccess } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    alternates: getAlternates(`/${city}/costs`),
+    alternates: getAlternates(`/${city}/costs`, await getLocale()),
     openGraph: {
       title,
       description,
