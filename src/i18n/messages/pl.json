@@ -1276,7 +1276,7 @@
     },
     "building": {
       "whiteSpotTitle": "Temu budynkowi brakuje raportów",
-      "whiteSpotDesc": "{count, plural, one {Na razie tylko # raport najemcy. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą realne dla kolejnych najemców.} few {Na razie # raporty najemców. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze dla kolejnych najemców.} many {Na razie # raportów najemców. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze dla kolejnych najemców.} other {Na razie # raportu. Od pięciu raportów dane budynku otrzymują status „wiarygodne” — Twój raport sprawi, że liczby będą dokładniejsze.}}",
+      "whiteSpotDesc": "{count, plural, one {Na razie # zgłoszenie z pięciu, po których dom dostaje status „wiarygodne”.} few {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.} many {Na razie # zgłoszeń z pięciu, po których dom dostaje status „wiarygodne”.} other {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.}}",
       "follow": "Obserwuj",
       "following": "Obserwujesz",
       "followToast": "Obserwujesz — wyślemy e-mail przy nowych raportach.",
@@ -1318,7 +1318,7 @@
       "emptyTagsTitle": "Jak się mieszka w tym budynku?",
       "emptyTagsDesc": "Słyszalność, ciepło zimą, winda, jak szybko naprawiane są usterki — tego nie ma w ogłoszeniu. Zaznacz w minutę, bez konta.",
       "tagsCta": "Opisz ten budynek",
-      "tagsAddCta": "Dodaj, co wiesz",
+      "tagsAddCta": "Dodaj swoją opinię",
       "thisBuilding": "Ten budynek",
       "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
@@ -2435,6 +2435,7 @@
     "outsideCity": "Na razie przyjmujemy opinie tylko w mieście {city}.",
     "error": "Nie udało się. Wybierz adres z podpowiedzi i spróbuj ponownie.",
     "othersSaid": "Co już napisano",
-    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać"
+    "effort": "5 grup zaznaczeń · bez konta · nic nie trzeba pisać",
+    "openBuilding": "Otwórz stronę budynku"
   }
 }

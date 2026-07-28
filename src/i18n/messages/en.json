@@ -1276,7 +1276,7 @@
     },
     "building": {
       "whiteSpotTitle": "This building needs more reports",
-      "whiteSpotDesc": "{count, plural, one {Only # tenant report so far. From five reports the building earns the \"reliable\" badge — your report makes these numbers real for the next renters.} other {Only # tenant reports so far. From five reports the building earns the \"reliable\" badge — your report makes these numbers more accurate for the next renters.}}",
+      "whiteSpotDesc": "{count, plural, one {# report so far, out of the five that mark a building as reliable.} other {# reports so far, out of the five that mark a building as reliable.}}",
       "follow": "Follow",
       "following": "Following",
       "followToast": "Following — we'll email you when new reports arrive.",
@@ -1318,7 +1318,7 @@
       "emptyTagsTitle": "What is this building like to live in?",
       "emptyTagsDesc": "Noise, warmth in winter, the lift, how fast repairs get done — none of that is in a listing. Tick the boxes in a minute, no account needed.",
       "tagsCta": "Describe this building",
-      "tagsAddCta": "Add what you know",
+      "tagsAddCta": "Add your review",
       "thisBuilding": "This Building",
       "districtAvg": "{district} Average",
       "warsawAvg": "Warsaw Average",
@@ -2435,6 +2435,7 @@
     "outsideCity": "We only take reviews in {city} for now.",
     "error": "That didn't work. Pick an address from the suggestions and try again.",
     "othersSaid": "What people said",
-    "effort": "5 groups of tick boxes · no account · nothing to write"
+    "effort": "5 groups of tick boxes · no account · nothing to write",
+    "openBuilding": "Open the building page"
   }
 }
