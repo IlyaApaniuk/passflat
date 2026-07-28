@@ -6,7 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
-import { getAlternates, getOgImage } from '@/lib/seo';
+import { getOgImage } from '@/lib/seo';
 import { pickMessages, SHARED_CLIENT_NAMESPACES } from '@/i18n/messages';
 import { Header } from '@/components/landing/header';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
@@ -39,7 +39,12 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s — Passflat',
     },
     description: t('homeDescription'),
-    alternates: getAlternates('/'),
+    // Deliberately no `alternates` here. Next merges metadata per top-level
+    // field, so a canonical set at the layout is inherited by every page that
+    // does not declare its own — which had `/costs/submit`, `/pricing` and the
+    // listing detail pages all claiming to be duplicates of the homepage. Each
+    // page now declares its own; a page that forgets simply emits none, and a
+    // missing canonical is self-referencing by default.
     openGraph: {
       title: t('homeTitle'),
       description: t('homeDescription'),

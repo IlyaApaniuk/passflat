@@ -4,6 +4,8 @@ import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import type { CityBounds } from '@/lib/listings-data';
 import { isCostImportAdmin, getAdminImportMode } from '@/lib/import-constants';
+import type { Metadata } from 'next';
+import { getAlternates } from '@/lib/seo';
 import { CostSubmitClient } from './client';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,6 +13,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+// Without its own canonical this page inherited the layout's, which pointed at
+// the homepage — the conversion target of the whole funnel declaring itself a
+// duplicate of another page. Not in the sitemap, but linked from everywhere.
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale, city } = await params;
+  return { alternates: getAlternates(`/${city}/costs/submit`, locale) };
 }
 
 export default async function SubmitCostsPage({ params, searchParams }: PageProps) {

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
 import { ResourcesClient } from './client';
@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('resources.metaTitle'),
     description: t('resources.metaDescription'),
-    alternates: getAlternates('/resources'),
+    alternates: getAlternates('/resources', await getLocale()),
     openGraph: {
       title: t('resources.metaTitle'),
       description: t('resources.metaDescription'),

@@ -1,5 +1,5 @@
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
 import { HelpCenterClient } from './client';
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: m('helpDescription'),
-    alternates: getAlternates('/help'),
+    alternates: getAlternates('/help', await getLocale()),
     openGraph: {
       title: t('title'),
       description: m('helpDescription'),

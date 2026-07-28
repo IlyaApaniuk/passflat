@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
+import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
+import { getAlternates } from '@/lib/seo';
 import { Hero } from '@/components/landing/hero';
 import { CheckAddress } from '@/components/landing/check-address';
 import { Districts } from '@/components/landing/districts';
@@ -199,6 +201,18 @@ const getTopBuildingCostDataCached = unstable_cache(
   ['home-top-building-cost'],
   { revalidate: 600 },
 );
+
+// Title, description and OG come from the locale layout; only the canonical
+// has to be stated here, since the layout no longer sets one (a canonical there
+// is inherited by every page that declares none).
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return { alternates: getAlternates('/', locale) };
+}
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

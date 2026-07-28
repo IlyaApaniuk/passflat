@@ -12,6 +12,8 @@ import { ShareButton } from '@/components/costs/share-button';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { LocationScore } from '@/components/listings/location-score';
 import { DistrictPositionBar } from '@/components/costs/district-position-bar';
+import { TenantTags, type TenantTagsSummary } from '@/components/buildings/tenant-tags';
+import { TrackedLink } from '@/components/analytics/tracked-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +40,7 @@ import {
   Info,
   FileText,
   BarChart3,
+  MessageSquarePlus,
   type LucideIcon,
 } from 'lucide-react';
 import { relativeCostStyle } from '@/lib/cost-color';
@@ -122,6 +125,35 @@ function GatedSection({
 }
 
 /**
+ * The dashed "white spot" card this page uses wherever a section has nothing to
+ * show. Shared so an invitation to contribute always looks the same, whatever it
+ * asks for — the button is the caller's, because the asks differ (a cost report,
+ * a description of the building) and so does what each one is worth tracking as.
+ */
+function PromptShell({
+  icon: Icon,
+  title,
+  desc,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <Icon className="h-6 w-6 text-primary" />
+      </div>
+      <p className="font-semibold">{title}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{desc}</p>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+/**
  * Empty-state contribution nudge for "thin" buildings. The blur teaser
  * (GatedSection) only fires when there IS hidden data to tease; on a building
  * with no per-utility breakdown — or too little data to compare against the
@@ -130,7 +162,7 @@ function GatedSection({
  * everyone: it's a data-coverage prompt, not an access gate.
  */
 function ContributePrompt({
-  icon: Icon,
+  icon,
   title,
   desc,
   submitHref,
@@ -145,13 +177,8 @@ function ContributePrompt({
   const t = useTranslations();
   const posthog = usePostHog();
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-        <Icon className="h-6 w-6 text-primary" />
-      </div>
-      <p className="font-semibold">{title}</p>
-      <p className="max-w-sm text-sm text-muted-foreground">{desc}</p>
-      <Button asChild className="mt-1">
+    <PromptShell icon={icon} title={title} desc={desc}>
+      <Button asChild>
         <Link
           href={submitHref}
           onClick={() => posthog?.capture('cost_submit_cta_clicked', { source })}
@@ -159,7 +186,75 @@ function ContributePrompt({
           {t('costs.overview.submitMyCosts')}
         </Link>
       </Button>
-    </div>
+    </PromptShell>
+  );
+}
+
+/**
+ * What tenants said about the building itself — the qualitative half of the
+ * page, next to the numbers rather than on a page of its own: "warm in winter"
+ * and "repairs ignored" transfer to the next tenant exactly the way the median
+ * bill does.
+ *
+ * Renders even with nothing to show, which is the opposite of what TenantTags
+ * does on the review page — there an empty shelf sits next to a picker that
+ * fixes it, here the slot IS the ask. Describing a building is a minute of
+ * checkboxes with no account, so it is the cheapest contribution this page can
+ * request, and the reader with an opinion about this address is the likeliest
+ * person on the site to have one.
+ */
+function TenantTagsCard({
+  summary,
+  reviewHref,
+  buildingId,
+  citySlug,
+}: {
+  summary: TenantTagsSummary | null;
+  reviewHref: string;
+  buildingId: string;
+  citySlug: string;
+}) {
+  const t = useTranslations();
+  const properties = { building_id: buildingId, city: citySlug };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('buildingTags.summary.title')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {summary ? (
+          <>
+            <TenantTags summary={summary} />
+            <TrackedLink
+              placement="building_tags_add"
+              properties={properties}
+              href={reviewHref}
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              {t('costs.building.tagsAddCta')}
+            </TrackedLink>
+          </>
+        ) : (
+          <PromptShell
+            icon={MessageSquarePlus}
+            title={t('costs.building.emptyTagsTitle')}
+            desc={t('costs.building.emptyTagsDesc')}
+          >
+            <Button asChild>
+              <TrackedLink
+                placement="building_tags_empty"
+                properties={properties}
+                href={reviewHref}
+              >
+                {t('costs.building.tagsCta')}
+              </TrackedLink>
+            </Button>
+          </PromptShell>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -196,6 +291,8 @@ interface BuildingCostsClientProps {
     district: string;
     districtSlug: string;
     city: string;
+    /** Google Places id, when the building was ever resolved from one. */
+    placeId: string | null;
   };
   reports: number;
   lastUpdated: string | null;
@@ -246,6 +343,8 @@ interface BuildingCostsClientProps {
     city: Baseline | null;
   };
   citySlug: string;
+  /** Published tenant tags, or null when nothing clears the publishing rules. */
+  tenantTags: TenantTagsSummary | null;
   initialLocationScore: {
     overall: number;
     categories: Array<{
@@ -271,6 +370,7 @@ export function BuildingCostsClient({
   leaseType,
   comparison,
   citySlug,
+  tenantTags,
   initialLocationScore,
 }: BuildingCostsClientProps) {
   const t = useTranslations();
@@ -302,6 +402,23 @@ export function BuildingCostsClient({
       city: citySlug,
     });
   }, [building.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // /review resolves an address through Places, so the place id skips that step
+  // entirely — one tap from here to the checkboxes. Buildings that never came
+  // from a Places result (the scraped import, mainly) have none, and then the
+  // link still lands on /review with the address left to type.
+  const reviewHref = building.placeId
+    ? `/${citySlug}/review?p=${encodeURIComponent(building.placeId)}`
+    : `/${citySlug}/review`;
+
+  const tenantTagsCard = (
+    <TenantTagsCard
+      summary={tenantTags}
+      reviewHref={reviewHref}
+      buildingId={building.id}
+      citySlug={citySlug}
+    />
+  );
 
   const isOftenIncluded = (count: number) =>
     includedCounts && includedCounts.total > 0 && count / includedCounts.total >= 0.5;
@@ -568,26 +685,39 @@ export function BuildingCostsClient({
           </motion.div>
 
           {reports === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardContent className="flex flex-col items-center py-16 text-center">
-                  <Building2 className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">{t('costs.overview.noBuildingsFound')}</h3>
-                  <p className="mt-1 text-muted-foreground">
-                    {t('costs.overview.noBuildingsDesc')}
-                  </p>
-                  <Button className="mt-6" asChild>
-                    <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
-                      {t('costs.overview.submitCostReport')}
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+            <div className="space-y-8">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <CardContent className="flex flex-col items-center py-16 text-center">
+                    <Building2 className="mb-4 h-12 w-12 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">
+                      {t('costs.overview.noBuildingsFound')}
+                    </h3>
+                    <p className="mt-1 text-muted-foreground">
+                      {t('costs.overview.noBuildingsDesc')}
+                    </p>
+                    <Button className="mt-6" asChild>
+                      <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
+                        {t('costs.overview.submitCostReport')}
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Tags arrive without a cost report — /review and the checker
+                  collect them on their own — so a building can hold what its
+                  tenants said while having no numbers at all. Skipping this
+                  branch would answer such a visitor with "no data" while their
+                  neighbours' answers sat in the database. */}
+              <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
+                {tenantTagsCard}
+              </motion.div>
+            </div>
           ) : (
             <div className="space-y-8">
               {!trust.reliable && (
@@ -827,11 +957,21 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
+              {/* Placed right after the money — the deposit/tenure card already
+                  reads as "what living here was like", and the location score
+                  below it steps outside the front door. Above the gated
+                  breakdown on purpose: this is the half of the page that needs
+                  no contribution to read and is what makes the address worth
+                  sending to someone. */}
               <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
-                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
+                {tenantTagsCard}
               </motion.div>
 
               <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
+                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
+              </motion.div>
+
+              <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('costs.building.costBreakdown')}</CardTitle>
@@ -861,7 +1001,7 @@ export function BuildingCostsClient({
               </motion.div>
 
               {(comparison.district || comparison.city) && comparison.thisBuilding != null ? (
-                <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
+                <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('costs.building.comparison')}</CardTitle>
@@ -1018,7 +1158,7 @@ export function BuildingCostsClient({
                   </Card>
                 </motion.div>
               ) : (
-                <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
+                <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('costs.building.comparison')}</CardTitle>
@@ -1036,7 +1176,7 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
-              <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
+              <motion.div custom={6} initial="hidden" animate="visible" variants={fadeUp}>
                 <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
                   <CardContent className="flex flex-col items-center py-8 text-center">
                     <h3 className="text-lg font-semibold">

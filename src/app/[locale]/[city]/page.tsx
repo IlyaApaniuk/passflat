@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getLocale, getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    alternates: getAlternates(`/${city}`),
+    alternates: getAlternates(`/${city}`, await getLocale()),
     openGraph: { title, description, images: [ogImage] },
   };
 }

@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function RoommateDetailPage({ params }: PageProps) {
-  const { id: slugOrId, city } = await params;
+  const { id: slugOrId, city, locale } = await params;
 
   const listing = await queryListingDetail(slugOrId);
   if (!listing) notFound();
@@ -37,7 +37,11 @@ export default async function RoommateDetailPage({ params }: PageProps) {
     notFound();
 
   const canonical = listing.slug ?? listing.id;
-  if (slugOrId !== canonical) redirect(`/${city}/${listing.type}/${canonical}`);
+  if (slugOrId !== canonical)
+    // Keep the locale: an unprefixed target is re-resolved from the
+    // browser's Accept-Language, so a shared RU link would 301 a reader
+    // onto the English page.
+    redirect(`/${locale}/${city}/${listing.type}/${canonical}`);
 
   await trackView(listing.id, user?.id);
 
