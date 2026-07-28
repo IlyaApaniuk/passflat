@@ -472,29 +472,6 @@
       "buildingInfo": "Building Information",
       "buildingCostHint": "Want to see the actual utility costs for this building reported by tenants?",
       "viewBuildingCosts": "View Building Cost Reports",
-      "locationScore": {
-        "title": "Location score",
-        "subtitle": "Convenience of the surroundings",
-        "level": {
-          "excellent": "Excellent location",
-          "good": "Good location",
-          "fair": "Decent location",
-          "poor": "Limited amenities nearby"
-        },
-        "categories": {
-          "supermarket": "Supermarkets",
-          "transitRail": "Metro & rail",
-          "pharmacy": "Pharmacies",
-          "transitBasic": "Bus & tram stops",
-          "convenience": "Convenience stores",
-          "dining": "Cafes & restaurants",
-          "education": "Schools & kindergartens",
-          "parks": "Parks & greenery",
-          "center": "City center"
-        },
-        "none": "Nothing nearby",
-        "poweredBy": "Based on OpenStreetMap data"
-      },
       "monthlyCosts": "Monthly Costs",
       "imInterested": "Write to Tenant",
       "contactHint": "Send a message to the current tenant to schedule a viewing or ask questions",
@@ -838,35 +815,7 @@
       "privacy": "<privacyLink>Privacy Policy</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Checked address",
-      "locationScore": "Location score",
-      "outOf100": "out of 100",
-      "scoreAria": "Location score: {score} out of 100",
-      "scoreDescription": "Based on straight-line proximity to everyday places and transport.",
-      "breakdownTitle": "What's nearby",
-      "noneNearby": "none nearby",
-      "poweredBy": "Distances are straight-line estimates based on OpenStreetMap data.",
-      "level": {
-        "excellent": "Excellent location",
-        "good": "Convenient location",
-        "fair": "Average convenience",
-        "poor": "Limited convenience"
-      },
-      "categories": {
-        "supermarket": "Supermarkets",
-        "transitRail": "Metro & rail",
-        "pharmacy": "Pharmacies",
-        "transitBasic": "Bus & tram stops",
-        "convenience": "Convenience stores",
-        "dining": "Cafes & restaurants",
-        "education": "Schools & kindergartens",
-        "parks": "Parks & greenery",
-        "center": "City center"
-      },
-      "view": {
-        "list": "List",
-        "map": "Map"
-      }
+      "checkedAddress": "Checked address"
     },
     "costs": {
       "availableTitle": "We have monthly cost data for this building",
@@ -884,20 +833,6 @@
       "cheaperThanDistrict": "{percent}% below the {district} median",
       "pricierThanDistrict": "{percent}% above the {district} median",
       "depositReturned": "deposit returned to {returned} of {answered}"
-    },
-    "map": {
-      "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay.",
-      "reports": "{count, plural, one {# report} other {# reports}}",
-      "openBuilding": "See the costs →",
-      "attribution": "© Mapbox · OpenStreetMap",
-      "layers": {
-        "costs": "Costs",
-        "transit": "Transit",
-        "shops": "Shops",
-        "dining": "Food",
-        "education": "Schools",
-        "parks": "Parks"
-      }
     },
     "nuisances": {
       "title": "Worth knowing",
@@ -919,6 +854,50 @@
       "body": "Tick what is worth knowing: sound, heating, the lift.",
       "cta": "Describe it",
       "existing": "{count, plural, one {# tenant has already described} other {# tenants have already described}} this building. Add yours."
+    }
+  },
+  "locationScore": {
+    "title": "Location score",
+    "outOf100": "out of 100",
+    "scoreAria": "Location score: {score} out of 100",
+    "scoreDescription": "Based on straight-line proximity to everyday places and transport.",
+    "breakdownTitle": "What's nearby",
+    "noneNearby": "none nearby",
+    "poweredBy": "Distances are straight-line estimates based on OpenStreetMap data.",
+    "level": {
+      "excellent": "Excellent location",
+      "good": "Convenient location",
+      "fair": "Average convenience",
+      "poor": "Limited convenience"
+    },
+    "categories": {
+      "supermarket": "Supermarkets",
+      "transitRail": "Metro & rail",
+      "pharmacy": "Pharmacies",
+      "transitBasic": "Bus & tram stops",
+      "convenience": "Convenience stores",
+      "dining": "Cafes & restaurants",
+      "education": "Schools & kindergartens",
+      "parks": "Parks & greenery",
+      "center": "City center"
+    },
+    "view": {
+      "list": "List",
+      "map": "Map"
+    },
+    "subtitleWithCosts": "Places nearby, plus {count, plural, one {# building} other {# buildings}} close by where we know what tenants pay."
+  },
+  "map": {
+    "reports": "{count, plural, one {# report} other {# reports}}",
+    "openBuilding": "See the costs →",
+    "attribution": "© Mapbox · OpenStreetMap",
+    "layers": {
+      "costs": "Costs",
+      "transit": "Transit",
+      "shops": "Shops",
+      "dining": "Food",
+      "education": "Schools",
+      "parks": "Parks"
     }
   },
   "calculator": {

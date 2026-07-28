@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
@@ -14,29 +14,26 @@ import {
   TrainTrack,
   MessageSquarePlus,
   Music,
-  Bus,
   CheckCircle2,
-  GraduationCap,
   Loader2,
   MapPin,
   MapPinned,
-  Navigation,
-  Pill,
   RefreshCw,
   Send,
   Share2,
-  ShoppingBasket,
-  Store,
-  TrainFront,
-  Trees,
-  Utensils,
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import type { CityBounds } from '@/lib/listings-data';
+import type { CategoryResult } from '@/lib/location-score';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
+import {
+  LocationScoreBlock,
+  LocationScoreSkeleton,
+  useDistanceFormatter,
+} from '@/components/buildings/location-score-block';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -44,29 +41,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { MapSkeleton } from '@/components/map/map-skeleton';
-import { cn } from '@/lib/utils';
-
-// Mapbox is a heavy WebGL bundle and every mounted map counts against the
-// Mapbox load quota, so the chunk is split and only mounted once the block is
-// actually scrolled into view.
-const LocationPoiMap = lazy(() => import('@/components/map/location-poi-map'));
-
-interface NearbyPoi {
-  name: string;
-  lat: number;
-  lng: number;
-  distanceM: number;
-}
-
-interface CategoryResult {
-  key: string;
-  score: number;
-  nearestM: number | null;
-  name: string | null;
-  nearby?: NearbyPoi[];
-}
 
 interface Neighbour {
   id: string;
@@ -156,60 +130,6 @@ const NUISANCE_ICONS: Record<string, LucideIcon> = {
   nightclub: Music,
   bars: Beer,
 };
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  supermarket: ShoppingBasket,
-  transitRail: TrainFront,
-  pharmacy: Pill,
-  transitBasic: Bus,
-  convenience: Store,
-  dining: Utensils,
-  education: GraduationCap,
-  parks: Trees,
-  center: Navigation,
-};
-
-const RING_SIZE = 112;
-const RING_STROKE = 9;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-function tier(score: number) {
-  if (score >= 80) {
-    return {
-      text: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-500/10',
-      bar: 'bg-emerald-500',
-      stroke: '#059669',
-      level: 'excellent' as const,
-    };
-  }
-  if (score >= 60) {
-    return {
-      text: 'text-lime-600 dark:text-lime-400',
-      bg: 'bg-lime-500/10',
-      bar: 'bg-lime-500',
-      stroke: '#65a30d',
-      level: 'good' as const,
-    };
-  }
-  if (score >= 40) {
-    return {
-      text: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-500/10',
-      bar: 'bg-amber-500',
-      stroke: '#d97706',
-      level: 'fair' as const,
-    };
-  }
-  return {
-    text: 'text-rose-600 dark:text-rose-400',
-    bg: 'bg-rose-500/10',
-    bar: 'bg-rose-500',
-    stroke: '#e11d48',
-    level: 'poor' as const,
-  };
-}
 
 function isInsideBounds(lat: number, lng: number, bounds: CityBounds) {
   return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
@@ -341,75 +261,6 @@ function OutsideCityCard({ selectedCity }: { selectedCity: string }) {
   );
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const t = useTranslations('checker');
-  const scoreTier = tier(score);
-  const offset = RING_CIRCUMFERENCE * (1 - score / 100);
-
-  return (
-    <div
-      className="relative shrink-0"
-      style={{ width: RING_SIZE, height: RING_SIZE }}
-      role="img"
-      aria-label={t('result.scoreAria', { score })}
-    >
-      <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90" aria-hidden>
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={RING_STROKE}
-          className="text-muted/60"
-        />
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={RING_RADIUS}
-          fill="none"
-          stroke={scoreTier.stroke}
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          strokeDasharray={RING_CIRCUMFERENCE}
-          strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-700"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn('text-3xl font-bold tabular-nums', scoreTier.text)}>{score}</span>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {t('result.outOf100')}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ResultSkeleton() {
-  return (
-    <div className="mt-6 space-y-4" aria-hidden>
-      <Card>
-        <CardContent className="flex items-center gap-5 p-6">
-          <Skeleton className="h-28 w-28 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-4 w-52 max-w-full" />
-            <Skeleton className="h-2 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 rounded-xl" />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export function CheckerClient({
   citySlug,
   cityName,
@@ -419,6 +270,9 @@ export function CheckerClient({
 }: CheckerClientProps) {
   const t = useTranslations('checker');
   const locale = useLocale();
+  // Shared with the location-score block, so a nuisance and a supermarket are
+  // never a metre apart in how far away they read.
+  const formatDistance = useDistanceFormatter();
   const posthog = usePostHog();
   const viewCapturedRef = useRef(false);
   const capturedCheckSequenceRef = useRef(0);
@@ -431,8 +285,6 @@ export function CheckerClient({
   );
   const [result, setResult] = useState<CheckerPayload | null>(null);
   const [outsideCity, setOutsideCity] = useState<string | null>(null);
-  // List first: the map chunk is heavy and every mounted map costs a Mapbox load.
-  const [view, setView] = useState<'list' | 'map'>('list');
   const [errorKind, setErrorKind] = useState<ErrorKind>('generic');
   const [canRetry, setCanRetry] = useState(false);
   const [inputDefault, setInputDefault] = useState('');
@@ -622,12 +474,6 @@ export function CheckerClient({
   };
 
   const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-  const distanceFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
-  const formatDistance = (meters: number | null) => {
-    if (meters === null) return t('result.noneNearby');
-    if (meters < 1000) return `${numberFormatter.format(meters)} m`;
-    return `${distanceFormatter.format(meters / 1000)} km`;
-  };
 
   /**
    * The building against its district, as a verdict. Withheld under 3% — at that
@@ -644,19 +490,6 @@ export function CheckerClient({
       district: costs.districtName,
     };
   })();
-
-  // A building with no coordinates cannot be placed on a map; its score would
-  // have been unavailable anyway, so the toggle simply does not appear.
-  const canShowMap = result?.building.lat != null && result?.building.lng != null;
-
-  /**
-   * "Żabka 42 m · Biedronka 210 m" — naming what is actually there beats a bare
-   * distance, and the names ship with the POI import at no extra cost.
-   */
-  const nearbySummary = (category: CategoryResult) => {
-    if (!category.nearby || category.nearby.length === 0) return null;
-    return category.nearby.map((poi) => `${poi.name} ${formatDistance(poi.distanceM)}`).join(' · ');
-  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -680,7 +513,7 @@ export function CheckerClient({
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span>{t('loading')}</span>
             </div>
-            <ResultSkeleton />
+            <LocationScoreSkeleton className="mt-6" />
           </>
         )}
 
@@ -726,128 +559,14 @@ export function CheckerClient({
               </Button>
             </div>
 
-            <Card className="overflow-hidden border-primary/20 shadow-lg">
-              <CardContent className="flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:text-left">
-                <ScoreRing score={result.score.overall} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {t('result.locationScore')}
-                  </p>
-                  <p className={cn('mt-1 text-2xl font-bold', tier(result.score.overall).text)}>
-                    {t(`result.level.${tier(result.score.overall).level}`)}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {t('result.scoreDescription')}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-4">
-              <CardHeader className="pb-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="text-lg">{t('result.breakdownTitle')}</CardTitle>
-                  {canShowMap && (
-                    <div className="flex rounded-lg bg-muted p-0.5">
-                      {(['list', 'map'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setView(mode)}
-                          aria-pressed={view === mode}
-                          className={cn(
-                            'rounded-md px-3 py-1 text-xs font-medium transition-colors',
-                            view === mode
-                              ? 'bg-background text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          {t(`result.view.${mode}`)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              {view === 'map' && canShowMap ? (
-                <CardContent className="px-4 sm:px-6">
-                  <Suspense fallback={<MapSkeleton className="h-[420px] rounded-xl" />}>
-                    <LocationPoiMap
-                      citySlug={citySlug}
-                      lat={result.building.lat!}
-                      lng={result.building.lng!}
-                      pois={result.score.categories.flatMap((category) =>
-                        (category.nearby ?? []).map((poi) => ({
-                          category: category.key,
-                          name: poi.name,
-                          lat: poi.lat,
-                          lng: poi.lng,
-                          distanceM: poi.distanceM,
-                        })),
-                      )}
-                      neighbours={result.neighbours ?? []}
-                      formatDistance={(meters) => formatDistance(meters)}
-                      formatMoney={(amount) => `${numberFormatter.format(amount)} zł`}
-                    />
-                  </Suspense>
-                  {(result.neighbours?.length ?? 0) > 0 && (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      {t('map.subtitleWithCosts', { count: result.neighbours!.length })}
-                    </p>
-                  )}
-                </CardContent>
-              ) : (
-                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
-                  {result.score.categories.map((category) => {
-                    const Icon = CATEGORY_ICONS[category.key] ?? MapPinned;
-                    const categoryTier = tier(category.score);
-                    const label = t.has(`result.categories.${category.key}`)
-                      ? t(`result.categories.${category.key}`)
-                      : category.key;
-
-                    return (
-                      <div key={category.key} className="rounded-xl border bg-muted/20 p-3.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <div
-                              className={cn(
-                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                                categoryTier.bg,
-                              )}
-                            >
-                              <Icon className={cn('h-[18px] w-[18px]', categoryTier.text)} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{label}</p>
-                              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                                {nearbySummary(category) ?? formatDistance(category.nearestM)}
-                              </p>
-                            </div>
-                          </div>
-                          <span className={cn('text-sm font-bold tabular-nums', categoryTier.text)}>
-                            {category.score}
-                          </span>
-                        </div>
-                        <div className="mt-3 flex items-center gap-3">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className={cn('h-full rounded-full', categoryTier.bar)}
-                              style={{ width: `${Math.max(0, Math.min(100, category.score))}%` }}
-                            />
-                          </div>
-                          <span className="min-w-14 text-right text-xs tabular-nums text-muted-foreground">
-                            {formatDistance(category.nearestM)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              )}
-              <p className="border-t px-6 pt-3 text-[10px] text-muted-foreground">
-                {t('result.poweredBy')}
-              </p>
-            </Card>
+            <LocationScoreBlock
+              overall={result.score.overall}
+              categories={result.score.categories}
+              citySlug={citySlug}
+              lat={result.building.lat}
+              lng={result.building.lng}
+              neighbours={result.neighbours}
+            />
 
             {/* Noise sources. Needs no tenant input, so unlike the tag block
                 below it has something to say on the very first check. */}

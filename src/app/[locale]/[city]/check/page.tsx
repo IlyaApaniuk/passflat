@@ -54,7 +54,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     : null;
 
   const title = checkedBuilding
-    ? `${checkedBuilding.addressFull} — ${t('checker.result.locationScore')}`
+    ? `${checkedBuilding.addressFull} — ${t('locationScore.title')}`
     : t('checker.metaTitle', { city: cityName });
   const description = t('checker.metaDescription', { city: cityName });
   const score =
@@ -70,7 +70,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
           title: checkedBuilding.addressFull,
           subtitle: districtName ? `${districtName}, ${cityName}` : cityName,
           score,
-          scoreLabel: t('checker.result.locationScore'),
+          scoreLabel: t('locationScore.title'),
         })
       : getOgImage(title, description);
 
@@ -103,12 +103,18 @@ export default async function CheckerPage({ params, searchParams }: PageProps) {
   // `checker` is page-specific and intentionally excluded from the shared client
   // bundle. `costs` is needed by FollowBuildingButton inside the result state,
   // and the tag namespaces serve both the chips and the picker in the result.
+  // `locationScore` and `map` belong to the score block and the POI map this
+  // page shares with the building page; a nested provider replaces (never
+  // merges) the layout's messages, so both have to be listed here even though
+  // they are shared namespaces.
   const messages = await getMessages();
   const clientMessages = pickMessages(messages, [
     'checker',
     'costs',
     'buildingTags',
     'buildingTagPicker',
+    'locationScore',
+    'map',
   ]);
 
   return (

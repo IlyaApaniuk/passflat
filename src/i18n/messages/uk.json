@@ -472,29 +472,6 @@
       "buildingInfo": "Інформація про будинок",
       "buildingCostHint": "Хочете побачити фактичні комунальні витрати у цьому будинку від мешканців?",
       "viewBuildingCosts": "Переглянути звіти про витрати будинку",
-      "locationScore": {
-        "title": "Оцінка локації",
-        "subtitle": "Наскільки зручне оточення",
-        "level": {
-          "excellent": "Відмінна локація",
-          "good": "Хороша локація",
-          "fair": "Непогана локація",
-          "poor": "Мало інфраструктури поруч"
-        },
-        "categories": {
-          "supermarket": "Супермаркети",
-          "transitRail": "Метро та залізниця",
-          "pharmacy": "Аптеки",
-          "transitBasic": "Автобуси та трамваї",
-          "convenience": "Продуктові магазини",
-          "dining": "Кафе та ресторани",
-          "education": "Школи та садочки",
-          "parks": "Парки та зелень",
-          "center": "Центр міста"
-        },
-        "none": "Поруч нічого немає",
-        "poweredBy": "За даними OpenStreetMap"
-      },
       "monthlyCosts": "Щомісячні витрати",
       "imInterested": "Написати орендарю",
       "contactHint": "Напишіть поточному орендарю, щоб записатися на огляд або задати питання",
@@ -838,35 +815,7 @@
       "privacy": "<privacyLink>Політика конфіденційності</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Перевірена адреса",
-      "locationScore": "Оцінка локації",
-      "outOf100": "зі 100",
-      "scoreAria": "Оцінка локації: {score} зі 100",
-      "scoreDescription": "На основі відстані по прямій до повсякденних місць і транспорту.",
-      "breakdownTitle": "Що поруч",
-      "noneNearby": "поруч немає",
-      "poweredBy": "Відстані по прямій розраховані за даними OpenStreetMap.",
-      "level": {
-        "excellent": "Відмінна локація",
-        "good": "Зручна локація",
-        "fair": "Середня доступність",
-        "poor": "Обмежена доступність"
-      },
-      "categories": {
-        "supermarket": "Супермаркети",
-        "transitRail": "Метро й потяги",
-        "pharmacy": "Аптеки",
-        "transitBasic": "Автобуси й трамваї",
-        "convenience": "Магазини поруч",
-        "dining": "Кафе й ресторани",
-        "education": "Школи й дитсадки",
-        "parks": "Парки й зелень",
-        "center": "Центр міста"
-      },
-      "view": {
-        "list": "Списком",
-        "map": "На карті"
-      }
+      "checkedAddress": "Перевірена адреса"
     },
     "costs": {
       "availableTitle": "Маємо дані про щомісячні витрати в цьому будинку",
@@ -884,20 +833,6 @@
       "cheaperThanDistrict": "На {percent}% дешевше за медіану по району {district}",
       "pricierThanDistrict": "На {percent}% дорожче за медіану по району {district}",
       "depositReturned": "заставу повернули {returned} з {answered}"
-    },
-    "map": {
-      "subtitleWithCosts": "Об’єкти поруч і {count, plural, one {# будинок} few {# будинки} many {# будинків} other {# будинків}} поблизу, де відомо, скільки платять.",
-      "reports": "{count, plural, one {# звіт} few {# звіти} many {# звітів} other {# звітів}}",
-      "openBuilding": "Дивитися витрати →",
-      "attribution": "© Mapbox · OpenStreetMap",
-      "layers": {
-        "costs": "Витрати",
-        "transit": "Транспорт",
-        "shops": "Магазини",
-        "dining": "Їжа",
-        "education": "Школи",
-        "parks": "Парки"
-      }
     },
     "nuisances": {
       "title": "На що звернути увагу",
@@ -919,6 +854,50 @@
       "body": "Познач галочками, що варто знати: чутність, опалення, ліфт.",
       "cta": "Розповісти про будинок",
       "existing": "{count, plural, one {# мешканець уже розповів} few {# мешканці вже розповіли} many {# мешканців уже розповіли} other {# мешканців уже розповіли}} про цей будинок. Додай своє."
+    }
+  },
+  "locationScore": {
+    "title": "Оцінка локації",
+    "outOf100": "зі 100",
+    "scoreAria": "Оцінка локації: {score} зі 100",
+    "scoreDescription": "На основі відстані по прямій до повсякденних місць і транспорту.",
+    "breakdownTitle": "Що поруч",
+    "noneNearby": "поруч немає",
+    "poweredBy": "Відстані по прямій розраховані за даними OpenStreetMap.",
+    "level": {
+      "excellent": "Відмінна локація",
+      "good": "Зручна локація",
+      "fair": "Середня доступність",
+      "poor": "Обмежена доступність"
+    },
+    "categories": {
+      "supermarket": "Супермаркети",
+      "transitRail": "Метро й потяги",
+      "pharmacy": "Аптеки",
+      "transitBasic": "Автобуси й трамваї",
+      "convenience": "Магазини поруч",
+      "dining": "Кафе й ресторани",
+      "education": "Школи й дитсадки",
+      "parks": "Парки й зелень",
+      "center": "Центр міста"
+    },
+    "view": {
+      "list": "Списком",
+      "map": "На карті"
+    },
+    "subtitleWithCosts": "Об’єкти поруч і {count, plural, one {# будинок} few {# будинки} many {# будинків} other {# будинків}} поблизу, де відомо, скільки платять."
+  },
+  "map": {
+    "reports": "{count, plural, one {# звіт} few {# звіти} many {# звітів} other {# звітів}}",
+    "openBuilding": "Дивитися витрати →",
+    "attribution": "© Mapbox · OpenStreetMap",
+    "layers": {
+      "costs": "Витрати",
+      "transit": "Транспорт",
+      "shops": "Магазини",
+      "dining": "Їжа",
+      "education": "Школи",
+      "parks": "Парки"
     }
   },
   "calculator": {

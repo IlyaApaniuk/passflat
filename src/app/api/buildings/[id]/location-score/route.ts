@@ -21,8 +21,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Building not found' }, { status: 404 });
   }
 
+  // The building's own coordinates, so the client can centre a map on it
+  // without a second round-trip. Decimal → number for JSON.
+  const coords = {
+    lat: building.lat == null ? null : Number(building.lat),
+    lng: building.lng == null ? null : Number(building.lng),
+  };
+
   if (building.locationScore && building.locationScore.version >= SCORE_VERSION) {
     return NextResponse.json({
+      ...coords,
       overall: building.locationScore.overall,
       categories: building.locationScore.categories,
       computedAt: building.locationScore.computedAt,
@@ -67,6 +75,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
+    ...coords,
     overall: saved.overall,
     categories: saved.categories,
     computedAt: saved.computedAt,

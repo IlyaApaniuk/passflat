@@ -352,7 +352,11 @@ interface BuildingCostsClientProps {
       score: number;
       nearestM: number | null;
       name: string | null;
+      nearby?: Array<{ name: string; lat: number; lng: number; distanceM: number }>;
     }>;
+    /** The building's own coordinates — the map tab centres on them. */
+    lat: number | null;
+    lng: number | null;
   } | null;
 }
 
@@ -968,7 +972,11 @@ export function BuildingCostsClient({
               </motion.div>
 
               <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
-                <LocationScore buildingId={building.id} initialData={initialLocationScore} />
+                <LocationScore
+                  buildingId={building.id}
+                  citySlug={citySlug}
+                  initialData={initialLocationScore}
+                />
               </motion.div>
 
               <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>

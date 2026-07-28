@@ -472,29 +472,6 @@
       "buildingInfo": "Информация о здании",
       "buildingCostHint": "Хотите увидеть фактические коммунальные расходы в этом здании от жильцов?",
       "viewBuildingCosts": "Смотреть отчёты о расходах здания",
-      "locationScore": {
-        "title": "Оценка локации",
-        "subtitle": "Насколько удобное окружение",
-        "level": {
-          "excellent": "Отличная локация",
-          "good": "Хорошая локация",
-          "fair": "Неплохая локация",
-          "poor": "Мало инфраструктуры рядом"
-        },
-        "categories": {
-          "supermarket": "Супермаркеты",
-          "transitRail": "Метро и ж/д",
-          "pharmacy": "Аптеки",
-          "transitBasic": "Автобусы и трамваи",
-          "convenience": "Продуктовые магазины",
-          "dining": "Кафе и рестораны",
-          "education": "Школы и садики",
-          "parks": "Парки и зелень",
-          "center": "Центр города"
-        },
-        "none": "Рядом ничего нет",
-        "poweredBy": "По данным OpenStreetMap"
-      },
       "monthlyCosts": "Ежемесячные расходы",
       "imInterested": "Написать арендатору",
       "contactHint": "Напишите текущему арендатору, чтобы записаться на просмотр или задать вопросы",
@@ -838,35 +815,7 @@
       "privacy": "<privacyLink>Политика конфиденциальности</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Проверенный адрес",
-      "locationScore": "Оценка локации",
-      "outOf100": "из 100",
-      "scoreAria": "Оценка локации: {score} из 100",
-      "scoreDescription": "На основе расстояния по прямой до повседневных мест и транспорта.",
-      "breakdownTitle": "Что рядом",
-      "noneNearby": "рядом нет",
-      "poweredBy": "Расстояния по прямой рассчитаны по данным OpenStreetMap.",
-      "level": {
-        "excellent": "Отличная локация",
-        "good": "Удобная локация",
-        "fair": "Средняя доступность",
-        "poor": "Ограниченная доступность"
-      },
-      "categories": {
-        "supermarket": "Супермаркеты",
-        "transitRail": "Метро и поезда",
-        "pharmacy": "Аптеки",
-        "transitBasic": "Автобусы и трамваи",
-        "convenience": "Магазины у дома",
-        "dining": "Кафе и рестораны",
-        "education": "Школы и детские сады",
-        "parks": "Парки и зелень",
-        "center": "Центр города"
-      },
-      "view": {
-        "list": "Списком",
-        "map": "На карте"
-      }
+      "checkedAddress": "Проверенный адрес"
     },
     "costs": {
       "availableTitle": "У нас есть данные о ежемесячных расходах в этом доме",
@@ -884,20 +833,6 @@
       "cheaperThanDistrict": "На {percent}% дешевле медианы по району {district}",
       "pricierThanDistrict": "На {percent}% дороже медианы по району {district}",
       "depositReturned": "депозит вернули {returned} из {answered}"
-    },
-    "map": {
-      "subtitleWithCosts": "Объекты рядом и {count, plural, one {# дом} few {# дома} many {# домов} other {# домов}} поблизости, где известно, сколько платят.",
-      "reports": "{count, plural, one {# отчёт} few {# отчёта} many {# отчётов} other {# отчётов}}",
-      "openBuilding": "Смотреть расходы →",
-      "attribution": "© Mapbox · OpenStreetMap",
-      "layers": {
-        "costs": "Расходы",
-        "transit": "Транспорт",
-        "shops": "Магазины",
-        "dining": "Еда",
-        "education": "Школы",
-        "parks": "Парки"
-      }
     },
     "nuisances": {
       "title": "На что обратить внимание",
@@ -919,6 +854,50 @@
       "body": "Отметь галочками, что стоит знать: слышимость, отопление, лифт.",
       "cta": "Рассказать о доме",
       "existing": "{count, plural, one {# жилец уже рассказал} few {# жильца уже рассказали} many {# жильцов уже рассказали} other {# жильцов уже рассказали}} об этом доме. Добавь своё."
+    }
+  },
+  "locationScore": {
+    "title": "Оценка локации",
+    "outOf100": "из 100",
+    "scoreAria": "Оценка локации: {score} из 100",
+    "scoreDescription": "На основе расстояния по прямой до повседневных мест и транспорта.",
+    "breakdownTitle": "Что рядом",
+    "noneNearby": "рядом нет",
+    "poweredBy": "Расстояния по прямой рассчитаны по данным OpenStreetMap.",
+    "level": {
+      "excellent": "Отличная локация",
+      "good": "Удобная локация",
+      "fair": "Средняя доступность",
+      "poor": "Ограниченная доступность"
+    },
+    "categories": {
+      "supermarket": "Супермаркеты",
+      "transitRail": "Метро и поезда",
+      "pharmacy": "Аптеки",
+      "transitBasic": "Автобусы и трамваи",
+      "convenience": "Магазины у дома",
+      "dining": "Кафе и рестораны",
+      "education": "Школы и детские сады",
+      "parks": "Парки и зелень",
+      "center": "Центр города"
+    },
+    "view": {
+      "list": "Списком",
+      "map": "На карте"
+    },
+    "subtitleWithCosts": "Объекты рядом и {count, plural, one {# дом} few {# дома} many {# домов} other {# домов}} поблизости, где известно, сколько платят."
+  },
+  "map": {
+    "reports": "{count, plural, one {# отчёт} few {# отчёта} many {# отчётов} other {# отчётов}}",
+    "openBuilding": "Смотреть расходы →",
+    "attribution": "© Mapbox · OpenStreetMap",
+    "layers": {
+      "costs": "Расходы",
+      "transit": "Транспорт",
+      "shops": "Магазины",
+      "dining": "Еда",
+      "education": "Школы",
+      "parks": "Парки"
     }
   },
   "calculator": {
