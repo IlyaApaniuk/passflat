@@ -9,7 +9,7 @@ import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import { SCORE_VERSION } from '@/lib/location-score';
-import { aggregateTagVotes } from '@/lib/building-tags';
+import { summarizeTagVotes } from '@/lib/building-tags';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -557,23 +557,8 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   // rows and counts the distinct voters behind them, the same way the checker
   // endpoint does.
   const tenantTags = (() => {
-    const votes = building.tags;
-    if (votes.length === 0) return null;
-
-    const summary = aggregateTagVotes(
-      votes.map((v) => ({ tagKey: v.tagKey, fromCostReport: v.source === 'cost_report' })),
-      {
-        total: new Set(votes.map((v) => v.voterKey)).size,
-        fromCostReports: new Set(
-          votes.filter((v) => v.source === 'cost_report').map((v) => v.voterKey),
-        ).size,
-      },
-    );
-
-    // Votes exist but nothing clears the publishing bar (a lone negative, say).
-    // Null → the invitation renders instead, which is the better use of the slot
-    // than a card with a heading and no chips.
-    return summary.tags.length > 0 ? summary : null;
+    // Null → the invitation renders instead of a card with no chips.
+    return summarizeTagVotes(building.tags);
   })();
 
   const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;

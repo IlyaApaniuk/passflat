@@ -8,6 +8,7 @@ import {
   conflictingTagKeys,
   findTagConflict,
   isBuildingTagKey,
+  summarizeTagVotes,
   tagSentiment,
   type TagVote,
 } from './building-tags';
@@ -38,6 +39,49 @@ describe('vocabulary', () => {
 
   it('groups every tag under a section', () => {
     expect(BUILDING_TAG_SECTIONS.flatMap((s) => s.items)).toHaveLength(BUILDING_TAGS.length);
+  });
+});
+
+describe('summarizeTagVotes', () => {
+  const vote = (tagKey: string, voterKey: string, source = 'standalone') => ({
+    tagKey,
+    voterKey,
+    source,
+  });
+
+  it('returns null when there are no votes at all', () => {
+    expect(summarizeTagVotes([])).toBeNull();
+  });
+
+  it('returns null when votes exist but none clear the publishing bar', () => {
+    // A lone negative is held back, so the caller gets the cue to invite a
+    // contribution rather than render a heading with no chips.
+    expect(summarizeTagVotes([vote('hardParking', 'v1')])).toBeNull();
+  });
+
+  it('counts distinct voters, not votes', () => {
+    const summary = summarizeTagVotes([
+      vote('greenYard', 'v1'),
+      vote('easyParking', 'v1'),
+      vote('greenYard', 'v2'),
+    ]);
+    expect(summary?.voters).toBe(2);
+  });
+
+  it('treats only cost-report-sourced votes as report-backed', () => {
+    const summary = summarizeTagVotes([
+      vote('greenYard', 'v1', 'cost_report'),
+      vote('greenYard', 'v2', 'standalone'),
+      vote('easyParking', 'v1', 'cost_report'),
+    ]);
+    expect(summary?.costReportVoters).toBe(1);
+    expect(summary?.tags.find((t) => t.key === 'greenYard')?.costReportVotes).toBe(1);
+  });
+
+  it('publishes a negative once a second voter reports it', () => {
+    expect(summarizeTagVotes([vote('hardParking', 'v1'), vote('hardParking', 'v2')])?.tags).toEqual(
+      [expect.objectContaining({ key: 'hardParking', votes: NEGATIVE_TAG_MIN_VOTES })],
+    );
   });
 });
 

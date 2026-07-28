@@ -159,6 +159,38 @@ export interface BuildingTagSummary {
   costReportVoters: number;
 }
 
+/** A stored vote, as every caller selects it. */
+export interface StoredTagVote {
+  tagKey: string;
+  source: string;
+  voterKey: string;
+}
+
+/**
+ * Stored rows → what may be shown, or null when nothing clears the bar.
+ *
+ * Shared so the building page and the address checker can never disagree about
+ * the same building: both the "backed by a cost report" rule and the distinct
+ * voter counts live here, instead of being re-derived at each call site where a
+ * later change would reach only one of them. Null rather than an empty summary —
+ * a heading with no chips is worse than no block, and both surfaces treat it as
+ * the cue to invite a contribution instead.
+ */
+export function summarizeTagVotes(votes: StoredTagVote[]): BuildingTagSummary | null {
+  if (votes.length === 0) return null;
+
+  const fromCostReport = (vote: StoredTagVote) => vote.source === 'cost_report';
+  const summary = aggregateTagVotes(
+    votes.map((vote) => ({ tagKey: vote.tagKey, fromCostReport: fromCostReport(vote) })),
+    {
+      total: new Set(votes.map((vote) => vote.voterKey)).size,
+      fromCostReports: new Set(votes.filter(fromCostReport).map((vote) => vote.voterKey)).size,
+    },
+  );
+
+  return summary.tags.length > 0 ? summary : null;
+}
+
 /**
  * Aggregates votes into what may be shown.
  *
