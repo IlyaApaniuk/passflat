@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getOrCreateProfile } from '@/lib/profile';
 import { claimAnonymousReports } from '@/lib/claim-reports';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/site-url';
 import { sendEmail } from '@/lib/email/send';
@@ -12,10 +13,43 @@ import { resolveEmailLocale } from '@/lib/email/types';
 import { localeUrl } from '@/lib/email/url';
 import { captureServerException, flushPostHog } from '@/lib/posthog-server';
 import { safeNextPath } from '@/lib/safe-next-path';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import type { AuthError } from '@supabase/supabase-js';
 
 const RESET_EXPIRES_IN_HOURS = 1;
 // Supabase magic links / email OTPs expire after 1 hour by default.
 const MAGIC_LINK_EXPIRES_IN_HOURS = 1;
+
+const AUTH_EMAIL_WINDOW_MS = 60 * 60 * 1000;
+// Per address, per flow: room for the honest "it never arrived, send it again"
+// without handing anyone a mailbox flooder.
+const AUTH_EMAILS_PER_ADDRESS = 5;
+// Per IP, shared by all three flows: what burns the Resend quota and gets the
+// sending domain flagged is total outbound volume, not any single entry point.
+const AUTH_EMAILS_PER_IP = 20;
+
+const GENERIC_AUTH_ERROR = 'Something went wrong. Please try again.';
+const RATE_LIMITED_ERROR = 'Too many requests. Please try again later.';
+
+/**
+ * These flows mail through admin.generateLink + Resend, which sidesteps
+ * Supabase's own email throttling, so the limit has to live here. Says nothing
+ * about whether the address exists — callers must keep it that way.
+ */
+async function isAuthEmailRateLimited(flow: string, email: string): Promise<boolean> {
+  const ip = getClientIp(await headers());
+  const perAddress = checkRateLimit({
+    key: `auth:${flow}:email:${email.trim().toLowerCase()}`,
+    limit: AUTH_EMAILS_PER_ADDRESS,
+    windowMs: AUTH_EMAIL_WINDOW_MS,
+  });
+  const perIp = checkRateLimit({
+    key: `auth:email:ip:${ip}`,
+    limit: AUTH_EMAILS_PER_IP,
+    windowMs: AUTH_EMAIL_WINDOW_MS,
+  });
+  return !perAddress.allowed || !perIp.allowed;
+}
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -51,6 +85,14 @@ export async function signup(formData: FormData) {
   const locale = (formData.get('locale') as string) || 'pl';
   const next = safeNextPath(formData.get('next'));
   const emailLocale = resolveEmailLocale(locale);
+
+  if (!email?.trim()) {
+    return { error: 'Email is required' };
+  }
+
+  if (await isAuthEmailRateLimited('signup', email)) {
+    return { error: RATE_LIMITED_ERROR };
+  }
 
   try {
     const admin = createAdminClient();
@@ -96,7 +138,7 @@ export async function signup(formData: FormData) {
       properties: { source: 'auth', action: 'signup' },
     });
     await flushPostHog();
-    return { error: 'Something went wrong. Please try again.' };
+    return { error: GENERIC_AUTH_ERROR };
   }
 }
 
@@ -122,6 +164,18 @@ export async function signInWithGoogle(locale: string, next?: string) {
 }
 
 /**
+ * "No such account" as GoTrue reports it: modern releases set the error code,
+ * older ones only a 404 with that message. Anything else must NOT be read as
+ * "the address is free".
+ */
+function isUserNotFoundError(error: AuthError): boolean {
+  return (
+    error.code === 'user_not_found' ||
+    (error.status === 404 && /user not found/i.test(error.message))
+  );
+}
+
+/**
  * Passwordless sign-in via emailed magic link. Used inside in-app browsers
  * (Instagram/Facebook WebViews) where Google OAuth is blocked
  * ("Error 403: disallowed_useragent") and asking for a password adds friction
@@ -142,6 +196,10 @@ export async function signInWithMagicLink(formData: FormData) {
     return { error: 'Email is required' };
   }
 
+  if (await isAuthEmailRateLimited('magiclink', email)) {
+    return { error: RATE_LIMITED_ERROR };
+  }
+
   try {
     const admin = createAdminClient();
     const redirectTo = `${SITE_URL}/${locale}/auth/callback`;
@@ -152,10 +210,29 @@ export async function signInWithMagicLink(formData: FormData) {
       options: { redirectTo },
     });
 
-    // No account yet (the common case for social traffic) — create it and retry.
-    // createUser is a no-op-with-error if the account already exists, which we
-    // ignore and just retry the link generation.
     if (error) {
+      // Only a genuinely absent account may fall through to createUser. On any
+      // other failure (banned user, provider disabled, upstream 5xx) creating
+      // the account would hand a confirmed, unowned account to whoever typed
+      // the address, and squat it before its real owner ever signs up.
+      if (!isUserNotFoundError(error)) {
+        console.error('[auth] Magic link generation failed:', error);
+        captureServerException(error, {
+          distinctId: email,
+          properties: {
+            source: 'auth',
+            action: 'magic_link',
+            code: error.code,
+            status: error.status,
+          },
+        });
+        await flushPostHog();
+        return { error: GENERIC_AUTH_ERROR };
+      }
+
+      // No account yet — the common case for social traffic. email_confirm:true
+      // because the emailed link is itself the verification. A parallel request
+      // may win the create; the retry below is what decides either way.
       await admin.auth.admin.createUser({ email, email_confirm: true }).catch(() => {});
       ({ data, error } = await admin.auth.admin.generateLink({
         type: 'magiclink',
@@ -165,7 +242,20 @@ export async function signInWithMagicLink(formData: FormData) {
     }
 
     if (error) {
-      return { error: error.message };
+      console.error('[auth] Magic link generation failed after account create:', error);
+      captureServerException(error, {
+        distinctId: email,
+        properties: {
+          source: 'auth',
+          action: 'magic_link',
+          code: error.code,
+          status: error.status,
+        },
+      });
+      await flushPostHog();
+      // Deliberately generic: the reply must not differ between an address that
+      // exists and one that doesn't.
+      return { error: GENERIC_AUTH_ERROR };
     }
 
     const hashedToken = data?.properties?.hashed_token;
@@ -201,7 +291,7 @@ export async function signInWithMagicLink(formData: FormData) {
       properties: { source: 'auth', action: 'magic_link' },
     });
     await flushPostHog();
-    return { error: 'Something went wrong. Please try again.' };
+    return { error: GENERIC_AUTH_ERROR };
   }
 }
 
@@ -223,6 +313,12 @@ export async function requestPasswordReset(formData: FormData) {
   const emailLocale = resolveEmailLocale(locale);
 
   if (email) {
+    // Silent by design: this endpoint always answers `success`, so a throttled
+    // caller must not be able to tell a limited address from an unknown one.
+    if (await isAuthEmailRateLimited('reset', email)) {
+      return { success: true };
+    }
+
     try {
       const admin = createAdminClient();
       const { data, error } = await admin.auth.admin.generateLink({

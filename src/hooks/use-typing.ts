@@ -2,12 +2,10 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-export function useTyping(
-  conversationId: string | null,
-  currentUserId: string | null,
-) {
+export function useTyping(conversationId: string | null, currentUserId: string | null) {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -18,7 +16,7 @@ export function useTyping(
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`typing:${conversationId}`)
+      .channel(`typing:${conversationId}`, PRIVATE_CHANNEL)
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload?.userId !== currentUserId) {
           setIsOtherTyping(true);

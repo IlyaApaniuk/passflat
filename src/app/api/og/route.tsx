@@ -3,21 +3,50 @@ import type { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+/**
+ * Per-field caps for the text params. The endpoint is public and unsigned, so
+ * these bound how much text a stranger can put on a Passflat-branded card and
+ * how much layout work satori can be made to do. Each cap sits well above the
+ * longest real value we render (longest today: a 278-char blog description in
+ * `subtitle`, ~110-char building titles), so nothing genuine gets clipped —
+ * raise the cap rather than shortening real copy.
+ */
+const MAX_LENGTHS = {
+  title: 200,
+  subtitle: 320,
+  stat: 48,
+  statLabel: 96,
+  split: 120,
+  scoreLabel: 96,
+} as const;
+
+// Control chars (satori renders them as tofu/blank boxes) plus the bidi and
+// zero-width formatting chars that could be used to scramble the card's text.
+// eslint-disable-next-line no-control-regex -- matching control chars is the point
+const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+function readParam(searchParams: URLSearchParams, key: keyof typeof MAX_LENGTHS): string | null {
+  const raw = searchParams.get(key);
+  if (raw == null) return null;
+  const cleaned = raw.replace(UNSAFE_CHARS, ' ').trim().slice(0, MAX_LENGTHS[key]);
+  return cleaned || null;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') ?? 'Passflat';
+  const title = readParam(searchParams, 'title') ?? 'Passflat';
   const subtitle =
-    searchParams.get('subtitle') ?? 'European rental marketplace with transparent costs';
+    readParam(searchParams, 'subtitle') ?? 'European rental marketplace with transparent costs';
   // Optional rich cost card (building / district / city share). Callers pass
   // already-localized, already-formatted strings so this route stays
   // language-agnostic and does no number/locale formatting itself.
-  const stat = searchParams.get('stat');
-  const statLabel = searchParams.get('statLabel');
-  const split = searchParams.get('split');
+  const stat = readParam(searchParams, 'stat');
+  const statLabel = readParam(searchParams, 'statLabel');
+  const split = readParam(searchParams, 'split');
   const rawScoreParam = searchParams.get('score');
   const rawScore = rawScoreParam == null ? Number.NaN : Number(rawScoreParam);
   const score = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
-  const scoreLabel = searchParams.get('scoreLabel') ?? 'Location score';
+  const scoreLabel = readParam(searchParams, 'scoreLabel') ?? 'Location score';
   const scoreCircumference = 2 * Math.PI * 60;
 
   return new ImageResponse(

@@ -6,6 +6,7 @@ import { stripe, STRIPE_PRICES, toStripeLocale, checkoutWaiverText } from '@/lib
 import { trackServerEvent, flushPostHog, isServerFeatureFlagEnabled } from '@/lib/posthog-server';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { SITE_URL } from '@/lib/site-url';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 const PROMOTE_PRICE_MAP: Record<number, string> = {
   7: STRIPE_PRICES.PROMOTE_7,
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
   }
 
   const body = await request.json();

@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email/send';
 import { localeUrl } from '@/lib/email/url';
 import { makeUnsubscribeToken } from '@/lib/email/unsubscribe';
 import { resolveEmailLocale } from '@/lib/email/types';
+import { requireCronAuth } from '@/lib/admin-auth';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTH_MS = 30.44 * DAY_MS;
@@ -22,10 +23,8 @@ const REFRESH_BATCH = 200;
  * Bearer-authenticated like the other crons; scheduled weekly in vercel.json.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const now = new Date();
   let activitySent = 0;

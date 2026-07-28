@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 
 export function useUnreadCount(currentUserId: string | null) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -32,7 +33,7 @@ export function useUnreadCount(currentUserId: string | null) {
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat:notifications:${currentUserId}`)
+      .channel(`chat:notifications:${currentUserId}`, PRIVATE_CHANNEL)
       .on('broadcast', { event: 'new_message' }, () => {
         setUnreadCount((prev) => prev + 1);
       })

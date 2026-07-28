@@ -59,6 +59,8 @@ export function captureReferralFromRequest(request: NextRequest, response: NextR
     maxAge: REFERRAL_COOKIE_MAX_AGE,
     httpOnly: true,
     sameSite: 'lax',
+    // HTTPS-only in production; off locally so `next dev` over http still sets it.
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
 }

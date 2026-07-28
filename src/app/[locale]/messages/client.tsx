@@ -8,6 +8,7 @@ import { ConversationList, type ConversationListItem } from '@/components/chat/c
 import { ChatWindow } from '@/components/chat/chat-window';
 import { usePresence } from '@/hooks/use-presence';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,7 +43,7 @@ export function MessagesClient({ userId }: MessagesClientProps) {
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat:notifications:${userId}`)
+      .channel(`chat:notifications:${userId}`, PRIVATE_CHANNEL)
       .on('broadcast', { event: 'new_conversation' }, () => {
         fetchConversations();
       })

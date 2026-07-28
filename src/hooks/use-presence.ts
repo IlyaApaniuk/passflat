@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 
 export function usePresence(currentUserId: string | null) {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -11,7 +12,7 @@ export function usePresence(currentUserId: string | null) {
 
     const supabase = createClient();
     const channel = supabase
-      .channel('online-users')
+      .channel('online-users', PRIVATE_CHANNEL)
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const ids = new Set<string>();

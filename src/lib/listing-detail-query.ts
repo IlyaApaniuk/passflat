@@ -10,6 +10,22 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const listingWhere = (slugOrId: string) =>
   UUID_RE.test(slugOrId) ? { OR: [{ slug: slugOrId }, { id: slugOrId }] } : { slug: slugOrId };
 
+/**
+ * Only active listings are public. A listing goes non-active when an admin acts
+ * on an abuse report (`removed`), when its author deletes their account
+ * (`deleted`), or when it is over the free limit and unpaid (`pending_payment`)
+ * — in every case the canonical URL must stop serving it, since that URL is
+ * exactly what gets shared. The author and moderation admins still see their own.
+ */
+export function canViewListing(
+  listing: { status: string; authorId: string },
+  viewer: { id: string; isAdmin: boolean } | null,
+): boolean {
+  if (listing.status === 'active') return true;
+  if (!viewer) return false;
+  return viewer.isAdmin || listing.authorId === viewer.id;
+}
+
 export async function queryListingDetail(slugOrId: string) {
   return prisma.listing.findFirst({
     where: listingWhere(slugOrId),
@@ -120,6 +136,12 @@ export async function generateListingMetadata(
   });
 
   if (!listing) return { title: 'Not Found' };
+
+  // Metadata is generated even when the page itself 404s the viewer, so a
+  // non-active listing must not leak its title/photo into <head>.
+  if (listing.status !== 'active') {
+    return { title: 'Not Found', robots: { index: false, follow: false } };
+  }
 
   return {
     title: `${listing.title} — Passflat`,

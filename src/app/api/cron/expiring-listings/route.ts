@@ -3,15 +3,14 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
 import { localeUrl } from '@/lib/email/url';
 import { resolveEmailLocale } from '@/lib/email/types';
+import { requireCronAuth } from '@/lib/admin-auth';
 
 const REMINDER_WINDOW_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const now = new Date();
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_DAYS * DAY_MS);

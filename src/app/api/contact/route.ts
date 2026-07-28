@@ -1,29 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendContactFormEmail } from '@/lib/resend';
 import { trackServerEvent } from '@/lib/posthog-server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
-const ipTimestamps = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = ipTimestamps.get(ip) ?? [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
-    return true;
-  }
-
-  recent.push(now);
-  ipTimestamps.set(ip, recent);
-  return false;
-}
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const ip = getClientIp(request.headers);
+  const { allowed } = checkRateLimit({
+    key: `contact:${ip}`,
+    limit: MAX_REQUESTS_PER_WINDOW,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
 
-  if (isRateLimited(ip)) {
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
       { status: 429 },

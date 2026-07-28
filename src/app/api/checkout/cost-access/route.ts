@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { stripe, STRIPE_PRICES, toStripeLocale, checkoutWaiverText } from '@/lib/stripe';
 import { trackServerEvent, flushPostHog } from '@/lib/posthog-server';
 import { SITE_URL } from '@/lib/site-url';
+import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 
 const TIER_PRICE_MAP: Record<number, string> = {
   7: STRIPE_PRICES.COST_ACCESS_7,
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (await isAccountDeleted(user.id)) {
+    return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
   }
 
   const body = await request.json();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PRIVATE_CHANNEL } from '@/lib/supabase/realtime';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ChatMessage {
@@ -62,6 +63,22 @@ export function useChat(
     }
   }, [conversationId]);
 
+  // The realtime channel is public, so it only carries a ping — the message
+  // itself comes from the authenticated API. Merges instead of replacing so
+  // history pulled via loadMore() survives an incoming message.
+  const mergeLatest = useCallback(async () => {
+    if (!conversationId) return;
+    const res = await fetch(`/api/conversations/${conversationId}/messages?limit=20`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const latest: ChatMessage[] = data.messages.slice().reverse();
+    setMessages((prev) => {
+      const known = new Set(prev.map((m) => m.id));
+      const fresh = latest.filter((m) => !known.has(m.id));
+      return fresh.length > 0 ? [...prev, ...fresh] : prev;
+    });
+  }, [conversationId]);
+
   useEffect(() => {
     if (!conversationId || !currentUserId) return;
 
@@ -71,30 +88,11 @@ export function useChat(
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat:${conversationId}`)
+      .channel(`chat:${conversationId}`, PRIVATE_CHANNEL)
       .on('broadcast', { event: 'new_message' }, ({ payload }) => {
-        const newMsg = payload as {
-          id: string;
-          content: string;
-          senderId: string;
-          senderName: string;
-          createdAt: string;
-        };
-        if (newMsg.senderId === currentUserId) return;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
-          return [
-            ...prev,
-            {
-              id: newMsg.id,
-              content: newMsg.content,
-              senderId: newMsg.senderId,
-              senderName: newMsg.senderName,
-              createdAt: newMsg.createdAt,
-              isOwn: newMsg.senderId === currentUserId,
-            },
-          ];
-        });
+        const ping = payload as { senderId?: string };
+        if (ping.senderId === currentUserId) return;
+        void mergeLatest();
       })
       .subscribe();
 
@@ -104,7 +102,7 @@ export function useChat(
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [conversationId, currentUserId, fetchMessages]);
+  }, [conversationId, currentUserId, fetchMessages, mergeLatest]);
 
   const sendMessage = useCallback(
     async (content: string) => {

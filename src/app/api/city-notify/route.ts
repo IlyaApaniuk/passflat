@@ -5,24 +5,10 @@ import { resolveEmailLocale } from '@/lib/email/types';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
-const ipTimestamps = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = ipTimestamps.get(ip) ?? [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
-    return true;
-  }
-
-  recent.push(now);
-  ipTimestamps.set(ip, recent);
-  return false;
-}
 
 // Logged-in one-tap subscribe: when the client sends no email (we already have
 // their account email), resolve it from the Supabase session.
@@ -44,9 +30,14 @@ async function getSessionEmail(): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const ip = getClientIp(request.headers);
+  const { allowed } = checkRateLimit({
+    key: `city-notify:${ip}`,
+    limit: MAX_REQUESTS_PER_WINDOW,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
 
-  if (isRateLimited(ip)) {
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
       { status: 429 },

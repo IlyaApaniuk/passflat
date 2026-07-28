@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
+import { requireCronAuth } from '@/lib/admin-auth';
 
 // Cap work per run so a large backlog drains across runs instead of OOM/timeout.
 const BATCH = 500;
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 

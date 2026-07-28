@@ -15,6 +15,8 @@ import { trackServerEvent } from '@/lib/posthog-server';
 import { trackView } from '@/lib/track-view';
 import { deletePhotosFromStorage } from '@/lib/supabase/storage-server';
 import { sanitizePeriodicCharges } from '@/lib/periodic-charges';
+import { canViewListing } from '@/lib/listing-detail-query';
+import { isCostImportAdmin } from '@/lib/import-constants';
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -61,6 +63,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!listing) {
+    return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+  }
+
+  const viewer = await getUser();
+  if (
+    !canViewListing(
+      listing,
+      viewer ? { id: viewer.id, isAdmin: isCostImportAdmin(viewer.email) } : null,
+    )
+  ) {
     return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
   }
 
