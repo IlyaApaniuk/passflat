@@ -5,6 +5,8 @@ import {
   BUILDING_TAG_SECTIONS,
   NEGATIVE_TAG_MIN_VOTES,
   aggregateTagVotes,
+  conflictingTagKeys,
+  findTagConflict,
   isBuildingTagKey,
   tagSentiment,
   type TagVote,
@@ -36,6 +38,43 @@ describe('vocabulary', () => {
 
   it('groups every tag under a section', () => {
     expect(BUILDING_TAG_SECTIONS.flatMap((s) => s.items)).toHaveLength(BUILDING_TAGS.length);
+  });
+});
+
+describe('mutually exclusive tags', () => {
+  it('pairs each opposite with the others in its group', () => {
+    expect(conflictingTagKeys('easyParking')).toEqual(['hardParking']);
+    expect(conflictingTagKeys('hardParking')).toEqual(['easyParking']);
+    expect(conflictingTagKeys('warmInWinter')).toEqual(['coldInWinter']);
+    expect(conflictingTagKeys('repairsHandledFast')).toEqual(['repairsIgnored']);
+    expect(conflictingTagKeys('tidyEntrance')).toEqual(['neglectedEntrance']);
+  });
+
+  it('treats "no elevator" as excluding both elevator states', () => {
+    expect(conflictingTagKeys('noElevator').sort()).toEqual(['elevatorBreaks', 'workingElevator']);
+  });
+
+  it('lets "quiet building" be contradicted by any specific noise complaint', () => {
+    expect(conflictingTagKeys('quietBuilding').sort()).toEqual([
+      'neighborsAudible',
+      'streetAudible',
+      'thinFloors',
+    ]);
+  });
+
+  it('leaves independent tags alone', () => {
+    // Damp and a green yard say nothing about each other.
+    expect(conflictingTagKeys('highHumidity')).toEqual([]);
+    expect(conflictingTagKeys('greenYard')).toEqual([]);
+  });
+
+  it('finds a contradiction in a submitted set', () => {
+    expect(findTagConflict(['greenYard', 'easyParking', 'hardParking'])).toEqual([
+      'easyParking',
+      'hardParking',
+    ]);
+    expect(findTagConflict(['greenYard', 'easyParking', 'warmInWinter'])).toBeNull();
+    expect(findTagConflict([])).toBeNull();
   });
 });
 

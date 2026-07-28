@@ -3,6 +3,7 @@ import { trackServerEvent } from '@/lib/posthog-server';
 import { classifyRef } from '@/lib/referral';
 import { readAnonId } from '@/lib/anon-id';
 import { ANON_AUTHOR_ID } from '@/lib/import-constants';
+import { syncHasContributedCost } from '@/lib/contribution';
 
 /**
  * Claim cost reports submitted anonymously from this browser and attach them to
@@ -12,7 +13,8 @@ import { ANON_AUTHOR_ID } from '@/lib/import-constants';
  *
  * Mirrors the `importedEmail` claim in the auth callback: re-points the report's
  * author, stamps `claimedAt`, clears `anonymousId` (so the same browser logging
- * into a different account can't re-claim it), and flips `hasContributedCost`.
+ * into a different account can't re-claim it), and re-derives
+ * `hasContributedCost` from the reports the user now owns.
  * Fires `referred_contribution` when this is the user's first contribution and
  * they were referred — the attribution signal that matters for growth.
  *
@@ -36,14 +38,18 @@ export async function claimAnonymousReports(userId: string): Promise<void> {
     });
     if (claimed.count === 0) return;
 
-    await prisma.profile.update({
-      where: { id: userId },
-      data: { hasContributedCost: true },
-    });
+    // Derived, not assumed: a claimed report that is flagged or hidden does not
+    // make its new owner a contributor.
+    const hasContributed = await syncHasContributedCost(userId);
 
     trackServerEvent(userId, 'anonymous_cost_reports_claimed', { count: claimed.count });
 
-    if (profileBefore && !profileBefore.hasContributedCost && profileBefore.referredBy) {
+    if (
+      hasContributed &&
+      profileBefore &&
+      !profileBefore.hasContributedCost &&
+      profileBefore.referredBy
+    ) {
       trackServerEvent(userId, 'referred_contribution', {
         referred_by: profileBefore.referredBy,
         referral_type: classifyRef(profileBefore.referredBy),

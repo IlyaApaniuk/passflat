@@ -6,6 +6,8 @@ import type { CityBounds } from '@/lib/listings-data';
 import { isCostImportAdmin, getAdminImportMode } from '@/lib/import-constants';
 import { CostSubmitClient } from './client';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -16,14 +18,24 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   const search = await searchParams;
   const isEditMode = search.edit === 'true';
   const reportId = typeof search.id === 'string' ? search.id : undefined;
-  // Only the checker is a supported attribution source. Never pass arbitrary
-  // query-string values through to PostHog event properties.
-  const source = search.source === 'checker' ? ('checker' as const) : undefined;
+  // The checker, the building-review flow and the building page are the only
+  // supported attribution sources. Never pass arbitrary query-string values
+  // through to PostHog event properties.
+  const source =
+    search.source === 'checker' || search.source === 'review' || search.source === 'building'
+      ? (search.source as 'checker' | 'review' | 'building')
+      : undefined;
   const rawPlaceId = typeof search.p === 'string' ? search.p.trim() : '';
-  const checkerPlaceId =
-    !isEditMode && source === 'checker' && rawPlaceId.length > 0 && rawPlaceId.length <= 255
+  const prefillPlaceId =
+    !isEditMode && source != null && rawPlaceId.length > 0 && rawPlaceId.length <= 255
       ? rawPlaceId
       : undefined;
+  // The building page links by id: a building can exist without a Google place
+  // id, and re-resolving its address through autocomplete risks a different
+  // place id splitting one building into two.
+  const rawBuildingId = typeof search.b === 'string' ? search.b.trim() : '';
+  const prefillBuildingId =
+    !isEditMode && !prefillPlaceId && UUID_RE.test(rawBuildingId) ? rawBuildingId : undefined;
 
   const city = await prisma.city.findUnique({
     where: { slug: citySlug },
@@ -51,12 +63,17 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
   const canFillOnBehalf = isCostImportAdmin(user?.email);
   const adminImportMode = getAdminImportMode();
 
-  // The checker persists a building before linking here, so prefill can be
+  // Both flows persist a building before linking here, so prefill can be
   // reconstructed server-side from the opaque Google place id. Scope the
   // lookup to the route city to prevent a crafted URL prefilling another city.
-  const prefillBuilding = checkerPlaceId
+  const prefillWhere = prefillPlaceId
+    ? { cityId: city.id, placeId: prefillPlaceId }
+    : prefillBuildingId
+      ? { cityId: city.id, id: prefillBuildingId }
+      : null;
+  const prefillBuilding = prefillWhere
     ? await prisma.building.findFirst({
-        where: { cityId: city.id, placeId: checkerPlaceId },
+        where: prefillWhere,
         select: {
           id: true,
           street: true,
@@ -75,7 +92,7 @@ export default async function SubmitCostsPage({ params, searchParams }: PageProp
         street: prefillBuilding.street,
         buildingNumber: prefillBuilding.buildingNumber,
         district: prefillBuilding.district?.slug ?? '',
-        placeId: prefillBuilding.placeId ?? checkerPlaceId ?? '',
+        placeId: prefillBuilding.placeId ?? prefillPlaceId ?? '',
         lat: prefillBuilding.lat == null ? 0 : Number(prefillBuilding.lat),
         lng: prefillBuilding.lng == null ? 0 : Number(prefillBuilding.lng),
         addressFull: prefillBuilding.addressFull,

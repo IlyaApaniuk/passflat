@@ -229,27 +229,41 @@ export function Header({ initialUser }: HeaderProps = {}) {
             )}
           </div>
 
-          {/* Mobile Menu Button (animated hamburger) */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden relative w-8 h-8 flex items-center justify-center"
-            aria-label="Toggle menu"
-          >
-            <div className="flex flex-col gap-1.5">
-              <motion.span
-                animate={{ rotate: mobileMenuOpen ? 45 : 0, y: mobileMenuOpen ? 6 : 0 }}
-                className="w-5 h-0.5 bg-foreground block origin-center"
-              />
-              <motion.span
-                animate={{ opacity: mobileMenuOpen ? 0 : 1 }}
-                className="w-5 h-0.5 bg-foreground block"
-              />
-              <motion.span
-                animate={{ rotate: mobileMenuOpen ? -45 : 0, y: mobileMenuOpen ? -6 : 0 }}
-                className="w-5 h-0.5 bg-foreground block origin-center"
-              />
-            </div>
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            {/* The one action we want on every page. Without it the north-star
+                CTA is only reachable through the hamburger on mobile — i.e.
+                invisible to the social traffic the site is built for. */}
+            <Link href={`/${DEFAULT_CITY}/costs/submit`}>
+              <Button
+                size="sm"
+                className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                {t('dashboard.addCostReport')}
+              </Button>
+            </Link>
+
+            {/* Mobile Menu Button (animated hamburger) */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="relative w-8 h-8 flex items-center justify-center"
+              aria-label="Toggle menu"
+            >
+              <div className="flex flex-col gap-1.5">
+                <motion.span
+                  animate={{ rotate: mobileMenuOpen ? 45 : 0, y: mobileMenuOpen ? 6 : 0 }}
+                  className="w-5 h-0.5 bg-foreground block origin-center"
+                />
+                <motion.span
+                  animate={{ opacity: mobileMenuOpen ? 0 : 1 }}
+                  className="w-5 h-0.5 bg-foreground block"
+                />
+                <motion.span
+                  animate={{ rotate: mobileMenuOpen ? -45 : 0, y: mobileMenuOpen ? -6 : 0 }}
+                  className="w-5 h-0.5 bg-foreground block origin-center"
+                />
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

@@ -17,6 +17,13 @@ export type TagSentiment = 'good' | 'neutral' | 'bad';
 export interface BuildingTagConfig {
   key: string;
   sentiment: TagSentiment;
+  /**
+   * Tags that contradict each other. Picking one clears the others in the same
+   * group, because a building cannot both have easy and hard parking — and a
+   * positive tag publishes on its first vote, so one mis-tap would otherwise
+   * put "quiet building" next to "neighbours audible" on the same card.
+   */
+  exclusiveGroup?: string;
 }
 
 export interface BuildingTagSection {
@@ -28,17 +35,19 @@ export const BUILDING_TAG_SECTIONS: BuildingTagSection[] = [
   {
     key: 'noise',
     items: [
-      { key: 'quietBuilding', sentiment: 'good' },
-      { key: 'neighborsAudible', sentiment: 'bad' },
-      { key: 'streetAudible', sentiment: 'bad' },
-      { key: 'thinFloors', sentiment: 'bad' },
+      // "Quiet building" is a summary claim that any specific noise complaint
+      // contradicts, so it is exclusive with all three of them.
+      { key: 'quietBuilding', sentiment: 'good', exclusiveGroup: 'noise' },
+      { key: 'neighborsAudible', sentiment: 'bad', exclusiveGroup: 'noise' },
+      { key: 'streetAudible', sentiment: 'bad', exclusiveGroup: 'noise' },
+      { key: 'thinFloors', sentiment: 'bad', exclusiveGroup: 'noise' },
     ],
   },
   {
     key: 'climate',
     items: [
-      { key: 'warmInWinter', sentiment: 'good' },
-      { key: 'coldInWinter', sentiment: 'bad' },
+      { key: 'warmInWinter', sentiment: 'good', exclusiveGroup: 'winter' },
+      { key: 'coldInWinter', sentiment: 'bad', exclusiveGroup: 'winter' },
       { key: 'hotInSummer', sentiment: 'bad' },
       { key: 'highHumidity', sentiment: 'bad' },
       { key: 'poorVentilation', sentiment: 'bad' },
@@ -47,19 +56,19 @@ export const BUILDING_TAG_SECTIONS: BuildingTagSection[] = [
   {
     key: 'condition',
     items: [
-      { key: 'workingElevator', sentiment: 'good' },
-      { key: 'noElevator', sentiment: 'neutral' },
-      { key: 'elevatorBreaks', sentiment: 'bad' },
-      { key: 'tidyEntrance', sentiment: 'good' },
-      { key: 'neglectedEntrance', sentiment: 'bad' },
+      { key: 'workingElevator', sentiment: 'good', exclusiveGroup: 'elevator' },
+      { key: 'noElevator', sentiment: 'neutral', exclusiveGroup: 'elevator' },
+      { key: 'elevatorBreaks', sentiment: 'bad', exclusiveGroup: 'elevator' },
+      { key: 'tidyEntrance', sentiment: 'good', exclusiveGroup: 'entrance' },
+      { key: 'neglectedEntrance', sentiment: 'bad', exclusiveGroup: 'entrance' },
       { key: 'oldPlumbing', sentiment: 'bad' },
     ],
   },
   {
     key: 'management',
     items: [
-      { key: 'repairsHandledFast', sentiment: 'good' },
-      { key: 'repairsIgnored', sentiment: 'bad' },
+      { key: 'repairsHandledFast', sentiment: 'good', exclusiveGroup: 'repairs' },
+      { key: 'repairsIgnored', sentiment: 'bad', exclusiveGroup: 'repairs' },
       { key: 'intercomWorks', sentiment: 'good' },
       { key: 'binsOverflowing', sentiment: 'bad' },
     ],
@@ -67,8 +76,8 @@ export const BUILDING_TAG_SECTIONS: BuildingTagSection[] = [
   {
     key: 'outside',
     items: [
-      { key: 'easyParking', sentiment: 'good' },
-      { key: 'hardParking', sentiment: 'bad' },
+      { key: 'easyParking', sentiment: 'good', exclusiveGroup: 'parking' },
+      { key: 'hardParking', sentiment: 'bad', exclusiveGroup: 'parking' },
       { key: 'greenYard', sentiment: 'good' },
     ],
   },
@@ -86,6 +95,36 @@ export function isBuildingTagKey(key: string): boolean {
 
 export function tagSentiment(key: string): TagSentiment | null {
   return SENTIMENT_BY_KEY.get(key) ?? null;
+}
+
+const EXCLUSIVE_GROUP_BY_KEY = new Map(
+  BUILDING_TAGS.filter((tag) => tag.exclusiveGroup).map((tag) => [tag.key, tag.exclusiveGroup!]),
+);
+
+/** Keys that cannot be held at the same time as `key` (excluding itself). */
+export function conflictingTagKeys(key: string): string[] {
+  const group = EXCLUSIVE_GROUP_BY_KEY.get(key);
+  if (!group) return [];
+  return BUILDING_TAGS.filter((tag) => tag.exclusiveGroup === group && tag.key !== key).map(
+    (tag) => tag.key,
+  );
+}
+
+/**
+ * The first pair of mutually exclusive keys in the selection, or null.
+ * The picker prevents these, so a payload containing one is a stale tab or a
+ * script rather than a mis-tap — worth rejecting instead of silently storing.
+ */
+export function findTagConflict(keys: string[]): [string, string] | null {
+  const seenByGroup = new Map<string, string>();
+  for (const key of keys) {
+    const group = EXCLUSIVE_GROUP_BY_KEY.get(key);
+    if (!group) continue;
+    const existing = seenByGroup.get(group);
+    if (existing) return [existing, key];
+    seenByGroup.set(group, key);
+  }
+  return null;
 }
 
 /**

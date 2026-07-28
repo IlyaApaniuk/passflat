@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/ui/reveal';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { TRUST_THRESHOLDS } from '@/lib/cost-stats';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -108,8 +109,24 @@ const districts: DistrictConfig[] = [
   },
 ];
 
-export async function Districts() {
+export interface DistrictMedian {
+  slug: string;
+  medianTotal: number;
+  reportCount: number;
+}
+
+export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }) {
   const t = await getTranslations('landing.districts');
+  const tCosts = await getTranslations('costs.overview');
+
+  // Only districts at the "reliable" threshold get a figure on a card that a
+  // visitor reads as a fact about the district. Below it the card keeps its
+  // vibe line, same gate the cost pages apply.
+  const medianBySlug = new Map(
+    medians
+      .filter((d) => d.reportCount >= TRUST_THRESHOLDS.reliableMin && d.medianTotal > 0)
+      .map((d) => [d.slug, d]),
+  );
 
   return (
     <section className="relative overflow-hidden border-y border-border/50 py-24 sm:py-32">
@@ -134,7 +151,28 @@ export async function Districts() {
                   <MapPin className={`h-4 w-4 ${district.pinColor}`} />
                   <h3 className="text-sm font-semibold sm:text-base">{t(district.key)}</h3>
                 </div>
-                <p className="text-xs text-muted-foreground sm:text-sm">{t(district.vibeKey)}</p>
+                {(() => {
+                  const stat = medianBySlug.get(
+                    DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key,
+                  );
+                  if (!stat) {
+                    return (
+                      <p className="text-xs text-muted-foreground sm:text-sm">
+                        {t(district.vibeKey)}
+                      </p>
+                    );
+                  }
+                  return (
+                    <div>
+                      <p className="font-mono text-sm font-semibold tabular-nums sm:text-base">
+                        ≈{stat.medianTotal.toLocaleString('pl-PL')} zł
+                      </p>
+                      <p className="text-[11px] text-muted-foreground sm:text-xs">
+                        {tCosts('nReports', { count: stat.reportCount })}
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div
                   className={`mt-auto flex items-center gap-1 pt-1 text-xs font-medium ${district.pinColor} opacity-0 transition-opacity group-hover:opacity-100`}
                 >

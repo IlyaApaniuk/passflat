@@ -581,7 +581,7 @@ export function BuildingCostsClient({
                     {t('costs.overview.noBuildingsDesc')}
                   </p>
                   <Button className="mt-6" asChild>
-                    <Link href={`/${citySlug}/costs/submit`}>
+                    <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
                       {t('costs.overview.submitCostReport')}
                     </Link>
                   </Button>
@@ -601,7 +601,7 @@ export function BuildingCostsClient({
                         </p>
                       </div>
                       <Button className="shrink-0" asChild>
-                        <Link href={`/${citySlug}/costs/submit`}>
+                        <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
                           {t('costs.overview.submitCostReport')}
                         </Link>
                       </Button>
@@ -841,7 +841,10 @@ export function BuildingCostsClient({
                       <div className="space-y-3">{basicItems.map(renderCostRow)}</div>
                     )}
                     {detailItems.length > 0 ? (
-                      <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                      <GatedSection
+                        show={showDetails}
+                        submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                      >
                         <div className="space-y-3">{detailItems.map(renderCostRow)}</div>
                       </GatedSection>
                     ) : (
@@ -849,7 +852,7 @@ export function BuildingCostsClient({
                         icon={FileText}
                         title={t('costs.building.emptyBreakdownTitle')}
                         desc={t('costs.building.emptyBreakdownDesc')}
-                        submitHref={`/${citySlug}/costs/submit`}
+                        submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
                         source="building_breakdown_empty"
                       />
                     )}
@@ -888,7 +891,10 @@ export function BuildingCostsClient({
                           percentile position to mean something. */}
                       {comparison.district &&
                       comparison.district.count >= TRUST_THRESHOLDS.reliableMin ? (
-                        <GatedSection show={showDetails} submitHref={`/${citySlug}/costs/submit`}>
+                        <GatedSection
+                          show={showDetails}
+                          submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                        >
                           {(() => {
                             const d = comparison.district!;
                             const unit = t('costs.building.perM2');
@@ -999,7 +1005,7 @@ export function BuildingCostsClient({
                             icon={BarChart3}
                             title={t('costs.building.emptyDistrictTitle')}
                             desc={t('costs.building.emptyDistrictDesc')}
-                            submitHref={`/${citySlug}/costs/submit`}
+                            submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
                             source="building_district_thin"
                           />
                         </div>
@@ -1022,7 +1028,7 @@ export function BuildingCostsClient({
                         icon={BarChart3}
                         title={t('costs.building.emptyCompareTitle')}
                         desc={t('costs.building.emptyCompareDesc')}
-                        submitHref={`/${citySlug}/costs/submit`}
+                        submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
                         source="building_comparison_empty"
                       />
                     </CardContent>

@@ -161,13 +161,13 @@
       "realCostDataDesc": "See what tenants actually pay — rent, utilities, admin fees. Crowdsourced data from tenants themselves across Warsaw.",
       "saveDepositTitle": "Save Your Deposit",
       "saveDepositDesc": "Find someone to take over your lease instead of losing 1–3 months deposit.",
-      "directContactTitle": "Direct Contact",
-      "directContactDesc": "Message listing owners directly — schedule viewings and ask questions instantly.",
-      "noAgencyFeesTitle": "No Agency Fees",
-      "noAgencyFeesDesc": "Deal directly with tenants — no middlemen, no hidden charges.",
-      "quickProcessTitle": "Quick Process",
-      "quickProcessDesc": "Post your listing and start getting responses right away.",
-      "exploreCta": "Explore cost data"
+      "exploreCta": "Explore cost data",
+      "buildingFactsTitle": "What tenants know about the building",
+      "buildingFactsDesc": "Lift, neighbours, damp, the property manager — what people who lived there know and the listing never says.",
+      "hiddenChargesTitle": "More than the rent",
+      "hiddenChargesDesc": "Advance payments, then a settlement bill for water and electricity. See the full monthly figure, not the one in the ad.",
+      "depositReturnTitle": "Deposit: returned or not",
+      "depositReturnDesc": "Tenants record whether the deposit came back, and in full. Check the building before you hand the money over."
     },
     "featured": {
       "title": "Featured Listings",
@@ -1389,7 +1389,8 @@
       "submit": "Log in",
       "noAccount": "Don't have an account?",
       "signUp": "Sign up",
-      "forgotPassword": "Forgot password?"
+      "forgotPassword": "Forgot password?",
+      "useMagicLink": "Sign in with an emailed link — no password"
     },
     "register": {
       "title": "Create account",

@@ -56,19 +56,35 @@ export function ShareButton({
     return `${origin}${localePrefix}${path}${sep}utm_source=share&utm_medium=${encodeURIComponent(source)}${ref}`;
   };
 
-  const onCopy = async () => {
+  const onShare = async () => {
     const url = buildUrl();
     posthog?.capture('share_clicked', { source, path });
+
+    // Prefer the OS share sheet: on mobile — where nearly all of this traffic
+    // is — copy-to-clipboard means leaving the site, opening Telegram, finding
+    // a chat and pasting, and most people simply don't. `navigator.share`
+    // rejects on user cancel, which is not an error worth a toast.
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ url });
+        posthog?.capture('share_completed', { source, path, method: 'native' });
+        return;
+      } catch {
+        return;
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(url);
       toast.success(t('copied'));
+      posthog?.capture('share_completed', { source, path, method: 'clipboard' });
     } catch {
       // Clipboard blocked — nothing else to do.
     }
   };
 
   return (
-    <Button type="button" variant={variant} size={size} className={className} onClick={onCopy}>
+    <Button type="button" variant={variant} size={size} className={className} onClick={onShare}>
       <Share2 className="mr-1.5 h-4 w-4" />
       {label ?? t('share')}
     </Button>

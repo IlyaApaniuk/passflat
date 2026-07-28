@@ -13,11 +13,20 @@ import { Home, Loader2, Mail } from 'lucide-react';
 import { signInWithMagicLink } from './actions';
 
 /**
- * Passwordless sign-in form shown only inside in-app browsers (Instagram/
- * Facebook WebViews) where Google OAuth is blocked. One email field → emailed
- * magic link. The normal-browser flow keeps Google + email/password untouched.
+ * Passwordless sign-in: one email field → emailed magic link.
+ *
+ * Served automatically inside in-app browsers (Instagram/Facebook WebViews)
+ * where Google OAuth is blocked, and on request elsewhere via
+ * `/auth/login?method=link`. `inAppBrowser` keeps the two funnels apart in
+ * analytics — one is forced, the other chosen.
  */
-export function MagicLinkForm({ next }: { next?: string }) {
+export function MagicLinkForm({
+  next,
+  inAppBrowser = false,
+}: {
+  next?: string;
+  inAppBrowser?: boolean;
+}) {
   const t = useTranslations('auth');
   const tc = useTranslations('common');
   const { locale } = useParams<{ locale: string }>();
@@ -34,7 +43,7 @@ export function MagicLinkForm({ next }: { next?: string }) {
       trigger: next ? 'required' : 'voluntary',
       next_kind: next ? (next.includes('/costs/submit') ? 'cost_submit' : 'other') : 'none',
       // Distinguishes the in-app-browser funnel from the normal-browser one.
-      in_app_browser: true,
+      in_app_browser: inAppBrowser,
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

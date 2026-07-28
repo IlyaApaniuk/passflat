@@ -136,11 +136,14 @@ export function Hero({ stats: liveStats }: HeroProps) {
                 {t('checkAddressCta')}
               </Link>
             </Button>
-            {/* Pillar 2 — building facts from the people who lived there. */}
+            {/* Pillar 2 — building facts from the people who lived there. A
+                text link on mobile: three stacked full-width buttons push the
+                real medians below a 390×844 first screen, and this one also
+                appears in the nav and its own section further down. */}
             <Button
               size="lg"
               variant="outline"
-              className="group h-12 rounded-full px-8 text-base"
+              className="group hidden h-12 rounded-full px-8 text-base sm:inline-flex"
               asChild
             >
               <Link href={`/${DEFAULT_CITY}/review`} onClick={() => onCtaClick('reviews')}>
@@ -148,6 +151,14 @@ export function Hero({ stats: liveStats }: HeroProps) {
                 {t('reviewsCta')}
               </Link>
             </Button>
+            <Link
+              href={`/${DEFAULT_CITY}/review`}
+              onClick={() => onCtaClick('reviews')}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground sm:hidden"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              {t('reviewsCta')}
+            </Link>
           </div>
 
           <p className="mt-4 text-sm text-muted-foreground">{t('trustLine')}</p>
@@ -178,7 +189,10 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
           {stats.length > 0 && (
             <Reveal
-              className={`mx-auto mt-20 grid gap-4 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : stats.length === 4 ? 'grid-cols-2 lg:grid-cols-4 max-w-6xl' : 'grid-cols-2 md:grid-cols-3 max-w-3xl'}`}
+              // mt-10 on mobile so the first row of real medians peeks above
+              // the fold — a visitor arriving from a post about hidden costs
+              // came for numbers, and mt-20 put them entirely off-screen.
+              className={`mx-auto mt-10 grid gap-4 sm:mt-20 sm:gap-8 ${stats.length === 1 ? 'grid-cols-1 max-w-xs' : stats.length === 2 ? 'grid-cols-2 max-w-lg' : stats.length === 4 ? 'grid-cols-2 lg:grid-cols-4 max-w-6xl' : 'grid-cols-2 md:grid-cols-3 max-w-3xl'}`}
             >
               {stats.map((stat, i) => (
                 <Reveal

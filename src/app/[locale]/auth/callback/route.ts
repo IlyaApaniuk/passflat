@@ -5,6 +5,7 @@ import { getOrCreateProfile } from '@/lib/profile';
 import { trackServerEvent, identifyUser } from '@/lib/posthog-server';
 import { classifyRef } from '@/lib/referral';
 import { claimAnonymousReports } from '@/lib/claim-reports';
+import { syncHasContributedCost } from '@/lib/contribution';
 import { safeNextPath } from '@/lib/safe-next-path';
 
 export async function GET(
@@ -87,10 +88,9 @@ export async function GET(
             data: { authorId: user.id, claimedAt: new Date() },
           });
           if (claimed.count > 0) {
-            await prisma.profile.update({
-              where: { id: user.id },
-              data: { hasContributedCost: true },
-            });
+            // Derived from the reports themselves — a claimed report that is
+            // flagged and hidden must not grant contributor access.
+            await syncHasContributedCost(user.id);
             trackServerEvent(user.id, 'imported_cost_reports_claimed', {
               count: claimed.count,
             });

@@ -6,7 +6,46 @@ import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { MotionConfig } from 'framer-motion';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
-import { useAnalyticsConsent } from '@/lib/consent';
+import {
+  ANONYMOUS_PERSISTENCE,
+  CONSENTED_PERSISTENCE,
+  analyticsPersistence,
+  readConsent,
+  useAnalyticsConsent,
+} from '@/lib/consent';
+
+/**
+ * Analytics before consent, storage only after it.
+ *
+ * Counting anonymous page views runs on legitimate interest (GDPR art. 6(1)(f));
+ * what art. 5(3) ePrivacy actually requires consent for is *writing to the
+ * device*. So until the user accepts, PostHog runs on `persistence: 'memory'` —
+ * capturing is on, but no cookie and no localStorage entry is created. Accepting
+ * upgrades the same instance to `localStorage+cookie`; declining keeps the
+ * memory mode, i.e. "don't store", not "don't count".
+ *
+ * Honest caveat: the banner copy still says "we use cookies and analytics",
+ * which does not describe this split. That is a deliberate debt the founder
+ * owns, flagged for a copy revision.
+ */
+function PersistenceUpgrade() {
+  const ph = usePostHog();
+  const consent = useAnalyticsConsent();
+
+  useEffect(() => {
+    if (!ph || !consent || ph.config.persistence === CONSENTED_PERSISTENCE) {
+      return;
+    }
+    // `set_config` re-points the store and carries the props already registered
+    // in memory (distinct_id, $device_id, $sesid, and the `ref`/utm_* super
+    // properties registered below) into the new one, so the accepting visitor
+    // keeps one identity across the consent boundary instead of splitting in
+    // two. It also re-runs the survey/recording gates, so no reload is needed.
+    ph.set_config({ persistence: CONSENTED_PERSISTENCE, disable_surveys: false });
+  }, [ph, consent]);
+
+  return null;
+}
 
 function SessionRecordingGate() {
   const ph = usePostHog();
@@ -88,7 +127,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const consent = localStorage.getItem('passflat-cookie-consent');
+    const consent = readConsent();
+    const persistence = analyticsPersistence(consent);
 
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
@@ -101,8 +141,18 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         maskAllInputs: true,
         maskTextSelector: '[data-ph-mask]',
       },
-      persistence: 'localStorage+cookie',
-      opt_out_capturing_by_default: consent !== 'accepted',
+      persistence,
+      // Capturing is deliberately NOT gated on consent (see the docblock above);
+      // gating it here is what made every un-consented visit invisible. Leaving
+      // it `false` also keeps posthog-js from ever calling `optInOut()`, which is
+      // the only thing that writes its `__ph_opt_in_out_<token>` localStorage key
+      // — so the memory mode really is write-free.
+      opt_out_capturing_by_default: false,
+      // Surveys write `seenSurvey_<id>` to localStorage directly, bypassing the
+      // persistence setting. None are configured today, but a survey enabled
+      // server-side would silently break the no-storage promise, so they stay off
+      // until consent. `PersistenceUpgrade` turns them back on when it arrives.
+      disable_surveys: persistence === ANONYMOUS_PERSISTENCE,
       bootstrap: {
         featureFlags: {
           [FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED]: false,
@@ -113,10 +163,17 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       },
       loaded: (ph) => {
         if (process.env.NODE_ENV === 'development') {
+          // Writes a `ph_debug` localStorage key. Development only, so it never
+          // touches a visitor's device in production.
           ph.debug();
         }
-        if (consent === 'declined') {
-          ph.opt_out_capturing();
+        if (persistence === ANONYMOUS_PERSISTENCE && ph.has_opted_out_capturing()) {
+          // Visitors who declined under the previous capture-gated build still
+          // carry posthog-js's own `__ph_opt_in_out_<token>` flag, which would
+          // keep them silent forever regardless of the config above. Clearing it
+          // only *removes* that key — it never writes one — and hands the
+          // decision back to the persistence switch.
+          ph.clear_opt_in_out_capturing();
         }
         // Providing `bootstrap.featureFlags` makes posthog-js mark flags as
         // already loaded, so it skips its automatic first-load fetch. Flags not
@@ -142,6 +199,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         <Suspense fallback={null}>
           <PostHogPageView />
         </Suspense>
+        <PersistenceUpgrade />
         <SessionRecordingGate />
         {children}
       </PHProvider>
