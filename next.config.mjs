@@ -9,18 +9,18 @@ const nextConfig = {
     // cost-report photos are served from Supabase Storage public buckets.
     remotePatterns: [
       {
-        // Pinned to this project's Supabase host on purpose: a `*.supabase.co`
-        // wildcard would let anyone proxy images from any Supabase project
-        // through /_next/image on our optimization bill.
+        // The custom domain every stored photo URL actually uses. Without it the
+        // image optimizer 400s (INVALID_IMAGE_OPTIMIZE_REQUEST) on every one.
         protocol: 'https',
-        hostname: 'owjyitulkmauajraoyhf.supabase.co',
+        hostname: 'auth.passflat.com',
         pathname: '/storage/v1/object/public/**',
       },
       {
-        // Prod Supabase lives behind the custom domain — without it the image
-        // optimizer 400s (INVALID_IMAGE_OPTIMIZE_REQUEST) on every listing photo.
+        // The same project's direct host, for URLs generated without the custom
+        // domain. Pinned rather than a `*.supabase.co` wildcard, which would let
+        // anyone proxy images from any Supabase project on our optimization bill.
         protocol: 'https',
-        hostname: 'auth.passflat.com',
+        hostname: 'wmanxshrqghrzwwykjns.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
       // Local `supabase start` storage (dev only — never shipped to prod).
