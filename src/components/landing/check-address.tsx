@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Link } from '@/i18n/navigation';
+import { TrackedLink } from '@/components/analytics/tracked-link';
 import { Reveal } from '@/components/ui/reveal';
 import { MapPinned, Receipt, Search, Sparkles, TramFront } from 'lucide-react';
 
@@ -44,7 +44,8 @@ export async function CheckAddress({ citySlug = DEFAULT_CITY }: CheckAddressProp
 
           <p className="mb-8 text-lg text-muted-foreground">{t('subtitle')}</p>
 
-          <Link
+          <TrackedLink
+            placement="landing_check_band"
             href={`/${citySlug}/check`}
             className="group flex items-center gap-3 rounded-full border border-border/60 bg-card/80 px-5 py-4 text-left shadow-sm backdrop-blur-sm transition-colors hover:border-accent/50 hover:bg-card"
           >
@@ -53,7 +54,7 @@ export async function CheckAddress({ citySlug = DEFAULT_CITY }: CheckAddressProp
             <span className="hidden shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground sm:inline">
               {t('cta')}
             </span>
-          </Link>
+          </TrackedLink>
 
           <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {points.map(({ icon: Icon, label }) => (

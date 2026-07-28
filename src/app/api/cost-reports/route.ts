@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Building } from '@prisma/client';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateProfile } from '@/lib/profile';
@@ -25,6 +26,7 @@ import {
 import { ensureAnonId } from '@/lib/anon-id';
 import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
 import { revalidateCostSurfaces } from '@/lib/revalidate-costs';
+import { isPrismaUniqueConstraintError, placeIdSlugSuffix } from '@/lib/location-checker';
 
 // Submit rate limit (anti-spam): at most N reports per rolling window per user.
 // Generous enough for someone genuinely filling several flats in one sitting,
@@ -37,6 +39,156 @@ const RATE_LIMIT_MAX_PER_WINDOW = 10;
 // NOTE: a slow distributed attack under this ceiling still needs IP/device-level
 // limiting (shared store, e.g. Upstash) — a deliberate follow-up, not here.
 const GLOBAL_RATE_LIMIT_MAX_PER_WINDOW = 200;
+
+/**
+ * Every error body is `{ error: <STABLE_CODE>, message?, ...details }`.
+ *
+ * The visitors filling this form read ru/uk/pl — an English sentence in `error`
+ * was being rendered verbatim at the end of a long form. The code is the
+ * contract the client translates from; `message` is an English fallback for
+ * logs and debugging and is never shown to a visitor.
+ */
+function jsonError(
+  code: string,
+  message: string,
+  status: number,
+  details?: Record<string, unknown>,
+) {
+  return NextResponse.json({ error: code, message, ...details }, { status });
+}
+
+/** 409 for "you already reported this building" — carries the report to edit. */
+function alreadyExistsResponse(reportId: string) {
+  return jsonError(
+    'ALREADY_EXISTS',
+    'You already have a cost report for this building. Please edit your existing one.',
+    409,
+    // `code` predates the move to codes-in-`error`; kept so a client build from
+    // before this change (a cached page mid-deploy) still recognises the case.
+    { code: 'ALREADY_EXISTS', reportId },
+  );
+}
+
+/**
+ * Lost the report-create race to a duplicate. Only reachable once a unique
+ * index backs the one-report-per-building rule (see `findOwnReportId`), but
+ * handled now so that day is a 409 and not a 500.
+ */
+class DuplicateReportError extends Error {
+  constructor(readonly reportId: string) {
+    super('duplicate cost report');
+  }
+}
+
+/**
+ * Who a submission belongs to for the one-report-per-building rule. Kept as a
+ * non-nullable union on purpose: a `null`/`undefined` id in this filter would
+ * silently widen it to "any report for this building".
+ */
+type ReportOwner = { anonymousId: string } | { authorId: string };
+
+/** The submitter's existing report for this building, if any. */
+async function findOwnReportId(owner: ReportOwner, buildingId: string): Promise<string | null> {
+  const existing = await prisma.costReport.findFirst({
+    where: { ...owner, buildingId },
+    select: { id: true },
+  });
+  return existing?.id ?? null;
+}
+
+async function findBuildingForAddress(
+  cityId: string,
+  placeId: string | null,
+  addressNormalized: string,
+): Promise<Building | null> {
+  if (placeId) {
+    const byPlaceId = await prisma.building.findFirst({ where: { placeId } });
+    if (byPlaceId) return byPlaceId;
+  }
+  return prisma.building.findUnique({
+    where: { cityId_addressNormalized: { cityId, addressNormalized } },
+  });
+}
+
+/**
+ * Find-or-create the building this report attaches to, surviving a concurrent
+ * create of the same address.
+ *
+ * Two people filling the form for the same new address at the same time (the
+ * realistic case: the link dropped in a building's chat) both read "no
+ * building" and both insert. One loses on `cityId_addressNormalized` — or on
+ * `cityId_slug` — with P2002, and that used to surface as a 500 that threw away
+ * a long, finished form. So: catch P2002 and re-read the winner, the pattern
+ * /api/location-score already uses.
+ *
+ * The slug suffix is derived from the placeId/address rather than `Date.now()`
+ * for the same reason: two racing requests must compute the SAME slug, so one
+ * loses cleanly and recovers, instead of both succeeding with near-identical
+ * slugs and splitting one building's reports across two rows.
+ */
+async function findOrCreateBuilding(args: {
+  cityId: string;
+  street: string;
+  buildingNumber: string;
+  cleanedStreet: string;
+  addressNormalized: string;
+  addressFull: string;
+  districtId: string | null;
+  lat: number | string | null;
+  lng: number | string | null;
+  placeId: string | null;
+}): Promise<Building> {
+  const { cityId, placeId, addressNormalized } = args;
+
+  const existing = await findBuildingForAddress(cityId, placeId, addressNormalized);
+  if (existing) {
+    // Backfill the Places id onto a building first created without one.
+    if (placeId && !existing.placeId) {
+      return prisma.building.update({ where: { id: existing.id }, data: { placeId } });
+    }
+    return existing;
+  }
+
+  const data = {
+    cityId,
+    districtId: args.districtId,
+    street: args.cleanedStreet,
+    buildingNumber: args.buildingNumber,
+    addressFull: args.addressFull,
+    addressNormalized,
+    lat: args.lat ?? null,
+    lng: args.lng ?? null,
+    placeId,
+  };
+
+  const baseSlug = generateBuildingSlug(args.street, args.buildingNumber);
+  const suffixedSlug = `${baseSlug}-${placeIdSlugSuffix(placeId ?? addressNormalized)}`;
+  const taken = await prisma.building.findUnique({
+    where: { cityId_slug: { cityId, slug: baseSlug } },
+    select: { id: true },
+  });
+  // A taken slug means a DIFFERENT address already owns the pretty URL, so go
+  // straight to the suffixed one; otherwise try the clean slug first and fall
+  // back to the suffix only if a collision appears underneath us.
+  const candidates = taken ? [suffixedSlug] : [baseSlug, suffixedSlug];
+
+  let lastError: unknown;
+  for (const slug of candidates) {
+    try {
+      return await prisma.building.create({ data: { ...data, slug } });
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error)) throw error;
+      lastError = error;
+      // Someone inserted this exact address between our read and our write —
+      // their row is the one this report belongs to.
+      const raced = await findBuildingForAddress(cityId, placeId, addressNormalized);
+      if (raced) return raced;
+      // Otherwise the conflict was the slug colliding with a different address:
+      // try the next candidate.
+    }
+  }
+  throw lastError;
+}
 
 async function getUser() {
   const cookieStore = await cookies();
@@ -70,7 +222,12 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUser();
     if (user && (await isAccountDeleted(user.id))) {
-      return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
+      // Shared body carries the code in `code`; re-shape it so the code is in
+      // `error` like every other response here, keeping `code` for compat.
+      return NextResponse.json(
+        { ...ACCOUNT_DELETED_RESPONSE, error: 'ACCOUNT_DELETED', message: 'Account deleted' },
+        { status: 403 },
+      );
     }
     // The cost form is open to logged-out visitors. An anonymous submission is
     // owned by the system ANON_AUTHOR_ID profile and tagged with a per-browser id
@@ -103,7 +260,9 @@ export async function POST(request: NextRequest) {
         recentCount >= RATE_LIMIT_MAX_PER_WINDOW ||
         recentGlobal >= GLOBAL_RATE_LIMIT_MAX_PER_WINDOW
       ) {
-        return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+        // Lowercase by contract — the client has keyed on this exact string
+        // since before codes were standardised here.
+        return jsonError('rate_limited', 'Too many submissions. Please try again later.', 429);
       }
     }
 
@@ -206,12 +365,10 @@ export async function POST(request: NextRequest) {
     // rather than quietly saving the report under the admin's own account — that
     // silent fallback is exactly how a batch once got mis-attributed and lost.
     if (isAdmin && (fillOnBehalfRequested || scrapedRequested) && !adminImport) {
-      return NextResponse.json(
-        {
-          error: 'ADMIN_IMPORT_MODE_MISMATCH',
-          message: `Admin import was requested but ADMIN_IMPORT_MODE is "${adminMode}". Set the matching mode (or remove the import field) — refusing to save under your own account.`,
-        },
-        { status: 400 },
+      return jsonError(
+        'ADMIN_IMPORT_MODE_MISMATCH',
+        `Admin import was requested but ADMIN_IMPORT_MODE is "${adminMode}". Set the matching mode (or remove the import field) — refusing to save under your own account.`,
+        400,
       );
     }
 
@@ -242,20 +399,22 @@ export async function POST(request: NextRequest) {
     // legacy / admin-imported data.
     const isRoom = rentalType === 'room';
     const isEmpty = (v: unknown) => v == null || v === '';
-    if (
-      !street ||
-      !buildingNumber ||
-      isEmpty(rent) ||
-      !rentalType ||
-      (!isRoom && isEmpty(areaM2))
-    ) {
-      return NextResponse.json(
+    // Name the fields that are ACTUALLY missing (the old response listed every
+    // required field regardless), so the client can mark and scroll to them.
+    const missingFields: string[] = [];
+    if (!street) missingFields.push('street');
+    if (!buildingNumber) missingFields.push('buildingNumber');
+    if (isEmpty(rent)) missingFields.push('rent');
+    if (!rentalType) missingFields.push('rentalType');
+    if (!isRoom && isEmpty(areaM2)) missingFields.push('areaM2');
+    if (missingFields.length > 0) {
+      return jsonError(
+        'MISSING_FIELDS',
+        `Missing required fields: ${missingFields.join(', ')}`,
+        400,
         {
-          error: isRoom
-            ? 'Missing required fields: street, buildingNumber, rent, rentalType'
-            : 'Missing required fields: street, buildingNumber, rent, rentalType, areaM2',
+          fields: missingFields,
         },
-        { status: 400 },
       );
     }
 
@@ -275,16 +434,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.hardErrors[0].message, errors: validation.hardErrors },
-        { status: 400 },
+      // `errors` carries the structure ({ field, min, max }) the client turns
+      // into a translated sentence; the English text stays in `message`.
+      return jsonError(
+        'VALIDATION_FAILED',
+        validation.hardErrors.map((e) => e.message).join('; '),
+        400,
+        { errors: validation.hardErrors },
       );
     }
 
     const wasFlagged = validation.shouldFlag;
 
     if (typeof citySlug !== 'string' || !citySlug.trim()) {
-      return NextResponse.json({ error: 'Missing city' }, { status: 400 });
+      return jsonError('MISSING_CITY', 'Missing city', 400);
     }
 
     const city = await prisma.city.findUnique({
@@ -293,7 +456,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!city) {
-      return NextResponse.json({ error: 'City not found' }, { status: 404 });
+      return jsonError('CITY_NOT_FOUND', 'City not found', 404);
     }
 
     // Reject addresses that don't belong to the route's city, before any building
@@ -324,10 +487,7 @@ export async function POST(request: NextRequest) {
         lngNum <= cityBounds.east &&
         lngNum >= cityBounds.west;
       if (!insideCity) {
-        return NextResponse.json(
-          { error: 'ADDRESS_OUTSIDE_CITY', message: 'The selected address is outside this city.' },
-          { status: 400 },
-        );
+        return jsonError('ADDRESS_OUTSIDE_CITY', 'The selected address is outside this city.', 400);
       }
     }
 
@@ -346,10 +506,7 @@ export async function POST(request: NextRequest) {
       const candidates = [city.slug, tCity(city.nameKey)].map(norm).filter(Boolean);
       const placeCityNorm = norm(placeCity);
       if (placeCityNorm && candidates.length && !candidates.includes(placeCityNorm)) {
-        return NextResponse.json(
-          { error: 'ADDRESS_OUTSIDE_CITY', message: 'The selected address is outside this city.' },
-          { status: 400 },
-        );
+        return jsonError('ADDRESS_OUTSIDE_CITY', 'The selected address is outside this city.', 400);
       }
     }
     // When bounds/coords are missing and no place city name was provided, we cannot
@@ -374,67 +531,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let building = placeId ? await prisma.building.findFirst({ where: { placeId } }) : null;
-
-    if (!building) {
-      building = await prisma.building.findUnique({
-        where: { cityId_addressNormalized: { cityId: city.id, addressNormalized } },
-      });
-
-      if (building && placeId && !building.placeId) {
-        building = await prisma.building.update({
-          where: { id: building.id },
-          data: { placeId },
-        });
-      }
-    }
-
-    if (!building) {
-      let slug = generateBuildingSlug(street, buildingNumber);
-      const existing = await prisma.building.findUnique({
-        where: { cityId_slug: { cityId: city.id, slug } },
-        select: { id: true },
-      });
-      if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
-
-      building = await prisma.building.create({
-        data: {
-          cityId: city.id,
-          slug,
-          districtId: matchedDistrict?.id ?? null,
-          street: cleanedStreet,
-          buildingNumber,
-          addressFull,
-          addressNormalized,
-          lat: lat ?? null,
-          lng: lng ?? null,
-          placeId: placeId ?? null,
-        },
-      });
-    }
+    const building = await findOrCreateBuilding({
+      cityId: city.id,
+      street,
+      buildingNumber,
+      cleanedStreet,
+      addressNormalized,
+      addressFull,
+      districtId: matchedDistrict?.id ?? null,
+      lat: lat ?? null,
+      lng: lng ?? null,
+      placeId: placeId ?? null,
+    });
 
     // One report per user PER BUILDING. A user may report for several buildings,
     // but a duplicate for the same building should be edited instead of recreated.
     // Skipped in fill-on-behalf mode: the system import profile legitimately owns
     // many reports per building (one per friend), like the bulk CSV import.
+    // `anonId` is non-null exactly when `isAnon` (see ensureAnonId above).
+    const reportOwner: ReportOwner = isAnon ? { anonymousId: anonId! } : { authorId: user!.id };
     if (!fillOnBehalf) {
-      const existingReport = await prisma.costReport.findFirst({
-        where: isAnon
-          ? { anonymousId: anonId, buildingId: building.id }
-          : { authorId: user!.id, buildingId: building.id },
-        select: { id: true },
-      });
-      if (existingReport) {
-        return NextResponse.json(
-          {
-            error:
-              'You already have a cost report for this building. Please edit your existing one.',
-            code: 'ALREADY_EXISTS',
-            reportId: existingReport.id,
-          },
-          { status: 409 },
-        );
-      }
+      const existingReportId = await findOwnReportId(reportOwner, building.id);
+      if (existingReportId) return alreadyExistsResponse(existingReportId);
     }
 
     const electricityAvg = electricityIncluded
@@ -486,53 +604,77 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const costReport = await prisma.costReport.create({
-      data: {
-        buildingId: building.id,
-        authorId: effectiveAuthorId,
-        source: reportSource,
-        importedEmail: fillOnBehalf ? normalizedImportedEmail : null,
-        anonymousId: isAnon ? anonId : null,
-        claimedAt: null,
-        currency: 'PLN',
-        rent: rent ? parseFloat(rent) : null,
-        adminFee: adminFee ? parseFloat(adminFee) : null,
-        depositAmount: deposit ? parseFloat(deposit) : null,
-        electricityAvg: electricityAvg ?? null,
-        electricityWinter: electricityWinter ? parseFloat(electricityWinter) : null,
-        electricitySummer: electricitySummer ? parseFloat(electricitySummer) : null,
-        electricityIncluded: electricityIncluded ?? null,
-        gas: gas ? parseFloat(gas) : null,
-        heating: heatingAvg ?? null,
-        heatingWinter: heatingWinter ? parseFloat(heatingWinter) : null,
-        heatingSummer: heatingSummer ? parseFloat(heatingSummer) : null,
-        heatingIncluded: heatingIncluded ?? null,
-        water: water ? parseFloat(water) : null,
-        waterIncluded: waterIncluded ?? null,
-        internet: internet ? parseFloat(internet) : null,
-        internetProvider: capFreeText(internetProvider),
-        otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-        otherCostsNote: capFreeText(otherCostsNote),
-        utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
-        totalMonthlyAvg: totalMonthlyAvg || null,
-        rooms: rooms ? parseInt(rooms, 10) : null,
-        areaM2: areaM2 ? parseFloat(areaM2) : null,
-        floor: floor ? parseInt(floor, 10) : null,
-        rentalType: rentalType || null,
-        leaseType: leaseType || null,
-        depositMonths: depositMonths ? parseFloat(depositMonths) : null,
-        depositReturned: typeof depositReturned === 'boolean' ? depositReturned : null,
-        depositReturnedAmount: depositReturnedAmount ? parseFloat(depositReturnedAmount) : null,
-        depositReturnDays: depositReturnDays ? parseInt(depositReturnDays, 10) : null,
-        isCurrentTenant: isCurrentTenant ?? null,
-        livedFrom: livedFrom ? new Date(livedFrom) : null,
-        livedUntil: livedUntil ? new Date(livedUntil) : null,
-        isVisible: !wasFlagged,
-        verificationStatus: wasFlagged ? 'flagged' : 'unverified',
-        periodicCharges: periodicCharges.length ? { create: periodicCharges } : undefined,
-      },
-      include: { building: true, periodicCharges: true },
-    });
+    // Re-check for the submitter's own duplicate immediately before the insert.
+    // The check above runs before the profile upserts, and a double submit (a
+    // second tab, an impatient second tap on a slow form) lands in that gap.
+    // This does not CLOSE the race — see the note on the catch below — it just
+    // shrinks the window to the single round-trip that a unique index would own.
+    if (!fillOnBehalf) {
+      const racedReportId = await findOwnReportId(reportOwner, building.id);
+      if (racedReportId) return alreadyExistsResponse(racedReportId);
+    }
+
+    // The one-report-per-building rule has no unique index behind it (adding one
+    // is a schema migration), so the reads above are the only guard and a truly
+    // simultaneous pair still writes two rows. Once
+    // `@@unique([authorId, buildingId])` / `@@unique([anonymousId, buildingId])`
+    // exist, the loser lands in the catch below and gets the same 409 + reportId
+    // it would have got from the read — not a 500 on a finished form.
+    const costReport = await prisma.costReport
+      .create({
+        data: {
+          buildingId: building.id,
+          authorId: effectiveAuthorId,
+          source: reportSource,
+          importedEmail: fillOnBehalf ? normalizedImportedEmail : null,
+          anonymousId: isAnon ? anonId : null,
+          claimedAt: null,
+          currency: 'PLN',
+          rent: rent ? parseFloat(rent) : null,
+          adminFee: adminFee ? parseFloat(adminFee) : null,
+          depositAmount: deposit ? parseFloat(deposit) : null,
+          electricityAvg: electricityAvg ?? null,
+          electricityWinter: electricityWinter ? parseFloat(electricityWinter) : null,
+          electricitySummer: electricitySummer ? parseFloat(electricitySummer) : null,
+          electricityIncluded: electricityIncluded ?? null,
+          gas: gas ? parseFloat(gas) : null,
+          heating: heatingAvg ?? null,
+          heatingWinter: heatingWinter ? parseFloat(heatingWinter) : null,
+          heatingSummer: heatingSummer ? parseFloat(heatingSummer) : null,
+          heatingIncluded: heatingIncluded ?? null,
+          water: water ? parseFloat(water) : null,
+          waterIncluded: waterIncluded ?? null,
+          internet: internet ? parseFloat(internet) : null,
+          internetProvider: capFreeText(internetProvider),
+          otherCosts: otherCosts ? parseFloat(otherCosts) : null,
+          otherCostsNote: capFreeText(otherCostsNote),
+          utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
+          totalMonthlyAvg: totalMonthlyAvg || null,
+          rooms: rooms ? parseInt(rooms, 10) : null,
+          areaM2: areaM2 ? parseFloat(areaM2) : null,
+          floor: floor ? parseInt(floor, 10) : null,
+          rentalType: rentalType || null,
+          leaseType: leaseType || null,
+          depositMonths: depositMonths ? parseFloat(depositMonths) : null,
+          depositReturned: typeof depositReturned === 'boolean' ? depositReturned : null,
+          depositReturnedAmount: depositReturnedAmount ? parseFloat(depositReturnedAmount) : null,
+          depositReturnDays: depositReturnDays ? parseInt(depositReturnDays, 10) : null,
+          isCurrentTenant: isCurrentTenant ?? null,
+          livedFrom: livedFrom ? new Date(livedFrom) : null,
+          livedUntil: livedUntil ? new Date(livedUntil) : null,
+          isVisible: !wasFlagged,
+          verificationStatus: wasFlagged ? 'flagged' : 'unverified',
+          periodicCharges: periodicCharges.length ? { create: periodicCharges } : undefined,
+        },
+        include: { building: true, periodicCharges: true },
+      })
+      .catch(async (error: unknown) => {
+        if (!fillOnBehalf && isPrismaUniqueConstraintError(error)) {
+          const duplicateId = await findOwnReportId(reportOwner, building.id);
+          if (duplicateId) throw new DuplicateReportError(duplicateId);
+        }
+        throw error;
+      });
 
     // Drop the cost caches now. The success screen links straight to the
     // building page, which is ISR-cached for an hour — without this the report
@@ -638,12 +780,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ costReport, wasFlagged, comparison }, { status: 201 });
   } catch (err: unknown) {
+    // A duplicate that lost the insert race is the submitter's own report, not
+    // a server fault: same 409 the pre-insert read returns.
+    if (err instanceof DuplicateReportError) {
+      return alreadyExistsResponse(err.reportId);
+    }
     console.error('[cost-reports POST]', err);
     captureServerException(err, {
       properties: { source: 'cost_reports', method: 'POST' },
     });
     await flushPostHog();
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return jsonError('INTERNAL_ERROR', 'Internal server error', 500);
   }
 }
 
@@ -664,7 +811,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!city) {
-    return NextResponse.json({ error: 'City not found' }, { status: 404 });
+    return jsonError('CITY_NOT_FOUND', 'City not found', 404);
   }
 
   const buildingWhere: Record<string, unknown> = { cityId: city.id };

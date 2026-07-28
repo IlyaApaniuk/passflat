@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormatter, useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { TrackedLink } from '@/components/analytics/tracked-link';
 import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Reveal } from '@/components/ui/reveal';
 import { Button } from '@/components/ui/button';
@@ -38,11 +38,11 @@ export function SubmitCostsButton({
 
   return (
     <Button size="lg" variant="outline" className="rounded-full" asChild>
-      <Link href={`/${citySlug}/costs/submit`}>
+      <TrackedLink placement="landing_cost_card_submit" href={`/${citySlug}/costs/submit`}>
         {hasContributed
           ? t('landing.costTransparency.addMoreCosts')
           : t('landing.costTransparency.submitCosts')}
-      </Link>
+      </TrackedLink>
     </Button>
   );
 }
@@ -133,12 +133,13 @@ export function CostTransparencyCard({
               <CheckCircle2 className="h-4 w-4" />
               {t('landing.costTransparency.alreadyContributedDesc')}
             </div>
-            <Link
+            <TrackedLink
+              placement="landing_cost_card_all"
               href={`/${citySlug}/costs`}
               className="text-sm font-medium text-accent hover:underline"
             >
               {t('landing.costTransparency.exploreCosts')}
-            </Link>
+            </TrackedLink>
           </div>
         ) : (
           <div className="relative mt-6 rounded-xl border border-dashed border-accent/30 bg-accent/5 p-4 text-center">
@@ -146,12 +147,13 @@ export function CostTransparencyCard({
               {t('landing.costTransparency.contributeUnlockDesc')}
             </p>
             <div className="flex flex-col items-center gap-2">
-              <Link
+              <TrackedLink
+                placement="landing_cost_card_submit_secondary"
                 href={`/${citySlug}/costs/submit`}
                 className="text-sm font-medium text-accent hover:underline"
               >
                 {t('landing.costTransparency.submitCosts')}
-              </Link>
+              </TrackedLink>
             </div>
           </div>
         )}

@@ -39,7 +39,7 @@ async function getUser() {
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Unauthorized' }, { status: 401 });
   }
 
   const { id } = await params;
@@ -50,7 +50,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!costReport) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ error: 'NOT_FOUND', message: 'Not found' }, { status: 404 });
   }
 
   return NextResponse.json({ costReport });
@@ -59,7 +59,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'UNAUTHORIZED', message: 'Unauthorized' }, { status: 401 });
   }
   if (await isAccountDeleted(user.id)) {
     return NextResponse.json(ACCOUNT_DELETED_RESPONSE, { status: 403 });
@@ -78,7 +78,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   });
 
   if (!existing) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ error: 'NOT_FOUND', message: 'Not found' }, { status: 404 });
   }
 
   // A moderator's hide has to survive an author edit. Admin hiding only flips
@@ -140,8 +140,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   });
 
   if (!validation.valid) {
+    // Same contract as POST: a code the client can translate, with the English
+    // sentence kept only for logs. An edit failing in English would land on
+    // someone who has already filled the whole form once.
     return NextResponse.json(
-      { error: validation.hardErrors[0].message, errors: validation.hardErrors },
+      {
+        error: 'VALIDATION_FAILED',
+        message: validation.hardErrors[0].message,
+        errors: validation.hardErrors,
+      },
       { status: 400 },
     );
   }

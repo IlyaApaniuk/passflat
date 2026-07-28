@@ -141,6 +141,22 @@ export async function GET(
       }
     }
 
+    // Closes the loop that starts with `auth_started`: without it the funnel
+    // ends at "was sent to log in" and cannot tell a completed return from an
+    // abandonment. Server-side, so it survives ad blockers and consent state.
+    if (user) {
+      trackServerEvent(user.id, 'auth_completed', {
+        locale,
+        next_kind: next.includes('/costs/submit')
+          ? 'cost_submit'
+          : next.includes('/check')
+            ? 'checker'
+            : next === `/${locale}` || next === '/'
+              ? 'none'
+              : 'other',
+      });
+    }
+
     return NextResponse.redirect(new URL(next, request.url));
   }
 
