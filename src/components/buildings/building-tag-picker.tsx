@@ -6,7 +6,7 @@ import { usePostHog } from 'posthog-js/react';
 import { Check, Loader2, MessageSquarePlus } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { useAnalyticsConsent } from '@/lib/consent';
-import { BUILDING_TAG_SECTIONS, type TagSentiment } from '@/lib/building-tags';
+import { BUILDING_TAG_SECTIONS, conflictingTagKeys, type TagSentiment } from '@/lib/building-tags';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -53,9 +53,13 @@ export function BuildingTagPicker({
 
   const toggle = useCallback((key: string) => {
     setStatus('idle');
-    setSelected((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
-    );
+    setSelected((current) => {
+      if (current.includes(key)) return current.filter((item) => item !== key);
+      // Picking a tag drops the ones it contradicts, so the card can never
+      // publish "easy parking" next to "hard parking".
+      const conflicts = new Set(conflictingTagKeys(key));
+      return [...current.filter((item) => !conflicts.has(item)), key];
+    });
   }, []);
 
   const submit = async () => {

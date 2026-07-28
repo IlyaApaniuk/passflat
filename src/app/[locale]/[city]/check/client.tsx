@@ -998,15 +998,29 @@ export function CheckerClient({
                     )}
                   </p>
 
-                  <Button asChild className="mt-4 w-full sm:w-auto">
-                    <Link
-                      href={`/${citySlug}/building/${result.building.slug}`}
-                      onClick={() => captureCta('building')}
-                    >
-                      {t('costs.viewBuilding')}
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <Button asChild className="w-full sm:w-auto">
+                      <Link
+                        href={`/${citySlug}/building/${result.building.slug}`}
+                        onClick={() => captureCta('building')}
+                      >
+                        {t('costs.viewBuilding')}
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {/* Someone checking an address that already has data is the
+                        likeliest contributor there is — they live there and can
+                        confirm or refresh the figures. The empty state asks;
+                        this one used to end the conversation. */}
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link
+                        href={`/${citySlug}/costs/submit?p=${encodeURIComponent(result.building.placeId)}&source=checker`}
+                        onClick={() => captureCta('form')}
+                      >
+                        {t('costs.contribute')}
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (

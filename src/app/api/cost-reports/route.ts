@@ -24,6 +24,7 @@ import {
 } from '@/lib/import-constants';
 import { ensureAnonId } from '@/lib/anon-id';
 import { isAccountDeleted, ACCOUNT_DELETED_RESPONSE } from '@/lib/active-user';
+import { revalidateCostSurfaces } from '@/lib/revalidate-costs';
 
 // Submit rate limit (anti-spam): at most N reports per rolling window per user.
 // Generous enough for someone genuinely filling several flats in one sitting,
@@ -532,6 +533,11 @@ export async function POST(request: NextRequest) {
       },
       include: { building: true, periodicCharges: true },
     });
+
+    // Drop the cost caches now. The success screen links straight to the
+    // building page, which is ISR-cached for an hour — without this the report
+    // the visitor just filed is not there when they land on it.
+    revalidateCostSurfaces({ citySlug: city.slug, buildingSlug: building.slug });
 
     // Only mark hasContributed for genuine self-submissions (not flagged, not an
     // admin import, and not anonymous). For anonymous reports this happens on the

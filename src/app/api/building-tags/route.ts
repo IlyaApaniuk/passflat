@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ensureAnonId } from '@/lib/anon-id';
-import { BUILDING_TAGS, isBuildingTagKey } from '@/lib/building-tags';
+import { BUILDING_TAGS, isBuildingTagKey, findTagConflict } from '@/lib/building-tags';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 
@@ -97,6 +97,12 @@ export async function POST(request: NextRequest) {
 
   const input = parseInput(raw);
   if (!input) return jsonError('INVALID_REQUEST', 400);
+
+  // The picker cannot produce a contradictory pair, so one here means a stale
+  // tab or a script. Rejecting beats storing "easy parking" and "hard parking"
+  // from the same voter.
+  const conflict = findTagConflict(input.tagKeys);
+  if (conflict) return jsonError('CONFLICTING_TAGS', 400);
 
   const building = await prisma.building.findUnique({
     where: { id: input.buildingId },

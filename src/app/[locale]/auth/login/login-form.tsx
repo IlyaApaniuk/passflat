@@ -153,6 +153,19 @@ export function LoginForm({ next, error: initialError }: { next?: string; error?
               </Button>
             </form>
 
+            <p className="text-center text-sm">
+              <Link
+                href={
+                  next
+                    ? { pathname: '/auth/login', query: { method: 'link', next } }
+                    : { pathname: '/auth/login', query: { method: 'link' } }
+                }
+                className="text-primary hover:underline"
+              >
+                {t('login.useMagicLink')}
+              </Link>
+            </p>
+
             <p className="text-center text-sm text-muted-foreground">
               {t('login.noAccount')}{' '}
               <Link

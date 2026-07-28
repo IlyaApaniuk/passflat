@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/ui/reveal';
-import { ArrowRight, TrendingDown, MessageSquare, BadgePercent, Rocket, Eye } from 'lucide-react';
+import { ArrowRight, TrendingDown, Building2, Droplets, ShieldCheck, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -32,23 +32,23 @@ const bentoItems: BentoItem[] = [
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'directContactTitle',
-    descKey: 'directContactDesc',
-    icon: MessageSquare,
+    titleKey: 'buildingFactsTitle',
+    descKey: 'buildingFactsDesc',
+    icon: Building2,
     className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'noAgencyFeesTitle',
-    descKey: 'noAgencyFeesDesc',
-    icon: BadgePercent,
+    titleKey: 'hiddenChargesTitle',
+    descKey: 'hiddenChargesDesc',
+    icon: Droplets,
     className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },
   {
-    titleKey: 'quickProcessTitle',
-    descKey: 'quickProcessDesc',
-    icon: Rocket,
+    titleKey: 'depositReturnTitle',
+    descKey: 'depositReturnDesc',
+    icon: ShieldCheck,
     className: 'lg:col-span-1',
     gradient: 'from-accent/10 via-transparent to-transparent',
   },

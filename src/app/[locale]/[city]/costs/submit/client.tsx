@@ -164,7 +164,8 @@ interface CostSubmitClientProps {
   editMode?: boolean;
   existingReport?: ExistingReport | null;
   prefill?: CostFormPrefill | null;
-  source?: 'checker';
+  /** Attribution for `cost_form_started`; anything else lands as "direct". */
+  source?: 'checker' | 'review' | 'building';
   canFillOnBehalf?: boolean;
   adminImportMode?: AdminImportMode;
 }
@@ -359,9 +360,9 @@ export function CostSubmitClient({
       const raw = localStorage.getItem(draftKey);
       if (raw) {
         const draft = JSON.parse(raw);
-        // A checker deep-link is an explicit address choice. Keep a draft only
+        // An address deep-link is an explicit address choice. Keep a draft only
         // when it belongs to that exact Google place; a stale draft for another
-        // home must never silently replace the address the visitor just checked.
+        // home must never silently replace the address the visitor just picked.
         if (prefill && draft.placeId !== prefill.placeId) return;
         // One-time hydration from a saved draft (external store → state) PLUS
         // syncing the progressive-disclosure toggles to the restored values.
@@ -559,9 +560,14 @@ export function CostSubmitClient({
 
       const utilityFields = showDetailedUtilities
         ? {
-            electricity: formData.electricityIncluded
-              ? undefined
-              : formData.electricity || undefined,
+            // With the seasonal view open the single input isn't rendered, so a
+            // value still sitting in it (an edit prefilled from the saved
+            // average) must not be sent: the API prefers the single value over
+            // the winter/summer pair and would keep the stale average.
+            electricity:
+              formData.electricityIncluded || showElectricitySeasonal
+                ? undefined
+                : formData.electricity || undefined,
             electricityIncluded: formData.electricityIncluded || undefined,
             electricityWinter:
               (!formData.electricityIncluded &&
@@ -574,7 +580,10 @@ export function CostSubmitClient({
                 formData.electricitySummer) ||
               undefined,
             gas: formData.gas || undefined,
-            heating: formData.heatingIncluded ? undefined : formData.heating || undefined,
+            heating:
+              formData.heatingIncluded || showHeatingSeasonal
+                ? undefined
+                : formData.heating || undefined,
             heatingIncluded: formData.heatingIncluded || undefined,
             heatingWinter:
               (!formData.heatingIncluded && showHeatingSeasonal && formData.heatingWinter) ||
@@ -716,9 +725,12 @@ export function CostSubmitClient({
     }
   };
 
+  // Mirrors what the submit actually sends: with the seasonal view open the
+  // single value is never submitted, so it must not count towards the preview
+  // total either (otherwise an edit shows the stale average it just replaced).
   const effectiveElectricity = formData.electricityIncluded
     ? 0
-    : showElectricitySeasonal && (formData.electricityWinter || formData.electricitySummer)
+    : showElectricitySeasonal
       ? Math.round(
           ((parseInt(formData.electricityWinter) || 0) +
             (parseInt(formData.electricitySummer) || 0)) /
@@ -728,7 +740,7 @@ export function CostSubmitClient({
 
   const effectiveHeating = formData.heatingIncluded
     ? 0
-    : showHeatingSeasonal && (formData.heatingWinter || formData.heatingSummer)
+    : showHeatingSeasonal
       ? Math.round(
           ((parseInt(formData.heatingWinter) || 0) + (parseInt(formData.heatingSummer) || 0)) / 2,
         )
@@ -795,6 +807,13 @@ export function CostSubmitClient({
   const completeness = Math.round(
     (qualitySignals.filter(Boolean).length / qualitySignals.length) * 100,
   );
+  const progressLabel = !coreComplete
+    ? t('costs.submit.coreProgress', { filled: coreFilled, total: coreFields.length })
+    : completeness >= 100
+      ? t('costs.submit.weightFull')
+      : completeness >= 60
+        ? t('costs.submit.weightGood')
+        : t('costs.submit.weightLight');
 
   if (submitted && wasFlagged) {
     return (
@@ -1471,6 +1490,7 @@ export function CostSubmitClient({
                         <Input
                           id="areaM2"
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           required={!isRoom}
                           placeholder="e.g., 45"
@@ -1488,6 +1508,7 @@ export function CostSubmitClient({
                         <Input
                           id="rooms"
                           type="number"
+                          inputMode="numeric"
                           min="1"
                           placeholder="e.g., 2"
                           value={formData.rooms}
@@ -1499,6 +1520,7 @@ export function CostSubmitClient({
                         <Input
                           id="floor"
                           type="number"
+                          inputMode="numeric"
                           min="0"
                           placeholder="e.g., 3"
                           value={formData.floor}
@@ -1726,6 +1748,7 @@ export function CostSubmitClient({
                             <Input
                               id="electricity"
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               placeholder="e.g., 150"
                               value={formData.electricity}
@@ -1736,6 +1759,7 @@ export function CostSubmitClient({
                             <div className="grid grid-cols-2 gap-2">
                               <Input
                                 type="number"
+                                inputMode="decimal"
                                 min="0"
                                 placeholder={t('costs.submit.winter')}
                                 value={formData.electricityWinter}
@@ -1745,6 +1769,7 @@ export function CostSubmitClient({
                               />
                               <Input
                                 type="number"
+                                inputMode="decimal"
                                 min="0"
                                 placeholder={t('costs.submit.summer')}
                                 value={formData.electricitySummer}
@@ -1788,6 +1813,7 @@ export function CostSubmitClient({
                           <Input
                             id="gas"
                             type="number"
+                            inputMode="decimal"
                             min="0"
                             placeholder="e.g., 80"
                             value={formData.gas}
@@ -1824,6 +1850,7 @@ export function CostSubmitClient({
                             <Input
                               id="heating"
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               placeholder="e.g., 200"
                               value={formData.heating}
@@ -1834,6 +1861,7 @@ export function CostSubmitClient({
                             <div className="grid grid-cols-2 gap-2">
                               <Input
                                 type="number"
+                                inputMode="decimal"
                                 min="0"
                                 placeholder={t('costs.submit.winter')}
                                 value={formData.heatingWinter}
@@ -1841,6 +1869,7 @@ export function CostSubmitClient({
                               />
                               <Input
                                 type="number"
+                                inputMode="decimal"
                                 min="0"
                                 placeholder={t('costs.submit.summer')}
                                 value={formData.heatingSummer}
@@ -1899,6 +1928,7 @@ export function CostSubmitClient({
                             <Input
                               id="water"
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               placeholder="e.g., 50"
                               value={formData.water}
@@ -1922,6 +1952,7 @@ export function CostSubmitClient({
                             <Input
                               id="internet"
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               placeholder="e.g., 79"
                               value={formData.internet}
@@ -1943,6 +1974,7 @@ export function CostSubmitClient({
                             <Input
                               id="other"
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               placeholder="e.g., 30"
                               value={formData.other}
@@ -2028,6 +2060,7 @@ export function CostSubmitClient({
                                 <div className="grid gap-2 sm:grid-cols-2">
                                   <Input
                                     type="number"
+                                    inputMode="decimal"
                                     min="0"
                                     placeholder={t('costs.submit.periodicAmountPlaceholder')}
                                     value={row.amount}
@@ -2320,17 +2353,46 @@ export function CostSubmitClient({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className="hidden text-xs text-muted-foreground sm:inline">
-                      {!coreComplete
-                        ? t('costs.submit.coreProgress', {
-                            filled: coreFilled,
-                            total: coreFields.length,
-                          })
-                        : completeness >= 100
-                          ? t('costs.submit.weightFull')
-                          : completeness >= 60
-                            ? t('costs.submit.weightGood')
-                            : t('costs.submit.weightLight')}
+                    {/* The sentence doesn't fit beside the button on a phone, so
+                        mobile gets the same progress as dots + a count. Both
+                        variants are display:none at some width, which also drops
+                        them from the a11y tree — hence the always-present
+                        screen-reader copy. */}
+                    <span className="sr-only">{progressLabel}</span>
+                    <span
+                      aria-hidden="true"
+                      title={progressLabel}
+                      className="flex items-center gap-1 text-xs text-muted-foreground sm:hidden"
+                    >
+                      {!coreComplete ? (
+                        <>
+                          <span className="flex items-center gap-1">
+                            {coreFields.map((value, i) => (
+                              <span
+                                key={i}
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  value ? 'bg-primary' : 'bg-muted-foreground/30'
+                                }`}
+                              />
+                            ))}
+                          </span>
+                          <span className="tabular-nums">
+                            {coreFilled}/{coreFields.length}
+                          </span>
+                        </>
+                      ) : (
+                        <span
+                          className={`tabular-nums ${completeness >= 100 ? 'font-medium text-primary' : ''}`}
+                        >
+                          {completeness}%
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="hidden text-xs text-muted-foreground sm:inline"
+                    >
+                      {progressLabel}
                     </span>
                     <Button type="submit" size="lg" disabled={submitting}>
                       {submitting ? (

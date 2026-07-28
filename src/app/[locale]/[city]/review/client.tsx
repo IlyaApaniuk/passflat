@@ -200,6 +200,10 @@ export function ReviewClient({
           <Card>
             <CardContent className="px-5 sm:px-6">
               <BuildingTagPicker
+                // Remount on a different address: the picker keeps its own
+                // selection and "saved" state, so without this a second lookup
+                // shows the previous building's thank-you card.
+                key={building.id}
                 buildingId={building.id}
                 citySlug={citySlug}
                 address={building.address}

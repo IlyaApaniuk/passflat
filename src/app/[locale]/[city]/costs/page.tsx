@@ -9,6 +9,7 @@ import { CostsOverviewClient, type CostAccess } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { median } from '@/lib/cost-stats';
 import { getBuildingsData } from '@/lib/cost-aggregates';
+import { getContributionState } from '@/lib/contribution';
 import type { CityBounds } from '@/lib/listings-data';
 
 const ANON_ACCESS: CostAccess = {
@@ -39,30 +40,17 @@ async function getCostAccess(): Promise<CostAccess> {
     } = await supabase.auth.getUser();
     if (!user) return empty;
 
-    const [existingReport, profile] = await Promise.all([
-      prisma.costReport.findFirst({
-        where: { authorId: user.id },
-        select: { id: true, verificationStatus: true, isVisible: true },
-      }),
+    const [contribution, profile] = await Promise.all([
+      getContributionState(user.id),
       prisma.profile.findUnique({
         where: { id: user.id },
         select: { costAccessUntil: true },
       }),
     ]);
 
-    let hasContributedData = false;
-    let isFlagged = false;
-    if (existingReport) {
-      if (existingReport.verificationStatus === 'flagged' && !existingReport.isVisible) {
-        isFlagged = true;
-      } else {
-        hasContributedData = true;
-      }
-    }
-
     return {
-      hasContributedData,
-      isFlagged,
+      hasContributedData: contribution.hasContributed,
+      isFlagged: contribution.isFlagged,
       costAccessUntil: profile?.costAccessUntil ? profile.costAccessUntil.toISOString() : null,
     };
   } catch {

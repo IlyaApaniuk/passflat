@@ -15,6 +15,7 @@ import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
 import { median, perAreaValues } from '@/lib/cost-stats';
+import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -166,10 +167,33 @@ async function getTopBuildingCostData() {
   };
 }
 
+/**
+ * Per-district medians for the district cards. Same roll-up the district pages
+ * use, so a card and the page it links to can never disagree.
+ */
+async function getDistrictMedians() {
+  const city = await prisma.city.findUnique({
+    where: { slug: DEFAULT_CITY },
+    select: { id: true, districts: { select: { slug: true, nameKey: true } } },
+  });
+  if (!city) return [];
+
+  const buildings = await getBuildingsData(city.id, null, null);
+  return rollUpDistricts(buildings, city.districts).map((d) => ({
+    slug: d.slug,
+    medianTotal: d.medianTotal,
+    reportCount: d.reportCount,
+  }));
+}
+
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
 const getStatsCached = unstable_cache(getStats, ['home-stats'], { revalidate: 300 });
+const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians'], {
+  revalidate: 300,
+  tags: ['costs'],
+});
 const getTopBuildingCostDataCached = unstable_cache(
   getTopBuildingCostData,
   ['home-top-building-cost'],
@@ -206,13 +230,15 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [statsResult, costResult] = await Promise.allSettled([
+  const [statsResult, costResult, districtResult] = await Promise.allSettled([
     getStatsCached(),
     getTopBuildingCostDataCached(),
+    getDistrictMediansCached(),
   ]);
 
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
+  const districtMedians = districtResult.status === 'fulfilled' ? districtResult.value : [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -223,7 +249,7 @@ async function HomeContent() {
         <main className="flex-1">
           <Hero stats={heroStats} />
           <CheckAddress citySlug={DEFAULT_CITY} />
-          <Districts />
+          <Districts medians={districtMedians} />
           <BentoGrid />
           <HowItWorks />
           <CostTransparency buildingData={costBuildingData} />
