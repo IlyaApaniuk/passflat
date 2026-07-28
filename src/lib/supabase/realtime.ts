@@ -10,7 +10,7 @@
  *
  * Joining is authorized by the policies in
  * supabase/snippets/realtime-authorization.sql, and closing the public route to
- * the same topics needs "Channel Restrictions" set to private-only under
+ * the same topics needs "Allow public access to channels" turned off under
  * Project Settings → Realtime Settings.
  */
 export const PRIVATE_CHANNEL = { config: { private: true } } as const;

@@ -4,10 +4,11 @@
 --   1. Run this in the Supabase SQL editor. Until it runs, every private join
 --      is denied (RLS is on for realtime.messages and no policy grants it), so
 --      chat has no live updates — sending still works, it goes through the API.
---   2. Dashboard → Project Settings → Realtime Settings → "Channel
---      Restrictions": switch to private-channels-only. Private channels already
---      work without this; the toggle is what stops the same topics from ALSO
---      being joinable publicly, which is the actual hole being closed.
+--   2. Dashboard → Project Settings → Realtime Settings → turn OFF "Allow
+--      public access to channels". Private channels already work without this;
+--      the toggle is what stops the same topics from ALSO being joinable as
+--      public ones. (Supabase's own settings doc calls this section "Channel
+--      Restrictions" — the toggle in the UI carries the longer label.)
 --
 -- Applies to the four topics the app uses (see src/lib/supabase/realtime.ts):
 --   chat:<conversationId>        broadcast, server → participants
