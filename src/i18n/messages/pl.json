@@ -105,7 +105,7 @@
       "statsCostReports": "Raporty kosztów",
       "statsDistricts": "Dzielnice",
       "statsBuildings": "{count, plural, one {dom} few {domy} many {domów} other {domów}} z cenami",
-      "statsPricePerM2": "mediana Warszawa",
+      "statsPricePerM2": "mediana Warszawy",
       "statsPriceUnit": "zł/m²",
       "statsExpenses": "dodatkowe koszty",
       "statsExpensesUnit": "zł/mies",
@@ -946,7 +946,7 @@
     "ctaDistrict": "Zobacz dane najemców",
     "ctaSubmit": "Dodaj swoje koszty",
     "shareLabel": "Udostępnij",
-    "sourcesNote": "Stawki: MPWiK, ciepło systemowe, G11, wywóz śmieci Warszawa (2025–2026). Czynsz najmu — mediany zgłoszeń Passflat."
+    "sourcesNote": "Stawki: MPWiK, ciepło systemowe, G11, wywóz śmieci w Warszawie (2025–2026). Czynsz najmu — mediany zgłoszeń Passflat."
   },
   "costsSeo": {
     "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
@@ -1286,7 +1286,7 @@
       "water": "Woda",
       "internet": "Internet",
       "seasonalHeating": "Sezonowe koszty ogrzewania",
-      "seasonalHeatingDesc": "Średnie koszty ogrzewania wg miesiąca. Miesiące zimowe (lis-lut) mają zwykle najwyższe koszty.",
+      "seasonalHeatingDesc": "Średnie koszty ogrzewania wg miesiąca. Miesiące zimowe (listopad–luty) mają zwykle najwyższe koszty.",
       "comparison": "Porównanie kosztów",
       "emptyCompareTitle": "Porównaj ten budynek z dzielnicą",
       "emptyCompareDesc": "Na razie za mało danych, by pokazać, jak ten budynek wypada na tle dzielnicy. Dodaj swoje koszty — pomożesz sobie i innym.",

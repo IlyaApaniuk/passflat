@@ -946,7 +946,7 @@
     "ctaDistrict": "See tenant data",
     "ctaSubmit": "Add your costs",
     "shareLabel": "Share",
-    "sourcesNote": "Tariffs: MPWiK, district heating, G11, Warsaw garbage (2025–2026). Rent — Passflat report medians."
+    "sourcesNote": "Tariffs: MPWiK, district heating, G11, waste collection in Warsaw (2025–2026). Rent — Passflat report medians."
   },
   "costsSeo": {
     "cityMetaTitle": "Rent in {city}: real costs by district",
@@ -1286,7 +1286,7 @@
       "water": "Water",
       "internet": "Internet",
       "seasonalHeating": "Seasonal Heating Costs",
-      "seasonalHeatingDesc": "Average heating costs by month. Winter months (Nov-Feb) typically have the highest costs.",
+      "seasonalHeatingDesc": "Average heating costs by month. Winter months (November–February) typically have the highest costs.",
       "comparison": "Cost comparison",
       "emptyCompareTitle": "Compare this building to the district",
       "emptyCompareDesc": "Not enough data yet to show how this building stacks up against the district. Add your costs — you'll help yourself and others.",
