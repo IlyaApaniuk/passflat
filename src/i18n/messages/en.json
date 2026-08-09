@@ -784,8 +784,8 @@
     "backToBlog": "← Blog"
   },
   "checker": {
-    "metaTitle": "Address location score in {city}",
-    "metaDescription": "Check any address in {city}: see a free location score and distances to shops, transport, schools, parks and everyday services.",
+    "metaTitle": "Check an address: location score and neighbour costs — {city}",
+    "metaDescription": "Check any address in {city}: a free location score, distances to shops, transport and schools, what makes noise nearby and what the neighbours pay.",
     "badge": "Free location score",
     "title": "Check an address: {city}",
     "subtitle": "See what's nearby, how convenient the location is and what tenants really pay in this building.",

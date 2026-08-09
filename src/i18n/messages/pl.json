@@ -784,8 +784,8 @@
     "backToBlog": "← Blog"
   },
   "checker": {
-    "metaTitle": "Ocena lokalizacji adresu w mieście {city}",
-    "metaDescription": "Sprawdź dowolny adres w mieście {city}: zobacz bezpłatną ocenę lokalizacji oraz odległości do sklepów, transportu, szkół, parków i usług.",
+    "metaTitle": "Sprawdź adres: ocena lokalizacji i koszty sąsiadów — {city}",
+    "metaDescription": "Sprawdź dowolny adres w mieście {city}: bezpłatna ocena lokalizacji, odległości do sklepów, transportu i szkół, co w pobliżu hałasuje i ile płacą sąsiedzi.",
     "badge": "Bezpłatna ocena lokalizacji",
     "title": "Sprawdź adres: {city}",
     "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
