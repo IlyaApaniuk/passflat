@@ -535,6 +535,12 @@ export async function POST(request: NextRequest) {
 /**
  * Read path for share links and dynamic OG metadata. It deliberately never
  * creates a building, increments checks, or calls Overpass.
+ *
+ * It does recompute a stale score, through the same cached/deduped path POST
+ * uses: the computation is a query over the seeded `Poi` table, not a network
+ * call. Bailing out on a version bump instead meant every link already shared
+ * turned into "этот адрес больше недоступен" the moment SCORE_VERSION moved —
+ * which is exactly the link this product is spread by.
  */
 export async function GET(request: NextRequest) {
   const citySlug = request.nextUrl.searchParams.get('city')?.trim().toLowerCase();
@@ -561,17 +567,18 @@ export async function GET(request: NextRequest) {
   if (!building) {
     return jsonError('NOT_FOUND', 'No checked address was found.', 404);
   }
-  if (!building.locationScore || building.locationScore.version < SCORE_VERSION) {
-    return new NextResponse(null, { status: 204 });
-  }
-
-  const [neighbours, nuisances, tenantTags, costs] = await Promise.all([
+  const [score, neighbours, nuisances, tenantTags, costs] = await Promise.all([
+    getOrComputeScore(building),
     findNeighboursWithCosts(building),
     findBuildingNuisances(building),
     findTenantTags(building.id),
     summariseCosts(building),
   ]);
-  return NextResponse.json(
-    toResponse(building, building.locationScore, neighbours, nuisances, tenantTags, costs),
-  );
+  // Only a building we genuinely cannot score — no coordinates, or a city with
+  // no points imported — still ends the shared link here.
+  if (!score) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  return NextResponse.json(toResponse(building, score, neighbours, nuisances, tenantTags, costs));
 }

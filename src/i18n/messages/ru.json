@@ -72,7 +72,9 @@
     "copyFailed": "Не удалось скопировать ссылку",
     "error": "Что-то пошло не так",
     "checkAddress": "Проверить адрес",
-    "buildingReviews": "Отзывы о домах"
+    "buildingReviews": "Отзывы о домах",
+    "addressLookupFailed": "Поиск адреса не загрузился — возможно, его блокирует расширение или сеть.",
+    "retry": "Повторить"
   },
   "upload": {
     "progress": "Загрузка фото {done}/{total}…",

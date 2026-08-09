@@ -72,7 +72,9 @@
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak",
     "checkAddress": "Sprawdź adres",
-    "buildingReviews": "Opinie o budynkach"
+    "buildingReviews": "Opinie o budynkach",
+    "addressLookupFailed": "Wyszukiwarka adresów się nie wczytała — mogła ją zablokować wtyczka lub sieć.",
+    "retry": "Spróbuj ponownie"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",

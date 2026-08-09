@@ -115,6 +115,10 @@ export default async function CheckerPage({ params, searchParams }: PageProps) {
     'buildingTagPicker',
     'locationScore',
     'map',
+    // The address input reports a failed Google Maps load from `common`. On a
+    // page that is one input wide, that message is the difference between a
+    // dead end and a retry.
+    'common',
   ]);
 
   return (

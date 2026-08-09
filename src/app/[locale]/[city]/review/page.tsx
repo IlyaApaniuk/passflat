@@ -71,7 +71,14 @@ export default async function ReviewPage({ params, searchParams }: PageProps) {
   const initialPlaceId = typeof p === 'string' && p.length <= 300 ? p : null;
 
   const messages = await getMessages();
-  const clientMessages = pickMessages(messages, ['review', 'buildingTags', 'buildingTagPicker']);
+  // `common` carries the address input's Maps-failure message — this page opens
+  // on that input too, so without it the failure would be silent here.
+  const clientMessages = pickMessages(messages, [
+    'review',
+    'buildingTags',
+    'buildingTagPicker',
+    'common',
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col">

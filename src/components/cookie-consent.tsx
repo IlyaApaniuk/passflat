@@ -88,12 +88,16 @@ export function CookieConsent() {
   // the end of the document lets the last element — /review's save button — be
   // scrolled clear of it. `sticky bottom-0` bars ignore document padding, which
   // is why the banner is *also* lifted above them on these routes.
+  //
+  // Every route reserves, not just those two: a banner that hides the bottom of
+  // the fold is survivable only if a scroll can free what is under it, and on a
+  // page that ends exactly at the fold there is nothing to scroll.
   useEffect(() => {
     const node = bannerRef.current;
-    if (visible !== true || !liftAboveAction || !node) return;
+    if (visible !== true || !node) return;
 
     const reserve = () => {
-      document.body.style.paddingBottom = `${node.offsetHeight + BOTTOM_ACTION_CLEARANCE_PX}px`;
+      document.body.style.paddingBottom = `${node.offsetHeight + (liftAboveAction ? BOTTOM_ACTION_CLEARANCE_PX : 0)}px`;
     };
     reserve();
     const observer = new ResizeObserver(reserve);
@@ -137,22 +141,35 @@ export function CookieConsent() {
             liftAboveAction
               ? // Floating card rather than an edge-to-edge bar, so the gap it
                 // leaves for the page's submit button reads as intentional.
-                'fixed inset-x-2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur-sm sm:inset-x-4'
-              : 'fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm p-4 shadow-lg'
+                'fixed inset-x-2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 rounded-xl border bg-background/95 p-2.5 shadow-lg backdrop-blur-sm sm:inset-x-4 sm:p-4'
+              : 'fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 p-2.5 shadow-lg backdrop-blur-sm sm:p-4'
           }
         >
-          <div className="container mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground max-w-xl">
+          {/* One row on every width. Stacked, the banner stood 117px tall on a
+              390x664 phone and swallowed the bottom sixth of the fold — on the
+              landing that is exactly where the primary CTA sits, and a tap
+              aimed at it landed on the privacy link underneath. */}
+          <div className="container mx-auto flex flex-row items-center justify-between gap-3">
+            <p className="max-w-xl text-xs leading-tight text-muted-foreground sm:text-sm sm:leading-normal">
               {t.message}{' '}
               <a href="/privacy" className="underline underline-offset-4 hover:text-foreground">
                 {t.learnMore}
               </a>
             </p>
-            <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={handleDecline}>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm"
+                onClick={handleDecline}
+              >
                 {t.decline}
               </Button>
-              <Button size="sm" onClick={handleAccept}>
+              <Button
+                size="sm"
+                className="h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm"
+                onClick={handleAccept}
+              >
                 {t.accept}
               </Button>
             </div>

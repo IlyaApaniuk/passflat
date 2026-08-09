@@ -72,7 +72,9 @@
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong",
     "checkAddress": "Check an address",
-    "buildingReviews": "Building reviews"
+    "buildingReviews": "Building reviews",
+    "addressLookupFailed": "Address lookup didn't load — an extension or your network may be blocking it.",
+    "retry": "Try again"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",

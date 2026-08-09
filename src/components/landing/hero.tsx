@@ -106,7 +106,10 @@ export function Hero({ stats: liveStats }: HeroProps) {
             <span className="gradient-text block pb-[0.18em]">{t('titleHighlight')}</span>
           </h1>
 
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+          {/* Tighter on mobile: this gap is the last thing between the promise
+              and the action, and on a 390x664 phone every pixel of it pushes the
+              primary CTA down into the consent banner's strip. */}
+          <p className="mx-auto mb-6 max-w-2xl text-lg text-muted-foreground sm:mb-10 sm:text-xl">
             {t('subtitle')}
           </p>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { MapPin } from 'lucide-react';
 
@@ -62,15 +63,36 @@ function bootstrapGoogleMaps() {
         s.onerror = () => reject(new Error('Failed to load Google Maps'));
         document.head.appendChild(s);
       });
+      // Without this the first failure is cached in the closure forever and a
+      // retry re-awaits the same rejected promise, so it can never recover —
+      // not on a new mount, and not on the retry button.
+      coreReady.catch(() => {
+        coreReady = null;
+      });
     }
     return coreReady.then(() => m.importLibrary(name));
   };
 }
 
+/** Past this, treat the loader as gone. Google's script exposes no timeout of
+ *  its own, and a request that never settles left the input disabled forever. */
+const MAPS_LOAD_TIMEOUT_MS = 10_000;
+
 function ensureMapsLoaded(): Promise<void> {
   if (placesLibPromise) return placesLibPromise;
   bootstrapGoogleMaps();
-  placesLibPromise = google.maps.importLibrary('places').then(() => {});
+  const load = google.maps.importLibrary('places').then(() => {});
+  placesLibPromise = Promise.race([
+    load,
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error('Google Maps timed out')), MAPS_LOAD_TIMEOUT_MS),
+    ),
+  ]);
+  // A rejected module-level promise would be cached as a permanent failure, so
+  // the next mount (or the retry button) gets to try again from scratch.
+  placesLibPromise.catch(() => {
+    placesLibPromise = null;
+  });
   return placesLibPromise;
 }
 
@@ -86,15 +108,33 @@ export function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompleteSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const t = useTranslations('common');
 
+  // An ad-blocker, a spent Places quota or a dead key all end here. Before, the
+  // promise had no rejection path at all: the input stayed `disabled` with no
+  // message, and on the checker — a page that is nothing but this input — that
+  // was the whole product silently gone.
   useEffect(() => {
-    ensureMapsLoaded().then(() => {
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
-      setIsLoading(false);
-    });
-  }, []);
+    let active = true;
+    ensureMapsLoaded()
+      .then(() => {
+        if (!active) return;
+        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsLoading(false);
+        setLoadFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [attempt]);
 
   const fetchSuggestions = useCallback(
     async (input: string) => {
@@ -214,9 +254,28 @@ export function AddressAutocomplete({
         onFocus={() => suggestions.length > 0 && setIsOpen(true)}
         placeholder={placeholder}
         className="pl-9"
-        disabled={isLoading}
+        disabled={isLoading || loadFailed}
         autoComplete="off"
       />
+      {loadFailed && (
+        <p className="mt-2 text-sm text-destructive">
+          {t('addressLookupFailed')}{' '}
+          <button
+            type="button"
+            onClick={() => {
+              // Reset here rather than at the top of the effect: the retry is
+              // what changes these, and setState inside an effect body is the
+              // pattern this codebase lints against.
+              setIsLoading(true);
+              setLoadFailed(false);
+              setAttempt((n) => n + 1);
+            }}
+            className="font-medium underline underline-offset-4"
+          >
+            {t('retry')}
+          </button>
+        </p>
+      )}
       {isOpen && suggestions.length > 0 && (
         <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 shadow-md">
           {suggestions.map((suggestion, i) => {
