@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import {
   Bus,
   GraduationCap,
@@ -27,6 +28,10 @@ import { cn } from '@/lib/utils';
 // actually switches to the map tab. Type-only imports above stay erased, so
 // nothing of the map reaches the initial payload of the pages using this block.
 const LocationPoiMap = lazy(() => import('@/components/map/location-poi-map'));
+
+/** The page a location score is being read on — carried on every event this
+ *  block and its map send, since all three surfaces emit the same names. */
+export type ScoreSurface = 'checker' | 'building' | 'listing';
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   supermarket: ShoppingBasket,
@@ -152,6 +157,8 @@ export function LocationScoreBlock({
   lat,
   lng,
   neighbours,
+  surface,
+  buildingId,
   className,
 }: {
   overall: number;
@@ -167,10 +174,16 @@ export function LocationScoreBlock({
   lng?: number | null;
   /** Buildings nearby whose costs we know — the layer no amenities map has. */
   neighbours?: NeighbourMarker[];
+  /** Which page this score is being read on. Required: the same block earns a
+   *  visit on the checker and keeps one on a building page, and an opened map
+   *  means something different in each. */
+  surface: ScoreSurface;
+  buildingId?: string;
   className?: string;
 }) {
   const t = useTranslations('locationScore');
   const locale = useLocale();
+  const posthog = usePostHog();
   const formatDistance = useDistanceFormatter();
   // List first: the map chunk is heavy and every mounted map costs a Mapbox load.
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -178,6 +191,38 @@ export function LocationScoreBlock({
   const tier = scoreTier(overall);
   const canShowMap = citySlug != null && lat != null && lng != null;
   const neighbourCount = neighbours?.length ?? 0;
+
+  const pois = useMemo(
+    () =>
+      categories.flatMap((category) =>
+        (category.nearby ?? []).map((poi) => ({
+          category: category.key,
+          name: poi.name,
+          lat: poi.lat,
+          lng: poi.lng,
+          distanceM: poi.distanceM,
+        })),
+      ),
+    [categories],
+  );
+
+  // The denominator for everything below: how often a score is put in front of
+  // someone, per surface. Without it an opened map is a number with nothing to
+  // divide by.
+  const viewCapturedRef = useRef(false);
+  const mapOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!posthog || viewCapturedRef.current) return;
+    viewCapturedRef.current = true;
+    posthog.capture('location_score_viewed', {
+      surface,
+      city: citySlug,
+      building_id: buildingId,
+      score: overall,
+      has_map: canShowMap,
+      neighbour_count: neighbourCount,
+    });
+  }, [buildingId, canShowMap, citySlug, neighbourCount, overall, posthog, surface]);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -202,7 +247,24 @@ export function LocationScoreBlock({
                   <button
                     key={mode}
                     type="button"
-                    onClick={() => setView(mode)}
+                    onClick={() => {
+                      // Only the switch INTO the map counts, and only the first
+                      // one per mount: this is the event the map exists to be
+                      // measured by, and toggling back and forth would inflate
+                      // it into a click counter.
+                      if (mode === 'map' && view !== 'map' && !mapOpenedRef.current) {
+                        mapOpenedRef.current = true;
+                        posthog?.capture('location_map_opened', {
+                          surface,
+                          city: citySlug,
+                          building_id: buildingId,
+                          score: overall,
+                          neighbour_count: neighbourCount,
+                          poi_count: pois.length,
+                        });
+                      }
+                      setView(mode);
+                    }}
                     aria-pressed={view === mode}
                     className={cn(
                       'rounded-md px-3 py-1 text-xs font-medium transition-colors',
@@ -225,16 +287,10 @@ export function LocationScoreBlock({
                 citySlug={citySlug}
                 lat={lat}
                 lng={lng}
-                pois={categories.flatMap((category) =>
-                  (category.nearby ?? []).map((poi) => ({
-                    category: category.key,
-                    name: poi.name,
-                    lat: poi.lat,
-                    lng: poi.lng,
-                    distanceM: poi.distanceM,
-                  })),
-                )}
+                pois={pois}
                 neighbours={neighbours ?? []}
+                surface={surface}
+                buildingId={buildingId}
                 formatDistance={formatDistance}
                 formatMoney={(amount) =>
                   `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)} zł`

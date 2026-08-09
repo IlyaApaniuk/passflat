@@ -422,6 +422,10 @@ export function CostSubmitClient({
   const abandonSentRef = useRef(false);
   const submittedRef = useRef(false);
   const draftRestoredCapturedRef = useRef(false);
+  /** Guards the two ways an address arrives without being picked (a deep-link
+   *  prefill, a restored draft) against reporting the same address twice. A
+   *  later manual pick still reports: that is a different address. */
+  const addressSelectedCapturedRef = useRef(false);
   /** True once the form has survived past its first tick — the gate on the
    *  unmount-based departure below. */
   const settledRef = useRef(false);
@@ -563,6 +567,22 @@ export function CostSubmitClient({
           }
         : {}),
     });
+    // The next funnel step is "this form has an address", not "someone clicked a
+    // Google suggestion" — the checker, the building pages and the review upsell
+    // all arrive with the address already resolved, so no suggestion is ever
+    // clicked on those paths and the step would read zero however many of them
+    // go on to submit. `method` keeps a handed-over address apart from a typed
+    // one; the two must never be summed as if they measured the same effort.
+    if (prefill) {
+      addressSelectedCapturedRef.current = true;
+      posthog.capture('cost_form_address_selected', {
+        city: citySlug,
+        method: 'prefill',
+        source: source ?? 'direct',
+        building_id: prefill.buildingId,
+        place_id: prefill.placeId,
+      });
+    }
   }, [citySlug, editMode, posthog, prefill, source]);
 
   const discardDraft = () => {
@@ -653,7 +673,12 @@ export function CostSubmitClient({
       lng: place.lng,
     });
     lastFieldRef.current = 'address';
-    posthog?.capture('cost_form_address_selected', { city: citySlug });
+    addressSelectedCapturedRef.current = true;
+    posthog?.capture('cost_form_address_selected', {
+      city: citySlug,
+      method: 'autocomplete',
+      source: source ?? 'direct',
+    });
   };
 
   /** The form's own translated label for an API field name (see
@@ -1078,7 +1103,18 @@ export function CostSubmitClient({
     // Carries the same progress snapshot, so "how much work did autosave save"
     // is answerable, not just "how often does the banner appear".
     posthog.capture('cost_form_draft_restored', { ...progressRef.current });
-  }, [draftRestored, posthog]);
+    // The draft brings its own address back (see the hydration above) — the
+    // second way to hold an address without picking one, and the same hole in
+    // the funnel if it goes unreported.
+    if (!addressSelectedCapturedRef.current && progressRef.current.has_address) {
+      addressSelectedCapturedRef.current = true;
+      posthog.capture('cost_form_address_selected', {
+        city: citySlug,
+        method: 'draft',
+        source: source ?? 'direct',
+      });
+    }
+  }, [citySlug, draftRestored, posthog, source]);
 
   useEffect(() => {
     // Edit mode is excluded to keep the funnel arithmetic honest: the opener

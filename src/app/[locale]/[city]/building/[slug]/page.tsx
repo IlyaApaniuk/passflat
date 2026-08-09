@@ -5,7 +5,8 @@ import { unstable_cache } from 'next/cache';
 import { getLocale, getTranslations, setRequestLocale } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
-import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
+import { JsonLd, breadcrumbJsonLd, buildingPlaceJsonLd } from '@/lib/json-ld';
+import { formatAddressDisplay } from '@/lib/address';
 import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import { SCORE_VERSION } from '@/lib/location-score';
@@ -318,12 +319,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // District `nameKey` holds a plain display name (e.g. "Mokotów"), unlike city
   // nameKey which is a translation key — so it's used as-is, not through t().
   const districtName = building.district?.nameKey ?? cityName;
+  const address = formatAddressDisplay(building.addressFull);
 
-  const title = `${building.addressFull} — Cost Reports | Passflat`;
-  const description = `Real rental costs for ${building.addressFull}, ${districtName}. Crowdsourced from actual tenants.`;
-
-  // Rich cost share-card when the building has data (the viral artifact people
-  // drop into chats); generic title/subtitle OG otherwise.
   const reports = building.costReports;
   const num = (v: unknown) => (v == null ? null : Number(v));
   const totalMedian = median(reports.map((r) => num(r.totalMonthlyAvg)));
@@ -336,10 +333,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }),
   );
 
+  // These pages are found by searching a bare street address — "pańska 96
+  // warszawa" — so the city belongs in the title, in the searcher's own
+  // language, and the medians belong in the description: they are the only
+  // thing on offer that the ten results above cannot show.
+  const title = t('costsSeo.buildingMetaTitle', { address, city: cityName });
+  const money = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  const description =
+    totalMedian != null && rentMedian != null && expensesMedian != null
+      ? t('costsSeo.buildingMetaDescriptionWithData', {
+          address,
+          city: cityName,
+          total: money.format(totalMedian),
+          rent: money.format(rentMedian),
+          expenses: money.format(expensesMedian),
+          reports: t('costs.overview.nReports', { count: reports.length }),
+        })
+      : t('costsSeo.buildingMetaDescription', { address, city: cityName });
+
+  // Rich cost share-card when the building has data (the viral artifact people
+  // drop into chats); generic title/subtitle OG otherwise.
   const ogImage =
     totalMedian != null
       ? getCostOgImage({
-          title: building.addressFull,
+          title: address,
           subtitle: `${districtName}, ${cityName} · ${t('costs.overview.nReports', { count: reports.length })}`,
           stat: `≈ ${totalMedian.toLocaleString()} zł`,
           statLabel: t('costs.building.medianMonthlyTotal'),
@@ -348,7 +365,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
               ? `${t('costs.building.rent')} ≈ ${rentMedian.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${expensesMedian.toLocaleString()}`
               : undefined,
         })
-      : getOgImage(building.addressFull, cityName);
+      : getOgImage(address, cityName);
 
   return {
     title,
@@ -633,6 +650,9 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         }
       : null;
 
+  const displayAddress = formatAddressDisplay(building.addressFull);
+  const buildingPath = `/${citySlug}/building/${building.slug}`;
+
   return (
     <>
       <JsonLd
@@ -646,14 +666,24 @@ export default async function BuildingCostsPage({ params }: PageProps) {
                 },
               ]
             : []),
-          { name: building.addressFull, path: `/${citySlug}/building/${building.slug}` },
+          { name: displayAddress, path: buildingPath },
         ])}
+      />
+      <JsonLd
+        data={buildingPlaceJsonLd({
+          address: displayAddress,
+          city: t(building.city.nameKey),
+          district: building.district?.nameKey,
+          url: getAlternates(buildingPath, locale).canonical,
+          lat: building.lat == null ? null : Number(building.lat),
+          lng: building.lng == null ? null : Number(building.lng),
+        })}
       />
       <BuildingCostsClient
         building={{
           id: building.id,
           slug: building.slug,
-          address: building.addressFull,
+          address: displayAddress,
           district: building.district?.nameKey ?? '',
           districtSlug: building.district?.slug ?? '',
           city: t(building.city.nameKey),

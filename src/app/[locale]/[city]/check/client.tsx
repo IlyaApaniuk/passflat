@@ -115,6 +115,14 @@ interface SuccessfulCheck {
   source: 'shared_url' | 'address_search';
 }
 
+/** A check that ended in nothing. Reported so `checker_viewed` minus
+ *  `address_checked` stops meaning both "nobody tried" and "it broke". */
+interface FailedCheck {
+  sequence: number;
+  reason: 'not_found' | 'rate_limited' | 'generic' | 'incomplete_address';
+  source: 'shared_url' | 'address_search';
+}
+
 interface CheckerClientProps {
   citySlug: string;
   cityName: string;
@@ -294,6 +302,7 @@ export function CheckerClient({
     initialPlaceId ? `loading-${initialPlaceId}` : 'empty',
   );
   const [successfulCheck, setSuccessfulCheck] = useState<SuccessfulCheck | null>(null);
+  const [failedCheck, setFailedCheck] = useState<FailedCheck | null>(null);
 
   useEffect(() => {
     if (!posthog || viewCapturedRef.current) return;
@@ -321,6 +330,20 @@ export function CheckerClient({
     });
   }, [citySlug, posthog, successfulCheck]);
 
+  // Failures are deferred the same way and share the sequence counter with the
+  // successes, so one attempt can never be counted as both.
+  useEffect(() => {
+    if (!posthog || !failedCheck || capturedCheckSequenceRef.current === failedCheck.sequence) {
+      return;
+    }
+    capturedCheckSequenceRef.current = failedCheck.sequence;
+    posthog.capture('checker_check_failed', {
+      city: citySlug,
+      reason: failedCheck.reason,
+      source: failedCheck.source,
+    });
+  }, [citySlug, failedCheck, posthog]);
+
   const updateUrl = useCallback((placeId: string | null) => {
     const url = new URL(window.location.href);
     if (placeId) url.searchParams.set('p', placeId);
@@ -336,6 +359,9 @@ export function CheckerClient({
       setStatus('loading');
       setResult(null);
       setOutsideCity(null);
+      const attemptSource = attempt.kind === 'get' ? 'shared_url' : 'address_search';
+      const fail = (reason: FailedCheck['reason']) =>
+        setFailedCheck({ sequence, reason, source: attemptSource });
 
       try {
         const response =
@@ -354,6 +380,7 @@ export function CheckerClient({
           setErrorKind('notFound');
           setCanRetry(false);
           setStatus('error');
+          fail('not_found');
           return;
         }
         if (!response.ok) {
@@ -361,6 +388,7 @@ export function CheckerClient({
           setErrorKind(response.status === 429 ? 'rateLimited' : notFound ? 'notFound' : 'generic');
           setCanRetry(!notFound);
           setStatus('error');
+          fail(response.status === 429 ? 'rate_limited' : notFound ? 'not_found' : 'generic');
           return;
         }
 
@@ -384,6 +412,7 @@ export function CheckerClient({
         if (sequence !== requestSequenceRef.current) return;
         setErrorKind('generic');
         setStatus('error');
+        fail('generic');
       }
     },
     [citySlug, updateUrl],
@@ -431,13 +460,16 @@ export function CheckerClient({
       !place.lat ||
       !place.lng
     ) {
-      ++requestSequenceRef.current;
+      const sequence = ++requestSequenceRef.current;
       setResult(null);
       setOutsideCity(null);
       setErrorKind('completeAddress');
       setCanRetry(false);
       setStatus('error');
       updateUrl(null);
+      // A street with no number: the visitor picked something, it just cannot
+      // be checked. Counts as a failed check, not as an unmade one.
+      setFailedCheck({ sequence, reason: 'incomplete_address', source: 'address_search' });
       return;
     }
 
@@ -566,6 +598,8 @@ export function CheckerClient({
               lat={result.building.lat}
               lng={result.building.lng}
               neighbours={result.neighbours}
+              surface="checker"
+              buildingId={result.building.id}
             />
 
             {/* Noise sources. Needs no tenant input, so unlike the tag block

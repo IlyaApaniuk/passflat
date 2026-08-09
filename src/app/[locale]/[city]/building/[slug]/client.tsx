@@ -631,7 +631,12 @@ export function BuildingCostsClient({
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h1 className="text-2xl font-bold md:text-3xl">{building.address}</h1>
+                {/* City in the heading, not only in the line under it: these
+                    pages are searched for as "<street> <city>", and the URL
+                    carries the English slug (/warsaw/). */}
+                <h1 className="text-2xl font-bold md:text-3xl">
+                  {building.address}, {building.city}
+                </h1>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
@@ -976,6 +981,7 @@ export function BuildingCostsClient({
                   buildingId={building.id}
                   citySlug={citySlug}
                   initialData={initialLocationScore}
+                  surface="building"
                 />
               </motion.div>
 

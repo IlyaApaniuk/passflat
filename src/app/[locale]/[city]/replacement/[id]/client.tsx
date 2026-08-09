@@ -968,7 +968,11 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
               </div>
 
               <div className="mt-4">
-                <LocationScore buildingId={listing.buildingId} citySlug={listing.citySlug} />
+                <LocationScore
+                  buildingId={listing.buildingId}
+                  citySlug={listing.citySlug}
+                  surface="listing"
+                />
               </div>
 
               {isOwner ? (

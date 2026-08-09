@@ -381,6 +381,9 @@
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
     "titleRoommate": "Szukam współlokatora",
+    "roommateMetaDescription": "Ogłoszenia współlokatorów — {city}: pokoje we wspólnych mieszkaniach, bez pośredników. Zanim się wprowadzisz, sprawdź realne koszty budynku: czynsz, opłaty i kaucję.",
+    "roommateCostsBridge": "Zanim się wprowadzisz — sprawdź realne koszty budynku: czynsz, opłaty, kaucja.",
+    "roommateCostsBridgeCta": "Sprawdź adres",
     "titleSublet": "Tymczasowy podnajem",
     "listingsInCity": "<b>{count}</b> {count, plural, one {oferta} few {oferty} many {ofert} other {ofert}}",
     "filters": {
@@ -781,8 +784,8 @@
     "backToBlog": "← Blog"
   },
   "checker": {
-    "metaTitle": "Ocena lokalizacji adresu w mieście {city}",
-    "metaDescription": "Sprawdź dowolny adres w mieście {city}: zobacz bezpłatną ocenę lokalizacji oraz odległości do sklepów, transportu, szkół, parków i usług.",
+    "metaTitle": "Sprawdź adres: ocena lokalizacji i koszty sąsiadów — {city}",
+    "metaDescription": "Sprawdź dowolny adres w mieście {city}: bezpłatna ocena lokalizacji, odległości do sklepów, transportu i szkół, co w pobliżu hałasuje i ile płacą sąsiedzi.",
     "badge": "Bezpłatna ocena lokalizacji",
     "title": "Sprawdź adres: {city}",
     "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
@@ -962,7 +965,10 @@
     "districtIntro": "Ile naprawdę płacą najemcy w {district}, {city} — czynsz, opłaty i kaucje, budynek po budynku.",
     "buildingsHeading": "Budynki w {district}",
     "backToCity": "Wszystkie dzielnice {city}",
-    "emptyDistrict": "Brak raportów — dodaj swój jako pierwszy."
+    "emptyDistrict": "Brak raportów — dodaj swój jako pierwszy.",
+    "buildingMetaTitle": "{address}, {city} — realne koszty najmu",
+    "buildingMetaDescriptionWithData": "Ile naprawdę kosztuje wynajem — {address}, {city}: razem ≈ {total} zł/mies. (czynsz ≈ {rent}, opłaty ≈ {expenses}). {reports}.",
+    "buildingMetaDescription": "Realne koszty wynajmu — {address}, {city}: czynsz, opłaty i kaucja. Sprawdź dane albo dodaj swoje."
   },
   "costs": {
     "title": "Przejrzystość kosztów",

@@ -7,14 +7,20 @@ import { SITE_URL as baseUrl } from '@/lib/site-url';
 import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
 
 function buildAlternates(pathname: string) {
-  return Object.fromEntries(
-    routing.locales.map((locale) => [
-      locale,
-      locale === routing.defaultLocale
-        ? `${baseUrl}${pathname}`
-        : `${baseUrl}/${locale}${pathname}`,
-    ]),
-  );
+  return {
+    ...Object.fromEntries(
+      routing.locales.map((locale) => [
+        locale,
+        locale === routing.defaultLocale
+          ? `${baseUrl}${pathname}`
+          : `${baseUrl}/${locale}${pathname}`,
+      ]),
+    ),
+    // Matches the page-level hreflang set (getAlternates), which has emitted an
+    // x-default since #99. A sitemap that disagrees with the pages is a signal
+    // Google has to reconcile.
+    'x-default': `${baseUrl}${pathname}`,
+  };
 }
 
 function entry(

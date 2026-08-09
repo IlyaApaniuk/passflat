@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import MapGL, { Marker, NavigationControl, Popup } from 'react-map-gl';
 import {
   Bus,
@@ -17,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import type { ScoreSurface } from '@/components/buildings/location-score-block';
 import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
 import { cn } from '@/lib/utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -50,6 +52,9 @@ interface LocationPoiMapProps {
   neighbours: NeighbourMarker[];
   formatDistance: (meters: number) => string;
   formatMoney: (amount: number) => string;
+  /** Analytics context, handed down by the block that owns the map tab. */
+  surface: ScoreSurface;
+  buildingId?: string;
 }
 
 /** The costs layer is ours alone, so it leads the list and defaults to on. */
@@ -104,10 +109,30 @@ export default function LocationPoiMap({
   neighbours,
   formatDistance,
   formatMoney,
+  surface,
+  buildingId,
 }: LocationPoiMapProps) {
   const t = useTranslations('map');
+  const posthog = usePostHog();
   const [active, setActive] = useState<string[]>(() => LAYERS.map((layer) => layer.key));
   const [selected, setSelected] = useState<Selection | null>(null);
+
+  const select = useCallback(
+    (selection: Selection) => {
+      setSelected(selection);
+      posthog?.capture('location_map_marker_clicked', {
+        kind: selection.kind,
+        surface,
+        city: citySlug,
+        building_id: buildingId,
+        distance_m: selection.marker.distanceM,
+        ...(selection.kind === 'poi'
+          ? { category: selection.marker.category }
+          : { has_median: selection.marker.totalMedian != null }),
+      });
+    },
+    [buildingId, citySlug, posthog, surface],
+  );
 
   const toggle = useCallback((key: string) => {
     setSelected(null);
@@ -158,7 +183,7 @@ export default function LocationPoiMap({
               anchor="center"
               onClick={(event) => {
                 event.originalEvent.stopPropagation();
-                setSelected({ kind: 'neighbour', marker: neighbour });
+                select({ kind: 'neighbour', marker: neighbour });
               }}
             >
               <button
@@ -188,7 +213,7 @@ export default function LocationPoiMap({
               anchor="center"
               onClick={(event) => {
                 event.originalEvent.stopPropagation();
-                setSelected({ kind: 'poi', marker: poi });
+                select({ kind: 'poi', marker: poi });
               }}
             >
               <button
@@ -233,6 +258,19 @@ export default function LocationPoiMap({
                 </p>
                 <Link
                   href={`/${citySlug}/building/${selected.marker.slug}`}
+                  onClick={() =>
+                    // The costs layer is the one loop no amenities map has —
+                    // a neighbour's median leading into that building's page.
+                    posthog?.capture('location_map_building_clicked', {
+                      surface,
+                      city: citySlug,
+                      building_id: buildingId,
+                      target_building_slug: selected.marker.slug,
+                      has_median: selected.marker.totalMedian != null,
+                      report_count: selected.marker.reportCount,
+                      distance_m: selected.marker.distanceM,
+                    })
+                  }
                   className="mt-1.5 inline-block text-xs font-medium text-primary hover:underline"
                 >
                   {t('openBuilding')}

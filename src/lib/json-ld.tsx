@@ -125,6 +125,38 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+/**
+ * A building page as a place, not just a document. The queries these pages are
+ * found by are addresses — street, number, city — and only the breadcrumb said
+ * so, in prose. `addressLocality` is the localized city name, so each locale
+ * declares the entity in its own language.
+ */
+export function buildingPlaceJsonLd(opts: {
+  address: string;
+  city: string;
+  district?: string | null;
+  url: string;
+  lat?: number | null;
+  lng?: number | null;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: `${opts.address}, ${opts.city}`,
+    url: opts.url,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: opts.address,
+      addressLocality: opts.city,
+      ...(opts.district ? { addressRegion: opts.district } : {}),
+      addressCountry: 'PL',
+    },
+    ...(opts.lat != null && opts.lng != null
+      ? { geo: { '@type': 'GeoCoordinates', latitude: opts.lat, longitude: opts.lng } }
+      : {}),
+  };
+}
+
 export function datasetJsonLd(opts: {
   name: string;
   description: string;
