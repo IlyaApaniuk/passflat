@@ -381,6 +381,9 @@
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
     "titleRoommate": "Roommate Search",
+    "roommateMetaDescription": "Flatmate listings in {city} — rooms in shared flats, no agents. Before you move in, check what the building really costs: rent, utilities and deposit.",
+    "roommateCostsBridge": "Before you move in — check what the building really costs: rent, utilities, deposit.",
+    "roommateCostsBridgeCta": "Check an address",
     "titleSublet": "Temporary Sublets",
     "listingsInCity": "<b>{count}</b> {count, plural, one {listing} other {listings}}",
     "filters": {
@@ -962,7 +965,10 @@
     "districtIntro": "What tenants actually pay in {district}, {city} — rent, utilities and deposits, building by building.",
     "buildingsHeading": "Buildings in {district}",
     "backToCity": "All {city} districts",
-    "emptyDistrict": "No reports here yet — be the first to add yours."
+    "emptyDistrict": "No reports here yet — be the first to add yours.",
+    "buildingMetaTitle": "{address}, {city} — real rental costs",
+    "buildingMetaDescriptionWithData": "What renting {address}, {city} actually costs: ≈ {total} zł/mo in total (rent ≈ {rent}, utilities ≈ {expenses}). {reports}.",
+    "buildingMetaDescription": "Real rental costs for {address}, {city}: rent, utilities and deposit. See the data or add yours."
   },
   "costs": {
     "title": "Cost Transparency",

@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const t = await getTranslations();
   const cityName = cityRecord ? t(cityRecord.nameKey) : city;
   const title = `${t('listings.titleRoommate')} — ${cityName}`;
-  const description = t('listings.types.roommateDesc');
+  // The one query cluster that already clicks. Its description carried neither
+  // the city nor the reason to stay, so the click landed and ended here.
+  const description = t('listings.roommateMetaDescription', { city: cityName });
 
   return {
     title,

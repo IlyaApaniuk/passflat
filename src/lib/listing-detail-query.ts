@@ -145,7 +145,9 @@ export async function generateListingMetadata(
   }
 
   return {
-    title: `${listing.title} — Passflat`,
+    // No brand suffix: the locale layout's title template appends one, and two
+    // of them ("… — Passflat — Passflat") is what the SERP was showing.
+    title: listing.title,
     description:
       listing.description?.slice(0, 160) ??
       `${listing.title} in ${listing.building.district?.nameKey ?? 'Warsaw'}`,

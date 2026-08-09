@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Map, List } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
@@ -301,6 +302,30 @@ function ListingsPageInner({
               scrollToSection={filterSection}
             />
           </motion.div>
+
+          {/* Roommate search is where organic clicks actually land ("szukam
+              współlokatora warszawa"), and it is a frozen part of the product —
+              one line is what carries that visit into the cost data instead of
+              letting it end on a list of ten listings. */}
+          {listingType === 'roommate' && (
+            <div className="border-b bg-primary/5 px-4 py-2 text-sm">
+              <Link
+                href={`/${citySlug}/check`}
+                onClick={() =>
+                  posthog?.capture('cost_data_cta_clicked', {
+                    source: 'roommate_bridge',
+                    city: citySlug,
+                  })
+                }
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {t('listings.roommateCostsBridge')}{' '}
+                <span className="font-medium text-primary underline-offset-4 hover:underline">
+                  {t('listings.roommateCostsBridgeCta')}
+                </span>
+              </Link>
+            </div>
+          )}
 
           <div className="border-b bg-card px-4 py-2">
             <ActiveFilters

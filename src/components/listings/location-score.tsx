@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   LocationScoreBlock,
   LocationScoreSkeleton,
+  type ScoreSurface,
 } from '@/components/buildings/location-score-block';
 import type { CategoryResult } from '@/lib/location-score';
 
@@ -24,11 +25,14 @@ export function LocationScore({
   buildingId,
   citySlug,
   initialData,
+  surface,
 }: {
   buildingId: string;
   /** Passed through to the block; without it the map tab stays hidden. */
   citySlug?: string;
   initialData?: LocationScoreResponse | null;
+  /** Which of the two pages that mount this wrapper is being read. */
+  surface: ScoreSurface;
 }) {
   const [data, setData] = useState<LocationScoreResponse | null>(initialData ?? null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(
@@ -73,6 +77,8 @@ export function LocationScore({
       citySlug={citySlug}
       lat={data.lat}
       lng={data.lng}
+      surface={surface}
+      buildingId={buildingId}
       // No "buildings nearby with known costs" query stands behind these pages,
       // so the costs layer stays empty and the map hides its chip on its own.
       neighbours={[]}
