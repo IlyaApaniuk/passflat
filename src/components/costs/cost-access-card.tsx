@@ -52,12 +52,15 @@ function Shell({
   icon,
   title,
   desc,
+  footnote,
   children,
 }: {
   tone: Tone;
   icon: ReactNode;
   title: string;
   desc?: string;
+  /** Friction-easing line under the action buttons. */
+  footnote?: string;
   children?: ReactNode;
 }) {
   return (
@@ -77,6 +80,7 @@ function Shell({
             {children}
           </div>
         )}
+        {footnote && <p className="mt-2 text-xs text-muted-foreground">{footnote}</p>}
       </CardContent>
     </Card>
   );
@@ -192,6 +196,7 @@ export function CostAccessCard({ access, citySlug }: CostAccessCardProps) {
       icon={<CheckCircle2 className="h-4 w-4" />}
       title={t('costs.access.openTitle')}
       desc={t('costs.access.openDesc')}
+      footnote={t('costs.access.submitTrust')}
     >
       <Button asChild>
         <Link

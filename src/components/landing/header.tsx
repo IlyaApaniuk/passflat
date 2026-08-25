@@ -217,34 +217,29 @@ export function Header({ initialUser }: HeaderProps = {}) {
                 </DropdownMenu>
               </>
             ) : (
-              <>
-                <Link href="/auth/login">
-                  <Button variant="ghost" size="sm" className="rounded-full">
-                    {t('common.login')}
-                  </Button>
-                </Link>
-                <Link href={`/${DEFAULT_CITY}/costs/submit`} onClick={trackCta('header_desktop')}>
-                  <Button
-                    size="sm"
-                    className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
-                  >
-                    {t('dashboard.addCostReport')}
-                  </Button>
-                </Link>
-              </>
+              // No submit CTA up here: the header is navigation. The ask to
+              // contribute lives on /costs, where the visitor can see the data
+              // they'd be adding to (access card + sticky pill).
+              <Link href="/auth/login">
+                <Button variant="ghost" size="sm" className="rounded-full">
+                  {t('common.login')}
+                </Button>
+              </Link>
             )}
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
-            {/* The one action we want on every page. Without it the north-star
-                CTA is only reachable through the hamburger on mobile — i.e.
-                invisible to the social traffic the site is built for. */}
-            <Link href={`/${DEFAULT_CITY}/costs/submit`} onClick={trackCta('header_mobile')}>
+            {/* The main route, one tap from every page — on mobile the nav
+                hides in the hamburger, so without this pill /costs is a level
+                deeper for exactly the social traffic the site is built for.
+                It leads to the data, not the form: the contribution ask lives
+                on /costs where the visitor can see what they'd be adding to. */}
+            <Link href={`/${DEFAULT_CITY}/costs`} onClick={trackCta('header_mobile')}>
               <Button
                 size="sm"
                 className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                {t('dashboard.addCostReport')}
+                {t('common.costsShort')}
               </Button>
             </Link>
 
@@ -349,24 +344,11 @@ export function Header({ initialUser }: HeaderProps = {}) {
                     </Button>
                   </>
                 ) : (
-                  <>
-                    <Link
-                      href={`/${DEFAULT_CITY}/costs/submit`}
-                      onClick={() => {
-                        trackCta('header_menu')();
-                        setMobileMenuOpen(false);
-                      }}
-                    >
-                      <Button className="w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
-                        {t('dashboard.addCostReport')}
-                      </Button>
-                    </Link>
-                    <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" className="mt-2 w-full rounded-xl">
-                        {t('common.login')}
-                      </Button>
-                    </Link>
-                  </>
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full rounded-xl">
+                      {t('common.login')}
+                    </Button>
+                  </Link>
                 )}
               </div>
             </motion.div>

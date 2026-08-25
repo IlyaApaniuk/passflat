@@ -36,6 +36,7 @@
   },
   "common": {
     "appName": "Passflat",
+    "costsShort": "Costs",
     "login": "Log in",
     "register": "Sign up",
     "logout": "Log out",
@@ -98,7 +99,7 @@
       "trustVerified": "Verified Listings",
       "trustVerifiedDesc": "Trusted community with transparent pricing and reviews",
       "costsCta": "See real costs",
-      "trustLine": "Add your cost report — no account, no name",
+      "trustLine": "The data is open — free, no account",
       "calculatorCta": "Calculator",
       "templatesCta": "Document templates",
       "statsListings": "Listings",
@@ -111,8 +112,7 @@
       "statsExpensesUnit": "zł/mo",
       "statsDeposit": "deposit · {pct}% returned",
       "statsAvgRating": "Avg Rating",
-      "checkAddressCta": "Check an address",
-      "reviewsCta": "Describe a building"
+      "checkAddressCta": "Check an address"
     },
     "howItWorks": {
       "title": "How Passflat Works",
@@ -1085,7 +1085,8 @@
       "unlockedTitle": "Cost reports unlocked",
       "unlockedDesc": "Your reports are saved in your dashboard",
       "openTitle": "Base data is open",
-      "openDesc": "Unlock the full data by adding your costs — and help the community."
+      "openDesc": "Unlock the full data by adding your costs — and help the community.",
+      "submitTrust": "Add your cost report — no account, no name"
     },
     "submit": {
       "title": "Submit Your Costs",

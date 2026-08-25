@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { StickyCta, useScrolledPast } from '@/components/landing/sticky-cta';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { BarChart3, MapPinned, MessageSquarePlus, Sparkles } from 'lucide-react';
+import { BarChart3, MapPinned, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -32,7 +32,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
   // then. The current headline is the loss-aversion framing.)
-  const onCtaClick = (cta: 'view_costs' | 'check_address' | 'reviews') =>
+  const onCtaClick = (cta: 'view_costs' | 'check_address') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
   // When the hero CTA row scrolls above the viewport, a floating pill takes
@@ -117,9 +117,10 @@ export function Hero({ stats: liveStats }: HeroProps) {
             {t('subtitle')}
           </p>
 
-          {/* The three transparency actions. The calculator and document
-              templates live in their own section so the hero states actions,
-              not the toolbox. */}
+          {/* Two actions, two intents: browse the data or probe one address.
+              Everything else the hero used to ask for (reviews, the niche
+              rental modes) lives in the nav and its own sections — one screen,
+              one verb. */}
           <div
             ref={ctaRowRef}
             className="flex flex-col items-center justify-center gap-4 sm:flex-row"
@@ -147,56 +148,9 @@ export function Hero({ stats: liveStats }: HeroProps) {
                 {t('checkAddressCta')}
               </Link>
             </Button>
-            {/* Pillar 2 — building facts from the people who lived there. A
-                text link on mobile: three stacked full-width buttons push the
-                real medians below a 390×844 first screen, and this one also
-                appears in the nav and its own section further down. */}
-            <Button
-              size="lg"
-              variant="outline"
-              className="group hidden h-12 rounded-full px-8 text-base sm:inline-flex"
-              asChild
-            >
-              <Link href={`/${DEFAULT_CITY}/review`} onClick={() => onCtaClick('reviews')}>
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                {t('reviewsCta')}
-              </Link>
-            </Button>
-            <Link
-              href={`/${DEFAULT_CITY}/review`}
-              onClick={() => onCtaClick('reviews')}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground sm:hidden"
-            >
-              <MessageSquarePlus className="h-4 w-4" />
-              {t('reviewsCta')}
-            </Link>
           </div>
 
           <p className="mt-4 text-sm text-muted-foreground">{t('trustLine')}</p>
-
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            <Link
-              href={`/${DEFAULT_CITY}/replacement`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              {t('trustLeaseTakeovers')}
-            </Link>
-            <Link
-              href={`/${DEFAULT_CITY}/roommate`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              {t('trustRoommate')}
-            </Link>
-            <Link
-              href={`/${DEFAULT_CITY}/sublet`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              {t('trustSublet')}
-            </Link>
-          </div>
 
           {stats.length > 0 && (
             <Reveal
@@ -220,6 +174,32 @@ export function Hero({ stats: liveStats }: HeroProps) {
               ))}
             </Reveal>
           )}
+
+          {/* Niche rental modes — SEO entries, not first-screen actions, so
+              they trail the medians instead of crowding the CTA row. */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            <Link
+              href={`/${DEFAULT_CITY}/replacement`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              {t('trustLeaseTakeovers')}
+            </Link>
+            <Link
+              href={`/${DEFAULT_CITY}/roommate`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+              {t('trustRoommate')}
+            </Link>
+            <Link
+              href={`/${DEFAULT_CITY}/sublet`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              {t('trustSublet')}
+            </Link>
+          </div>
         </div>
       </div>
 

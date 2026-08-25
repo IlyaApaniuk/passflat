@@ -129,6 +129,9 @@ export function CookieConsent() {
       {visible && (
         <motion.div
           ref={bannerRef}
+          // Lets other bottom-anchored chrome (StickyCta) find and measure the
+          // banner so it can sit above it instead of underneath.
+          data-cookie-banner
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}

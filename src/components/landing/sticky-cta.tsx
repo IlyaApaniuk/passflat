@@ -45,19 +45,34 @@ export function StickyCta({
   children: ReactNode;
 }) {
   // While the cookie banner occupies the bottom edge (consent not yet
-  // answered) the pill lifts above it; the 76px clearance mirrors the
-  // banner's own lift over bottom action bars in cookie-consent.tsx.
-  const [consentAnswered, setConsentAnswered] = useState(false);
+  // answered) the pill lifts above it. The banner's height varies with copy
+  // length and wrapping, so it is measured, not assumed — a fixed clearance
+  // left the pill half-hidden whenever the banner wrapped one line taller.
+  const [clearance, setClearance] = useState(0);
   useEffect(() => {
-    const sync = () => setConsentAnswered(readConsent() !== null);
-    sync();
-    window.addEventListener(CONSENT_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(CONSENT_EVENT, sync);
-      window.removeEventListener('storage', sync);
+    if (!visible) return;
+    const measure = () => {
+      if (readConsent() !== null) {
+        setClearance(0);
+        return;
+      }
+      const banner = document.querySelector('[data-cookie-banner]');
+      setClearance(banner instanceof HTMLElement ? banner.offsetHeight + 12 : 0);
     };
-  }, []);
+    measure();
+    // Re-measure after the banner's entrance spring settles, and track later
+    // wrapping changes (rotation, resize).
+    const settle = setTimeout(measure, 700);
+    window.addEventListener(CONSENT_EVENT, measure);
+    window.addEventListener('storage', measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearTimeout(settle);
+      window.removeEventListener(CONSENT_EVENT, measure);
+      window.removeEventListener('storage', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, [visible]);
 
   return (
     <AnimatePresence>
@@ -70,11 +85,8 @@ export function StickyCta({
           // pointer-events split: the full-width wrapper centers the pill
           // without blocking taps on content beside it. z-40 stays under the
           // header and consent banner (both z-50).
-          className={`pointer-events-none fixed inset-x-0 z-40 flex justify-center ${
-            consentAnswered
-              ? 'bottom-[calc(1rem+env(safe-area-inset-bottom))]'
-              : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'
-          }`}
+          className="pointer-events-none fixed inset-x-0 z-40 flex justify-center"
+          style={{ bottom: `calc(${16 + clearance}px + env(safe-area-inset-bottom))` }}
         >
           <Button
             size="lg"

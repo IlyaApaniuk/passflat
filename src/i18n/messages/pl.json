@@ -36,6 +36,7 @@
   },
   "common": {
     "appName": "Passflat",
+    "costsShort": "Koszty",
     "login": "Zaloguj się",
     "register": "Zarejestruj się",
     "logout": "Wyloguj",
@@ -98,7 +99,7 @@
       "trustVerified": "Zweryfikowane oferty",
       "trustVerifiedDesc": "Zaufana społeczność z przejrzystymi cenami i opiniami",
       "costsCta": "Zobacz prawdziwe koszty",
-      "trustLine": "Dodaj swój raport kosztów — bez konta i bez imienia",
+      "trustLine": "Dane są otwarte — za darmo i bez konta",
       "calculatorCta": "Kalkulator",
       "templatesCta": "Wzory dokumentów",
       "statsListings": "Oferty",
@@ -111,8 +112,7 @@
       "statsExpensesUnit": "zł/mies",
       "statsDeposit": "kaucja · zwrot {pct}%",
       "statsAvgRating": "Śr. ocena",
-      "checkAddressCta": "Sprawdź adres",
-      "reviewsCta": "Opisz budynek"
+      "checkAddressCta": "Sprawdź adres"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
@@ -1085,7 +1085,8 @@
       "unlockedTitle": "Raporty kosztów odblokowane",
       "unlockedDesc": "Raporty są zapisane w panelu",
       "openTitle": "Podstawowe dane są otwarte",
-      "openDesc": "Odblokuj pełne dane, dodając swoje koszty, i pomóż społeczności."
+      "openDesc": "Odblokuj pełne dane, dodając swoje koszty, i pomóż społeczności.",
+      "submitTrust": "Dodaj swój raport kosztów — bez konta i bez imienia"
     },
     "submit": {
       "title": "Zgłoś swoje koszty",
