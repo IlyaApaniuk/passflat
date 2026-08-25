@@ -97,7 +97,7 @@
       "trustSublet": "Temporary Sublets",
       "trustVerified": "Verified Listings",
       "trustVerifiedDesc": "Trusted community with transparent pricing and reviews",
-      "costsCta": "See costs by district",
+      "costsCta": "See real costs",
       "trustLine": "Add your cost report — no account, no name",
       "calculatorCta": "Calculator",
       "templatesCta": "Document templates",
@@ -111,7 +111,6 @@
       "statsExpensesUnit": "zł/mo",
       "statsDeposit": "deposit · {pct}% returned",
       "statsAvgRating": "Avg Rating",
-      "submitCostsCta": "Add your costs",
       "checkAddressCta": "Check an address",
       "reviewsCta": "Describe a building"
     },

@@ -1,12 +1,14 @@
 'use client';
 
+import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
+import { StickyCta, useScrolledPast } from '@/components/landing/sticky-cta';
 import { useIsTouch } from '@/hooks/use-reveal';
-import { MapPinned, MessageSquarePlus, Receipt, Sparkles } from 'lucide-react';
+import { BarChart3, MapPinned, MessageSquarePlus, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 const MIN_STAT_THRESHOLD = 5;
@@ -30,8 +32,13 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
   // then. The current headline is the loss-aversion framing.)
-  const onCtaClick = (cta: 'submit_costs' | 'check_address' | 'reviews') =>
+  const onCtaClick = (cta: 'view_costs' | 'check_address' | 'reviews') =>
     posthog?.capture('hero_cta_clicked', { cta });
+
+  // When the hero CTA row scrolls above the viewport, a floating pill takes
+  // over at the bottom edge so the primary action never leaves the screen.
+  const ctaRowRef = useRef<HTMLDivElement>(null);
+  const ctaScrolledPast = useScrolledPast(ctaRowRef);
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -113,15 +120,19 @@ export function Hero({ stats: liveStats }: HeroProps) {
           {/* The three transparency actions. The calculator and document
               templates live in their own section so the hero states actions,
               not the toolbox. */}
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            {/* Primary CTA — the contribution that powers the whole dataset. */}
+          <div
+            ref={ctaRowRef}
+            className="flex flex-col items-center justify-center gap-4 sm:flex-row"
+          >
+            {/* Primary CTA — the cost data itself. Deliberately NOT a submit
+                link: dropping a cold visitor onto a blank form made them
+                bounce. The landing sells the data, /costs shows it, and the
+                ask to contribute lives there (access card up top + the sticky
+                pill), where the visitor can see what they'd be adding to. */}
             <Button size="lg" className="group h-12 rounded-full px-8 text-base" asChild>
-              <Link
-                href={`/${DEFAULT_CITY}/costs/submit`}
-                onClick={() => onCtaClick('submit_costs')}
-              >
-                <Receipt className="mr-2 h-4 w-4" />
-                {t('submitCostsCta')}
+              <Link href={`/${DEFAULT_CITY}/costs`} onClick={() => onCtaClick('view_costs')}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                {t('costsCta')}
               </Link>
             </Button>
             {/* Secondary CTA — the free probe: instant value before any ask. */}
@@ -221,6 +232,17 @@ export function Hero({ stats: liveStats }: HeroProps) {
           <div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
         </div>
       </div>
+
+      {/* The hero CTA, following the reader down the page. Same destination
+          and label — one CTA in two positions. */}
+      <StickyCta
+        visible={ctaScrolledPast}
+        href={`/${DEFAULT_CITY}/costs`}
+        onClick={() => posthog?.capture('cta_click', { placement: 'landing_sticky' })}
+      >
+        <BarChart3 className="mr-2 h-4 w-4" />
+        {t('costsCta')}
+      </StickyCta>
     </section>
   );
 }

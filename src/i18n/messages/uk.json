@@ -97,7 +97,7 @@
       "trustSublet": "Суборенда",
       "trustVerified": "Перевірені оголошення",
       "trustVerifiedDesc": "Довірена спільнота з прозорими цінами та відгуками",
-      "costsCta": "Витрати за районами",
+      "costsCta": "Дивитися реальні витрати",
       "trustLine": "Свій звіт про витрати — без акаунта та імені",
       "calculatorCta": "Калькулятор",
       "templatesCta": "Шаблони документів",
@@ -111,7 +111,6 @@
       "statsExpensesUnit": "zł/міс",
       "statsDeposit": "застава · {pct}% повернули",
       "statsAvgRating": "Сер. оцінка",
-      "submitCostsCta": "Додати свої витрати",
       "checkAddressCta": "Перевірити адресу",
       "reviewsCta": "Розповісти про будинок"
     },

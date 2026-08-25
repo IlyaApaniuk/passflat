@@ -97,7 +97,7 @@
       "trustSublet": "Субаренда",
       "trustVerified": "Проверенные объявления",
       "trustVerifiedDesc": "Доверенное сообщество с прозрачными ценами и отзывами",
-      "costsCta": "Смотреть расходы по районам",
+      "costsCta": "Смотреть реальные расходы",
       "trustLine": "Свой отчёт о расходах — без аккаунта и имени",
       "calculatorCta": "Калькулятор",
       "templatesCta": "Шаблоны документов",
@@ -111,7 +111,6 @@
       "statsExpensesUnit": "zł/мес",
       "statsDeposit": "залог · {pct}% вернули",
       "statsAvgRating": "Ср. оценка",
-      "submitCostsCta": "Добавить свои расходы",
       "checkAddressCta": "Проверить адрес",
       "reviewsCta": "Рассказать о доме"
     },

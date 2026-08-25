@@ -97,7 +97,7 @@
       "trustSublet": "Podnajem",
       "trustVerified": "Zweryfikowane oferty",
       "trustVerifiedDesc": "Zaufana społeczność z przejrzystymi cenami i opiniami",
-      "costsCta": "Zobacz koszty wg dzielnic",
+      "costsCta": "Zobacz prawdziwe koszty",
       "trustLine": "Dodaj swój raport kosztów — bez konta i bez imienia",
       "calculatorCta": "Kalkulator",
       "templatesCta": "Wzory dokumentów",
@@ -111,7 +111,6 @@
       "statsExpensesUnit": "zł/mies",
       "statsDeposit": "kaucja · zwrot {pct}%",
       "statsAvgRating": "Śr. ocena",
-      "submitCostsCta": "Dodaj swoje koszty",
       "checkAddressCta": "Sprawdź adres",
       "reviewsCta": "Opisz budynek"
     },

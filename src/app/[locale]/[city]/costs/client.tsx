@@ -1,12 +1,14 @@
 'use client';
 
-import { use, useCallback, useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { use, useCallback, useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
+import { usePostHog } from 'posthog-js/react';
 import { toast } from 'sonner';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
+import { StickyCta, useScrolledPast } from '@/components/landing/sticky-cta';
 import { CostAccessCard } from '@/components/costs/cost-access-card';
 import type { CostAccess } from '@/components/costs/cost-access-card';
 import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
@@ -36,6 +38,7 @@ import {
   DoorOpen,
   BarChart3,
   Calculator,
+  Pencil,
 } from 'lucide-react';
 
 export type { CostAccess };
@@ -141,6 +144,13 @@ export function CostsOverviewClient({
 }: CostsOverviewClientProps) {
   const t = useTranslations();
   const searchParams = useSearchParams();
+  const posthog = usePostHog();
+
+  // Once the hero (and the access card's submit button in it) scrolls away, a
+  // floating pill keeps the contribution ask in the viewport — the page is a
+  // long scroll of exactly the data a would-be contributor is reading.
+  const heroRef = useRef<HTMLElement>(null);
+  const heroScrolledPast = useScrolledPast(heroRef);
 
   // `null` while the streamed auth promise resolves; once resolved it drives the
   // CostAccessCard's contribution nudge / "your access" status. The cost table
@@ -260,7 +270,10 @@ export function CostsOverviewClient({
         </Suspense>
       )}
       <main className="flex-1 pt-24">
-        <section className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16">
+        <section
+          ref={heroRef}
+          className="relative overflow-hidden border-b bg-muted/30 py-12 md:py-16"
+        >
           <div className="absolute inset-0 grid-pattern opacity-30" />
           <div className="container relative mx-auto px-4">
             <motion.div
@@ -683,6 +696,17 @@ export function CostsOverviewClient({
           </div>
         </div>
       </main>
+
+      {/* Floating counterpart of the access card's submit button up top —
+          the form entry stays reachable however deep the reader scrolls. */}
+      <StickyCta
+        visible={heroScrolledPast}
+        href={`/${citySlug}/costs/submit`}
+        onClick={() => posthog?.capture('cost_submit_cta_clicked', { source: 'sticky' })}
+      >
+        <Pencil className="mr-2 h-4 w-4" />
+        {t('costs.overview.submitMyCosts')}
+      </StickyCta>
 
       <Footer />
     </div>
