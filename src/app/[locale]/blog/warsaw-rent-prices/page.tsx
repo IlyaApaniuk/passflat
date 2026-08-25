@@ -354,7 +354,7 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
             <p className="mt-2 text-muted-foreground">{t('rentReport.doplatyBody2')}</p>
             <p className="mt-2">
               <Link
-                href="/blog/hidden-rental-costs-warsaw"
+                href="/blog/doplaty-rozliczenie-warsaw"
                 className="font-medium text-primary hover:underline"
               >
                 {t('rentReport.doplatyCta')} →
