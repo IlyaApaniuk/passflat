@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     apple: '/icon.svg',
   },
   robots: robotsMeta,
+  // MyLead affiliate-network site-ownership verification. Harmless to keep
+  // permanently; removing it would drop the verified status.
+  other: { 'mylead-verification': '2df52e2a06605ff279b6e965a90a0568' },
 };
 
 // viewport-fit=cover is required for `env(safe-area-inset-*)` to resolve to real
