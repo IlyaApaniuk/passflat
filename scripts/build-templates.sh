@@ -22,7 +22,7 @@ SRC_DIR="$ROOT/docs/legal-templates"
 TR_DIR="$SRC_DIR/translations"
 OUT_DIR="$ROOT/public/documents"
 
-DOCS=(cesja-umowy-najmu umowa-podnajmu umowa-wspollokatorska)
+DOCS=(cesja-umowy-najmu umowa-podnajmu umowa-wspollokatorska protokol-zdawczo-odbiorczy)
 LANGS=(en ru uk)
 
 PDF_OPTS=(--pdf-engine=typst -V fontsize=10.5pt)
