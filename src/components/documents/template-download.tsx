@@ -8,7 +8,7 @@ import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 import { FileText, FileType2, ShieldAlert } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
 
-export type DocumentKey = 'cesja' | 'podnajem' | 'wspollokatorska';
+export type DocumentKey = 'cesja' | 'podnajem' | 'wspollokatorska' | 'protokol';
 
 export type TemplateSource = 'listing' | 'resources' | 'how_it_works' | 'blog' | 'chat';
 
@@ -22,6 +22,7 @@ const DOC_BASENAME: Record<DocumentKey, string> = {
   cesja: 'cesja-umowy-najmu',
   podnajem: 'umowa-podnajmu',
   wspollokatorska: 'umowa-wspollokatorska',
+  protokol: 'protokol-zdawczo-odbiorczy',
 };
 
 const TRANSLATED_LOCALES = ['uk', 'en', 'ru'];

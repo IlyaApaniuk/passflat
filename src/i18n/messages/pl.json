@@ -2216,6 +2216,10 @@
     "formatNote": "PDF jest tylko do odczytu; DOCX jest edytowalny. Oba po polsku — w wersji wiążącej.",
     "localeNote": "PDF to tłumaczenie informacyjne (wiążąca jest wersja polska). Edytowalny plik DOCX jest po polsku.",
     "docs": {
+      "protokol": {
+        "title": "Protokół zdawczo-odbiorczy lokalu",
+        "description": "Wzór protokołu przy przekazaniu i zwrocie mieszkania: liczniki, stan pomieszczeń, wyposażenie, klucze. Kluczowy dokument przy rozliczeniu kaucji."
+      },
       "cesja": {
         "title": "Cesja umowy najmu",
         "description": "Trójstronna umowa przeniesienia najmu na nowego najemcę, za zgodą wynajmującego."
