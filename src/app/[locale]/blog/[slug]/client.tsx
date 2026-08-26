@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { ArrowLeft, Calendar, Tag } from 'lucide-react';
 import { MDXRemote } from 'next-mdx-remote';
@@ -10,9 +11,38 @@ import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 
 const CESJA_SLUG = 'cesja-najmu-guide';
 
+// Hosts whose links earn a commission. Drives both the rel="sponsored"
+// annotation (Google requires it on paid links) and the click event.
+const AFFILIATE_HOSTS = ['connectorlink.online'];
+
+function affiliateHost(href: string): string | null {
+  try {
+    const host = new URL(href).hostname.replace(/^www\./, '');
+    return AFFILIATE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) ? host : null;
+  } catch {
+    return null;
+  }
+}
+
 export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown } }) {
   const t = useTranslations('blog');
   const tDocs = useTranslations('documents');
+  const posthog = usePostHog();
+
+  // Markdown links render as plain <a>, so affiliate clicks are caught here by
+  // delegation instead of per-link components.
+  const onArticleClick = (e: React.MouseEvent<HTMLElement>) => {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (!anchor?.href) return;
+    const partner = affiliateHost(anchor.href);
+    if (partner) {
+      posthog?.capture('affiliate_link_clicked', {
+        partner,
+        article: post.slug,
+        href: anchor.href,
+      });
+    }
+  };
 
   return (
     <>
@@ -55,7 +85,10 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
 
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
-          <article className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl">
+          <article
+            className="prose prose-neutral dark:prose-invert mx-auto max-w-3xl"
+            onClick={onArticleClick}
+          >
             {post.mdxSource ? (
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               <MDXRemote {...(post.mdxSource as any)} />
@@ -91,7 +124,13 @@ function markdownToHtml(md: string): string {
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // External links open in a new tab; affiliate links additionally carry
+  // rel="sponsored" (required for paid links) on top of the safety rel.
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, href: string) => {
+    if (!/^https?:\/\//.test(href)) return `<a href="${href}">${text}</a>`;
+    const rel = affiliateHost(href) ? 'sponsored nofollow noopener' : 'noopener';
+    return `<a href="${href}" target="_blank" rel="${rel}">${text}</a>`;
+  });
 
   const lines = html.split('\n');
   const result: string[] = [];
