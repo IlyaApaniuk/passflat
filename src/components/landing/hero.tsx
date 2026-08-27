@@ -1,12 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
-import { StickyCta, useScrolledPast } from '@/components/landing/sticky-cta';
 import { useIsTouch } from '@/hooks/use-reveal';
 import { BarChart3, MapPinned, Sparkles } from 'lucide-react';
 
@@ -34,11 +32,6 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // then. The current headline is the loss-aversion framing.)
   const onCtaClick = (cta: 'view_costs' | 'check_address') =>
     posthog?.capture('hero_cta_clicked', { cta });
-
-  // When the hero CTA row scrolls above the viewport, a floating pill takes
-  // over at the bottom edge so the primary action never leaves the screen.
-  const ctaRowRef = useRef<HTMLDivElement>(null);
-  const ctaScrolledPast = useScrolledPast(ctaRowRef);
 
   const formatStat = (n: number) => (n > 100 ? `${n.toLocaleString()}+` : n.toString());
 
@@ -121,10 +114,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
               Everything else the hero used to ask for (reviews, the niche
               rental modes) lives in the nav and its own sections — one screen,
               one verb. */}
-          <div
-            ref={ctaRowRef}
-            className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-          >
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             {/* Primary CTA — the cost data itself. Deliberately NOT a submit
                 link: dropping a cold visitor onto a blank form made them
                 bounce. The landing sells the data, /costs shows it, and the
@@ -212,17 +202,6 @@ export function Hero({ stats: liveStats }: HeroProps) {
           <div className="h-2 w-1 rounded-full bg-muted-foreground/50" />
         </div>
       </div>
-
-      {/* The hero CTA, following the reader down the page. Same destination
-          and label — one CTA in two positions. */}
-      <StickyCta
-        visible={ctaScrolledPast}
-        href={`/${DEFAULT_CITY}/costs`}
-        onClick={() => posthog?.capture('cta_click', { placement: 'landing_sticky' })}
-      >
-        <BarChart3 className="mr-2 h-4 w-4" />
-        {t('costsCta')}
-      </StickyCta>
     </section>
   );
 }
