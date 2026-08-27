@@ -9,11 +9,16 @@ import type { BlogPost } from '@/lib/blog';
 import { TemplateDownload } from '@/components/documents/template-download';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
 
-const CESJA_SLUG = 'cesja-najmu-guide';
+// Articles that end with a matching document-template download block.
+const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
+  'cesja-najmu-guide': 'cesja',
+  'protokol-zdawczo-odbiorczy-warsaw': 'protokol',
+};
 
 // Hosts whose links earn a commission. Drives both the rel="sponsored"
 // annotation (Google requires it on paid links) and the click event.
-const AFFILIATE_HOSTS = ['connectorlink.online'];
+// prf.hn is Partnerize's tracking domain (Wise campaign).
+const AFFILIATE_HOSTS = ['connectorlink.online', 'prf.hn'];
 
 function affiliateHost(href: string): string | null {
   try {
@@ -97,10 +102,14 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
             )}
           </article>
 
-          {post.slug === CESJA_SLUG && isDocumentTemplatesEnabled() && (
+          {SLUG_TO_DOC[post.slug] && isDocumentTemplatesEnabled() && (
             <div className="mx-auto mt-10 max-w-3xl">
               <p className="mb-3 text-sm font-medium">{tDocs('blog.subtitle')}</p>
-              <TemplateDownload documentKey="cesja" source="blog" showDescription />
+              <TemplateDownload
+                documentKey={SLUG_TO_DOC[post.slug]}
+                source="blog"
+                showDescription
+              />
             </div>
           )}
         </div>

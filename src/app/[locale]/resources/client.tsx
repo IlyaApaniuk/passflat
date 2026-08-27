@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Info } from 'lucide-react';
 import { TemplateDownload, type DocumentKey } from '@/components/documents/template-download';
 
-const DOCS: DocumentKey[] = ['cesja', 'podnajem', 'wspollokatorska'];
+const DOCS: DocumentKey[] = ['protokol', 'cesja', 'podnajem', 'wspollokatorska'];
 
 export function ResourcesClient() {
   const t = useTranslations('documents');

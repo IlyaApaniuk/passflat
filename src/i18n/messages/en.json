@@ -2216,6 +2216,10 @@
     "formatNote": "PDF is read-only; DOCX is editable. Both in Polish — the binding language.",
     "localeNote": "PDF is an informational translation (the Polish version is binding). The editable DOCX is in Polish.",
     "docs": {
+      "protokol": {
+        "title": "Handover protocol (protokół zdawczo-odbiorczy)",
+        "description": "Move-in/move-out protocol form: meters, condition, equipment, keys. The document that decides whether the deposit comes back."
+      },
       "cesja": {
         "title": "Lease assignment (cesja umowy najmu)",
         "description": "Tripartite agreement to transfer a lease to a new tenant, with the landlord's consent."
