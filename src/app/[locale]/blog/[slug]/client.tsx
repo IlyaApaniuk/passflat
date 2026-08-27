@@ -17,7 +17,8 @@ const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
 
 // Hosts whose links earn a commission. Drives both the rel="sponsored"
 // annotation (Google requires it on paid links) and the click event.
-const AFFILIATE_HOSTS = ['connectorlink.online'];
+// prf.hn is Partnerize's tracking domain (Wise campaign).
+const AFFILIATE_HOSTS = ['connectorlink.online', 'prf.hn'];
 
 function affiliateHost(href: string): string | null {
   try {
