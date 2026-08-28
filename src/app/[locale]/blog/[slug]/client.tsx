@@ -73,8 +73,10 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
                 day: 'numeric',
               })}
             </span>
-            <div className="flex items-center gap-1.5">
-              <Tag className="h-4 w-4" />
+            {/* flex-wrap: six localized tags overflow a 390px viewport and drag
+                the whole page into horizontal scroll without it. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Tag className="h-4 w-4 shrink-0" />
               {post.tags.map((tag) => (
                 <span
                   key={tag}
