@@ -1233,6 +1233,7 @@
       "leaseTypeRequired": "Wybierz rodzaj najmu",
       "addressOutsideCity": "Wybierz adres w granicach miasta {city}.",
       "addressRequired": "Podaj swój adres",
+      "addressNotPicked": "Wybierz adres z listy podpowiedzi — samo wpisanie go nie wystarczy.",
       "rateLimited": "Zbyt wiele zgłoszeń w krótkim czasie. Spróbuj później.",
       "errorGeneric": "Nie udało się wysłać raportu. Sprawdź połączenie i spróbuj ponownie — wszystko, co wpisałeś, jest zapisane.",
       "errorMissingFields": "Uzupełnij: {fields}.",

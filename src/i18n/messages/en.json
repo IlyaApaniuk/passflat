@@ -1233,6 +1233,7 @@
       "leaseTypeRequired": "Please select the lease type",
       "addressOutsideCity": "Please choose an address within {city}.",
       "addressRequired": "Enter your address",
+      "addressNotPicked": "Pick your address from the dropdown — typing it is not enough.",
       "rateLimited": "Too many reports in a short time. Please try again later.",
       "errorGeneric": "We couldn't submit your report. Check your connection and try again — everything you filled in is saved.",
       "errorMissingFields": "Please fill in: {fields}.",
