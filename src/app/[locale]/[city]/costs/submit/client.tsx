@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -426,6 +426,13 @@ export function CostSubmitClient({
    *  prefill, a restored draft) against reporting the same address twice. A
    *  later manual pick still reports: that is a different address. */
   const addressSelectedCapturedRef = useRef(false);
+  /** Address-search activity. `cost_form_address_selected` only ever fires on a
+   *  pick, so a drop-off at this step could not be attributed: never typed,
+   *  typed and Places found nothing, or typed, saw a list and picked nothing —
+   *  three different problems that all read as one. Peak count, not last: a
+   *  visitor who backspaces still saw the list. */
+  const addressTypedRef = useRef(false);
+  const addressSuggestionsSeenRef = useRef(0);
   /** True once the form has survived past its first tick — the gate on the
    *  unmount-based departure below. */
   const settledRef = useRef(false);
@@ -638,6 +645,18 @@ export function CostSubmitClient({
     }));
   };
 
+  // Refs only, so a keystroke in the address box never re-renders the form.
+  // Stable identity: the autocomplete debounces through it.
+  const handleAddressActivity = useCallback(
+    ({ typed, suggestionsShown }: { typed: boolean; suggestionsShown: number }) => {
+      if (typed) addressTypedRef.current = true;
+      if (suggestionsShown > addressSuggestionsSeenRef.current) {
+        addressSuggestionsSeenRef.current = suggestionsShown;
+      }
+    },
+    [],
+  );
+
   const handlePlaceSelect = (place: PlaceResult) => {
     // Reject out-of-city picks: outside the bounding box (far-away cities) or a
     // neighbouring town inside the box (Places returns its own locality, not the
@@ -767,7 +786,16 @@ export function CostSubmitClient({
         return;
       }
       if (!formData.street.trim() || !formData.buildingNumber.trim()) {
-        setAddressError(t('costs.submit.addressRequired'));
+        // Typing an address is not choosing one — only a pick fills these fields.
+        // "Enter your address" next to a box that visibly holds one reads as a
+        // bug, so someone who typed is told the actual next step instead.
+        setAddressError(
+          t(
+            addressTypedRef.current
+              ? 'costs.submit.addressNotPicked'
+              : 'costs.submit.addressRequired',
+          ),
+        );
         addressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
@@ -1132,6 +1160,8 @@ export function CostSubmitClient({
           ...progressRef.current,
           // Read live: these are ref-only and must not lag a render behind.
           last_field: lastFieldRef.current,
+          address_typed: addressTypedRef.current,
+          address_suggestions_seen: addressSuggestionsSeenRef.current,
           submit_attempts: submitAttemptsRef.current,
           last_error_code: lastErrorCodeRef.current,
           draft_saved: draftSavedRef.current,
@@ -1769,6 +1799,7 @@ export function CostSubmitClient({
                           placeholder={t('listings.create.addressPlaceholder')}
                           defaultValue={prefill?.addressFull}
                           bounds={cityBounds}
+                          onSearchActivity={handleAddressActivity}
                         />
                         {addressError ? (
                           <p className="text-sm font-medium text-destructive">{addressError}</p>
