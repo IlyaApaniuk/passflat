@@ -34,6 +34,8 @@
     "db:import-pois": "tsx prisma/import-osm-pois.ts",
     "postinstall": "prisma generate",
     "db:studio": "prisma studio",
+    "bot:dev": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-dev.ts",
+    "bot:webhook": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-webhook.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -82,6 +84,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.6.0",
     "framer-motion": "^12.39.0",
+    "grammy": "^1.46.0",
     "input-otp": "1.4.2",
     "lucide-react": "^0.564.0",
     "mapbox-gl": "^3.11.1",

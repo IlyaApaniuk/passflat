@@ -87,6 +87,7 @@ model Building {
   locationScore BuildingLocationScore?
   follows       BuildingFollow[]
   tags          BuildingTag[]
+  telegramSubs  TelegramSubscription[]
 
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
@@ -508,6 +509,7 @@ model Profile {
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
   buildingFollows          BuildingFollow[]
+  telegramChats            TelegramChat[]
 
   @@map("profiles")
 }
@@ -633,4 +635,54 @@ model CityNotifySubscription {
   @@unique([email, cityNormalized, districtSlug, listingType], map: "city_notify_email_city_district_type_key")
   @@index([cityNormalized, districtSlug], map: "city_notify_city_district_idx")
   @@map("city_notify_subscriptions")
+}
+
+// --- Telegram bot ---
+
+// One row per Telegram chat that started the bot. Deliberately account-free:
+// the bot's whole point is that a Telegram user needs no signup to look up an
+// address, so `profileId` stays null unless the chat later links a web account.
+model TelegramChat {
+  id           String    @id @default(uuid()) @db.Uuid
+  chatId       BigInt    @unique @map("chat_id")
+  profileId    String?   @map("profile_id") @db.Uuid
+  locale       String    @default("ru")
+  // Raw `?start=` payload of the first /start, e.g. "thr_med" or "b_<uuid>".
+  // Attribution for the whole point of the bot: which surface sent this person.
+  startPayload String?   @map("start_payload")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  blockedAt    DateTime? @map("blocked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  profile       Profile?               @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  subscriptions TelegramSubscription[]
+
+  @@index([profileId])
+  @@map("telegram_chats")
+}
+
+// A chat watching a building or a district. Mirrors BuildingFollow, but keyed
+// by chat instead of user because the push channel is the chat itself.
+//
+// `targetKey` ("b:<uuid>" or "d:<slug>") carries the dedupe key instead of the
+// nullable columns it duplicates: Postgres treats NULLs as distinct, so a
+// unique key over `buildingId` would let one chat subscribe to the same
+// district many times and get the same push twice.
+model TelegramSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  targetKey      String    @map("target_key")
+  buildingId     String?   @map("building_id") @db.Uuid
+  districtSlug   String    @default("") @map("district_slug")
+  citySlug       String    @default("warsaw") @map("city_slug")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastNotifiedAt DateTime? @map("last_notified_at")
+
+  chat     TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  building Building?    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, targetKey], map: "telegram_sub_chat_target_key")
+  @@index([buildingId])
+  @@index([citySlug, districtSlug])
+  @@map("telegram_subscriptions")
 }
