@@ -867,7 +867,8 @@
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
       "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
       "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
-      "depositReturned": "kaucję zwrócono {returned} z {answered}"
+      "depositReturned": "kaucję zwrócono {returned} z {answered}",
+      "telegramCta": "Śledź ten budynek na Telegramie"
     },
     "nuisances": {
       "title": "Na co zwrócić uwagę",

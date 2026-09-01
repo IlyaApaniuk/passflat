@@ -867,7 +867,8 @@
       "followHint": "Пока не готов делиться? Следи за обновлениями дома.",
       "cheaperThanDistrict": "На {percent}% дешевле медианы по району {district}",
       "pricierThanDistrict": "На {percent}% дороже медианы по району {district}",
-      "depositReturned": "депозит вернули {returned} из {answered}"
+      "depositReturned": "депозит вернули {returned} из {answered}",
+      "telegramCta": "Следить за этим домом в Telegram"
     },
     "nuisances": {
       "title": "На что обратить внимание",
