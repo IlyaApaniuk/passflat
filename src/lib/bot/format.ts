@@ -21,8 +21,16 @@ export function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+const PUBLIC_ORIGIN = 'https://passflat.com';
+
+/**
+ * Telegram rejects inline buttons pointing at localhost (BUTTON_URL_INVALID),
+ * which fails the whole reply, not just the button. So a dev bot running
+ * against http://localhost links to the public site instead.
+ */
 function appUrl(path: string): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://passflat.com').replace(/\/$/, '');
+  const configured = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
+  const base = configured.startsWith('https://') ? configured : PUBLIC_ORIGIN;
   return `${base}${path}`;
 }
 
