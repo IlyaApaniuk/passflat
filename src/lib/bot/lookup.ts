@@ -23,9 +23,9 @@ import type { GeocodedAddress } from './geocode';
  * landed on is reported so the message can be honest about it.
  */
 
-export type LookupLevel = 'building' | 'district' | 'city';
+type LookupLevel = 'building' | 'district' | 'city';
 
-export interface NeighbourSummary {
+interface NeighbourSummary {
   address: string;
   slug: string;
   distanceM: number;
@@ -62,7 +62,7 @@ export interface AddressLookup {
 }
 
 /** Below this, a district median says more about the sample than the district. */
-const MIN_AREA_REPORTS = 5;
+export const MIN_AREA_REPORTS = 5;
 
 const NEIGHBOUR_RADIUS_M = 1500;
 const NEIGHBOUR_LIMIT = 3;

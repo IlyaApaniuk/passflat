@@ -1,14 +1,25 @@
 import { Bot, InlineKeyboard, type Context } from 'grammy';
 
+import { getCityCostStats } from '@/lib/cost-baselines';
 import { trackServerEvent } from '@/lib/posthog-server';
 
+import { matchDistrict } from './districts';
 import { geocodeAddress } from './geocode';
-import { money, renderDistrictTable, renderLookup, submitLink, webLink } from './format';
 import {
+  money,
+  renderDistrict,
+  renderDistrictTable,
+  renderLookup,
+  submitLink,
+  webLink,
+} from './format';
+import {
+  getCity,
   getCityDepositFacts,
   getDistrictBySlug,
   getDistrictTable,
   lookupAddress,
+  MIN_AREA_REPORTS,
   type AddressLookup,
 } from './lookup';
 import {
@@ -121,6 +132,43 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
     link_preview_options: { is_disabled: true },
     reply_markup: lookupKeyboard(lookup, locale),
   });
+}
+
+async function replyDistrict(ctx: Context, locale: BotLocale, slug: string) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
+
+  const [district, table, city] = await Promise.all([
+    getDistrictBySlug(slug),
+    getDistrictTable(),
+    getCity(),
+  ]);
+  if (!district) return;
+  const cityStats = city ? await getCityCostStats(city.id) : null;
+
+  const position = table.findIndex((row) => row.slug === slug);
+  track(chatId, 'tg_district_checked', { district: slug, report_count: district.stats.count });
+
+  const keyboard = new InlineKeyboard()
+    .text(t(locale, 'subscribeDistrict', { district: district.name }), `sub:d:${district.slug}`)
+    .row()
+    .text(t(locale, 'btnDistricts'), 'districts')
+    .url(t(locale, 'btnSubmit'), webLink(`/${district.citySlug}/costs/submit`, locale, 'district'));
+
+  await ctx.reply(
+    renderDistrict(
+      {
+        name: district.name,
+        stats: district.stats,
+        deposit: district.deposit,
+        rank: position >= 0 ? { position: position + 1, total: table.length } : null,
+        cityMedian: cityStats?.total.median ?? null,
+      },
+      locale,
+      MIN_AREA_REPORTS,
+    ),
+    { parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: keyboard },
+  );
 }
 
 export function createBot(token: string): Bot {
@@ -320,7 +368,18 @@ export function createBot(token: string): Bot {
       chatId: ctx.chat.id,
       locale: normalizeLocale(ctx.from?.language_code),
     });
-    await replyLookup(ctx, chat.locale as BotLocale, text);
+    const locale = chat.locale as BotLocale;
+
+    // A district name has no single point to geocode, so it is caught before
+    // Google sees it — otherwise "Мокотов" came back as "address not found".
+    const city = await getCity();
+    const districtSlug = city ? matchDistrict(text, city.districts) : null;
+    if (districtSlug) {
+      await replyDistrict(ctx, locale, districtSlug);
+      return;
+    }
+
+    await replyLookup(ctx, locale, text);
   });
 
   bot.catch((error) => {

@@ -168,11 +168,3 @@ export async function removeSubscription(chatId: number, targetKey: string): Pro
   if (!chat) return;
   await prisma.telegramSubscription.deleteMany({ where: { chatId: chat.id, targetKey } });
 }
-
-/** Marks a chat that blocked the bot so the notifier stops trying. */
-export async function markChatBlocked(chatId: bigint): Promise<void> {
-  await prisma.telegramChat.updateMany({
-    where: { chatId },
-    data: { blockedAt: new Date() },
-  });
-}

@@ -1,4 +1,5 @@
-import type { AddressLookup, DistrictRow } from './lookup';
+import type { AddressLookup, DepositFacts, DistrictRow } from './lookup';
+import type { AreaStats } from '@/lib/cost-baselines';
 import { reportsWord, t, tenanciesWord, type BotLocale } from './texts';
 
 /**
@@ -10,14 +11,14 @@ import { reportsWord, t, tenanciesWord, type BotLocale } from './texts';
  * only free distribution, so the message is the ad.
  */
 
-const NBSP = ' ';
+const NBSP = '\u00A0';
 
 export function money(value: number | null | undefined): string | null {
   if (value == null || !Number.isFinite(value)) return null;
   return `${Math.round(value).toLocaleString('ru-RU').replace(/\s/g, NBSP)}${NBSP}zł`;
 }
 
-export function escapeHtml(value: string): string {
+function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
@@ -67,15 +68,11 @@ function verdict(value: number | null, baseline: number | null, locale: BotLocal
     : t(locale, 'verdictBelow', { pct: String(Math.abs(diff)) });
 }
 
-function depositLine(lookup: AddressLookup, locale: BotLocale): string | null {
-  const { returned, answered, medianDeposit } = lookup.deposit;
+function depositLine(deposit: DepositFacts, area: string, locale: BotLocale): string | null {
+  const { returned, answered, medianDeposit } = deposit;
   if (answered < 3) return null;
   const pct = Math.round((returned / answered) * 100);
   const amount = money(medianDeposit);
-  // The area is named because these figures are never building-level — under a
-  // building card an unlabelled "88% returned" would read as this house's record.
-  const area =
-    lookup.areaIsCity || !lookup.districtName ? t(locale, 'cityNameIn') : lookup.districtName;
   return t(locale, 'depositLine', {
     area: escapeHtml(area),
     pct: String(pct),
@@ -83,6 +80,16 @@ function depositLine(lookup: AddressLookup, locale: BotLocale): string | null {
     word: tenanciesWord(locale, answered),
     amount: amount ? ` ${t(locale, 'depositTypical', { amount })}` : '',
   });
+}
+
+/**
+ * Deposit figures are never building-level, so the area is always named — under
+ * a building card an unlabelled "88% returned" would read as this house's record.
+ */
+function lookupDepositLine(lookup: AddressLookup, locale: BotLocale): string | null {
+  const area =
+    lookup.areaIsCity || !lookup.districtName ? t(locale, 'cityNameIn') : lookup.districtName;
+  return depositLine(lookup.deposit, area, locale);
 }
 
 /**
@@ -114,7 +121,7 @@ function buildingCard(lookup: AddressLookup, locale: BotLocale): string {
   );
   if (costs.reportCount < 2) lines.push(t(locale, 'thinBuilding'));
 
-  const deposit = depositLine(lookup, locale);
+  const deposit = lookupDepositLine(lookup, locale);
   if (deposit) lines.push('', deposit);
 
   return lines.join('\n');
@@ -175,7 +182,7 @@ function districtCard(lookup: AddressLookup, locale: BotLocale): string {
     }
   }
 
-  const deposit = depositLine(lookup, locale);
+  const deposit = lookupDepositLine(lookup, locale);
   if (deposit) lines.push('', deposit);
 
   lines.push('', t(locale, 'beFirstPrompt'));
@@ -203,5 +210,75 @@ export function renderDistrictTable(rows: DistrictRow[], locale: BotLocale): str
   });
 
   lines.push('', t(locale, 'districtTableFooter'), '', t(locale, 'cardFooter'));
+  return lines.join('\n');
+}
+
+export interface DistrictAnswer {
+  name: string;
+  stats: AreaStats;
+  deposit: DepositFacts;
+  /** 1-based position in the cheapest-first league table, when it has one. */
+  rank: { position: number; total: number } | null;
+  /** Warsaw-wide median, the reference point when the district itself is thin. */
+  cityMedian: number | null;
+}
+
+/**
+ * The answer to a district name typed on its own ("Мокотов", "wola") — the
+ * question "how much does it cost to live here?" asked before there is an
+ * address to ask about.
+ */
+export function renderDistrict(
+  district: DistrictAnswer,
+  locale: BotLocale,
+  minReports: number,
+): string {
+  const name = escapeHtml(district.name);
+
+  if (district.stats.count < minReports) {
+    const cityTotal = money(district.cityMedian);
+    return [
+      t(locale, 'districtThin', { district: name }),
+      ...(cityTotal ? ['', t(locale, 'districtThinCity', { total: cityTotal })] : []),
+      '',
+      t(locale, 'districtThinPrompt'),
+      '',
+      t(locale, 'cardFooter'),
+    ].join('\n');
+  }
+
+  const lines = [t(locale, 'areaHeader', { area: name })];
+  const total = money(district.stats.total.median);
+  const rent = money(district.stats.rentMedian);
+  const expenses = money(district.stats.expensesMedian);
+  if (total) lines.push(t(locale, 'areaTotal', { total }));
+  if (rent || expenses) {
+    lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
+  }
+  const { p25, p75 } = district.stats.total;
+  if (p25 != null && p75 != null) {
+    lines.push(t(locale, 'areaBand', { band: `${money(p25)} – ${money(p75)}` }));
+  }
+  lines.push(
+    t(locale, 'basedOn', {
+      count: String(district.stats.count),
+      word: reportsWord(locale, district.stats.count),
+    }),
+  );
+
+  if (district.rank) {
+    lines.push(
+      '',
+      t(locale, 'districtRank', {
+        position: String(district.rank.position),
+        total: String(district.rank.total),
+      }),
+    );
+  }
+
+  const deposit = depositLine(district.deposit, district.name, locale);
+  if (deposit) lines.push('', deposit);
+
+  lines.push('', t(locale, 'districtAskAddress'), '', t(locale, 'cardFooter'));
   return lines.join('\n');
 }
