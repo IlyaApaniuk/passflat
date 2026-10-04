@@ -23,7 +23,7 @@ either duplicating that logic or maintaining an API between two deploys.
 2. **Google key** — a _server_ Geocoding key. The existing
    `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` is referrer-restricted for the browser
    and will be rejected from a server call. Restrict the new one by IP/API to
-   Geocoding and set it as `GOOGLE_GEOCODING_API_KEY`.
+   Geocoding and set it as `GEOCODING_API_SERVER_KEY`.
 3. **Secret** — `openssl rand -hex 32` → `TELEGRAM_WEBHOOK_SECRET`. The webhook
    route rejects any update that does not carry it.
 4. **Local run** — put all three in `.env.local`, then `npm run bot:dev`
