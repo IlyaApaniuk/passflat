@@ -664,7 +664,7 @@ model TelegramChat {
 // A chat watching a building or a district. Mirrors BuildingFollow, but keyed
 // by chat instead of user because the push channel is the chat itself.
 //
-// `targetKey` ("b:<uuid>" or "d:<slug>") carries the dedupe key instead of the
+// `targetKey` ("b:<uuid>", "d:<slug>" or "c:<city>") carries the dedupe key instead of the
 // nullable columns it duplicates: Postgres treats NULLs as distinct, so a
 // unique key over `buildingId` would let one chat subscribe to the same
 // district many times and get the same push twice.
@@ -675,6 +675,9 @@ model TelegramSubscription {
   buildingId     String?   @map("building_id") @db.Uuid
   districtSlug   String    @default("") @map("district_slug")
   citySlug       String    @default("warsaw") @map("city_slug")
+  // Display name for a target we hold no row for: a city we do not cover yet
+  // ("c:krakow" → "Kraków"), waitlisted from the bot.
+  label          String?
   createdAt      DateTime  @default(now()) @map("created_at")
   lastNotifiedAt DateTime? @map("last_notified_at")
 

@@ -48,6 +48,15 @@ export function tenanciesWord(locale: BotLocale, count: number): string {
   return plural(count, TENANCY_FORMS[locale]);
 }
 
+const PEOPLE_FORMS: Record<BotLocale, [string, string, string]> = {
+  ru: ['человек', 'человека', 'человек'],
+  uk: ['людина', 'людини', 'людей'],
+};
+
+export function peopleWord(locale: BotLocale, count: number): string {
+  return plural(count, PEOPLE_FORMS[locale]);
+}
+
 type Vars = Record<string, string>;
 
 const RU = {
@@ -102,6 +111,14 @@ const RU = {
   addressNotFound:
     '🤔 Не нашёл такой адрес в Варшаве.\n\nПопробуй в формате <code>улица + номер</code>, например <code>Grójecka 45</code> или <code>Marszałkowska 10</code>.',
   outsideCity: 'Пока я знаю только Варшаву. Другие города — позже.',
+  outsideCityNamed:
+    'Пока я знаю только Варшаву, {city} — ещё нет.\n\nНажми кнопку — напишу сюда, как только заработаем в этом городе. Чем больше людей ждёт, тем раньше он появится.',
+  btnCityWait: '🔔 Жду {city}',
+  cityWaitAdded:
+    '✅ Записал. Напишу сюда, когда Passflat заработает в городе <b>{city}</b>.\n\nЭтот город уже ждут: {count} {people}.',
+  cityWaitAlready:
+    'Ты уже в списке — напишу, когда появится <b>{city}</b>.\n\nЭтот город ждут: {count} {people}.',
+  waitlistSuffix: 'ждём запуска',
   tooManyRequests: 'Слишком много запросов подряд. Подожди минуту.',
   genericError: 'Что-то пошло не так. Попробуй ещё раз через минуту.',
 
@@ -205,6 +222,14 @@ const UK: Record<Key, string> = {
   addressNotFound:
     '🤔 Не знайшов такої адреси у Варшаві.\n\nСпробуй у форматі <code>вулиця + номер</code>, наприклад <code>Grójecka 45</code>.',
   outsideCity: 'Поки я знаю лише Варшаву. Інші міста — згодом.',
+  outsideCityNamed:
+    'Поки я знаю лише Варшаву, {city} — ще ні.\n\nНатисни кнопку — напишу сюди, щойно запрацюємо в цьому місті. Що більше людей чекає, то раніше воно з’явиться.',
+  btnCityWait: '🔔 Чекаю {city}',
+  cityWaitAdded:
+    '✅ Записав. Напишу сюди, коли Passflat запрацює в місті <b>{city}</b>.\n\nЦе місто вже чекають: {count} {people}.',
+  cityWaitAlready:
+    'Ти вже в списку — напишу, коли з’явиться <b>{city}</b>.\n\nЦе місто чекають: {count} {people}.',
+  waitlistSuffix: 'чекаємо запуску',
   tooManyRequests: 'Забагато запитів поспіль. Зачекай хвилину.',
   genericError: 'Щось пішло не так. Спробуй ще раз за хвилину.',
 

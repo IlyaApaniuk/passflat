@@ -32,9 +32,26 @@ either duplicating that logic or maintaining an API between two deploys.
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
 
-The production database needs the `telegram_chats` and `telegram_subscriptions`
-tables from `prisma/migrations/20260831120000_add_telegram_bot` — run that
-migration deliberately, it has not been applied to prod.
+The production database needs two migrations, neither applied to prod yet —
+run them deliberately: `20260831120000_add_telegram_bot` (the `telegram_chats`
+and `telegram_subscriptions` tables) and `20261004120000_telegram_subscription_label`.
+
+## City waitlist
+
+An address outside Warsaw gets a one-tap "🔔 waiting for <city>" button instead
+of a dead end. It is stored as a subscription with `targetKey = "c:<slug>"`
+(spellings collapse: Kraków / Краков / krakow → `krakow`), so the chat can be
+messaged when that city launches. Which city to open next:
+
+```sql
+select city_slug, max(label) as city, count(*) as waiting
+from telegram_subscriptions
+where target_key like 'c:%'
+group by city_slug
+order by waiting desc;
+```
+
+Email requests from the landing form live separately in `city_notify_subscriptions`.
 
 Until `TELEGRAM_BOT_TOKEN` is set the webhook route answers 503 and the site's
 CTA renders nothing, so merging this changes nothing user-visible.

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
+import { transliterateToPolish } from './geocode';
 import { getCity } from './lookup';
 import { normalizeLocale, type BotLocale } from './texts';
 
@@ -69,17 +70,35 @@ export interface SubscriptionTarget {
   buildingId?: string;
   districtSlug?: string;
   citySlug?: string;
+  /** A city we do not cover yet: the chat wants to hear when it launches. */
+  waitlistCity?: string;
 }
 
 export interface SubscriptionResult {
   created: boolean;
   name: string;
   targetKey: string;
+  /** Chats waiting for this city, this one included (waitlist targets only). */
+  waiting?: number;
+}
+
+/** "Kraków" / "Краков" / "krakow" → "krakow": one key per city however it was typed. */
+export function waitlistCitySlug(name: string): string {
+  const latin = /[\u0400-\u04FF]/.test(name) ? transliterateToPolish(name) : name;
+  return latin
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ł/g, 'l')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
 }
 
 function targetKeyOf(target: SubscriptionTarget): string | null {
   if (target.buildingId) return `b:${target.buildingId}`;
   if (target.districtSlug) return `d:${target.districtSlug}`;
+  if (target.waitlistCity) return `c:${waitlistCitySlug(target.waitlistCity)}`;
   return null;
 }
 
@@ -91,7 +110,7 @@ export async function addSubscription(
   const targetKey = targetKeyOf(target);
   if (!targetKey) return { created: false, name: '', targetKey: '' };
 
-  let name = target.districtSlug ?? '';
+  let name = target.districtSlug ?? target.waitlistCity ?? '';
   let buildingId: string | null = null;
 
   if (target.buildingId) {
@@ -111,24 +130,36 @@ export async function addSubscription(
     where: { chatId_targetKey: { chatId: chat.id, targetKey } },
     select: { id: true },
   });
-  if (existing) return { created: false, name, targetKey };
 
-  await prisma.telegramSubscription.create({
-    data: {
-      chatId: chat.id,
-      targetKey,
-      buildingId,
-      districtSlug: target.districtSlug ?? '',
-      citySlug: target.citySlug ?? 'warsaw',
-    },
-  });
+  if (!existing) {
+    await prisma.telegramSubscription.create({
+      data: {
+        chatId: chat.id,
+        targetKey,
+        buildingId,
+        districtSlug: target.districtSlug ?? '',
+        citySlug: target.waitlistCity
+          ? waitlistCitySlug(target.waitlistCity)
+          : (target.citySlug ?? 'warsaw'),
+        label: target.waitlistCity ?? null,
+      },
+    });
+  }
 
-  return { created: true, name, targetKey };
+  // How many people wait for the same city is the one thing worth telling the
+  // person who just asked — and the demand signal for which city goes next.
+  const waiting = target.waitlistCity
+    ? await prisma.telegramSubscription.count({ where: { targetKey } })
+    : undefined;
+
+  return { created: !existing, name, targetKey, waiting };
 }
 
 export interface SubscriptionListItem {
   targetKey: string;
   name: string;
+  /** True for a city we do not cover yet, which reads differently in /my. */
+  isWaitlist: boolean;
 }
 
 export async function listSubscriptions(chatId: number): Promise<SubscriptionListItem[]> {
@@ -144,6 +175,7 @@ export async function listSubscriptions(chatId: number): Promise<SubscriptionLis
       targetKey: true,
       districtSlug: true,
       citySlug: true,
+      label: true,
       building: { select: { addressFull: true } },
     },
     orderBy: { createdAt: 'desc' },
@@ -155,8 +187,10 @@ export async function listSubscriptions(chatId: number): Promise<SubscriptionLis
     targetKey: sub.targetKey,
     name:
       sub.building?.addressFull ??
+      sub.label ??
       city?.districts.find((d) => d.slug === sub.districtSlug)?.nameKey ??
       sub.districtSlug,
+    isWaitlist: sub.targetKey.startsWith('c:'),
   }));
 }
 

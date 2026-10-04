@@ -6,6 +6,7 @@ import { trackServerEvent } from '@/lib/posthog-server';
 import { matchDistrict } from './districts';
 import { geocodeAddress } from './geocode';
 import {
+  escapeHtml,
   money,
   renderDistrict,
   renderDistrictTable,
@@ -29,7 +30,7 @@ import {
   setChatLocale,
   touchChat,
 } from './store';
-import { normalizeLocale, t, type BotLocale } from './texts';
+import { normalizeLocale, peopleWord, t, type BotLocale } from './texts';
 
 /**
  * The bot itself: a thin conversational shell over the same data the website's
@@ -115,8 +116,24 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
 
   const lookup = await lookupAddress(geo);
   if (!lookup) {
-    track(chatId, 'tg_address_outside_city', { query });
-    await ctx.reply(t(locale, 'outsideCity'));
+    // Another city is demand data, not a miss: offer a one-tap waitlist right
+    // here, so the ask needs no email and the reply can come back to this chat.
+    const city = geo.city;
+    track(chatId, 'tg_address_outside_city', { query, city });
+    // Callback data is capped at 64 bytes; a city name that does not fit is
+    // answered without the button rather than with a truncated city.
+    const callback = city ? `cw:${city}` : null;
+    const fits = callback != null && Buffer.byteLength(callback, 'utf8') <= 64;
+    await ctx.reply(
+      city ? t(locale, 'outsideCityNamed', { city: escapeHtml(city) }) : t(locale, 'outsideCity'),
+      {
+        parse_mode: 'HTML',
+        reply_markup:
+          city && fits
+            ? new InlineKeyboard().text(t(locale, 'btnCityWait', { city }), callback!)
+            : undefined,
+      },
+    );
     return;
   }
 
@@ -276,7 +293,11 @@ export function createBot(token: string): Bot {
     const keyboard = new InlineKeyboard();
     const lines = [t(locale, 'mySubsHeader'), ''];
     for (const sub of subs) {
-      lines.push(`• ${sub.name}`);
+      lines.push(
+        sub.isWaitlist
+          ? `• ${escapeHtml(sub.name)} <i>(${t(locale, 'waitlistSuffix')})</i>`
+          : `• ${escapeHtml(sub.name)}`,
+      );
       keyboard.text(`✖️ ${sub.name}`, `unsub:${sub.targetKey}`).row();
     }
 
@@ -346,6 +367,32 @@ export function createBot(token: string): Bot {
       result.created
         ? t(locale, 'subscribedDistrict', { name: district.name })
         : t(locale, 'alreadySubscribed'),
+      { parse_mode: 'HTML' },
+    );
+  });
+
+  bot.callbackQuery(/^cw:(.+)$/, async (ctx) => {
+    const chatId = ctx.chat!.id;
+    const chat = await touchChat({ chatId });
+    const locale = chat.locale as BotLocale;
+    const city = ctx.match![1];
+
+    const result = await addSubscription(chatId, { waitlistCity: city });
+    await ctx.answerCallbackQuery();
+    track(chatId, 'tg_city_requested', {
+      city,
+      city_key: result.targetKey,
+      waiting: result.waiting,
+      already: !result.created,
+    });
+
+    const waiting = result.waiting ?? 1;
+    await ctx.reply(
+      t(locale, result.created ? 'cityWaitAdded' : 'cityWaitAlready', {
+        city: escapeHtml(city),
+        count: String(waiting),
+        people: peopleWord(locale, waiting),
+      }),
       { parse_mode: 'HTML' },
     );
   });
