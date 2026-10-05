@@ -170,3 +170,67 @@ describe('buildDemandLetter', () => {
     expect(letter).toContain('[numer rachunku]');
   });
 });
+
+describe('with the contract read', () => {
+  const base = {
+    movedOutAt: d('2026-08-20'),
+    deposit: 4000,
+    returned: 0,
+    protocol: 'both' as const,
+  };
+
+  it("counts the contract's own term instead of the statute's month", () => {
+    expect(formatPolishDate(depositDeadline(d('2026-08-20'), { value: 14, unit: 'days' }))).toBe(
+      '03.09.2026',
+    );
+    expect(formatPolishDate(depositDeadline(d('2026-08-20'), { value: 2, unit: 'months' }))).toBe(
+      // 20.10.2026 is a Tuesday — no shift.
+      '20.10.2026',
+    );
+    const verdict = assessDeposit(
+      { ...base, reason: 'silent', contract: { returnTerm: { value: 14, unit: 'days' } } },
+      TODAY,
+    );
+    expect(verdict.deadlineSource).toBe('contract');
+  });
+
+  it('settles repainting when the contract exempts the tenant', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'paint', contract: { renovation: 'tenant_exempt' } },
+      TODAY,
+    );
+    expect(verdict.strength).toBe('strong');
+  });
+
+  it('weakens a cleaning dispute when the contract requires cleaning', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'wear', contract: { cleaning: 'cleaning_required' } },
+      TODAY,
+    );
+    expect(verdict.strength).toBe('medium');
+  });
+
+  it('fills the parties, cites the contract term and addresses a company as Państwo', () => {
+    const letter = buildDemandLetter({
+      ...base,
+      reason: 'paint',
+      contract: { returnTerm: { value: 14, unit: 'days' }, renovation: 'tenant_exempt' },
+      parties: {
+        tenantName: 'Olena Kowalenko',
+        landlordName: 'Mieszkania Praga Sp. z o.o.',
+        landlordAddress: 'ul. Targowa 18, Warszawa',
+        flatAddress: 'ul. Grójecka 45 lok. 12, Warszawa',
+      },
+      landlordKind: 'company',
+      today: TODAY,
+    });
+    expect(letter).toContain('Olena Kowalenko');
+    expect(letter).toContain('położonego przy ul. Grójecka 45 lok. 12, Warszawa');
+    expect(letter).toContain('Zgodnie z umową najmu kaucja podlega zwrotowi w terminie 14 dni');
+    expect(letter).toContain('najemca nie był zobowiązany do odnowienia lokalu');
+    expect(letter).toContain('narazi Państwa');
+    expect(letter).not.toContain('[Imię i nazwisko najemcy]');
+    // The bot never asks for these, so they stay placeholders.
+    expect(letter).toContain('[numer rachunku]');
+  });
+});

@@ -32,10 +32,12 @@ either duplicating that logic or maintaining an API between two deploys.
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
 
-The production database needs three migrations, none applied to prod yet —
+The production database needs four migrations, none applied to prod yet —
 run them deliberately: `20260831120000_add_telegram_bot` (`telegram_chats`,
-`telegram_subscriptions`), `20261004120000_telegram_subscription_label` and
-`20261005120000_deposit_cases`. Enable RLS on the new tables by hand.
+`telegram_subscriptions`), `20261004120000_telegram_subscription_label`,
+`20261005120000_deposit_cases` and `20261005140000_deposit_contract`. Enable
+RLS on the new tables by hand. The deposit flow's contract step also needs
+`ANTHROPIC_API_KEY`.
 
 ## City waitlist
 
@@ -120,4 +122,21 @@ group by reason, outcome
 order by reason, outcome;
 ```
 
-Legal wording should be checked by a Polish lawyer before wide promotion.
+### Reading the contract (`contract.ts`)
+
+After the five questions the bot asks for the lease (PDF, or photos of the
+pages followed by "done"). Claude (`claude-opus-5-5`, structured output, server
+fallback on refusal) extracts what the statute leaves to the contract — its own
+return deadline, whether repainting is on the tenant, whether cleaning is
+required — plus the landlord type and the parties. Measured on a test lease:
+6–11 s, roughly $0.10–0.15 per contract.
+
+- The reading runs after the webhook response (`next/server` `after`), because
+  Telegram retries slow webhooks; the person first gets "reading…".
+- Files are never stored: only Telegram file ids until reading, then cleared.
+  Names and addresses are kept in `letter_parties` only until the letter is
+  generated, and the daily cron clears any left after three days.
+- A failed read or a non-lease falls back to the verdict without the contract.
+
+Legal wording was checked against the consolidated statute texts (October
+2026); it should still be read by a Polish lawyer before wide promotion.

@@ -720,6 +720,30 @@ model DepositCase {
   // Asked for a lawyer after the letter failed — demand for the lawyer layer
   // before any lawyer is signed up.
   wantsLawyer    Boolean   @default(false) @map("wants_lawyer")
+
+  // What the lease itself says, read from an uploaded PDF or photos. The
+  // contract decides cases the statute leaves open: its own return deadline,
+  // whether repainting is on the tenant, whether cleaning is required.
+  // Telegram file ids of photographed pages, collected until "done" is pressed.
+  contractFiles       String[] @default([]) @map("contract_files")
+  // pending | done | failed | skipped
+  contractStatus      String?  @map("contract_status")
+  // standard | okazjonalny | instytucjonalny | unknown
+  contractType        String?  @map("contract_type")
+  // person | company | unknown
+  landlordKind        String?  @map("landlord_kind")
+  contractReturnValue Int?     @map("contract_return_value")
+  // days | months — null when the contract sets no deadline of its own.
+  contractReturnUnit  String?  @map("contract_return_unit")
+  // tenant_must_renew | tenant_exempt | not_mentioned
+  renovationRule      String?  @map("renovation_rule")
+  // cleaning_required | not_mentioned
+  cleaningRule        String?  @map("cleaning_rule")
+  // The clauses quoted back to the person, so the verdict shows its source.
+  contractQuotes      Json?    @map("contract_quotes")
+  // Names and addresses for the letter. Personal data, held only until the
+  // letter is generated and then cleared.
+  letterParties       Json?    @map("letter_parties")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 

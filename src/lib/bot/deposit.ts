@@ -39,12 +39,21 @@ export const DEPOSIT_REASONS: DepositReason[] = [
 ];
 export const DEPOSIT_PROTOCOLS: DepositProtocol[] = ['both', 'one', 'none'];
 
+export interface ContractTerms {
+  /** The contract's own return deadline, when it sets one. */
+  returnTerm?: { value: number; unit: 'days' | 'months' } | null;
+  renovation?: 'tenant_must_renew' | 'tenant_exempt' | 'not_mentioned' | null;
+  cleaning?: 'cleaning_required' | 'not_mentioned' | null;
+}
+
 export interface DepositFactsInput {
   movedOutAt: Date;
   deposit: number;
   returned: number;
   reason: DepositReason;
   protocol: DepositProtocol;
+  /** What the lease says, when the person shared it. */
+  contract?: ContractTerms | null;
 }
 
 /**
@@ -55,11 +64,13 @@ export interface DepositFactsInput {
  * - weak: damage is claimed and there is no protocol — word against word;
  * - lawful: unpaid bills are a legitimate deduction, if real and documented.
  */
-export type DepositStrength = 'strong' | 'medium' | 'weak' | 'lawful';
+type DepositStrength = 'strong' | 'medium' | 'weak' | 'lawful';
 
 export interface DepositVerdict {
   claim: number;
   deadline: Date;
+  /** Whether the deadline comes from the contract or from the statute's month. */
+  deadlineSource: 'statute' | 'contract';
   overdue: boolean;
   /** Days left until the deadline, or days past it when overdue. */
   days: number;
@@ -81,11 +92,15 @@ export function startOfUtcDay(date: Date): Date {
  * next month, or that month's last day when it has no such day (31 January →
  * 28/29 February).
  */
-export function addOneMonth(date: Date): Date {
+function addMonths(date: Date, months: number): Date {
   const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1;
+  const month = date.getUTCMonth() + months;
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   return utcDate(year, month, Math.min(date.getUTCDate(), lastDay));
+}
+
+export function addOneMonth(date: Date): Date {
+  return addMonths(date, 1);
 }
 
 // Easter Sunday by the anonymous Gregorian algorithm — two Polish public
@@ -130,9 +145,19 @@ function toWorkingDay(date: Date): Date {
   return day;
 }
 
-/** The last day the landlord has to return the deposit. */
-export function depositDeadline(movedOutAt: Date): Date {
-  return toWorkingDay(addOneMonth(startOfUtcDay(movedOutAt)));
+/**
+ * The last day the landlord has to return the deposit: the contract's own term
+ * when it sets one (courts have applied contractual terms, e.g. III C 224/22),
+ * otherwise the statute's month.
+ */
+export function depositDeadline(movedOutAt: Date, returnTerm?: ContractTerms['returnTerm']): Date {
+  const start = startOfUtcDay(movedOutAt);
+  const end = !returnTerm
+    ? addOneMonth(start)
+    : returnTerm.unit === 'days'
+      ? new Date(start.getTime() + returnTerm.value * DAY_MS)
+      : addMonths(start, returnTerm.value);
+  return toWorkingDay(end);
 }
 
 const TODAY_WORDS = ['сегодня', 'сьогодні', 'dziś', 'dzis', 'dzisiaj', 'today'];
@@ -185,15 +210,23 @@ export function parseAmount(text: string): number | null {
   return amount > 0 && amount <= 200_000 ? amount : null;
 }
 
-function assessStrength(reason: DepositReason, protocol: DepositProtocol): DepositStrength {
+function assessStrength(
+  reason: DepositReason,
+  protocol: DepositProtocol,
+  contract?: ContractTerms | null,
+): DepositStrength {
   switch (reason) {
     case 'wear':
+      // A contract that requires cleaning makes it the tenant's to prove.
+      return contract?.cleaning === 'cleaning_required' ? 'medium' : 'strong';
     case 'silent':
       return 'strong';
     case 'bills':
       return 'lawful';
     case 'paint':
-      return 'medium';
+      // Art. 6e puts renewal on the tenant only "unless the contract says
+      // otherwise" — a contract that exempts the tenant settles it.
+      return contract?.renovation === 'tenant_exempt' ? 'strong' : 'medium';
     case 'damage':
       return protocol === 'none' ? 'weak' : 'medium';
     default:
@@ -202,7 +235,8 @@ function assessStrength(reason: DepositReason, protocol: DepositProtocol): Depos
 }
 
 export function assessDeposit(facts: DepositFactsInput, today: Date): DepositVerdict {
-  const deadline = depositDeadline(facts.movedOutAt);
+  const returnTerm = facts.contract?.returnTerm ?? null;
+  const deadline = depositDeadline(facts.movedOutAt, returnTerm);
   const base = startOfUtcDay(today);
   const overdue = base > deadline;
   const days = Math.round(Math.abs(base.getTime() - deadline.getTime()) / DAY_MS);
@@ -210,9 +244,10 @@ export function assessDeposit(facts: DepositFactsInput, today: Date): DepositVer
   return {
     claim: Math.max(0, facts.deposit - facts.returned),
     deadline,
+    deadlineSource: returnTerm ? 'contract' : 'statute',
     overdue,
     days,
-    strength: assessStrength(facts.reason, facts.protocol),
+    strength: assessStrength(facts.reason, facts.protocol, facts.contract),
   };
 }
 
@@ -254,9 +289,31 @@ const REASON_PARAGRAPH: Record<DepositReason, string> = {
     'i faktycznej wraz z dokumentami.',
 };
 
+export interface LetterParties {
+  tenantName?: string | null;
+  landlordName?: string | null;
+  landlordAddress?: string | null;
+  flatAddress?: string | null;
+}
+
 export interface DepositLetterInput extends DepositFactsInput {
   today: Date;
+  /** From the contract, when read; any missing field stays a placeholder. */
+  parties?: LetterParties | null;
+  /** A company is addressed as "Państwo", a person as "Pan/Pani". */
+  landlordKind?: 'person' | 'company' | 'unknown' | null;
 }
+
+function polishTerm(term: NonNullable<ContractTerms['returnTerm']>): string {
+  if (term.unit === 'days') return term.value === 1 ? '1 dnia' : `${term.value} dni`;
+  return term.value === 1 ? '1 miesiąca' : `${term.value} miesięcy`;
+}
+
+// The paragraph for a contract that exempts the tenant from repainting.
+const PAINT_EXEMPT_PARAGRAPH =
+  'Zgodnie z umową najmu najemca nie był zobowiązany do odnowienia lokalu, ' +
+  'a zużycie będące następstwem prawidłowego używania nie obciąża najemcy ' +
+  '(art. 675 § 1 Kodeksu cywilnego). Potrącenie kosztów odnowienia lokalu jest bezzasadne.';
 
 /**
  * A wezwanie do zapłaty, in Polish, filled with everything the bot knows and
@@ -266,6 +323,9 @@ export interface DepositLetterInput extends DepositFactsInput {
  */
 export function buildDemandLetter(input: DepositLetterInput): string {
   const verdict = assessDeposit(input, input.today);
+  const parties = input.parties ?? {};
+  const you = input.landlordKind === 'company' ? 'Państwa' : 'Pana/Panią';
+  const returnTerm = input.contract?.returnTerm ?? null;
   const deadlineSentence = verdict.overdue
     ? `Termin ten upłynął w dniu ${formatPolishDate(verdict.deadline)}.`
     : `Termin ten upływa w dniu ${formatPolishDate(verdict.deadline)}.`;
@@ -273,24 +333,30 @@ export function buildDemandLetter(input: DepositLetterInput): string {
   return [
     `[Miejscowość], dnia ${formatPolishDate(input.today)}`,
     '',
-    '[Imię i nazwisko najemcy]',
+    parties.tenantName || '[Imię i nazwisko najemcy]',
     '[Adres do korespondencji]',
     '',
-    '[Imię i nazwisko lub nazwa wynajmującego]',
-    '[Adres wynajmującego]',
+    parties.landlordName || '[Imię i nazwisko lub nazwa wynajmującego]',
+    parties.landlordAddress || '[Adres wynajmującego]',
     '',
     'WEZWANIE DO ZAPŁATY',
     '',
     `Wzywam do zwrotu kaucji w kwocie ${formatPolishAmount(verdict.claim)}, wpłaconej na ` +
-      'podstawie umowy najmu lokalu położonego przy [adres lokalu], w terminie 7 dni od dnia ' +
+      `podstawie umowy najmu lokalu położonego przy ${parties.flatAddress || '[adres lokalu]'}, w terminie 7 dni od dnia ` +
       'doręczenia niniejszego wezwania, na rachunek bankowy nr [numer rachunku].',
     '',
     `Lokal został opróżniony i wydany w dniu ${formatPolishDate(input.movedOutAt)}. ` +
-      'Zgodnie z art. 6 ust. 4 ustawy z dnia 21 czerwca 2001 r. o ochronie praw lokatorów ' +
-      'kaucja podlega zwrotowi w ciągu miesiąca od dnia opróżnienia lokalu, po potrąceniu ' +
-      `należności wynajmującego z tytułu najmu lokalu. ${deadlineSentence}`,
+      (returnTerm
+        ? `Zgodnie z umową najmu kaucja podlega zwrotowi w terminie ${polishTerm(returnTerm)} ` +
+          'od dnia wydania lokalu (por. art. 6 ust. 4 ustawy z dnia 21 czerwca 2001 r. ' +
+          `o ochronie praw lokatorów). ${deadlineSentence}`
+        : 'Zgodnie z art. 6 ust. 4 ustawy z dnia 21 czerwca 2001 r. o ochronie praw lokatorów ' +
+          'kaucja podlega zwrotowi w ciągu miesiąca od dnia opróżnienia lokalu, po potrąceniu ' +
+          `należności wynajmującego z tytułu najmu lokalu. ${deadlineSentence}`),
     '',
-    REASON_PARAGRAPH[input.reason],
+    input.reason === 'paint' && input.contract?.renovation === 'tenant_exempt'
+      ? PAINT_EXEMPT_PARAGRAPH
+      : REASON_PARAGRAPH[input.reason],
     '',
     // Interest needs no demand: it runs from the day after the deadline (KC 481).
     verdict.overdue
@@ -298,9 +364,9 @@ export function buildDemandLetter(input: DepositLetterInput): string {
         formatPolishDate(new Date(verdict.deadline.getTime() + DAY_MS)) +
         ' należą się odsetki ustawowe za opóźnienie (art. 481 Kodeksu cywilnego). ' +
         'W przypadku bezskutecznego upływu terminu sprawa zostanie skierowana na drogę ' +
-        'postępowania sądowego, co narazi Pana/Panią na dodatkowe koszty postępowania.'
+        `postępowania sądowego, co narazi ${you} na dodatkowe koszty postępowania.`
       : 'W przypadku braku zwrotu w terminie sprawa zostanie skierowana na drogę ' +
-        'postępowania sądowego, co narazi Pana/Panią na dodatkowe koszty, w tym koszty ' +
+        `postępowania sądowego, co narazi ${you} na dodatkowe koszty, w tym koszty ` +
         'postępowania oraz odsetki ustawowe za opóźnienie (art. 481 Kodeksu cywilnego).',
     '',
     '[Podpis]',

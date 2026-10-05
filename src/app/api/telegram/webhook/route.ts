@@ -12,7 +12,9 @@ import { getBot } from '@/lib/bot/bot';
  */
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+// Contract reading runs after the response (next/server `after`) and counts
+// toward this budget; it typically takes 6–10 s, up to a minute for long scans.
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const bot = getBot();
