@@ -53,6 +53,7 @@ async function findOwnCase(chatDbId: string, caseId: string) {
 function reasonKeyboard(locale: BotLocale): InlineKeyboard {
   const labels: Record<DepositReason, Parameters<typeof dt>[1]> = {
     wear: 'reasonWear',
+    paint: 'reasonPaint',
     damage: 'reasonDamage',
     bills: 'reasonBills',
     silent: 'reasonSilent',
@@ -107,6 +108,7 @@ function factsOf(row: CaseRow) {
 
 const STRENGTH_TEXT = {
   wear: 'strongWear',
+  paint: 'mediumPaint',
   silent: 'strongSilent',
   bills: 'lawfulBills',
   other: 'mediumOther',
@@ -137,6 +139,7 @@ function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
     '',
     dt(locale, 'claimLine', { claim: money(verdict.claim) ?? '' }),
     deadlineLine,
+    dt(locale, 'contractNote'),
     '',
     strengthLine,
     ...(caveat ? ['', dt(locale, 'noProtocolNote')] : []),
@@ -293,7 +296,7 @@ export function registerDepositFlow(bot: Bot) {
     await saveReturned(ctx, row, locale, 0);
   });
 
-  bot.callbackQuery(/^dep:r:(wear|damage|bills|silent|other)$/, async (ctx) => {
+  bot.callbackQuery(/^dep:r:(wear|paint|damage|bills|silent|other)$/, async (ctx) => {
     const { chat, locale } = await localeOf(ctx);
     await ctx.answerCallbackQuery();
     const row = await findOpenCase(chat.id);
@@ -349,6 +352,7 @@ export function registerDepositFlow(bot: Bot) {
     const verdict = assessDeposit(facts, today);
     const extraKey = {
       wear: 'letterExtraWear',
+      paint: 'letterExtraPaint',
       damage: 'letterExtraDamage',
       bills: 'letterExtraBills',
     } as const;

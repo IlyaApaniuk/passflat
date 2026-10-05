@@ -4,6 +4,7 @@ import {
   addOneMonth,
   assessDeposit,
   buildDemandLetter,
+  depositDeadline,
   formatPolishDate,
   parseAmount,
   parseMoveOutDate,
@@ -18,6 +19,25 @@ describe('addOneMonth', () => {
     expect(formatPolishDate(addOneMonth(d('2026-01-31')))).toBe('28.02.2026');
     expect(formatPolishDate(addOneMonth(d('2028-01-31')))).toBe('29.02.2028');
     expect(formatPolishDate(addOneMonth(d('2026-12-15')))).toBe('15.01.2027');
+  });
+});
+
+describe('depositDeadline', () => {
+  it.each([
+    // An ordinary weekday: one month on, nothing to shift.
+    ['2026-09-01', '01.10.2026'],
+    // KC art. 115: Saturday 10.10 → Monday 12.10.
+    ['2026-09-10', '12.10.2026'],
+    // Sunday 20.09 → Monday 21.09.
+    ['2026-08-20', '21.09.2026'],
+    // Independence Day, Wednesday 11.11 → Thursday 12.11.
+    ['2026-10-11', '12.11.2026'],
+    // Easter Monday 2026 is 06.04 → Tuesday 07.04.
+    ['2026-03-06', '07.04.2026'],
+    // Christmas Eve is a day off from 2025: 24.12 → 25 and 26 are holidays too → Monday 28.12.
+    ['2026-11-24', '28.12.2026'],
+  ])('moved out %s → deadline %s', (movedOut, expected) => {
+    expect(formatPolishDate(depositDeadline(d(movedOut)))).toBe(expected);
   });
 });
 
@@ -84,6 +104,11 @@ describe('assessDeposit', () => {
     expect(verdict.strength).toBe('strong');
   });
 
+  it('does not promise a win on repainting, which the tenant may owe (uopl art. 6e)', () => {
+    const verdict = assessDeposit({ ...base, reason: 'paint', movedOutAt: d('2026-08-01') }, TODAY);
+    expect(verdict.strength).toBe('medium');
+  });
+
   it('treats unpaid bills as a lawful deduction', () => {
     const verdict = assessDeposit({ ...base, reason: 'bills', movedOutAt: d('2026-08-01') }, TODAY);
     expect(verdict.strength).toBe('lawful');
@@ -103,6 +128,21 @@ describe('assessDeposit', () => {
   });
 });
 
+describe('buildDemandLetter for repainting', () => {
+  it('asks for proof of actual costs instead of calling the deduction groundless outright', () => {
+    const letter = buildDemandLetter({
+      movedOutAt: d('2026-08-20'),
+      deposit: 4000,
+      returned: 0,
+      reason: 'paint',
+      protocol: 'both',
+      today: TODAY,
+    });
+    expect(letter).toContain('faktyczne poniesienie tych kosztów');
+    expect(letter).toContain('art. 6 Kodeksu cywilnego');
+  });
+});
+
 describe('buildDemandLetter', () => {
   const letter = buildDemandLetter({
     movedOutAt: d('2026-08-20'),
@@ -118,7 +158,10 @@ describe('buildDemandLetter', () => {
     // Polish groups thousands only from five digits: 3500,00 zł but 13 500,00 zł.
     expect(letter).toMatch(/kwocie 3500,00.zł/);
     expect(letter).toContain('art. 6 ust. 4');
-    expect(letter).toContain('Termin ten upłynął w dniu 20.09.2026.');
+    // 20.09.2026 is a Sunday, so the deadline runs to Monday (KC art. 115)…
+    expect(letter).toContain('Termin ten upłynął w dniu 21.09.2026.');
+    // …and statutory interest from the day after, without any demand.
+    expect(letter).toContain('Od dnia 22.09.2026 należą się odsetki ustawowe');
     expect(letter).toContain('art. 675 § 1');
   });
 

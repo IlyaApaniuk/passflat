@@ -11,14 +11,32 @@
  *   the tenancy;
  * - Kodeks cywilny art. 675 § 1 — the tenant is not liable for wear resulting
  *   from proper use;
- * - Kodeks cywilny art. 481 — statutory interest for late payment;
- * - Kodeks cywilny art. 112 — how a deadline set in months is counted.
+ * - ustawa o ochronie praw lokatorów, art. 6e ust. 1 and Kodeks cywilny
+ *   art. 681 — after moving out the tenant must "renew" the flat (painting),
+ *   unless the contract says otherwise; the landlord may then deduct what the
+ *   renewal actually cost, and must prove it (Kodeks cywilny art. 6);
+ * - Kodeks cywilny art. 481 — statutory interest for late payment, due from the
+ *   day after the deadline without any demand;
+ * - Kodeks cywilny art. 112 and 115 — how a deadline set in months is counted,
+ *   and that one ending on a Saturday or a public holiday moves to the next
+ *   working day.
+ *
+ * Checked against the consolidated texts in October 2026. A contract may set a
+ * different return deadline (a Szczecin court applied a two-month one in
+ * III C 224/22), which is why the verdict tells people to check theirs.
  */
 
-export type DepositReason = 'wear' | 'damage' | 'bills' | 'silent' | 'other';
+export type DepositReason = 'wear' | 'paint' | 'damage' | 'bills' | 'silent' | 'other';
 export type DepositProtocol = 'both' | 'one' | 'none';
 
-export const DEPOSIT_REASONS: DepositReason[] = ['wear', 'damage', 'bills', 'silent', 'other'];
+export const DEPOSIT_REASONS: DepositReason[] = [
+  'wear',
+  'paint',
+  'damage',
+  'bills',
+  'silent',
+  'other',
+];
 export const DEPOSIT_PROTOCOLS: DepositProtocol[] = ['both', 'one', 'none'];
 
 export interface DepositFactsInput {
@@ -32,7 +50,8 @@ export interface DepositFactsInput {
 /**
  * How the case looks against the law:
  * - strong: the deduction has no legal footing (ordinary wear, no explanation);
- * - medium: the landlord must prove damage, and a handover protocol helps;
+ * - medium: the landlord may have a claim but must prove it — damage, or the
+ *   cost of repainting the tenant may owe under art. 6e;
  * - weak: damage is claimed and there is no protocol — word against word;
  * - lawful: unpaid bills are a legitimate deduction, if real and documented.
  */
@@ -69,6 +88,53 @@ export function addOneMonth(date: Date): Date {
   return utcDate(year, month, Math.min(date.getUTCDate(), lastDay));
 }
 
+// Easter Sunday by the anonymous Gregorian algorithm — two Polish public
+// holidays (Easter Monday, Corpus Christi) move with it.
+function easterSunday(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return utcDate(year, month - 1, day);
+}
+
+/** Statutory days off (ustawa o dniach wolnych od pracy), Christmas Eve included from 2025. */
+function isPolishPublicHoliday(date: Date): boolean {
+  const year = date.getUTCFullYear();
+  const md = `${date.getUTCMonth() + 1}-${date.getUTCDate()}`;
+  const fixed = ['1-1', '1-6', '5-1', '5-3', '8-15', '11-1', '11-11', '12-25', '12-26'];
+  if (year >= 2025) fixed.push('12-24');
+  if (fixed.includes(md)) return true;
+
+  const easter = easterSunday(year).getTime();
+  const movable = [1, 60].map((offset) => new Date(easter + offset * DAY_MS)); // Easter Monday, Corpus Christi
+  return movable.some((holiday) => holiday.getTime() === date.getTime());
+}
+
+/** Kodeks cywilny art. 115: a deadline on a Saturday, Sunday or holiday runs to the next working day. */
+function toWorkingDay(date: Date): Date {
+  let day = date;
+  while (day.getUTCDay() === 0 || day.getUTCDay() === 6 || isPolishPublicHoliday(day)) {
+    day = new Date(day.getTime() + DAY_MS);
+  }
+  return day;
+}
+
+/** The last day the landlord has to return the deposit. */
+export function depositDeadline(movedOutAt: Date): Date {
+  return toWorkingDay(addOneMonth(startOfUtcDay(movedOutAt)));
+}
+
 const TODAY_WORDS = ['сегодня', 'сьогодні', 'dziś', 'dzis', 'dzisiaj', 'today'];
 const YESTERDAY_WORDS = ['вчера', 'вчора', 'wczoraj', 'yesterday'];
 
@@ -101,7 +167,8 @@ export function parseMoveOutDate(text: string, today: Date): Date | null {
   if (!match[3] && date > base) date = utcDate(year - 1, monthIndex, day);
 
   if (date > base) return null;
-  if (base.getTime() - date.getTime() > 3 * 365 * DAY_MS) return null;
+  // The claim itself runs for six years (KC art. 118); older is almost surely a typo.
+  if (base.getTime() - date.getTime() > 6 * 365 * DAY_MS) return null;
   return date;
 }
 
@@ -125,6 +192,8 @@ function assessStrength(reason: DepositReason, protocol: DepositProtocol): Depos
       return 'strong';
     case 'bills':
       return 'lawful';
+    case 'paint':
+      return 'medium';
     case 'damage':
       return protocol === 'none' ? 'weak' : 'medium';
     default:
@@ -133,7 +202,7 @@ function assessStrength(reason: DepositReason, protocol: DepositProtocol): Depos
 }
 
 export function assessDeposit(facts: DepositFactsInput, today: Date): DepositVerdict {
-  const deadline = addOneMonth(startOfUtcDay(facts.movedOutAt));
+  const deadline = depositDeadline(facts.movedOutAt);
   const base = startOfUtcDay(today);
   const overdue = base > deadline;
   const days = Math.round(Math.abs(base.getTime() - deadline.getTime()) / DAY_MS);
@@ -163,7 +232,12 @@ const REASON_PARAGRAPH: Record<DepositReason, string> = {
   wear:
     'Wskazane potrącenie dotyczy zużycia lokalu będącego następstwem jego prawidłowego używania, ' +
     'za które – zgodnie z art. 675 § 1 Kodeksu cywilnego – najemca nie ponosi odpowiedzialności. ' +
-    'Potrącenie z tego tytułu jest bezzasadne.',
+    'Proszę o wskazanie podstawy potrącenia wraz z dokumentami potwierdzającymi poniesione koszty.',
+  paint:
+    'W zakresie potrącenia kosztów odnowienia lokalu proszę o przedstawienie dokumentów ' +
+    'potwierdzających faktyczne poniesienie tych kosztów i ich wysokość (faktury, rachunki). ' +
+    'Ciężar wykazania zasadności potrącenia spoczywa na wynajmującym (art. 6 Kodeksu cywilnego). ' +
+    'Potrącenie kwot nieudokumentowanych jest bezzasadne.',
   damage:
     'W przypadku zgłaszania roszczeń z tytułu uszkodzeń lokalu proszę o wskazanie ich zakresu ' +
     'wraz z dowodami (protokół zdawczo-odbiorczy, dokumentacja zdjęciowa) oraz kalkulacją kosztów ' +
@@ -214,13 +288,20 @@ export function buildDemandLetter(input: DepositLetterInput): string {
     `Lokal został opróżniony i wydany w dniu ${formatPolishDate(input.movedOutAt)}. ` +
       'Zgodnie z art. 6 ust. 4 ustawy z dnia 21 czerwca 2001 r. o ochronie praw lokatorów ' +
       'kaucja podlega zwrotowi w ciągu miesiąca od dnia opróżnienia lokalu, po potrąceniu ' +
-      `należności wynajmującego z tytułu najmu. ${deadlineSentence}`,
+      `należności wynajmującego z tytułu najmu lokalu. ${deadlineSentence}`,
     '',
     REASON_PARAGRAPH[input.reason],
     '',
-    'W przypadku bezskutecznego upływu terminu sprawa zostanie skierowana na drogę ' +
-      'postępowania sądowego, co narazi Pana/Panią na dodatkowe koszty, w tym koszty ' +
-      'postępowania oraz odsetki ustawowe za opóźnienie (art. 481 Kodeksu cywilnego).',
+    // Interest needs no demand: it runs from the day after the deadline (KC 481).
+    verdict.overdue
+      ? 'Od dnia ' +
+        formatPolishDate(new Date(verdict.deadline.getTime() + DAY_MS)) +
+        ' należą się odsetki ustawowe za opóźnienie (art. 481 Kodeksu cywilnego). ' +
+        'W przypadku bezskutecznego upływu terminu sprawa zostanie skierowana na drogę ' +
+        'postępowania sądowego, co narazi Pana/Panią na dodatkowe koszty postępowania.'
+      : 'W przypadku braku zwrotu w terminie sprawa zostanie skierowana na drogę ' +
+        'postępowania sądowego, co narazi Pana/Panią na dodatkowe koszty, w tym koszty ' +
+        'postępowania oraz odsetki ustawowe za opóźnienie (art. 481 Kodeksu cywilnego).',
     '',
     '[Podpis]',
   ].join('\n');
