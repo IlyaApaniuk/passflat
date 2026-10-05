@@ -35,6 +35,7 @@ import {
   useDistanceFormatter,
 } from '@/components/buildings/location-score-block';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
+import { TelegramBotCta } from '@/components/costs/telegram-bot-cta';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -480,7 +481,7 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
-  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us') => {
+  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us' | 'telegram') => {
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
       city: citySlug,
@@ -768,6 +769,9 @@ export function CheckerClient({
                       </Link>
                     </Button>
                   </div>
+                  <div onClickCapture={() => captureCta('telegram')}>
+                    <TelegramBotCta buildingId={result.building.id} source="checker" />
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -797,6 +801,11 @@ export function CheckerClient({
                         citySlug={citySlug}
                         returnTo={`/${citySlug}/check?p=${encodeURIComponent(result.building.placeId)}`}
                       />
+                    </div>
+                    {/* The empty state is where the bot earns its place: nothing
+                        to show today, but a chat can come back when it changes. */}
+                    <div onClickCapture={() => captureCta('telegram')}>
+                      <TelegramBotCta buildingId={result.building.id} source="empty" />
                     </div>
                   </div>
                 </CardContent>

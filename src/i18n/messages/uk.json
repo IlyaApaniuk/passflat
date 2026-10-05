@@ -867,7 +867,8 @@
       "followHint": "Ще не готовий ділитися? Стеж за оновленнями будинку.",
       "cheaperThanDistrict": "На {percent}% дешевше за медіану по району {district}",
       "pricierThanDistrict": "На {percent}% дорожче за медіану по району {district}",
-      "depositReturned": "заставу повернули {returned} з {answered}"
+      "depositReturned": "заставу повернули {returned} з {answered}",
+      "telegramCta": "Стежити за цим будинком у Telegram"
     },
     "nuisances": {
       "title": "На що звернути увагу",

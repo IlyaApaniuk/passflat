@@ -867,7 +867,8 @@
       "followHint": "Not ready to share? Follow the building for updates.",
       "cheaperThanDistrict": "{percent}% below the {district} median",
       "pricierThanDistrict": "{percent}% above the {district} median",
-      "depositReturned": "deposit returned to {returned} of {answered}"
+      "depositReturned": "deposit returned to {returned} of {answered}",
+      "telegramCta": "Follow this building on Telegram"
     },
     "nuisances": {
       "title": "Worth knowing",

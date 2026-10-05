@@ -87,6 +87,7 @@ model Building {
   locationScore BuildingLocationScore?
   follows       BuildingFollow[]
   tags          BuildingTag[]
+  telegramSubs  TelegramSubscription[]
 
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
@@ -508,6 +509,7 @@ model Profile {
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
   buildingFollows          BuildingFollow[]
+  telegramChats            TelegramChat[]
 
   @@map("profiles")
 }
@@ -633,4 +635,121 @@ model CityNotifySubscription {
   @@unique([email, cityNormalized, districtSlug, listingType], map: "city_notify_email_city_district_type_key")
   @@index([cityNormalized, districtSlug], map: "city_notify_city_district_idx")
   @@map("city_notify_subscriptions")
+}
+
+// --- Telegram bot ---
+
+// One row per Telegram chat that started the bot. Deliberately account-free:
+// the bot's whole point is that a Telegram user needs no signup to look up an
+// address, so `profileId` stays null unless the chat later links a web account.
+model TelegramChat {
+  id           String    @id @default(uuid()) @db.Uuid
+  chatId       BigInt    @unique @map("chat_id")
+  profileId    String?   @map("profile_id") @db.Uuid
+  locale       String    @default("ru")
+  // Raw `?start=` payload of the first /start, e.g. "thr_med" or "b_<uuid>".
+  // Attribution for the whole point of the bot: which surface sent this person.
+  startPayload String?   @map("start_payload")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  blockedAt    DateTime? @map("blocked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  profile       Profile?               @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  subscriptions TelegramSubscription[]
+  depositCases  DepositCase[]
+
+  @@index([profileId])
+  @@map("telegram_chats")
+}
+
+// A chat watching a building or a district. Mirrors BuildingFollow, but keyed
+// by chat instead of user because the push channel is the chat itself.
+//
+// `targetKey` ("b:<uuid>", "d:<slug>" or "c:<city>") carries the dedupe key instead of the
+// nullable columns it duplicates: Postgres treats NULLs as distinct, so a
+// unique key over `buildingId` would let one chat subscribe to the same
+// district many times and get the same push twice.
+model TelegramSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  targetKey      String    @map("target_key")
+  buildingId     String?   @map("building_id") @db.Uuid
+  districtSlug   String    @default("") @map("district_slug")
+  citySlug       String    @default("warsaw") @map("city_slug")
+  // Display name for a target we hold no row for: a city we do not cover yet
+  // ("c:krakow" → "Kraków"), waitlisted from the bot.
+  label          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastNotifiedAt DateTime? @map("last_notified_at")
+
+  chat     TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  building Building?    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, targetKey], map: "telegram_sub_chat_target_key")
+  @@index([buildingId])
+  @@index([citySlug, districtSlug])
+  @@map("telegram_subscriptions")
+}
+
+// A tenant trying to get a deposit back, walked through by the bot: a short
+// intake, a verdict against the law, a demand letter in Polish, and follow-ups
+// on fixed dates. The outcome a case ends with (returned in full / in part /
+// not at all) is the deposit statistic nobody else in this market has — it
+// accrues here as a by-product of helping, not from a form.
+model DepositCase {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  // intake → verdict → letter_sent → resolved; "abandoned" when restarted.
+  status         String    @default("intake")
+  // The intake question awaiting an answer while status = "intake".
+  step           String?
+  movedOutAt     DateTime? @map("moved_out_at") @db.Date
+  depositAmount  Int?      @map("deposit_amount")
+  returnedAmount Int?      @map("returned_amount")
+  // wear | damage | bills | silent | other
+  reason         String?
+  // both | one | none — a handover protocol with photos at move-in and move-out.
+  protocol       String?
+  letterAt       DateTime? @map("letter_at")
+  // The next date the bot writes first; "deadline" or "letter" says why.
+  followUpAt     DateTime? @map("follow_up_at")
+  followUpKind   String?   @map("follow_up_kind")
+  // full | partial | none
+  outcome        String?
+  outcomeAt      DateTime? @map("outcome_at")
+  // Asked for a lawyer after the letter failed — demand for the lawyer layer
+  // before any lawyer is signed up.
+  wantsLawyer    Boolean   @default(false) @map("wants_lawyer")
+
+  // What the lease itself says, read from an uploaded PDF or photos. The
+  // contract decides cases the statute leaves open: its own return deadline,
+  // whether repainting is on the tenant, whether cleaning is required.
+  // Telegram file ids of photographed pages, collected until "done" is pressed.
+  contractFiles       String[] @default([]) @map("contract_files")
+  // pending | done | failed | skipped
+  contractStatus      String?  @map("contract_status")
+  // standard | okazjonalny | instytucjonalny | unknown
+  contractType        String?  @map("contract_type")
+  // person | company | unknown
+  landlordKind        String?  @map("landlord_kind")
+  contractReturnValue Int?     @map("contract_return_value")
+  // days | months — null when the contract sets no deadline of its own.
+  contractReturnUnit  String?  @map("contract_return_unit")
+  // tenant_must_renew | tenant_exempt | not_mentioned
+  renovationRule      String?  @map("renovation_rule")
+  // cleaning_required | not_mentioned
+  cleaningRule        String?  @map("cleaning_rule")
+  // The clauses quoted back to the person, so the verdict shows its source.
+  contractQuotes      Json?    @map("contract_quotes")
+  // Names and addresses for the letter. Personal data, held only until the
+  // letter is generated and then cleared.
+  letterParties       Json?    @map("letter_parties")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  chat TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, status])
+  @@index([followUpAt])
+  @@map("deposit_cases")
 }

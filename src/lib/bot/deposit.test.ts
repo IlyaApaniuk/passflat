@@ -1,0 +1,236 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  addOneMonth,
+  assessDeposit,
+  buildDemandLetter,
+  depositDeadline,
+  formatPolishDate,
+  parseAmount,
+  parseMoveOutDate,
+} from './deposit';
+
+const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
+const TODAY = d('2026-10-05');
+
+describe('addOneMonth', () => {
+  it('counts a month the way KC art. 112 does', () => {
+    expect(formatPolishDate(addOneMonth(d('2026-09-12')))).toBe('12.10.2026');
+    expect(formatPolishDate(addOneMonth(d('2026-01-31')))).toBe('28.02.2026');
+    expect(formatPolishDate(addOneMonth(d('2028-01-31')))).toBe('29.02.2028');
+    expect(formatPolishDate(addOneMonth(d('2026-12-15')))).toBe('15.01.2027');
+  });
+});
+
+describe('depositDeadline', () => {
+  it.each([
+    // An ordinary weekday: one month on, nothing to shift.
+    ['2026-09-01', '01.10.2026'],
+    // KC art. 115: Saturday 10.10 → Monday 12.10.
+    ['2026-09-10', '12.10.2026'],
+    // Sunday 20.09 → Monday 21.09.
+    ['2026-08-20', '21.09.2026'],
+    // Independence Day, Wednesday 11.11 → Thursday 12.11.
+    ['2026-10-11', '12.11.2026'],
+    // Easter Monday 2026 is 06.04 → Tuesday 07.04.
+    ['2026-03-06', '07.04.2026'],
+    // Christmas Eve is a day off from 2025: 24.12 → 25 and 26 are holidays too → Monday 28.12.
+    ['2026-11-24', '28.12.2026'],
+  ])('moved out %s → deadline %s', (movedOut, expected) => {
+    expect(formatPolishDate(depositDeadline(d(movedOut)))).toBe(expected);
+  });
+});
+
+describe('parseMoveOutDate', () => {
+  it.each([
+    ['12.09.2026', '12.09.2026'],
+    ['12.09', '12.09.2026'],
+    ['1/9/26', '01.09.2026'],
+    ['вчера', '04.10.2026'],
+    ['dziś', '05.10.2026'],
+    // "12.12" typed in October means last December, not a future date.
+    ['12.12', '12.12.2025'],
+  ])('%s → %s', (input, expected) => {
+    expect(formatPolishDate(parseMoveOutDate(input, TODAY)!)).toBe(expected);
+  });
+
+  it.each(['31.02.2026', '12.13', 'завтра', '01.01.2020', '10.10.2026', 'Grójecka 45'])(
+    'rejects %s',
+    (input) => {
+      expect(parseMoveOutDate(input, TODAY)).toBeNull();
+    },
+  );
+});
+
+describe('parseAmount', () => {
+  it.each([
+    ['3600', 3600],
+    ['3 600 zł', 3600],
+    ['3 600,00', 3600],
+    ['4500 злотых', 4500],
+  ])('%s → %d', (input, expected) => {
+    expect(parseAmount(input)).toBe(expected);
+  });
+
+  it.each(['ничего', '0', '-100', 'много'])('rejects %s', (input) => {
+    expect(parseAmount(input)).toBeNull();
+  });
+});
+
+describe('assessDeposit', () => {
+  const base = { deposit: 4000, returned: 1000, protocol: 'both' as const };
+
+  it('is overdue a day after the month runs out', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'silent', movedOutAt: d('2026-09-01') },
+      TODAY,
+    );
+    expect(verdict.overdue).toBe(true);
+    expect(verdict.days).toBe(4);
+    expect(verdict.claim).toBe(3000);
+  });
+
+  it('is not overdue on the deadline day itself', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'silent', movedOutAt: d('2026-09-05') },
+      TODAY,
+    );
+    expect(verdict.overdue).toBe(false);
+    expect(verdict.days).toBe(0);
+  });
+
+  it('rates ordinary wear as having no legal footing', () => {
+    const verdict = assessDeposit({ ...base, reason: 'wear', movedOutAt: d('2026-08-01') }, TODAY);
+    expect(verdict.strength).toBe('strong');
+  });
+
+  it('does not promise a win on repainting, which the tenant may owe (uopl art. 6e)', () => {
+    const verdict = assessDeposit({ ...base, reason: 'paint', movedOutAt: d('2026-08-01') }, TODAY);
+    expect(verdict.strength).toBe('medium');
+  });
+
+  it('treats unpaid bills as a lawful deduction', () => {
+    const verdict = assessDeposit({ ...base, reason: 'bills', movedOutAt: d('2026-08-01') }, TODAY);
+    expect(verdict.strength).toBe('lawful');
+  });
+
+  it('weakens a damage dispute without a handover protocol', () => {
+    const withProtocol = assessDeposit(
+      { ...base, reason: 'damage', movedOutAt: d('2026-08-01') },
+      TODAY,
+    );
+    const without = assessDeposit(
+      { ...base, protocol: 'none', reason: 'damage', movedOutAt: d('2026-08-01') },
+      TODAY,
+    );
+    expect(withProtocol.strength).toBe('medium');
+    expect(without.strength).toBe('weak');
+  });
+});
+
+describe('buildDemandLetter for repainting', () => {
+  it('asks for proof of actual costs instead of calling the deduction groundless outright', () => {
+    const letter = buildDemandLetter({
+      movedOutAt: d('2026-08-20'),
+      deposit: 4000,
+      returned: 0,
+      reason: 'paint',
+      protocol: 'both',
+      today: TODAY,
+    });
+    expect(letter).toContain('faktyczne poniesienie tych kosztów');
+    expect(letter).toContain('art. 6 Kodeksu cywilnego');
+  });
+});
+
+describe('buildDemandLetter', () => {
+  const letter = buildDemandLetter({
+    movedOutAt: d('2026-08-20'),
+    deposit: 4000,
+    returned: 500,
+    reason: 'wear',
+    protocol: 'both',
+    today: TODAY,
+  });
+
+  it('claims what was not returned, with the statute and the passed deadline', () => {
+    expect(letter).toContain('WEZWANIE DO ZAPŁATY');
+    // Polish groups thousands only from five digits: 3500,00 zł but 13 500,00 zł.
+    expect(letter).toMatch(/kwocie 3500,00.zł/);
+    expect(letter).toContain('art. 6 ust. 4');
+    // 20.09.2026 is a Sunday, so the deadline runs to Monday (KC art. 115)…
+    expect(letter).toContain('Termin ten upłynął w dniu 21.09.2026.');
+    // …and statutory interest from the day after, without any demand.
+    expect(letter).toContain('Od dnia 22.09.2026 należą się odsetki ustawowe');
+    expect(letter).toContain('art. 675 § 1');
+  });
+
+  it('leaves personal data as placeholders instead of asking for it', () => {
+    expect(letter).toContain('[Imię i nazwisko najemcy]');
+    expect(letter).toContain('[numer rachunku]');
+  });
+});
+
+describe('with the contract read', () => {
+  const base = {
+    movedOutAt: d('2026-08-20'),
+    deposit: 4000,
+    returned: 0,
+    protocol: 'both' as const,
+  };
+
+  it("counts the contract's own term instead of the statute's month", () => {
+    expect(formatPolishDate(depositDeadline(d('2026-08-20'), { value: 14, unit: 'days' }))).toBe(
+      '03.09.2026',
+    );
+    expect(formatPolishDate(depositDeadline(d('2026-08-20'), { value: 2, unit: 'months' }))).toBe(
+      // 20.10.2026 is a Tuesday — no shift.
+      '20.10.2026',
+    );
+    const verdict = assessDeposit(
+      { ...base, reason: 'silent', contract: { returnTerm: { value: 14, unit: 'days' } } },
+      TODAY,
+    );
+    expect(verdict.deadlineSource).toBe('contract');
+  });
+
+  it('settles repainting when the contract exempts the tenant', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'paint', contract: { renovation: 'tenant_exempt' } },
+      TODAY,
+    );
+    expect(verdict.strength).toBe('strong');
+  });
+
+  it('weakens a cleaning dispute when the contract requires cleaning', () => {
+    const verdict = assessDeposit(
+      { ...base, reason: 'wear', contract: { cleaning: 'cleaning_required' } },
+      TODAY,
+    );
+    expect(verdict.strength).toBe('medium');
+  });
+
+  it('fills the parties, cites the contract term and addresses a company as Państwo', () => {
+    const letter = buildDemandLetter({
+      ...base,
+      reason: 'paint',
+      contract: { returnTerm: { value: 14, unit: 'days' }, renovation: 'tenant_exempt' },
+      parties: {
+        tenantName: 'Olena Kowalenko',
+        landlordName: 'Mieszkania Praga Sp. z o.o.',
+        landlordAddress: 'ul. Targowa 18, Warszawa',
+        flatAddress: 'ul. Grójecka 45 lok. 12, Warszawa',
+      },
+      landlordKind: 'company',
+      today: TODAY,
+    });
+    expect(letter).toContain('Olena Kowalenko');
+    expect(letter).toContain('położonego przy ul. Grójecka 45 lok. 12, Warszawa');
+    expect(letter).toContain('Zgodnie z umową najmu kaucja podlega zwrotowi w terminie 14 dni');
+    expect(letter).toContain('najemca nie był zobowiązany do odnowienia lokalu');
+    expect(letter).toContain('narazi Państwa');
+    expect(letter).not.toContain('[Imię i nazwisko najemcy]');
+    // The bot never asks for these, so they stay placeholders.
+    expect(letter).toContain('[numer rachunku]');
+  });
+});
