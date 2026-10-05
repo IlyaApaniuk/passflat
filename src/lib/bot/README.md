@@ -32,9 +32,10 @@ either duplicating that logic or maintaining an API between two deploys.
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
 
-The production database needs two migrations, neither applied to prod yet —
-run them deliberately: `20260831120000_add_telegram_bot` (the `telegram_chats`
-and `telegram_subscriptions` tables) and `20261004120000_telegram_subscription_label`.
+The production database needs three migrations, none applied to prod yet —
+run them deliberately: `20260831120000_add_telegram_bot` (`telegram_chats`,
+`telegram_subscriptions`), `20261004120000_telegram_subscription_label` and
+`20261005120000_deposit_cases`. Enable RLS on the new tables by hand.
 
 ## City waitlist
 
@@ -89,3 +90,34 @@ rozliczenie), conversational cost submission, and the push notifier that reads
 `TelegramSubscription` and messages chats when new reports land. The
 subscriptions accumulate from day one so the notifier has something to send
 when it is written.
+
+## Deposit recovery ("Верни залог")
+
+Entry points: the word "залог"/"застава"/"kaucja" in a message, the button
+under `/deposit`, or the deep link `?start=dep` — the one to paste under
+"they won't return my deposit" questions in chats.
+
+1. Five questions (move-out date, deposit, returned, reason, handover
+   protocol) — state in `DepositCase`, because webhook calls land on
+   different serverless instances.
+2. A rule-based verdict (`deposit.ts`): the deadline counted per KC art. 112,
+   ordinary wear per KC art. 675 § 1, unpaid bills as a lawful deduction.
+   Deliberately not generated — same facts, same answer.
+3. A wezwanie do zapłaty in Polish with placeholders for names, addresses and
+   the bank account, which the bot never asks for.
+4. Follow-ups from `/api/cron/telegram-followups` (daily, 09:00 UTC): on the
+   landlord's deadline, and 8 days after the letter. The outcome answers
+   (full / partial / none) and `wants_lawyer` are the deposit statistic and
+   the demand signal for a lawyer partnership.
+
+Outcomes by reason:
+
+```sql
+select reason, outcome, count(*), sum(deposit_amount - coalesce(returned_amount, 0)) as claimed
+from deposit_cases
+where outcome is not null
+group by reason, outcome
+order by reason, outcome;
+```
+
+Legal wording should be checked by a Polish lawyer before wide promotion.

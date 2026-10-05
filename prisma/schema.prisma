@@ -656,6 +656,7 @@ model TelegramChat {
 
   profile       Profile?               @relation(fields: [profileId], references: [id], onDelete: SetNull)
   subscriptions TelegramSubscription[]
+  depositCases  DepositCase[]
 
   @@index([profileId])
   @@map("telegram_chats")
@@ -688,4 +689,43 @@ model TelegramSubscription {
   @@index([buildingId])
   @@index([citySlug, districtSlug])
   @@map("telegram_subscriptions")
+}
+
+// A tenant trying to get a deposit back, walked through by the bot: a short
+// intake, a verdict against the law, a demand letter in Polish, and follow-ups
+// on fixed dates. The outcome a case ends with (returned in full / in part /
+// not at all) is the deposit statistic nobody else in this market has — it
+// accrues here as a by-product of helping, not from a form.
+model DepositCase {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  // intake → verdict → letter_sent → resolved; "abandoned" when restarted.
+  status         String    @default("intake")
+  // The intake question awaiting an answer while status = "intake".
+  step           String?
+  movedOutAt     DateTime? @map("moved_out_at") @db.Date
+  depositAmount  Int?      @map("deposit_amount")
+  returnedAmount Int?      @map("returned_amount")
+  // wear | damage | bills | silent | other
+  reason         String?
+  // both | one | none — a handover protocol with photos at move-in and move-out.
+  protocol       String?
+  letterAt       DateTime? @map("letter_at")
+  // The next date the bot writes first; "deadline" or "letter" says why.
+  followUpAt     DateTime? @map("follow_up_at")
+  followUpKind   String?   @map("follow_up_kind")
+  // full | partial | none
+  outcome        String?
+  outcomeAt      DateTime? @map("outcome_at")
+  // Asked for a lawyer after the letter failed — demand for the lawyer layer
+  // before any lawyer is signed up.
+  wantsLawyer    Boolean   @default(false) @map("wants_lawyer")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  chat TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, status])
+  @@index([followUpAt])
+  @@map("deposit_cases")
 }

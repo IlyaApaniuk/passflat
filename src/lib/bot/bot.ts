@@ -1,8 +1,16 @@
 import { Bot, InlineKeyboard, type Context } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
-import { trackServerEvent } from '@/lib/posthog-server';
 
+import { track } from './analytics';
+import {
+  cancelDepositFlow,
+  handleDepositText,
+  maybeOfferDeposit,
+  registerDepositFlow,
+  startDepositFlow,
+} from './deposit-flow';
+import { dt } from './deposit-texts';
 import { matchDistrict } from './districts';
 import { geocodeAddress } from './geocode';
 import {
@@ -52,10 +60,6 @@ function isRateLimited(chatId: number): boolean {
   lastSeen.set(chatId, hits);
   if (lastSeen.size > 5000) lastSeen.clear();
   return hits.length > RATE_MAX;
-}
-
-function track(chatId: number, event: string, properties?: Record<string, unknown>) {
-  trackServerEvent(`tg_${chatId}`, event, { source: 'telegram_bot', ...properties });
 }
 
 /**
@@ -212,6 +216,12 @@ export function createBot(token: string): Bot {
 
     track(chatId, 'tg_bot_started', { payload: payload || null, is_new: chat.isNew });
 
+    // "?start=dep" — shared in chats under "they won't return my deposit".
+    if (payload === 'dep') {
+      await startDepositFlow(ctx, chat.id, locale);
+      return;
+    }
+
     // A deep link can carry a building the user already looked at on the site
     // ("b_<uuid>"), so honour it instead of asking for an address they just typed.
     if (payload.startsWith('d_')) {
@@ -273,12 +283,19 @@ export function createBot(token: string): Bot {
     await ctx.reply(lines.join('\n'), {
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
-      reply_markup: new InlineKeyboard().url(
-        t(locale, 'btnSubmit'),
-        webLink('/warsaw/costs/submit', locale, 'deposit'),
-      ),
+      reply_markup: new InlineKeyboard()
+        .text(dt(locale, 'btnStartFlow'), 'dep:start')
+        .row()
+        .url(t(locale, 'btnSubmit'), webLink('/warsaw/costs/submit', locale, 'deposit')),
     });
   });
+
+  bot.command('cancel', async (ctx) => {
+    const chat = await touchChat({ chatId: ctx.chat.id });
+    await cancelDepositFlow(ctx, chat.id, chat.locale as BotLocale);
+  });
+
+  registerDepositFlow(bot);
 
   bot.command('my', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat.id });
@@ -416,6 +433,11 @@ export function createBot(token: string): Bot {
       locale: normalizeLocale(ctx.from?.language_code),
     });
     const locale = chat.locale as BotLocale;
+
+    // An answer to a deposit-flow question ("12.09", "4000") comes first, so it
+    // is never mistaken for an address.
+    if (await handleDepositText(ctx, chat.id, locale, text)) return;
+    if (await maybeOfferDeposit(ctx, locale, text)) return;
 
     // A district name has no single point to geocode, so it is caught before
     // Google sees it — otherwise "Мокотов" came back as "address not found".
