@@ -1,0 +1,15 @@
+{
+  "enabledMcpjsonServers": ["posthog"],
+  "permissions": {
+    "allow": [
+      "Bash(scripts/ralph.sh)",
+      "Bash(scripts/ralph.sh *)",
+      "Bash(node scripts/ralph-tasks.mjs *)",
+      "Bash(touch ralph/STOP)",
+      "Bash(scripts/ralph-watch.sh)",
+      "Read(ralph/**)",
+      "Read(docs/**)",
+      "mcp__posthog"
+    ]
+  }
+}
