@@ -4,6 +4,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Playwright builds and serves into `.next-e2e` so an e2e run never touches the
+  // `.next` directory of a running dev server.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
     // Vercel Image Optimization (WebP/AVIF, resizing, CDN caching). Listing and
     // cost-report photos are served from Supabase Storage public buckets.

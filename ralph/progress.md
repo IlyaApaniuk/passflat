@@ -11,8 +11,9 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
   SQL first). Never add RLS statements to migrations: the owner switches RLS on in the
   dashboard; name the new table under "Owner review".
 - `npm test` runs Vitest on `src/**/*.{test,spec}.{ts,tsx}` only; `e2e/` is Playwright.
-- `npm run test:e2e` builds into `.next` and reuses the owner's dev server on port 3000: do not
-  run it before T001 is done. Iterations use ports 3100–3199 for their own servers.
+- `npm run test:e2e` builds into `.next-e2e` and serves on port 3100 (never reused; a busy 3100
+  fails the run). It is safe while the owner's dev server runs on 3000. Iterations use ports
+  3100–3199 for their own servers; port 3100 belongs to e2e runs.
 - `npm run knip` is part of CI and of the pre-push hook: a new file must be imported or listed
   as an entry in `knip.json`; a new dependency must be used.
 - The husky pre-commit hook runs lint-staged (ESLint fix and Prettier on staged files); if it
@@ -24,8 +25,8 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Pipes and `;`-chained commands may be denied by the loop permissions; run one plain allowed
   command per Bash call.
 - The gate is `npm run verify` (lint, typecheck, knip, test, build; stops at the first failure).
-- `npm run build` rewrites `next-env.d.ts` (`.next/dev/types` → `.next/types`): run
-  `git restore next-env.d.ts` before committing.
+- `npm run build` rewrites `next-env.d.ts` (`.next/dev/types` → `.next/types`), and so does
+  `npm run test:e2e` (→ `.next-e2e/types`): run `git restore next-env.d.ts` before committing.
 - Knip prints unlisted dependencies, unused exports and types as warnings (`knip.json` rules)
   and exits 0; only unused files and dependencies fail it. The current warnings pre-date the loop.
 
@@ -38,3 +39,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing.
 - Owner review: nothing.
 - Next: T001 (move `npm run test:e2e` to its own port and build directory).
+
+### 2026-11-18 23:33 · T001 · done
+
+- Done: `playwright.config.ts` takes the port from one `PORT` constant (3100); `baseURL` and the dummy `NEXT_PUBLIC_APP_URL` follow it; the web server runs `npm run build && npm run start -- --port 3100` with `NEXT_DIST_DIR=.next-e2e` in its env and `reuseExistingServer: false`. `next.config.mjs` reads `distDir` from `NEXT_DIST_DIR` (default `.next`). `.next-e2e/` added to `.gitignore` (which knip honours), `.prettierignore` and the ESLint ignores; `.next-e2e/types/**/*.ts` and `.next-e2e/dev/types/**/*.ts` added to `tsconfig.json` `include` so the e2e build does not rewrite tsconfig. Docs: `docs/development-workflow.md` (end-to-end section, commands table), `docs/architecture.md` (tests), `CLAUDE.md` (verification paragraph), `docs/specs/README.md` (harness row Done), Learnings here. CI workflow unchanged (its job-level `NEXT_PUBLIC_APP_URL: http://localhost:3000` is overridden by the web server env).
+- Checks: `npm run verify` passed twice (before and with `.next-e2e/` present: lint clean, typecheck clean, knip exit 0 with the same pre-existing warnings, Vitest 29 files / 312 tests, build OK). `npm run test:e2e` passed (2/2) and `CI=1 npm run test:e2e` passed (2/2) while the owner's dev server on 3000 stayed up (same PID before and after). Negative check: with a throwaway server on 3100, `npx playwright test` failed with "http://localhost:3100 is already used"; server stopped afterwards. `prettier --file-info` reports `.next-e2e` ignored; `git status` shows no `.next-e2e` entries.
+- Did not work: nothing. Note: the e2e build rewrites `next-env.d.ts` to `.next-e2e/types/routes.d.ts` (restored with `git restore next-env.d.ts`).
+- Owner review: nothing. The CI e2e job itself was not run (no push); local CI-mode run passed.
+- Next: M0 harness tasks are done; the next work comes from decomposing PRD 1 into specs and tasks.

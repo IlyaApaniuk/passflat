@@ -119,9 +119,9 @@ npm run build
 ```
 
 `npm run verify` runs all five in order and stops at the first failure. `npm run build` needs the
-build env from `.env.local` (CI uses dummies). `npm run test:e2e` builds and serves on port 3000
-and reuses a running server there, which is the owner's dev server: do not run it until task
-T001 moves it to its own port. Never use `db:deploy`, `db:push`, `prisma migrate deploy`,
+build env from `.env.local` (CI uses dummies). `npm run test:e2e` builds into `.next-e2e` and
+serves on port 3100, never reusing a running server, so the owner's dev server on port 3000 is
+not touched. Never use `db:deploy`, `db:push`, `prisma migrate deploy`,
 `prisma migrate reset`, `bot:dev` or `bot:webhook` as a check.
 
 Finish with a focused diff review and report what changed, what passed and what remains

@@ -243,7 +243,7 @@ imported (`src/lib/stripe.ts`, `src/lib/email/client.ts`, `src/lib/supabase/broa
   - `docs/audit-2026-07-27.md` (C1; removed 2026-11-18, in git history) found RLS off on `pois` and `building_tags`. Whether that is fixed is **unverified**.
 - **Tests**:
   - Vitest (`vitest.config.ts`): `src/**/*.{test,spec}.{ts,tsx}` (29 files), node environment, `NEXT_PUBLIC_APP_URL=https://passflat.com`.
-  - Playwright (`playwright.config.ts`): `e2e/home.spec.ts` smoke tests on port 3000. The web server is `npm run build && npm run start` with dummy env, and `reuseExistingServer` is on outside CI, so a running dev server on :3000 is reused.
+  - Playwright (`playwright.config.ts`): `e2e/home.spec.ts` smoke tests on port 3100 (the `PORT` constant). The web server is `npm run build && npm run start -- --port 3100` with dummy env and `NEXT_DIST_DIR=.next-e2e` (read as `distDir` by `next.config.mjs`), and `reuseExistingServer` is off, so a running dev server is never reused or touched.
   - CI runs lint, typecheck, knip, unit tests and build; the e2e job is `continue-on-error`.
 - **knip** (`knip.json`) runs in CI and on pre-push. It ignores `scripts-tmp-cleanup/**` and keeps `src/components/ui/**`, `scripts/**` and `pricing/client.tsx` as entries.
 

@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 3000;
+// The e2e server runs on its own port and build directory so it never touches
+// the owner's dev server (port 3000, `.next`). Agents use ports 3100–3199.
+const PORT = 3100;
 const baseURL = `http://localhost:${PORT}`;
+const DIST_DIR = '.next-e2e';
 
 // Inert dummy env so `next start` can boot in CI without real services. Mirrors
 // the build env in .github/workflows/ci.yml. Real values would be wired via
@@ -26,6 +29,8 @@ const dummyEnv: Record<string, string> = {
   CRON_SECRET: 'dummy-cron-secret',
   NEXT_PUBLIC_APP_URL: baseURL,
   NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES: 'true',
+  // Read by next.config.mjs as `distDir` for both `next build` and `next start`.
+  NEXT_DIST_DIR: DIST_DIR,
 };
 
 export default defineConfig({
@@ -45,9 +50,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run start',
+    command: `npm run build && npm run start -- --port ${PORT}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Never test a server this run did not start: a busy port fails the run.
+    reuseExistingServer: false,
     timeout: 180_000,
     env: dummyEnv,
   },

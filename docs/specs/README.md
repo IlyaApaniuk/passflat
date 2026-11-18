@@ -38,9 +38,9 @@ Draft copy is allowed where a spec says so; list such keys in the progress entry
 
 ## Requirement map
 
-| FR  | Requirement                                                   | Spec                                                     | Status  |
-| --- | ------------------------------------------------------------- | -------------------------------------------------------- | ------- |
-| —   | Harness: the `verify` gate (T000), e2e on its own port (T001) | [../development-workflow.md](../development-workflow.md) | Planned |
+| FR  | Requirement                                                   | Spec                                                     | Status |
+| --- | ------------------------------------------------------------- | -------------------------------------------------------- | ------ |
+| —   | Harness: the `verify` gate (T000), e2e on its own port (T001) | [../development-workflow.md](../development-workflow.md) | Done   |
 
 ## Related references
 

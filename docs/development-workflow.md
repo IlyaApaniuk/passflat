@@ -60,10 +60,17 @@ The gate writes to no database and sends nothing. A task is done only when the g
 ## End-to-end tests
 
 `npm run test:e2e` runs Playwright (`playwright.config.ts`, specs in `e2e/`) in Chromium. The
-current config builds and serves the app on port 3000 and reuses a server already running there,
-which on this machine is the owner's dev server. Do not run it until task T001 moves it to its
-own port and build directory. CI runs it as a separate, non-blocking job; `npm run verify` does
-not include it.
+Playwright web server builds the app with inert dummy env into its own build directory,
+`.next-e2e` (`NEXT_DIST_DIR=.next-e2e`, read as `distDir` by `next.config.mjs`; default
+`.next`), and serves it with `next start` on port 3100, set by the `PORT` constant in
+`playwright.config.ts`. It never reuses a running server: if something already answers on 3100,
+the run fails instead of testing it. The owner's dev server on port 3000 and its `.next`
+directory are not touched, so the command is safe to run while it is up.
+
+`.next-e2e/` is ignored by git, ESLint, Prettier and knip, and its type globs are listed in
+`tsconfig.json` so the build does not rewrite it. The build still rewrites `next-env.d.ts` to
+import `.next-e2e/types/routes.d.ts`; run `git restore next-env.d.ts` afterwards. CI runs the
+same command as a separate, non-blocking job; `npm run verify` does not include it.
 
 ## Commands with additional effects
 
@@ -77,7 +84,7 @@ not include it.
 | `npm run db:import-pois`   | Imports OpenStreetMap points of interest; uses the network                   |
 | `npm run bot:dev`          | Long-polls the Telegram dev bot; takes its updates; owner only               |
 | `npm run bot:webhook -- …` | Registers or deletes the production webhook; owner only                      |
-| `npm run test:e2e`         | Builds and serves the app; see the port caveat above                         |
+| `npm run test:e2e`         | Builds into `.next-e2e` and serves the app on port 3100 (see above)          |
 
 ## Feature task template
 
