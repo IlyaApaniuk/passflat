@@ -7,9 +7,12 @@ PRD changes status or an experiment ends.
 
 - Harness: verify gate (T000), e2e on its own port (T001). Night run 2026-11-18/19 (D21).
 - PostHog baseline readout and an independent direction review (`reviews/`).
-- PRD 1, activation measurement and the Telegram bot: decomposed and built on
-  `chore/agent-harness`; the owner answers its decision review, reviews the pull request,
-  applies the four bot migrations and launches the bot when ready.
+- PRD 1, activation measurement and the Telegram bot: decomposed on 2026-11-19 into specs
+  `docs/specs/01`–`05` and 45 tasks (M1 events 9, M2 roommate 6, M3 building figures 14, M4 bot
+  13, M5 measurement docs 3; 6 blocked on owner questions Q-1–Q-6 of
+  `prd/prd-1-decision-review.md`); the loop builds it on `chore/agent-harness`. The owner
+  answers the decision review, reviews the pull request, applies the four bot migrations and
+  launches the bot when ready.
 
 ## Next
 

@@ -1,41 +1,773 @@
 {
   "version": 1,
-  "prd": "Harness setup (before PRD 1), 2026-11-18",
+  "prd": {
+    "title": "PRD 1: Activation measurement and the Telegram bot",
+    "version": "0.1",
+    "date": "2026-11-19"
+  },
   "tasks": [
     {
-      "id": "T000",
-      "milestone": "M0",
-      "title": "Add the npm verify script used as the gate of every task",
-      "spec": "docs/development-workflow.md#the-gate",
+      "id": "T002",
+      "milestone": "M1",
+      "title": "Fix landing events lost before posthog.init (PRD 2 FR-1, if moved into PRD 1)",
+      "spec": "docs/specs/01-analytics-context.md#landing-capture",
       "dependsOn": [],
-      "status": "done",
+      "status": "blocked",
       "acceptance": [
-        "package.json has a `verify` script that runs, in this order and stopping at the first failure: `npm run lint`, `npm run typecheck`, `npm run knip`, `npm test`, `npm run build`",
-        "docs/development-workflow.md names `npm run verify` as the gate and lists the five steps; the sentence saying the script does not exist yet is removed",
-        "CI (.github/workflows/ci.yml) is unchanged"
-      ],
-      "checks": ["npm run verify"],
-      "attempts": 1,
-      "notes": "Harness self-test: small, real and safe. Run it as the first loop dry run."
-    },
-    {
-      "id": "T001",
-      "milestone": "M0",
-      "title": "Run the Playwright smoke tests on their own port and build directory",
-      "spec": "docs/development-workflow.md#end-to-end-tests",
-      "dependsOn": ["T000"],
-      "status": "done",
-      "acceptance": [
-        "playwright.config.ts takes the port from one constant set to 3100 and the base URL from it; `NEXT_PUBLIC_APP_URL` in its dummy env follows the constant",
-        "the web server is never reused locally: `reuseExistingServer` is false, so a server on 3100 that the run did not start fails the run instead of being tested",
-        "the e2e build and server use a separate Next build directory `.next-e2e`: next.config.mjs reads `distDir` from `NEXT_DIST_DIR` (default `.next`) and the Playwright web server sets `NEXT_DIST_DIR=.next-e2e`; `next start` serves on the constant port",
-        "`.next-e2e/` is ignored by git, ESLint, Prettier and knip; the owner's dev server on port 3000 keeps running untouched during `npm run test:e2e`",
-        "the CI e2e job still passes with the same command (`npm run test:e2e`)",
-        "docs/development-workflow.md end-to-end section and the Learnings line about port 3000 in ralph/progress.md are updated"
+        "Built exactly as PRD 2 FR-1 acceptance criteria 1-7 (docs/product/prd/prd-2-deposit-sprint.md): a test that fails on the current code first; if the loss cannot be reproduced, block with the finding instead of changing the provider",
+        "The before_send page context of T005 still attaches to every event after init moves",
+        "Consent model and analytics identity unchanged (D10); existing consent tests pass unchanged"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 1,
-      "notes": "Until this task is done, iterations must not run `npm run test:e2e`: the current config builds into `.next` and reuses whatever answers on port 3000, which is the owner's dev server."
+      "attempts": 0,
+      "notes": "Blocked: Q-1 (prd-1-decision-review.md). Should PRD 2 FR-1 (landing $pageview and mount-time events dropped because PostHogPageView captures before the parent effect runs posthog.init; 86 % of visits have no $pageview) move into PRD 1 now, so E8 and E9 can be read? Proposal: yes."
+    },
+    {
+      "id": "T003",
+      "milestone": "M1",
+      "title": "Add a test that the four locale files have identical key sets",
+      "spec": "docs/specs/01-analytics-context.md#locale-key-parity",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/i18n/messages.test.ts loads src/i18n/messages/{pl,en,ru,uk}.json, flattens leaf keys and fails listing every key missing in any file",
+        "The test passes on the current tree; if it does not, the missing keys are added with the English value and listed in the progress entry as draft copy",
+        "A deliberately removed key (checked locally, not committed) makes the test fail with that key in the message"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Every later copy task relies on this test."
+    },
+    {
+      "id": "T004",
+      "milestone": "M1",
+      "title": "Add the pure page-context mapping (page_type, locale, city, listing_type)",
+      "spec": "docs/specs/01-analytics-context.md#page-context",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/analytics/page-context.ts exports getPageContext(pathname) returning { page_type, locale, city, listing_type? } per the spec table, with the page_type values in one exported constant",
+        "Static top-level routes are listed from the directories under src/app/[locale]/ so that /about, /blog, /auth/... never read as a city",
+        "Unit tests cover every golden example of the spec section plus /sublet and /replacement list pages (other, with listing_type) and /warsaw/review (other)",
+        "`blog` is a page_type value (Assumption, Q-12) and is named in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T005",
+      "milestone": "M1",
+      "title": "Attach page context and entry_page_type to every client event in before_send",
+      "spec": "docs/specs/01-analytics-context.md#attaching-context-to-every-event",
+      "dependsOn": ["T004"],
+      "status": "todo",
+      "acceptance": [
+        "posthog.init gets a before_send hook that merges getPageContext(window.location.pathname) into every event; the event's own properties win",
+        "entry_page_type follows the spec's order of preference (SDK per-session initial pathname if posthog-js 1.374 exposes one, otherwise the first event of any kind per $session_id kept in module memory); the choice is named in the progress entry",
+        "The merge logic is a pure function with unit tests: context added; own property wins; entry set for the session and kept for later events; reset on a new $session_id; a null event passes through",
+        "No new storage of any kind; persistence modes, consent upgrade, ref/utm register_once handling unchanged; nothing runs when NEXT_PUBLIC_POSTHOG_KEY is unset",
+        "docs/architecture.md §5 states where context is attached and the two limitations (memory mode loses it on reload; entry restarts on a consented reload when the SDK has no initial-pathname property)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "The provider renders on every page, so the e2e smoke run checks the home page still loads."
+    },
+    {
+      "id": "T006",
+      "milestone": "M1",
+      "title": "Send listing_type next to type on listing detail events",
+      "spec": "docs/specs/01-analytics-context.md#listing-events",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "listing_detail_viewed, interest_modal_opened (both call sites) and listing_external_contact_clicked in src/app/[locale]/[city]/replacement/[id]/client.tsx send listing_type with the same value as type; type stays",
+        "The property object is built by a small pure function with a unit test (roommate, sublet, replacement)",
+        "listing_detail_viewed still fires once per listing id (effect deps unchanged)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T007",
+      "milestone": "M1",
+      "title": "Count search_performed results after the active filters",
+      "spec": "docs/specs/01-analytics-context.md#listing-events",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "The inline useMemo filter of listings-page-client.tsx (about lines 120-170) moves into a pure filterListings(listings, filters) used by the memo and by the event",
+        "search_performed.results_count is filterListings(listings, newFilters).length, computed with the new filters inside handleFiltersChange",
+        "Unit tests: 10 listings and a filter leaving 3 gives 3; a filter leaving 0 gives 0; the existing filter behaviour (price on totalCost, districts by display name, roomType, preferredGender, registration, amenities) is covered by at least one case each",
+        "Map moves still fire no event; replacement and sublet pages behave as before"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T008",
+      "milestone": "M1",
+      "title": "Fire telegram_bot_opened from the website's Telegram bot link",
+      "spec": "docs/specs/01-analytics-context.md#telegram-link-click",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/components/costs/telegram-bot-cta.tsx fires one telegram_bot_opened per click with source (checker | empty, the existing prop) and has_building_context (buildingId present); the link still opens as before",
+        "The source union type lives in one exported place so PRD 2 can add guide_deposit",
+        "The property builder is a pure function with a unit test; the component still renders nothing without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME",
+        "checker_cta_clicked {cta: 'telegram'} on the checker stays unchanged"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T009",
+      "milestone": "M1",
+      "title": "Add report and per-source counts to building_detail_viewed",
+      "spec": "docs/specs/01-analytics-context.md#building-view",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "The building page server passes counts of visible reports per source; building_detail_viewed adds report_count, user_count, import_count, scraped_count and keeps building_id, building_slug, city",
+        "Counting is a pure function with a unit test: sources user, user, scraped give report_count 3, user_count 2, import_count 0, scraped_count 1; zero reports give all zeros",
+        "The event still fires once per building id"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Names are an Assumption (spec). T019 later takes the counts from the figure contract."
+    },
+    {
+      "id": "T010",
+      "milestone": "M1",
+      "title": "Fire listing_interest_saved and listing_interest_failed from the interest form",
+      "spec": "docs/specs/01-analytics-context.md#interest-events",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/components/listings/listings-empty-state.tsx fires exactly one listing_interest_saved after a 2xx response from /api/city-notify, with listing_type, district_scope (district | city) and intent only when an optional intent prop is set",
+        "A non-2xx response or a thrown fetch fires exactly one listing_interest_failed with error_code from the spec set: taken from the response's code field when present, otherwise by status (429 rate_limited, 400 invalid_input, 500+ server_error), network_error when fetch threw",
+        "No email, form text or response body in either event; no success event on an error",
+        "A pure interestOutcomeEvent function has unit tests for both scopes, with and without intent, and every error code including the status fallback"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "The API's code field arrives with T011; the status fallback keeps this task independent."
+    },
+    {
+      "id": "T011",
+      "milestone": "M2",
+      "title": "Store the three waitlist classes in /api/city-notify with independent validation",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#interest-api-three-classes",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "listingType and districtSlug are validated independently; rows are stored as exactly one of: city launch ('' / ''), listings whole city (type / ''), listings district (type / slug); unique key unchanged",
+        "Listings classes require an existing City slug (400 unknown_city) and, for a district, a district of that city (400 unknown_district); a district without type or an unknown type is 400 invalid_input; it never becomes a city-launch row",
+        "Only the city-launch class sends cityNotifyConfirmation and fires city_notify_subscribed; both listings classes fire district_notify_subscribed with listingType and districtSlug",
+        "Every error JSON has a stable code (rate_limited, invalid_input, consent_required, invalid_email, unknown_city, unknown_district, server_error) next to the existing error text; a P2002 unique violation on the upsert returns 200",
+        "Route tests with mocked @/lib/prisma, @/lib/email/send, @/lib/posthog-server and Supabase cover every case listed in the spec, including the old city form body {email, city: 'Kraków', consent, locale} and a repeat submission; no real e-mail is sent"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T012",
+      "milestone": "M2",
+      "title": "Send the city-launch e-mail only to city-launch rows",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-mailing",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "/api/cron/city-launch selects cityNormalized, listingType '', districtSlug '', consent true, notifiedAt null; old rows are not relabelled",
+        "A route test with mocked Prisma and sendEmail asserts the where clause, 401 without auth, and notifiedAt set only after a successful send; Resend is never called",
+        "The progress entry records for the owner: overlapping manual runs can double-send and the e-mail links to the frozen /replacement page (Q-16)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T013",
+      "milestone": "M2",
+      "title": "Add the two-role selector to the roommate page",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#role-selector",
+      "dependsOn": ["T010"],
+      "status": "todo",
+      "acceptance": [
+        "On /[city]/roommate only, two equal choices sit in the header stack directly above the roommate bridge: Szukam pokoju / Ищу комнату and Mam wolny pokój / Есть свободная комната (EN and UK drafts in a new listings.roommateRoles group in all four files)",
+        "Find: sets intent find_room, scrolls the list container to the top and collapses the choices into a chip that reopens them; Offer: navigates to /create-listing?type=roommate with the locale-aware Link",
+        "Each choice fires one roommate_intent_selected with intent; the intent is passed to ListingsEmptyState so listing_interest_saved carries it; nothing is stored",
+        "Choice logic is a pure helper with a unit test; the list stays rendered; /replacement and /sublet are unchanged",
+        "At 360 px both choices fit on one line without horizontal scroll and are at least 44 px high (checked in the code's classes and named in the progress entry); the namespace shipped to the client is checked and named"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Draft copy keys go into the progress entry for the owner (Q-8)."
+    },
+    {
+      "id": "T014",
+      "milestone": "M2",
+      "title": "Keep the query string when sign-in protects /create-listing",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#offer-a-room-across-sign-in",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/middleware.ts builds next from pathname plus search for protected paths, through a pure function that keeps safeNextPath's rules",
+        "Unit tests: /ru/create-listing?type=roommate gives next=/ru/create-listing?type=roommate; a path without a query is unchanged; an unsafe value is still rejected",
+        "The empty state's direct sign-in link and the other protected paths (/dashboard, /messages) keep working"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T015",
+      "milestone": "M2",
+      "title": "Tell 'no offers in the city' from 'nothing matches your filters'",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#empty-states",
+      "dependsOn": ["T007", "T013"],
+      "status": "todo",
+      "acceptance": [
+        "The roommate page server passes cityOfferCount (active roommate listings in the city without URL filters, one count query); replacement and sublet pages pass it too if the shared component needs it and render as before",
+        "A pure listingsEmptyKind({ cityOfferCount, filteredCount, hasActiveFilters }) returns none, no_offers_in_city or no_match_for_filters, with the three spec examples as tests",
+        "no_match_for_filters shows 'No offers match your filters' with a clear-filters button and, when a district is selected, the district interest capture; 'no listings in the city yet' never shows while cityOfferCount > 0, also on a reload with strict URL filters",
+        "New copy keys in all four locale files (drafts listed in the progress entry)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T016",
+      "milestone": "M2",
+      "title": "Make the interest form and the checker link copy honest",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#honest-interest-copy",
+      "dependsOn": ["T011", "T015"],
+      "status": "todo",
+      "acceptance": [
+        "The interest button reads Сохранить интерес (RU, given) with PL, EN, UK drafts; listings.demandCapture subtitles no longer promise an e-mail when listings appear; a new success key says the interest is saved and there are no automatic notifications yet (landing.cityNotify.success stays for the city-launch form)",
+        "Applies to all three listing types; ListingsEmptyState is keyed by districtSlug so a success message does not survive a district change",
+        "The roommate bridge copy becomes «Нашёл вариант? Проверь адрес и известные расходы» (RU, given) with PL, EN, UK drafts (spec 02 §Checker link); no cost gate on offers or the checker",
+        "Consent checkbox and text unchanged; every draft key is listed in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T017",
+      "milestone": "M3",
+      "title": "Add the pure figure contract with golden tests",
+      "spec": "docs/specs/03-building-figures.md#the-contract",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/cost-figures.ts (no Prisma import) exports the spec types, summarizeFigures(reports, { level, rentalType }), summarizeDepositReturns(reports), answerProperties(summary, reference) (spec 01 §Answer quality), MIN_AREA_REPORTS = 5, MIN_DEPOSIT_ANSWERS = 3 and the Q-3 constants (LEGACY_NULL_IS_COMPLETE = false and the others), each in one place",
+        "src/lib/cost-figures.test.ts implements golden examples 1-11 of the spec exactly, plus answerProperties for a building answer, a district reference and no data",
+        "Medians use computeStats without trimming; null is never counted as 0; stored 0 counts as a value; *Included counts separately",
+        "src/lib/bot/lookup.ts imports MIN_AREA_REPORTS from the new module (no second constant)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Every Q-3 default is an Assumption: name them in the progress entry."
+    },
+    {
+      "id": "T018",
+      "milestone": "M3",
+      "title": "Add the cached server loaders of the figure contract",
+      "spec": "docs/specs/03-building-figures.md#loaders",
+      "dependsOn": ["T017"],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/cost-figures-query.ts exports loadBuildingFigures, loadAreaReference (returns level, slug, districtName or the city nameKey, and the summary) and loadDepositReturns, selecting only the needed fields with isVisible true and take 5000",
+        "Loaders are cached with unstable_cache, tag costs, 300 s, through a helper that calls straight through when the Next incremental cache is unavailable (bot:dev under tsx)",
+        "The rental-type filter is applied in the query or before summarizeFigures; the area fallback follows golden example 11",
+        "Tests mock @/lib/prisma and next/cache: the where includes isVisible true, the rental-type filter, district → city fallback, no reference when the city has no report"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T019",
+      "milestone": "M3",
+      "title": "Building page: read figures from the contract and show tenant and asking groups separately",
+      "spec": "docs/specs/03-building-figures.md#building-page",
+      "dependsOn": ["T018", "T009"],
+      "status": "todo",
+      "acceptance": [
+        "building/[slug]/page.tsx gets its figures from loadBuildingFigures (and the per-field breakdown over the tenant group as in the spec table); no second median code stays in the page except the items the table keeps",
+        "The page shows a source line (reports from tenants, of them entered by Passflat, asking prices from listings, with counts) and the tenant group, then the asking group, each with its own figures and N; never one number over both",
+        "costs.building.basedOnReports and estimateCaption no longer call asking prices tenant reports; outlier trimming is removed",
+        "building_detail_viewed takes its counts from sourceCounts; generateMetadata (title, OG) is unchanged (Q-2)",
+        "Draft copy keys in all four files listed in the progress entry; the client namespace is checked and named"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Large page (client.tsx is over 1,000 lines): change only what this task needs; later tasks T020-T022 continue on the same page."
+    },
+    {
+      "id": "T020",
+      "milestone": "M3",
+      "title": "Building page: one observation, known part, zero vs unknown and dates",
+      "spec": "docs/specs/03-building-figures.md#building-page",
+      "dependsOn": ["T019"],
+      "status": "todo",
+      "acceptance": [
+        "A group with one report reads «Одно наблюдение по этому адресу» (RU given; PL, EN, UK drafts) with its values and characteristics, and shows no median, range or comparison",
+        "A knownPartTotal is labelled 'known part of the costs' and never as the monthly cost; the utilitiesUnknown chip is replaced",
+        "The breakdown shows unknown, included in rent and a confirmed 0 zł distinctly, with each metric's own N",
+        "Dates: 'last report added or confirmed' as month and year; the tenancy period as years, or 'the period these costs were paid is not known'",
+        "Display decisions are pure helpers with unit tests built on golden examples 2-5 and 9"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T021",
+      "milestone": "M3",
+      "title": "Building page: first-screen order, two actions, fallback and neutral badges",
+      "spec": "docs/specs/03-building-figures.md#building-page",
+      "dependsOn": ["T020"],
+      "status": "todo",
+      "acceptance": [
+        "First screen order: address and district, source line, known costs per group with their limits, then two actions View details (scrolls to the breakdown) and Add your experience (/costs/submit?b=<id>&source=building); sources and limits are never behind useHasContributed",
+        "No visible report: «По дому данных нет» (RU given) first, then the area reference from loadAreaReference labelled with its level, group and N; no reference: 'No figures for this area yet' plus location score and nuisances; district figures never labelled as the building's",
+        "costs.trust.reliable no longer claims reliability: a neutral sample-size badge (draft); earlyData stays",
+        "building_detail_viewed adds answer_level, source_kind, n, incomplete from answerProperties",
+        "A pure function picks the fallback state; tests cover building data, district reference, city reference, none"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T022",
+      "milestone": "M3",
+      "title": "Building page: remove overpay and cheaper/pricier verdicts from the comparison",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
+      "dependsOn": ["T021"],
+      "status": "todo",
+      "acceptance": [
+        "The comparison section, cheaperThanPercentile and district-position-bar.tsx show no 'cheaper / pricier / overpay / save' conclusion",
+        "Side-by-side reference values with group label and N remain; a percentage, position bar or percentile only when both sides are the same group, the same single rental type and both N >= 5 (so none on this page in PRD 1)",
+        "The comparability rule is one pure function with unit tests (mixed types, N 4 vs 5, tenant vs asking)",
+        "Unused message keys are left in place and listed in the progress entry (no key removal in this task)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T023",
+      "milestone": "M3",
+      "title": "Checker API: build the cost summary from the figure contract",
+      "spec": "docs/specs/03-building-figures.md#checker",
+      "dependsOn": ["T018"],
+      "status": "todo",
+      "acceptance": [
+        "src/app/api/location-score/route.ts summariseCosts returns the building FigureSummary, the area reference (MIN_AREA_REPORTS rule, city fallback; no ungated district median) and the deposit statistic from the contract loaders",
+        "aggregateLocationCheckerCosts is removed or becomes a thin wrapper over the contract; no second median code remains",
+        "Route tests (existing pattern) cover a mixed building, a building without reports with a district reference, and with a city reference",
+        "A consistency test feeds the same report fixture through the checker summary and loadBuildingFigures and gets the same median and N per group"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Neighbour medians stay as they are (Q-2)."
+    },
+    {
+      "id": "T024",
+      "milestone": "M3",
+      "title": "Checker page: show groups, one observation and the labelled reference without verdicts",
+      "spec": "docs/specs/03-building-figures.md#checker",
+      "dependsOn": ["T023"],
+      "status": "todo",
+      "acceptance": [
+        "check/client.tsx renders the groups with N, one observation, known part, the labelled district or city reference and the deposit statistic ('X of N who answered got it back, fully or partly', only when answered >= 3)",
+        "cheaperThanDistrict / pricierThanDistrict conclusions are gone",
+        "address_checked for a successful in-city check adds answer_level, source_kind, n, incomplete from answerProperties; outside-city and failure events unchanged",
+        "Draft copy keys listed; the checker namespace provider is checked"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T025",
+      "milestone": "M3",
+      "title": "Post-submit comparison and dashboard panel: neutral reference from the contract",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
+      "dependsOn": ["T018"],
+      "status": "todo",
+      "acceptance": [
+        "POST /api/cost-reports returns the area reference (tenant group, level, N) instead of the blended district median; the success screen shows the user's own total next to it without comparisonOverpay / comparisonSave / percentHigher / percentLower conclusions",
+        "dashboard/page.tsx and cost-reports-panel.tsx use loadAreaReference; overpay/save conclusions are gone",
+        "Existing route tests are updated and a test asserts the new response field; no e-mail or analytics behaviour changes",
+        "The remaining consumers of cost-baselines.ts are listed in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T026",
+      "milestone": "M3",
+      "title": "Remove the map's vs-median verdicts and the share page's brag",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
+      "dependsOn": ["T003"],
+      "status": "todo",
+      "acceptance": [
+        "CostsMap popups no longer show vsMedianAbove / vsMedianBelow / vsMedianEqual conclusions",
+        "costs/share/page.tsx keeps its card without a 'less than X % of ...' brag and shows the area figure neutrally (draft copy, four locales)",
+        "The map's headline numbers are unchanged (Q-2)",
+        "Draft keys listed in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T027",
+      "milestone": "M3",
+      "title": "Costs overview: restrict the room/flat filter to reports of that type",
+      "spec": "docs/specs/03-building-figures.md#costs-overview-room--flat-filter",
+      "dependsOn": ["T017"],
+      "status": "todo",
+      "acceptance": [
+        "getBuildingsData keeps its existing fields byte-identical and adds byType.{apartment,room} with medianTotal, medianRent and reports computed over that type's reports only; the cache key is renamed",
+        "The /[city]/costs filter uses byType of the selected type; buildings without a report of that type are hidden under the filter; counts follow the filter",
+        "A test builds golden example 6 as buildings data: byType.room.medianTotal 2,200, byType.apartment.medianTotal 4,400",
+        "The divergence between the client district roll-up and loadAreaReference is noted in the progress entry as accepted until Q-2"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T028",
+      "milestone": "M3",
+      "title": "Single-number surfaces: apply the owner's rule for a mixed base",
+      "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
+      "dependsOn": ["T027"],
+      "status": "blocked",
+      "acceptance": [
+        "Map markers, list cards, district roll-ups, city hub, district pages, calculator baseline, home hero and district medians, home top building, blog data report, OG images, the bot /districts table and rank, and neighbour medians follow the owner's answer to Q-2, each labelled with its group and N",
+        "Golden tests for the chosen rule; the same metric shows the same value as the building page"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: Q-2. Single-number surfaces (map, cards, district roll-ups, hero, calculator, OG, blog report, bot /districts, neighbours) blend user, import and scraped (D4), while PRD 1 says not to combine listings and residents' reports into one number: (a) tenant group with fallback to asking prices, labelled; (b) keep the blend with a composition label; or (c) two numbers? Proposal: (a). May split into several tasks after the answer."
+    },
+    {
+      "id": "T029",
+      "milestone": "M3",
+      "title": "Rewrite marketing copy that claims verified or actually-paid figures",
+      "spec": "docs/specs/03-building-figures.md#marketing-copy",
+      "dependsOn": ["T018"],
+      "status": "blocked",
+      "acceptance": [
+        "Every key listed in the spec section follows the owner's answer to Q-4 in all four locale files",
+        "The home hero and blog report deposit numbers use summarizeDepositReturns (no partial returns or current tenants counted as returned in full)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: Q-4. About 25 marketing keys say 'verified', 'checked by tenants', 'actually pay' or 'returned in full' (D3 kept them; CLAUDE.md and PRD 1 forbid them): rewrite to 'costs tenants reported' wording drafted by the agent, or keep them?"
+    },
+    {
+      "id": "T030",
+      "milestone": "M3",
+      "title": "Apply the owner's answer on the figure parameters",
+      "spec": "docs/specs/03-building-figures.md#parameters-to-confirm",
+      "dependsOn": ["T017"],
+      "status": "blocked",
+      "acceptance": [
+        "The Q-3 constants in src/lib/cost-figures.ts match the owner's answer; golden tests and the spec section are updated; every surface still passes its tests"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: Q-3. Confirm the cautious defaults: tenant group = user + import; legacy utilitiesComplete=null counts as not established; untrimmed medians; expenses never below 0; 'one observation' = a group with one report; dates as month/year and tenancy as years; deposit share only from 3 answers; reference level by the district's report count?"
+    },
+    {
+      "id": "T031",
+      "milestone": "M4",
+      "title": "Add the bot's start-payload parser and entry_source constant",
+      "spec": "docs/specs/04-telegram-bot.md#start-payloads",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/bot/start-payload.ts exports parseStartPayload and the entry_source constant (typed_address, typed_district, link_building, link_district)",
+        "A table-driven test covers every row of the spec table, including a 65-character payload, a payload with a space, b_ with a non-UUID and uppercase UUIDs",
+        "bot.ts /start uses the parser for dep, d_ and the fallback with unchanged behaviour (b_ wiring comes in T035); tg_bot_started keeps payload and is_new"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T032",
+      "milestone": "M4",
+      "title": "Bot lookup: read building figures and the area reference from the contract",
+      "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
+      "dependsOn": ["T018", "T023"],
+      "status": "todo",
+      "acceptance": [
+        "lookupAddress gets building figures, the area reference and the deposit statistic from cost-figures-query; AddressLookup carries FigureSummary and the reference instead of LocationCheckerCosts/AreaStats; the level rule is unchanged",
+        "No aggregation code stays in lookup.ts except neighbours (Q-2)",
+        "Tests with mocked Prisma and next/cache: building level, district level, city level when the district has fewer than 5 reports",
+        "format.ts compiles against the new shape with the old wording (rendering changes come in T033)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T033",
+      "milestone": "M4",
+      "title": "Bot cards: groups with N, one observation, labelled reference, no district verdict",
+      "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
+      "dependsOn": ["T032"],
+      "status": "todo",
+      "acceptance": [
+        "buildingCard and districtCard render per group the headline value with N and its source label, «одно наблюдение по этому адресу», «известная часть расходов», and a reference line labelled with its level (district or city) and N; RU and UK drafts",
+        "verdict (дороже/дешевле района) is removed; basedOn no longer counts asking prices as жильцы; cardFooter and start copy no longer say «реальные расходы»",
+        "format.test.ts covers mixed, one observation, known part, district and city references; data values pass through escapeHtml",
+        "A consistency test renders the same fixture through the checker summary (T023) and the bot card and finds the same median and N"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T034",
+      "milestone": "M4",
+      "title": "Bot deposit statistics as specific answers with N and area",
+      "spec": "docs/specs/04-telegram-bot.md#deposit-statistics-in-the-bot",
+      "dependsOn": ["T033"],
+      "status": "todo",
+      "acceptance": [
+        "depositLine and the /deposit depositStats use summarizeDepositReturns: «Вернули залог полностью или частично: X из N ответивших (<area>)» and the UK equivalent, only when answered >= 3",
+        "No individual probability; DepositCase is never read",
+        "Unit tests: example 10 of spec 03 renders 2 of 3 with the area name; 2 answers render no line"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T035",
+      "milestone": "M4",
+      "title": "Open the building from /start b_<uuid> with safe fallbacks",
+      "spec": "docs/specs/04-telegram-bot.md#building-deep-link",
+      "dependsOn": ["T031", "T033"],
+      "status": "todo",
+      "acceptance": [
+        "lookupBuilding(buildingId) returns the same AddressLookup as lookupAddress through a shared internal function and never creates a building",
+        "/start b_<known id> replies at once with that building's card and buttons; a building without reports gives the area card starting with noBuildingData; null coordinates or no district give the city reference",
+        "Unknown, deleted, outside-city and malformed ids give the fallback text and the address prompt (malformed without a DB query); a DB error replies genericError; an open deposit intake stays open and the reply mentions /cancel",
+        "checker.costs.telegramCta becomes 'Open this building in the Telegram bot' in all four locale files (drafts)",
+        "The /start handler body is exported and tested with a fake context and mocked lookup for every case above"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T036",
+      "milestone": "M4",
+      "title": "Stop /start d_<slug> from subscribing; offer an explicit save-interest button",
+      "spec": "docs/specs/04-telegram-bot.md#district-deep-link",
+      "dependsOn": ["T031"],
+      "status": "todo",
+      "acceptance": [
+        "/start d_<known slug> replies with renderDistrict and a save-interest button (sub:d:<slug>); no TelegramSubscription is created by the link",
+        "Unknown slug gives the generic start reply; dep and web_* behave as before",
+        "District and building names in subscription replies pass through escapeHtml",
+        "Handler tests with a fake context and mocked store assert that addSubscription is not called on open and is called on the button"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T037",
+      "milestone": "M4",
+      "title": "Replace the bot's notification promises and align help, greeting and command menu",
+      "spec": "docs/specs/04-telegram-bot.md#promises-and-capabilities",
+      "dependsOn": ["T036"],
+      "status": "todo",
+      "acceptance": [
+        "subscribedBuilding, subscribedDistrict, mySubsEmpty, outsideCityNamed, cityWaitAdded and cityWaitAlready say the interest is saved and there are no automatic notifications (RU and UK drafts); subscribe buttons read as saving interest; /my unsubscribe still works",
+        "/help, start and startAfterPayload list the same real capabilities (address or district check, /districts, /deposit, /my, /lang, /cancel); no roommate search, no notifications; deposit follow-up texts unchanged",
+        "scripts/tg-webhook.ts COMMANDS adds /cancel, renames /my and adds a UK menu (language_code uk); the script is not run",
+        "A test asserts that no RU or UK text in texts.ts contains the removed promise phrases (напишу, когда / напишу сюда / напишу, как только) outside the deposit follow-up keys"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "lawyerAck is excluded here (blocked T043, Q-6)."
+    },
+    {
+      "id": "T038",
+      "milestone": "M4",
+      "title": "Extend bot check events and flush bot events in the webhook and cron",
+      "spec": "docs/specs/04-telegram-bot.md#bot-analytics",
+      "dependsOn": ["T035", "T024"],
+      "status": "todo",
+      "acceptance": [
+        "tg_address_checked adds entry_source, lookup_level, source_kind, n, incomplete via answerProperties and keeps level, district, has_building, report_count; tg_district_checked adds entry_source, source_kind, n, incomplete",
+        "A b_ open fires exactly one tg_address_checked with entry_source link_building",
+        "The webhook route calls flushPostHog in after() and the telegram-followups cron awaits it; tests assert the calls",
+        "A pure checkEventProperties has unit tests; no new free text in any event"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T039",
+      "milestone": "M4",
+      "title": "Keep the bot's address prefill and UTM on links to the cost form",
+      "spec": "docs/specs/04-telegram-bot.md#links-to-the-website",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "costs/submit/page.tsx accepts source=tgbot (parsing extracted into a pure function with tests): prefill by b and by p as for other sources; cost_form_started gets source tgbot",
+        "submitLink sends b=<buildingId> whenever the lookup has one, plus p and the UTM parameters as today",
+        "Tests of submitLink and webLink assert utm_source=telegram, utm_medium=bot, utm_campaign and the absence of any chat id; without a building there is no prefill and the form works"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T040",
+      "milestone": "M4",
+      "title": "Deposit reminders: claim before sending and let /cancel stop them",
+      "spec": "docs/specs/04-telegram-bot.md#deposit-reminders",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "sendDueFollowUps claims each row with a conditional updateMany and sends only when count is 1; a non-403 error restores followUpAt; 403 marks the chat blocked as today",
+        "/cancel clears followUpAt (not followUpKind) on the chat's verdict and letter_sent cases and replies «Напоминания отключены.» (RU and UK drafts); with nothing to cancel, the existing reply",
+        "Tests with mocked Prisma and a fake api.sendMessage: two runs over one due row send once; a failed send restores the row; /cancel clears pending follow-ups; the cron route without auth is 401"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T041",
+      "milestone": "M4",
+      "title": "Write the deposit scenario list for a Polish lawyer's review",
+      "spec": "docs/specs/04-telegram-bot.md#scenarios-for-a-lawyer",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "docs/legal-review/deposit-scenarios.md (English, Polish legal terms literal) lists every scenario the code distinguishes, what the bot says in each, the rules as implemented in src/lib/bot/deposit.ts with their statute references as written in the code, and the known limits",
+        "It states at the top that it describes the implementation, is not legal advice and has not been reviewed by a lawyer; it adds and changes no rule",
+        "Every scenario row cites the function or line it comes from"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T042",
+      "milestone": "M4",
+      "title": "Deposit flow wording for an unread contract, a non-lease and unsupported cases",
+      "spec": "docs/specs/04-telegram-bot.md#deposit-helper-scope",
+      "dependsOn": ["T041"],
+      "status": "blocked",
+      "acceptance": [
+        "The texts and the verdict presentation for contractFailed, contractNotLease, unsupported files and the owner-defined unsupported cases follow the owner's wording (RU and UK), with no confident personal conclusion",
+        "Tests cover each state's message"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: Q-5. Approve the RU/UK wording when the lease was not read or is not a lease (general rule, not a conclusion about your contract), replacing the «Разбор» header and strength word there, what counts as an unsupported case, and how to point disputed cases to qualified help (drafts in the decision review)."
+    },
+    {
+      "id": "T043",
+      "milestone": "M4",
+      "title": "wants_lawyer: explain before and after the tap that no service exists yet",
+      "spec": "docs/specs/04-telegram-bot.md#lawyer-interest",
+      "dependsOn": [],
+      "status": "blocked",
+      "acceptance": [
+        "btnWantLawyer and lawyerAck follow the owner's wording (RU and UK): no promise of a response time, a consultation or a future message",
+        "tg_lawyer_interest unchanged and separate from any outcome event; a test covers the confirmation text"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: Q-6. Approve the button text and confirmation for wants_lawyer (draft: interest recorded, no legal help through Passflat yet, no promise to write), or hide the button until a partner exists?"
+    },
+    {
+      "id": "T044",
+      "milestone": "M5",
+      "title": "Write the activation funnels document",
+      "spec": "docs/specs/05-measurement-docs.md#activation-funnels-document",
+      "dependsOn": ["T005", "T010", "T013", "T024", "T038"],
+      "status": "todo",
+      "acceptance": [
+        "docs/analytics/activation-funnels.md has the event table (checked by searching src/), the five funnels with steps, queries or settings and windows, DB counts, the two-week comparison and the limitations, exactly as spec 05 lists them",
+        "Every event and property named exists in src/ (the progress entry lists the search used); no query was run against PostHog",
+        "Roommate is counted in sessions per step with intent as a breakdown; address answers split by answer_level and entry_page_type; E8 and E9 readouts are marked valid only after FR-13 is fixed and verified"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T045",
+      "milestone": "M5",
+      "title": "Update the bot README and the architecture bot rows",
+      "spec": "docs/specs/05-measurement-docs.md#bot-readme",
+      "dependsOn": ["T035", "T036", "T037", "T038", "T040"],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/bot/README.md covers the implemented features, saved interest that sends nothing, the working reminders (opt-in by tap, /cancel, at-most-once), deep-link formats, the full event list with properties, and the production status as unknown or not launched",
+        "docs/architecture.md §2 and §5 bot rows match the code; the webhook-secret note (architecture §9 item 12) is kept accurate"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T046",
+      "milestone": "M5",
+      "title": "Final check of PRD 1 and handoff for the owner",
+      "spec": "docs/specs/05-measurement-docs.md#final-check",
+      "dependsOn": [
+        "T003",
+        "T006",
+        "T008",
+        "T012",
+        "T014",
+        "T016",
+        "T022",
+        "T025",
+        "T026",
+        "T027",
+        "T034",
+        "T039",
+        "T041",
+        "T044",
+        "T045"
+      ],
+      "status": "todo",
+      "acceptance": [
+        "npm run verify and npm run test:e2e pass; node scripts/ralph-tasks.mjs summary shows every non-blocked PRD 1 task done",
+        "docs/specs/README.md requirement map marks each FR Done or Blocked with its task",
+        "CLAUDE.md 'Cost data honesty' says the building page, checker and bot show tenant and asking-price groups separately (PRD 1 package C) while single-number surfaces follow D4 until Q-2",
+        "The progress entry lists all draft copy keys (website and bot), the Assumption constants, the blocked tasks with their questions, that no table or migration was added, the owner step npm run bot:webhook for the new command menu, and what remains unverified (mobile flows by eye, Live Events after deploy, the bot in production)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": ""
     }
   ]
 }
