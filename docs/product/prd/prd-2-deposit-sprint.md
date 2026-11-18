@@ -1,7 +1,8 @@
 # PRD 2: Deposit sprint — source-tagged deposit links, guide prompts and a paid next-step probe
 
 - **Version:** 0.1 (draft), 2026-11-19
-- **Status:** Draft
+- **Status:** Evaluated, 2026-11-19 (`prd-2-decision-review.md`: ready with assumptions, 12
+  decisions)
 - **Serves:** H9 through E10 (the main test); H11 through E12 (the guide prompt only); FR-1 is
   the measurement prerequisite for E8, E9 and E11.
 - **BRD assumptions:** A3, A4, A6, A12, A14, A15; proposed new A19 and A20 (in
