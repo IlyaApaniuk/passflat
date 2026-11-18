@@ -47,8 +47,7 @@ both, and agents never start the bot (`npm run bot:dev` takes the dev bot's upda
 
 ## The gate
 
-The gate of every task is `npm run verify` once task T000 adds it. It runs, in order, and stops
-at the first failure:
+The gate of every task is `npm run verify`. It runs, in order, and stops at the first failure:
 
 1. `npm run lint`
 2. `npm run typecheck`
@@ -56,8 +55,7 @@ at the first failure:
 4. `npm test` (Vitest, `src/**/*.{test,spec}.{ts,tsx}`)
 5. `npm run build` (Next build; no migration)
 
-Until the script exists, run the five commands one by one. The gate writes to no database and
-sends nothing. A task is done only when the gate passes.
+The gate writes to no database and sends nothing. A task is done only when the gate passes.
 
 ## End-to-end tests
 

@@ -8,14 +8,14 @@
       "title": "Add the npm verify script used as the gate of every task",
       "spec": "docs/development-workflow.md#the-gate",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "package.json has a `verify` script that runs, in this order and stopping at the first failure: `npm run lint`, `npm run typecheck`, `npm run knip`, `npm test`, `npm run build`",
         "docs/development-workflow.md names `npm run verify` as the gate and lists the five steps; the sentence saying the script does not exist yet is removed",
         "CI (.github/workflows/ci.yml) is unchanged"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Harness self-test: small, real and safe. Run it as the first loop dry run."
     },
     {
