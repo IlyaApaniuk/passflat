@@ -29,6 +29,8 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
   `npm run test:e2e` (→ `.next-e2e/types`): run `git restore next-env.d.ts` before committing.
 - Knip prints unlisted dependencies, unused exports and types as warnings (`knip.json` rules)
   and exits 0; only unused files and dependencies fail it. The current warnings pre-date the loop.
+- `src/i18n/messages.test.ts` enforces identical leaf key sets across the four locale files;
+  run `npx vitest run src/i18n/messages.test.ts` after any copy change to list missing keys.
 
 ## Log
 
@@ -47,3 +49,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing. Note: the e2e build rewrites `next-env.d.ts` to `.next-e2e/types/routes.d.ts` (restored with `git restore next-env.d.ts`).
 - Owner review: nothing. The CI e2e job itself was not run (no push); local CI-mode run passed.
 - Next: M0 harness tasks are done; the next work comes from decomposing PRD 1 into specs and tasks.
+
+### 2026-11-19 00:50 · T003 · done
+
+- Done: new `src/i18n/messages.test.ts` reads `src/i18n/messages/{pl,en,ru,uk}.json` with `fs`, flattens leaf keys to dotted paths (anything that is not a nested object is a leaf), and fails with one line per gap (`ru.json is missing "common.appName"`) across all four files; a second case guards against an empty catalog. No locale file changed: all four have the same 2,081 leaf keys (strings only, no arrays).
+- Checks: `npx vitest run src/i18n/messages.test.ts` passed (2/2). Negative check, not committed: deleting `common.appName` from `ru.json` failed the test with `ru.json is missing "common.appName"` in the message; the file was restored with `git restore`. `npm run verify` passed (lint clean, typecheck clean, knip exit 0 with the same pre-existing warnings, Vitest 30 files / 314 tests, build OK); `next-env.d.ts` restored after the build.
+- Did not work: nothing.
+- Owner review: nothing (no draft copy, no assumptions, no tables, no migrations).
+- Next: the next `todo` task of M1 in `ralph/tasks.json`; copy tasks can rely on `src/i18n/messages.test.ts` to catch missing keys.

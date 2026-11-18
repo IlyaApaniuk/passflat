@@ -28,14 +28,14 @@
       "title": "Add a test that the four locale files have identical key sets",
       "spec": "docs/specs/01-analytics-context.md#locale-key-parity",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/i18n/messages.test.ts loads src/i18n/messages/{pl,en,ru,uk}.json, flattens leaf keys and fails listing every key missing in any file",
         "The test passes on the current tree; if it does not, the missing keys are added with the English value and listed in the progress entry as draft copy",
         "A deliberately removed key (checked locally, not committed) makes the test fail with that key in the message"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Every later copy task relies on this test."
     },
     {
