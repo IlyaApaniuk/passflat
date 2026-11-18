@@ -44,7 +44,7 @@
       "title": "Add the pure page-context mapping (page_type, locale, city, listing_type)",
       "spec": "docs/specs/01-analytics-context.md#page-context",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/analytics/page-context.ts exports getPageContext(pathname) returning { page_type, locale, city, listing_type? } per the spec table, with the page_type values in one exported constant",
         "Static top-level routes are listed from the directories under src/app/[locale]/ so that /about, /blog, /auth/... never read as a city",
@@ -52,7 +52,7 @@
         "`blog` is a page_type value (Assumption, Q-12) and is named in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

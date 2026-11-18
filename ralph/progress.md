@@ -31,6 +31,10 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
   and exits 0; only unused files and dependencies fail it. The current warnings pre-date the loop.
 - `src/i18n/messages.test.ts` enforces identical leaf key sets across the four locale files;
   run `npx vitest run src/i18n/messages.test.ts` after any copy change to list missing keys.
+- `src/lib/analytics/page-context.test.ts` compares the static route lists with the directories
+  under `src/app/[locale]/` and `[city]/`: a new route directory must be added to
+  `STATIC_TOP_LEVEL_ROUTES` / `STATIC_CITY_ROUTES` (and mapped) or the test fails.
+- `npm run verify 2>&1 | tail` hides the exit code; redirect to a scratchpad log and echo `$?`.
 
 ## Log
 
@@ -57,3 +61,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing.
 - Owner review: nothing (no draft copy, no assumptions, no tables, no migrations).
 - Next: the next `todo` task of M1 in `ralph/tasks.json`; copy tasks can rely on `src/i18n/messages.test.ts` to catch missing keys.
+
+### 2026-11-19 00:54 · T004 · done
+
+- Done: new `src/lib/analytics/page-context.ts` exports `getPageContext(pathname)` → `{ page_type, locale, city, listing_type? }` per the spec table, `PAGE_TYPES` (the one constant of `page_type` values), `STATIC_TOP_LEVEL_ROUTES` (the 16 static directories under `src/app/[locale]/`) and `STATIC_CITY_ROUTES` (the 8 static directories under `[city]/`; any other second segment is a district → `costs`). Locales come from `routing.locales`; no prefix → `pl`. Query, hash and trailing slashes are ignored; unknown deeper paths are `other`. `src/lib/analytics/page-context.test.ts` (37 cases): all 8 golden examples, `/sublet` and `/replacement` list pages (`other` + `listing_type`), `/warsaw/review` (`other`), roommate/replacement details, costs/share/calculator/check/resources/blog, a set of `other` paths, every static route never read as a city, and two tests that compare both route lists with the file system so a new route directory fails the test.
+- Checks: `npx vitest run src/lib/analytics/page-context.test.ts` passed (37/37). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 31 files / 351 tests, build OK); `next-env.d.ts` restored after the build.
+- Did not work: nothing. The type `PageType` is kept module-private so knip reports no new unused export; export it when T005 (`withPageContext`) needs it.
+- Owner review: Assumption applied — the whole value mapping lives in `src/lib/analytics/page-context.ts`; `blog` is a `page_type` value (Assumption, Q-12) covering `/blog` and `/blog/<slug>` (including the static `/blog/warsaw-rent-prices`). No copy, tables or migrations.
+- Next: the `before_send` merge (`withPageContext` + `entry_page_type`) in the same module, per spec 01 §Attaching; it can call `getPageContext` directly.
