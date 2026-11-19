@@ -95,14 +95,14 @@
       "title": "Contact filter for the short profile text (FR-10)",
       "spec": "docs/specs/06-roommate-profiles.md#text-filter",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/roommate/text-filter.ts exports checkAboutText(raw) with the result shape of spec 06 §Text filter",
         "Every golden case of the spec table is a unit test, plus a phone with dashes, a t.me/ link, www., an IBAN with spaces, a 15-digit run and a phone in full-width digits (the text is NFKC-normalised first and stored normalised)",
         "No input is logged"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
