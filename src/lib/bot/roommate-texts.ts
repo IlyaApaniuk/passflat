@@ -23,10 +23,17 @@ import { peopleWord } from './texts';
  * Stage 2 texts (spec 07) are added with their tasks; the cards' are here
  * (§Cards: the card, its buttons, "That's everyone", the username prompt, and
  * "matching is paused" of §Switch). The card reuses the own card's field labels.
- * "Interested" (§Interest) adds the daily limit and "already answered".
+ * "Interested" (§Interest) adds the daily limit and "already answered". The
+ * reveal (§Reveal) adds the match line, the safety lines (PRD 3 §8 verbatim), the
+ * reveal's username prompt and the three next steps.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
+
+/** Roommate copy in the chat's stored bot language (`telegram_chats.locale`). */
+export function roommateLocale(locale: string): RoommateLocale {
+  return locale === 'uk' || locale === 'en' ? locale : 'ru';
+}
 
 type Vars = Record<string, string>;
 
@@ -260,6 +267,25 @@ const RU = {
   interestLimit:
     'На сегодня это лимит: не больше {limit} отметок «Интересно» за 24 часа. Попробуй позже.',
   interestAlready: 'Ответ на эту анкету уже сохранён.',
+
+  // --- the reveal (spec 07 §Reveal, FR-26, FR-30); the safety lines are PRD 3 §8 verbatim ---
+  revealMatch: 'Интерес взаимный. Напиши @{username}.',
+  /** Names the Report button under the reveal (`btnReport`). */
+  revealSafety:
+    'Passflat никогда не просит денег. Не плати залог или «бронь» до просмотра квартиры и подписанного договора. Если человек просит деньги или документы — нажми «Пожаловаться».',
+  /** The username prompt of a formed pair (context `reveal`); its button is `btnDone`. */
+  usernamePromptReveal:
+    'У тебя взаимный интерес. Чтобы другой человек смог тебе написать, нужен username в Telegram. Задай его в настройках Telegram, потом нажми «Готово».',
+  btnNextAgreement: '📄 Соглашение соседей',
+  btnNextAddress: '📍 Проверить адрес',
+  btnNextCost: '💰 Расходы на аренду',
+  /** The website's wording of the template (`documents.*`): a base template, a translation for reference. */
+  nextStepAgreement:
+    '📄 <b>Соглашение соседей</b> (umowa współlokatorska) — базовый образец, требует проверки юриста.\nИнформационный перевод на русский: <a href="{url}">PDF</a>\nПольский оригинал: <a href="{originalUrl}">PDF</a>',
+  /** The bot's address prompt, as `startAfterPayload` asks for an address. */
+  nextStepAddress:
+    '<b>Пришли адрес</b>, например <code>Grójecka 45</code> — покажу расходы по дому или по его району.',
+  nextStepCost: 'Расходы на аренду в Варшаве по домам и районам: <a href="{url}">passflat.com</a>',
 } as const;
 
 type Key = keyof typeof RU;
@@ -455,6 +481,21 @@ const UK: Record<Key, string> = {
   interestLimit:
     'На сьогодні це ліміт: не більше {limit} позначок «Цікаво» за 24 години. Спробуй пізніше.',
   interestAlready: 'Відповідь на цю анкету вже збережено.',
+
+  revealMatch: 'Інтерес взаємний. Напиши @{username}.',
+  revealSafety:
+    'Passflat ніколи не просить грошей. Не плати заставу чи «бронь» до перегляду квартири й підписаного договору. Якщо людина просить гроші чи документи — натисни «Поскаржитися».',
+  usernamePromptReveal:
+    'У тебе взаємний інтерес. Щоб інша людина змогла тобі написати, потрібен username у Telegram. Задай його в налаштуваннях Telegram, потім натисни «Готово».',
+  btnNextAgreement: '📄 Угода співмешканців',
+  btnNextAddress: '📍 Перевірити адресу',
+  btnNextCost: '💰 Витрати на оренду',
+  nextStepAgreement:
+    '📄 <b>Угода співмешканців</b> (umowa współlokatorska) — базовий зразок, потребує юридичної перевірки.\nІнформаційний переклад українською: <a href="{url}">PDF</a>\nПольський оригінал: <a href="{originalUrl}">PDF</a>',
+  nextStepAddress:
+    '<b>Надішли адресу</b>, наприклад <code>Grójecka 45</code> — покажу витрати по будинку або по його району.',
+  nextStepCost:
+    'Витрати на оренду у Варшаві по будинках і районах: <a href="{url}">passflat.com</a>',
 };
 
 const EN: Record<Key, string> = {
@@ -650,6 +691,20 @@ const EN: Record<Key, string> = {
   interestLimit:
     'That\'s the limit for today: up to {limit} "Interested" taps in 24 hours. Try again later.',
   interestAlready: 'Your answer to this profile is already saved.',
+
+  revealMatch: "It's mutual. Write to @{username}.",
+  revealSafety:
+    "Passflat never asks for money. Don't pay a deposit or a 'reservation' before a viewing and a signed contract. If someone asks for money or documents, tap Report.",
+  usernamePromptReveal:
+    'You have a mutual match. So the other person can write to you, you need a Telegram username. Set one in Telegram Settings, then tap Done.',
+  btnNextAgreement: '📄 Roommate agreement',
+  btnNextAddress: '📍 Check an address',
+  btnNextCost: '💰 Rental costs',
+  nextStepAgreement:
+    '📄 <b>Roommate agreement</b> (umowa współlokatorska): a base template that requires legal review.\nInformational English translation: <a href="{url}">PDF</a>\nPolish original: <a href="{originalUrl}">PDF</a>',
+  nextStepAddress:
+    "<b>Send an address</b>, for example <code>Grójecka 45</code>, and I'll show the costs for the building or its district.",
+  nextStepCost: 'Rental costs in Warsaw by building and district: <a href="{url}">passflat.com</a>',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

@@ -40,6 +40,7 @@ const db = vi.hoisted(() => {
 
   function matches(row: Row, where: Where): boolean {
     return Object.entries(where).every(([key, cond]) => {
+      if (key === 'OR') return (cond as Where[]).some((part) => matches(row, part));
       if (key === 'chat') return matches(chatOf(row), cond as Where);
       if (key in RELATIONS) {
         const { none, ...rest } = cond as { none?: Where };
@@ -117,6 +118,17 @@ const db = vi.hoisted(() => {
           async ({ where }: { where: Where }) =>
             state.reactions.filter((row) => matches(row, where)).length,
         ),
+        /** The pair reads of the reveal (`loadMatchedPair`, `pendingRevealPartners`). */
+        findMany: vi.fn(async ({ where, include }: { where: Where; include?: Row }) =>
+          state.reactions
+            .filter((row) => matches(row, where))
+            .map((row) => {
+              const copy = structuredClone(row);
+              if (!include) return copy;
+              const from = state.profiles.find((p) => p.id === row.fromProfileId)!;
+              return { ...copy, fromProfile: { ...structuredClone(from), chat: chatOf(from) } };
+            }),
+        ),
       },
       /**
        * The mutual-match statement (`formMutualMatch`), applied in memory: its values are the two
@@ -147,6 +159,8 @@ const mocks = vi.hoisted(() => ({
   hasOpenIntake: vi.fn(),
   getCity: vi.fn(),
   roomCostsReply: vi.fn(),
+  /** The reveal itself is `roommate-reveal.test.ts`; here only what the tap decides from it. */
+  revealPair: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: db.prisma }));
@@ -155,6 +169,10 @@ vi.mock('./analytics', () => ({ track: mocks.track }));
 vi.mock('./deposit-flow', () => ({ hasOpenIntake: mocks.hasOpenIntake }));
 vi.mock('./lookup', () => ({ getCity: mocks.getCity }));
 vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }));
+vi.mock('./roommate-reveal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./roommate-reveal')>()),
+  revealPair: mocks.revealPair,
+}));
 
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
@@ -327,6 +345,7 @@ beforeEach(() => {
   mocks.hasOpenIntake.mockResolvedValue(false);
   mocks.getCity.mockResolvedValue({ districts: DISTRICTS });
   mocks.roomCostsReply.mockResolvedValue(null);
+  mocks.revealPair.mockResolvedValue(new Set());
 });
 
 afterEach(() => {
@@ -772,7 +791,32 @@ describe('Interested (rm:i:<id>), the daily limit and the mutual match', () => {
       [CHAT_ID, 'tg_roommate_matched', { role: 'completer' }],
       [tgChatOf(B), 'tg_roommate_matched', { role: 'waiting' }],
     ]);
+    // Then the reveal of the pair formed just now, the waiting person (B) first.
+    expect(mocks.revealPair).toHaveBeenCalledTimes(1);
+    const [, pair, at, options] = mocks.revealPair.mock.calls[0];
+    expect(pair.waiting.profile.id).toBe(B);
+    expect(pair.completer.profile.id).toBe(VIEWER);
+    expect([at, options]).toEqual([NOW, { justFormed: true }]);
+    // The reveal sent this person nothing (mocked), so the next card follows.
     expect(replies.map((reply) => reply.text)).toEqual([cardOf(A)]);
+  });
+
+  it('a reveal (or its username prompt) to this person replaces the next card', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.state.reactions.push(interest(B, VIEWER, new Date(NOW.getTime() - 3 * DAY)));
+    mocks.revealPair.mockResolvedValueOnce(new Set([VIEWER, B]));
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(mocks.revealPair).toHaveBeenCalledTimes(1);
+    expect(replies).toEqual([]);
+  });
+
+  it('a one-sided interest reveals nothing', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    await tap(`rm:i:${B}`);
+
+    expect(mocks.revealPair).not.toHaveBeenCalled();
   });
 
   it.each([0, 1])(

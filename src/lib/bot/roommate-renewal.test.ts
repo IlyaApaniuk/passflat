@@ -105,6 +105,8 @@ const db = vi.hoisted(() => {
         }),
       },
       roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      /** No pair is matched here: the default run's reveal retry (`dueRevealPairs`) finds none. */
+      roommateReaction: { findMany: vi.fn(async () => []) },
     },
   };
 });

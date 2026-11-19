@@ -511,7 +511,7 @@
       "title": "Reveal with safety lines, waiting usernames and next steps (FR-26 criteria 3 – 4, FR-30)",
       "spec": "docs/specs/07-roommate-matching.md#reveal",
       "dependsOn": ["T077", "T088"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A formed pair is revealed as spec 07 §Reveal: no reveal when a chat is blocked or a profile inactive; a missing username prompts that person (tg_roommate_username_prompted, context=reveal) and holds both messages until Done; otherwise B then A, each claimed on revealed_at, the partner's username refreshed with api.getChat first, with the safety lines, a Report button for the partner and tg_roommate_contact_revealed per delivered message",
         "A 403 to B blocks B and A gets nothing; another error releases the claim; retryPendingReveals in the send-hour cron sends the missing reveals of pairs whose profiles are active, chats unblocked and usernames stored",
@@ -519,7 +519,7 @@
         "The safety lines and next-step copy are listed in the progress entry as drafts the owner approves before the switch (D56)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D56."
     },
     {

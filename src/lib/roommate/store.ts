@@ -384,6 +384,127 @@ export async function formMutualMatch(
   return changed === 2;
 }
 
+/** The chat facts a reveal needs: where to send, whether it may, and in which language. */
+const REVEAL_CHAT_SELECT = {
+  chatId: true,
+  blockedAt: true,
+  locale: true,
+  roommateBannedAt: true,
+} as const;
+
+/**
+ * One person of a formed pair (spec 07 §Reveal): the profile, its chat and the person's own
+ * `interest` reaction, whose `revealed_at` marks the reveal message to this person as claimed.
+ */
+export type RevealSide = {
+  profile: RoommateProfile;
+  chat: Prisma.TelegramChatGetPayload<{ select: typeof REVEAL_CHAT_SELECT }>;
+  reaction: { id: string; createdAt: Date; revealedAt: Date | null };
+};
+
+/** A formed pair: the waiting person (the earlier interest) and the completer (the later one). */
+export type RevealPair = { waiting: RevealSide; completer: RevealSide };
+
+/**
+ * The formed pair of two profiles with both people's profiles, chats and reactions, or null when
+ * the two are not matched (or a profile is gone). The earlier interest is the waiting person's
+ * (ties by reaction id), so a retry keeps the order of the first attempt.
+ */
+export async function loadMatchedPair(
+  profileId: string,
+  otherProfileId: string,
+): Promise<RevealPair | null> {
+  const rows = await prisma.roommateReaction.findMany({
+    where: {
+      kind: 'interest',
+      matchedAt: { not: null },
+      OR: [
+        { fromProfileId: profileId, toProfileId: otherProfileId },
+        { fromProfileId: otherProfileId, toProfileId: profileId },
+      ],
+    },
+    include: { fromProfile: { include: { chat: { select: REVEAL_CHAT_SELECT } } } },
+  });
+  if (rows.length !== 2) return null;
+  const [waiting, completer] = rows
+    .sort(
+      (x, y) =>
+        x.createdAt.getTime() - y.createdAt.getTime() || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0),
+    )
+    .map(({ fromProfile: { chat, ...profile }, id, createdAt, revealedAt }) => ({
+      profile,
+      chat,
+      reaction: { id, createdAt, revealedAt },
+    }));
+  return { waiting, completer };
+}
+
+/** Distinct unordered pairs of profile ids from reaction rows. */
+function distinctPairs(rows: { fromProfileId: string; toProfileId: string }[]): [string, string][] {
+  const pairs = new Map<string, [string, string]>();
+  for (const { fromProfileId, toProfileId } of rows) {
+    const pair: [string, string] =
+      fromProfileId < toProfileId ? [fromProfileId, toProfileId] : [toProfileId, fromProfileId];
+    pairs.set(pair.join(':'), pair);
+  }
+  return [...pairs.values()];
+}
+
+const UNREVEALED_MATCH = {
+  kind: 'interest',
+  matchedAt: { not: null },
+  revealedAt: null,
+} satisfies Prisma.RoommateReactionWhereInput;
+
+/**
+ * The other profile of every formed pair of `profileId` with a reveal not claimed yet on either
+ * side: what Done under the reveal's username prompt retries (spec 07 §Reveal).
+ */
+export async function pendingRevealPartners(profileId: string): Promise<string[]> {
+  const rows = await prisma.roommateReaction.findMany({
+    where: { ...UNREVEALED_MATCH, OR: [{ fromProfileId: profileId }, { toProfileId: profileId }] },
+    select: { fromProfileId: true, toProfileId: true },
+  });
+  return distinctPairs(rows).map(([x, y]) => (x === profileId ? y : x));
+}
+
+/**
+ * The pairs the send-hour run retries (`retryPendingReveals`, spec 07 §Reveal): matched, a reveal
+ * not claimed yet, both profiles active by the counts' definition (so both chats unblocked and not
+ * banned) and both usernames stored. A pair waiting on a username stays out until Done stores one.
+ * The oldest matches first.
+ */
+export async function dueRevealPairs(now: Date, take: number): Promise<[string, string][]> {
+  const ready = { ...activeProfilesWhere(now), tgUsername: { not: null } };
+  const rows = await prisma.roommateReaction.findMany({
+    where: { ...UNREVEALED_MATCH, fromProfile: ready, toProfile: ready },
+    select: { fromProfileId: true, toProfileId: true },
+    orderBy: { matchedAt: 'asc' },
+    take,
+  });
+  return distinctPairs(rows);
+}
+
+/**
+ * Claims the reveal message to the person whose reaction this is (`revealed_at` null → `now`, a
+ * conditional update): true only for the one request that may send it.
+ */
+export async function claimReveal(reactionId: string, now: Date): Promise<boolean> {
+  const { count } = await prisma.roommateReaction.updateMany({
+    where: { id: reactionId, matchedAt: { not: null }, revealedAt: null },
+    data: { revealedAt: now },
+  });
+  return count === 1;
+}
+
+/** Undoes `claimReveal` after a failed send, so a retry sends it. */
+export async function releaseReveal(reactionId: string, now: Date): Promise<void> {
+  await prisma.roommateReaction.updateMany({
+    where: { id: reactionId, revealedAt: now },
+    data: { revealedAt: null },
+  });
+}
+
 /** The Telegram chat id of a chat row, for an event about another person (`tg_<chatId>`). */
 export async function telegramChatIdOf(chatDbId: string): Promise<number | null> {
   const chat = await prisma.telegramChat.findUnique({

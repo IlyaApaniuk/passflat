@@ -183,7 +183,34 @@ the migrations are missing (`docs/architecture.md` §9).
   two concurrent taps form one. That request sends `tg_roommate_matched`
   `role=completer` for the tapping chat and `role=waiting` for the other chat
   (`telegramChatIdOf`); no event names a partner, a match or a username. Then the
-  next card; the reveal is spec 07 §Reveal.
+  reveal (below); when it sends the tapping person nothing, the next card.
+- **Reveal** (spec 07 §Reveal, FR-26, FR-30; `roommate-reveal.ts`): `revealPair`
+  loads the pair (`loadMatchedPair`: the earlier interest is the waiting person).
+  Either profile not active or either chat blocked or banned → nothing (the pair
+  stays matched). Each message still due names the other person, whose username
+  is read with `api.getChat` first and stored (a failed `getChat` uses the stored
+  one). A username missing → that person gets "You have a mutual match. Set a
+  username, then tap Done" (`rm:u:done`, `tg_roommate_username_prompted` context
+  `reveal`) and both reveals wait; a retry does not prompt again someone whose
+  stored username was already missing. Otherwise the waiting person first, then
+  the completer: each message is claimed on that person's reaction's
+  `revealed_at` (`claimReveal`), says "It's mutual. Write to @<username>." with the
+  safety lines (PRD 3 §8), the next steps (`rm:ns:agreement|address|cost`) and
+  "Report" for the partner (`rm:r:<profileId>`), and sends
+  `tg_roommate_contact_revealed` once delivered. The tap sends through
+  `createCronSender` too, so a 403 to the waiting person marks that chat blocked
+  and the completer gets nothing, and any other error releases the claim and the
+  completer waits for the send-hour retry (`retryPendingReveals`: matched pairs
+  with a reveal unclaimed, both profiles active, both usernames stored,
+  `dueRevealPairs`; switch on or off). Done with waiting pairs (context `reveal`):
+  no username → the prompt again; else `tg_roommate_username_set` and every
+  waiting pair of that profile is retried (`pendingRevealPartners`), then the next
+  card when none of them wrote to this person. A next step sends
+  `tg_roommate_next_step` (`step` `agreement` / `address_check` / `cost`) and
+  replies with the roommate agreement PDF in the chat's language plus the Polish
+  original (`documentLink`, `/documents/…`), the address prompt, or the Warsaw
+  costs page (`webLink`); links carry `utm_source=telegram`, `utm_medium=bot`,
+  `utm_campaign=roommate` and no chat id. The next steps work with the switch off.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -232,10 +259,10 @@ the migrations are missing (`docs/architecture.md` §9).
   skipped, the row claimed first, a 403 marks the chat blocked and keeps the
   claim, any other error releases it, a 429 releases it and stops the run, at
   most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
-  `MESSAGE_JOBS`: the renewal reminder (`sendRenewalReminders`) and, with the
-  switch on only (`switchOnOnly`), the one-time message
-  (`sendMatchingOpenMessages`); reveals, statements, outcome and the push add
-  theirs in the priority order of the spec. The response holds counts only;
+  `MESSAGE_JOBS`: the retry of waiting reveals (`retryPendingReveals`, see
+  **Reveal**), the renewal reminder (`sendRenewalReminders`) and, with the switch
+  on only (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`);
+  statements, outcome and the push add theirs in the priority order of the spec. The response holds counts only;
   PostHog is flushed before it.
 - **Matching is open** (spec 06 §Matching is open, FR-19): with the switch on,
   each active profile with `notify_on_open_at` set and `notified_open_at` null
@@ -295,7 +322,8 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
-| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, the username prompt    |
+| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, Done, next steps       |
+| `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |

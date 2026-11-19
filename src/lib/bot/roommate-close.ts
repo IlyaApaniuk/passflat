@@ -3,14 +3,8 @@ import type { Api } from 'grammy';
 import { prisma } from '@/lib/prisma';
 
 import { track } from './analytics';
-import {
-  SYSTEM_CLOCK,
-  createCronSender,
-  roommateLocale,
-  type CronClock,
-  type CronSender,
-} from './roommate-daily';
-import { rt } from './roommate-texts';
+import { SYSTEM_CLOCK, createCronSender, type CronClock, type CronSender } from './roommate-daily';
+import { roommateLocale, rt } from './roommate-texts';
 
 /**
  * The manual closing run (spec 06 §Closing route, FR-20, D64): when the owner decides that

@@ -112,6 +112,9 @@ function sampleVars(locale: BotLocale): Record<string, string> {
     source: t(locale, 'figureSourceTenant'),
     term: dt(locale, 'termDays', { n: '30' }),
     total: '18',
+    originalUrl: 'https://passflat.com/documents/umowa-wspollokatorska.pdf',
+    url: 'https://passflat.com/ru/warsaw/costs',
+    username: 'anna_w',
     value: '4 100 zł',
     word: reportsWord(locale, 3),
   };

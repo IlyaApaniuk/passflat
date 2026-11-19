@@ -73,6 +73,18 @@ export function webLink(path: string, locale: BotLocale, source = 'tgbot'): stri
 }
 
 /**
+ * A file of `public/documents/` (served at `/documents/…`, no locale prefix) with the bot's UTM
+ * as query parameters (spec 07 §Reveal, next steps). Nothing identifying the chat goes in.
+ */
+export function documentLink(fileName: string, source = 'tgbot'): string {
+  const url = new URL(appUrl(`/documents/${fileName}`));
+  url.searchParams.set('utm_source', 'telegram');
+  url.searchParams.set('utm_medium', 'bot');
+  url.searchParams.set('utm_campaign', source);
+  return url.toString();
+}
+
+/**
  * The cost form, prefilled with the looked-up building (spec 04 §Links to the
  * website). The form prefills only from an existing building row, and the bot
  * never creates one, so `b` is the building id whenever the lookup found a row
