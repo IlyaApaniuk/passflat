@@ -86,26 +86,32 @@ type Vars = Record<string, string>;
  * `help` so they never drift apart (spec 04 §Promises and capabilities). The
  * command menu (`COMMAND_MENU`) names the same commands. No notifications: the
  * bot sends nothing on its own except the deposit follow-ups a user asked for.
+ *
+ * The `/mate` line is the `{mate}` variable, `capabilityMateOff` or
+ * `capabilityMateOn` by the matching switch at reply time (spec 06 §Capability
+ * text and command menu); `capabilityText` fills it. No line promises a date.
  */
 const CAPABILITIES_RU =
   '<b>Что я умею</b>\n' +
   '• Пришли адрес — расходы по дому, а если по нему данных нет, то по его району\n' +
   '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — расходы по району\n' +
+  '• /mate — {mate}\n' +
   '• /districts — расходы по всем районам Варшавы\n' +
   '• /deposit — как часто возвращают залог и как вернуть свой\n' +
   '• /my — сохранённые интересы: дома, районы, города\n' +
   '• /lang — русский / українська\n' +
-  '• /cancel — выйти из вопросов о залоге';
+  '• /cancel — выйти из вопросов: о залоге или для анкеты';
 
 const CAPABILITIES_UK =
   '<b>Що я вмію</b>\n' +
   '• Надішли адресу — витрати по будинку, а якщо по ньому даних немає, то по його району\n' +
   '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — витрати по району\n' +
+  '• /mate — {mate}\n' +
   '• /districts — витрати по всіх районах Варшави\n' +
   '• /deposit — як часто повертають заставу і як повернути свою\n' +
   '• /my — збережені інтереси: будинки, райони, міста\n' +
   '• /lang — русский / українська\n' +
-  '• /cancel — вийти з питань про заставу';
+  '• /cancel — вийти з питань: про заставу або для анкети';
 
 const RU = {
   cityName: 'Варшава',
@@ -127,6 +133,12 @@ const RU = {
     '\n\nНе возвращают залог? Напиши «залог» — разберу по закону и составлю письмо хозяину.\n\n' +
     'Цифры — из отчётов жильцов и из цен в объявлениях; у каждой указано, по скольким ' +
     'наблюдениям она посчитана. Свой отчёт можно оставить за 3 минуты.',
+
+  /** The `/mate` capability with the matching switch off (stage 1) and on (stage 2). */
+  capabilityMateOff:
+    'найти, с кем снять квартиру: заполни анкету и посмотри, сколько людей ищут в каждом районе; подбор откроется позже',
+  capabilityMateOn:
+    'найти, с кем снять квартиру: люди, которые тебе подходят, и обмен контактами только при взаимном интересе',
 
   // --- address answers: one block per group, each figure with its own N ---
   groupTenant: '👥 <b>Отчёты жильцов: {count}</b>{imported}',
@@ -263,6 +275,11 @@ const UK: Record<Key, string> = {
     'Цифри — зі звітів мешканців і з цін в оголошеннях; для кожної вказано, за скількома ' +
     'спостереженнями її пораховано. Свій звіт можна залишити за 3 хвилини.',
 
+  capabilityMateOff:
+    'знайти, з ким зняти квартиру: заповни анкету й подивись, скільки людей шукають у кожному районі; підбір відкриється пізніше',
+  capabilityMateOn:
+    'знайти, з ким зняти квартиру: люди, які тобі підходять, і обмін контактами лише за взаємного інтересу',
+
   groupTenant: '👥 <b>Звіти мешканців: {count}</b>{imported}',
   groupTenantImported: ' <i>(з них внесено Passflat: {count})</i>',
   groupAsking: '📰 <b>Ціни з оголошень: {count}</b>',
@@ -374,23 +391,26 @@ type MenuCommand = { command: string; description: string };
 /**
  * The Telegram command menu, published by `scripts/tg-webhook.ts`: RU as the
  * default menu, UK for `language_code: 'uk'`. Same commands as the capability
- * list in `start` and `help`.
+ * list in `start` and `help`. `/mate` reads the same in both switch states;
+ * `/cancel` leaves the deposit questions and the roommate questions.
  */
 export const COMMAND_MENU: Record<BotLocale, readonly MenuCommand[]> = {
   ru: [
+    { command: 'mate', description: 'Найти, с кем снять квартиру' },
     { command: 'districts', description: 'Районы Варшавы по расходам' },
     { command: 'deposit', description: 'Залог: как часто возвращают и как вернуть свой' },
     { command: 'my', description: 'Сохранённые интересы' },
     { command: 'lang', description: 'Язык / Мова' },
-    { command: 'cancel', description: 'Выйти из вопросов о залоге' },
+    { command: 'cancel', description: 'Выйти из вопросов' },
     { command: 'help', description: 'Что умеет бот' },
   ],
   uk: [
+    { command: 'mate', description: 'Знайти, з ким зняти квартиру' },
     { command: 'districts', description: 'Райони Варшави за витратами' },
     { command: 'deposit', description: 'Застава: як часто повертають і як повернути свою' },
     { command: 'my', description: 'Збережені інтереси' },
     { command: 'lang', description: 'Язык / Мова' },
-    { command: 'cancel', description: 'Вийти з питань про заставу' },
+    { command: 'cancel', description: 'Вийти з питань' },
     { command: 'help', description: 'Що вміє бот' },
   ],
 };
@@ -399,4 +419,21 @@ export function t(locale: BotLocale, key: Key, vars?: Vars): string {
   const template = DICTS[locale][key] ?? DICTS.ru[key];
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => vars[name] ?? match);
+}
+
+/** The replies that carry the capability list. */
+export type CapabilityTextKey = 'start' | 'startAfterPayload' | 'help';
+
+/**
+ * A reply with the capability list, its `/mate` line worded by the matching
+ * switch. The caller passes `isMatchingEnabled()` read at reply time, so the
+ * greeting, `/help` and the roommate flow agree on the state.
+ */
+export function capabilityText(
+  locale: BotLocale,
+  key: CapabilityTextKey,
+  matchingEnabled: boolean,
+): string {
+  const mate = t(locale, matchingEnabled ? 'capabilityMateOn' : 'capabilityMateOff');
+  return t(locale, key, { mate });
 }

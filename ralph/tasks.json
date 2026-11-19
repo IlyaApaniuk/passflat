@@ -163,7 +163,7 @@
       "title": "Capability list and command menu name /mate, worded by the switch (FR-3 criteria 2 and 4)",
       "spec": "docs/specs/06-roommate-profiles.md#capability-text-and-command-menu",
       "dependsOn": ["T064", "T069"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "start, startAfterPayload and help share one capability list that includes the roommate line with /mate, chosen by isMatchingEnabled() at reply time (off: profile, counts per district, matching opens later; on: matching); no text promises a date",
         "COMMAND_MENU has `mate` in ru and uk with the drafts of spec 06, and the `cancel` description covers the roommate questions too",
@@ -171,7 +171,7 @@
         "Changed keys are listed in the progress entry as draft copy"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The en menu comes with T098."
     },
     {

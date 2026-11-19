@@ -8,6 +8,8 @@ import {
   type Filter,
 } from 'grammy';
 
+import { isMatchingEnabled } from '@/lib/roommate/switch';
+
 import { track } from './analytics';
 import { checkEventProperties, districtCheckEventProperties } from './check-events';
 import {
@@ -60,7 +62,7 @@ import {
   recordedStartPayload,
   type EntrySource,
 } from './start-payload';
-import { normalizeLocale, peopleWord, t, type BotLocale } from './texts';
+import { capabilityText, normalizeLocale, peopleWord, t, type BotLocale } from './texts';
 
 /**
  * The bot itself: a thin conversational shell over the same data the website's
@@ -225,7 +227,11 @@ async function replyBuildingLink(
     return;
   }
 
-  const lines = [t(locale, 'buildingLinkFailed'), '', t(locale, 'startAfterPayload')];
+  const lines = [
+    t(locale, 'buildingLinkFailed'),
+    '',
+    capabilityText(locale, 'startAfterPayload', isMatchingEnabled()),
+  ];
   if (note) lines.push('', note);
   await ctx.reply(lines.join('\n'), {
     parse_mode: 'HTML',
@@ -337,11 +343,19 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
     return;
   }
 
-  await ctx.reply(t(locale, start.kind === 'none' ? 'start' : 'startAfterPayload'), {
+  const key = start.kind === 'none' ? 'start' : 'startAfterPayload';
+  await ctx.reply(capabilityText(locale, key, isMatchingEnabled()), {
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
     reply_markup: new InlineKeyboard().text(rt(locale, 'btnStart'), 'rm:start'),
   });
+}
+
+/** `/help`: the capability list, its `/mate` line by the switch at reply time. Exported for tests. */
+export async function handleHelp(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat.id });
+  const locale = chat.locale as BotLocale;
+  await ctx.reply(capabilityText(locale, 'help', isMatchingEnabled()), { parse_mode: 'HTML' });
 }
 
 /**
@@ -559,10 +573,7 @@ export function createBot(token: string): Bot {
 
   bot.command('start', handleStart);
 
-  bot.command('help', async (ctx) => {
-    const chat = await touchChat({ chatId: ctx.chat.id });
-    await ctx.reply(t(chat.locale as BotLocale, 'help'), { parse_mode: 'HTML' });
-  });
+  bot.command('help', handleHelp);
 
   bot.command('districts', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat.id });

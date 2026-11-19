@@ -97,6 +97,7 @@ function sampleVars(locale: BotLocale): Record<string, string> {
     items: rt(locale, 'countsItem', { name: 'Wola', count: '1' }),
     languages: `${rt(locale, 'langPl')}, ${rt(locale, 'langEn')}`,
     length: '291',
+    mate: t(locale, 'capabilityMateOff'),
     max: '3',
     metric: t(locale, 'referenceKnownPart'),
     min: '5',

@@ -68,8 +68,8 @@ the migrations are missing (`docs/architecture.md` §9).
   profile when it changed.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
-- **`/deposit`**, **`/help`**, **`/lang`** (RU / UK; `TelegramChat.locale`
-  defaults to `ru`).
+- **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
+  matching switch), **`/lang`** (RU / UK; `TelegramChat.locale` defaults to `ru`).
 - A rate limit of 12 text messages per minute per chat (`bot.ts`), because
   geocoding is paid.
 - **Blocked chats** (spec 06 §Blocked chats): a `my_chat_member` update in a
@@ -234,9 +234,15 @@ city waitlist button save a `TelegramSubscription`, the reply says there are no
 automatic notifications, and no code reads those rows to send a message (only
 `/my` lists them, with a remove button each, `unsub:<targetKey>`). `start`,
 `startAfterPayload` and `/help` share one capability list in `texts.ts`
-(address or district check, `/districts`, `/deposit`, `/my`, `/lang`,
-`/cancel`), and `COMMAND_MENU` names the same commands. `texts.test.ts` fails if
-a text in `texts.ts` promises to write later.
+(address or district check, `/mate`, `/districts`, `/deposit`, `/my`, `/lang`,
+`/cancel`), and `COMMAND_MENU` names the same commands in the same order. The
+`/mate` line is chosen by `isMatchingEnabled()` at reply time (`capabilityText`):
+off, "fill in a profile and see how many people look per district; matching
+opens later"; on, "people who fit you, contacts only on mutual interest". No line
+names a date. `/cancel` in the list and the menu covers the deposit and the
+roommate questions. `texts.test.ts` fails if a text in `texts.ts` promises to
+write later, if a listed command is missing from the menu (or a menu command
+from the list), or if the roommate line does not name `/mate`.
 
 ## Events
 

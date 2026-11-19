@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { dt } from './deposit-texts';
 import { ROOMMATE_TEXT_KEYS, rt, type RoommateLocale } from './roommate-texts';
-import { COMMAND_MENU, TEXT_KEYS, t, type BotLocale } from './texts';
+import {
+  capabilityText,
+  COMMAND_MENU,
+  TEXT_KEYS,
+  t,
+  type BotLocale,
+  type CapabilityTextKey,
+} from './texts';
 
 const LOCALES: BotLocale[] = ['ru', 'uk'];
 
@@ -46,13 +53,26 @@ const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {};
 
 const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
 
-/** Words that would describe a notification or a roommate search as a feature. */
-const NOT_A_CAPABILITY =
-  /напишу|уведомл|сповіщ|подпис|підпис|слежу|следишь|стежу|стежиш|соседа по квартире|сусіда по квартирі|roommate/i;
+/** Words that would describe a notification as a feature. */
+const NOT_A_CAPABILITY = /напишу|уведомл|сповіщ|подпис|підпис|слежу|следишь|стежу|стежиш/i;
+
+/** Both states of the matching switch (spec 07 §Switch). */
+const SWITCH_STATES = [false, true] as const;
+
+const CAPABILITY_KEYS: CapabilityTextKey[] = ['start', 'startAfterPayload', 'help'];
 
 /** The capability list is the first paragraph of `help`. */
-function capabilities(locale: BotLocale): string {
-  return t(locale, 'help').split('\n\n')[0];
+function capabilities(locale: BotLocale, matchingEnabled: boolean): string {
+  return capabilityText(locale, 'help', matchingEnabled).split('\n\n')[0];
+}
+
+function bullets(list: string): string[] {
+  return list.split('\n').filter((line) => line.startsWith('• '));
+}
+
+/** The command a bullet names, or null for the address and district checks. */
+function bulletCommand(line: string): string | null {
+  return /^• (\/[a-z0-9_]+) — /.exec(line)?.[1] ?? null;
 }
 
 describe('bot texts: no notification promises', () => {
@@ -177,40 +197,90 @@ describe('bot texts: no notification promises', () => {
 });
 
 describe('bot texts: one set of real capabilities', () => {
-  it('start, startAfterPayload and help list the same capabilities', () => {
+  it.each(SWITCH_STATES)(
+    'start, startAfterPayload and help list the same capabilities (switch on: %s)',
+    (enabled) => {
+      for (const locale of LOCALES) {
+        const list = capabilities(locale, enabled);
+        expect(capabilityText(locale, 'start', enabled)).toContain(list);
+        expect(capabilityText(locale, 'startAfterPayload', enabled)).toContain(list);
+        expect(capabilityText(locale, 'help', enabled).startsWith(list)).toBe(true);
+        for (const key of CAPABILITY_KEYS) {
+          expect(capabilityText(locale, key, enabled), `${locale}.${key}`).not.toMatch(/\{\w+\}/);
+        }
+      }
+    },
+  );
+
+  it.each(SWITCH_STATES)(
+    'every listed capability has a command in the menu, and every menu command is listed (switch on: %s)',
+    (enabled) => {
+      for (const locale of LOCALES) {
+        const lines = bullets(capabilities(locale, enabled));
+        const menu = COMMAND_MENU[locale].map((item) => `/${item.command}`);
+
+        // The two checks without a command: a typed address and a typed district.
+        const checks = lines.filter((line) => bulletCommand(line) === null);
+        expect(checks).toHaveLength(2);
+        expect(checks[0]).toMatch(locale === 'ru' ? /^• Пришли адрес/ : /^• Надішли адресу/);
+        expect(checks[1]).toMatch(/^• Напиши район/);
+
+        // Every other line names a menu command, in the menu's order; /help is the list itself.
+        const listed = lines.map(bulletCommand).filter((command) => command !== null);
+        expect(listed).toEqual(menu.filter((command) => command !== '/help'));
+        for (const command of listed) expect(menu, `${locale} ${command}`).toContain(command);
+      }
+    },
+  );
+
+  it('the roommate line names /mate and is worded by the switch', () => {
     for (const locale of LOCALES) {
-      const list = capabilities(locale);
-      expect(t(locale, 'start')).toContain(list);
-      expect(t(locale, 'startAfterPayload')).toContain(list);
-      expect(t(locale, 'help').startsWith(list)).toBe(true);
+      const mateLine = (enabled: boolean) =>
+        bullets(capabilities(locale, enabled)).filter((line) => line.includes('/mate'));
+
+      expect(mateLine(false)).toEqual([`• /mate — ${t(locale, 'capabilityMateOff')}`]);
+      expect(mateLine(true)).toEqual([`• /mate — ${t(locale, 'capabilityMateOn')}`]);
+      expect(t(locale, 'capabilityMateOn')).not.toBe(t(locale, 'capabilityMateOff'));
+
+      // Off (stage 1): a profile, the counts per district, matching later.
+      const off = t(locale, 'capabilityMateOff');
+      expect(off).toMatch(/анкет/);
+      expect(off).toMatch(
+        locale === 'ru'
+          ? /сколько людей ищут в каждом районе/
+          : /скільки людей шукають у кожному районі/,
+      );
+      expect(off).toMatch(
+        locale === 'ru' ? /подбор откроется позже$/ : /підбір відкриється пізніше$/,
+      );
+
+      // On (stage 2): matching, contacts only on mutual interest; nothing says "later".
+      const on = t(locale, 'capabilityMateOn');
+      expect(on).toMatch(locale === 'ru' ? /взаимном интересе/ : /взаємного інтересу/);
+      expect(on).not.toMatch(/позже|пізніше|откроется|відкриється/);
     }
   });
 
-  it('the list names the address or district check and every command of the menu', () => {
+  it('no capability text promises a date', () => {
+    const MONTHS =
+      /январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр|січ|лют|берез|квіт|травн|червн|липн|серп|верес|жовт|листопад|груд/i;
     for (const locale of LOCALES) {
-      const list = capabilities(locale);
-      const bullets = list.split('\n').filter((line) => line.startsWith('• '));
-      expect(bullets).toHaveLength(7);
-      expect(bullets[0]).toMatch(locale === 'ru' ? /^• Пришли адрес/ : /^• Надішли адресу/);
-      expect(bullets[1]).toMatch(/^• Напиши район/);
-      expect(bullets.slice(2).map((line) => line.split(' ')[1])).toEqual([
-        '/districts',
-        '/deposit',
-        '/my',
-        '/lang',
-        '/cancel',
-      ]);
-      const menu = COMMAND_MENU[locale].map((item) => `/${item.command}`);
-      for (const command of menu.filter((command) => command !== '/help')) {
-        expect(list).toContain(`• ${command} — `);
+      for (const key of ['capabilityMateOff', 'capabilityMateOn'] as const) {
+        expect(t(locale, key), `${locale}.${key}`).not.toMatch(/\d/);
+        expect(t(locale, key), `${locale}.${key}`).not.toMatch(MONTHS);
+        expect(t(locale, key), `${locale}.${key}`).not.toMatch(/скоро|незабаром|soon/i);
       }
     }
   });
 
-  it('describes no notifications and no roommate search', () => {
+  it('describes no notifications in either switch state or in the menu', () => {
     for (const locale of LOCALES) {
-      for (const key of ['start', 'startAfterPayload', 'help'] as const) {
-        expect(t(locale, key), `${locale}.${key}`).not.toMatch(NOT_A_CAPABILITY);
+      for (const enabled of SWITCH_STATES) {
+        for (const key of CAPABILITY_KEYS) {
+          expect(capabilityText(locale, key, enabled), `${locale}.${key}`).not.toMatch(
+            NOT_A_CAPABILITY,
+          );
+        }
       }
       for (const item of COMMAND_MENU[locale]) {
         expect(item.description).not.toMatch(NOT_A_CAPABILITY);
@@ -220,14 +290,44 @@ describe('bot texts: one set of real capabilities', () => {
 });
 
 describe('COMMAND_MENU', () => {
-  it('has the same commands in RU and UK, with /cancel and /my as saved interests', () => {
+  it('has the same commands in RU and UK, with /mate, /cancel and /my as saved interests', () => {
     const commands = (locale: BotLocale) => COMMAND_MENU[locale].map((item) => item.command);
-    expect(commands('ru')).toEqual(['districts', 'deposit', 'my', 'lang', 'cancel', 'help']);
+    expect(commands('ru')).toEqual([
+      'mate',
+      'districts',
+      'deposit',
+      'my',
+      'lang',
+      'cancel',
+      'help',
+    ]);
     expect(commands('uk')).toEqual(commands('ru'));
 
-    const my = (locale: BotLocale) => COMMAND_MENU[locale].find((item) => item.command === 'my');
-    expect(my('ru')?.description).toBe('Сохранённые интересы');
-    expect(my('uk')?.description).toBe('Збережені інтереси');
+    const item = (locale: BotLocale, command: string) =>
+      COMMAND_MENU[locale].find((entry) => entry.command === command)?.description;
+    expect(item('ru', 'my')).toBe('Сохранённые интересы');
+    expect(item('uk', 'my')).toBe('Збережені інтереси');
+    expect(item('ru', 'mate')).toBe('Найти, с кем снять квартиру');
+    expect(item('uk', 'mate')).toBe('Знайти, з ким зняти квартиру');
+  });
+
+  it('describes /cancel for the deposit and the roommate questions alike', () => {
+    for (const locale of LOCALES) {
+      const cancel = COMMAND_MENU[locale].find((entry) => entry.command === 'cancel');
+      expect(cancel?.description).not.toMatch(/залог|застав/i);
+      const line = bullets(capabilities(locale, false)).find((entry) =>
+        entry.startsWith('• /cancel — '),
+      );
+      expect(line).toMatch(
+        locale === 'ru' ? /о залоге или для анкеты$/ : /про заставу або для анкети$/,
+      );
+    }
+    expect(COMMAND_MENU.ru.find((entry) => entry.command === 'cancel')?.description).toBe(
+      'Выйти из вопросов',
+    );
+    expect(COMMAND_MENU.uk.find((entry) => entry.command === 'cancel')?.description).toBe(
+      'Вийти з питань',
+    );
   });
 
   it('fits the Telegram limits and is translated for UK', () => {

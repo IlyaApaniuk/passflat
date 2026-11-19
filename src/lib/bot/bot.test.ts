@@ -5,7 +5,7 @@ import {
   type CommandContext,
   type Context,
 } from 'grammy';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   summarizeDepositReturns,
@@ -19,6 +19,7 @@ import {
   UNSUBSCRIBE_CALLBACK,
   handleCancel,
   handleDeposit,
+  handleHelp,
   handleMy,
   handleStart,
   handleSubscribe,
@@ -29,7 +30,7 @@ import {
 import { renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
 import { rt } from './roommate-texts';
-import { t } from './texts';
+import { capabilityText, t } from './texts';
 
 const mocks = vi.hoisted(() => ({
   touchChat: vi.fn(),
@@ -164,6 +165,8 @@ const unreportedLookup = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The matching switch is off unless a test turns it on (spec 07 §Switch).
+  vi.stubEnv('ROOMMATE_MATCHING_ENABLED', undefined);
   mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'ru', isNew: true });
   mocks.hasOpenIntake.mockResolvedValue(false);
   mocks.lookupBuilding.mockResolvedValue(null);
@@ -173,12 +176,69 @@ beforeEach(() => {
   mocks.cancelRoommate.mockResolvedValue(false);
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('the capability list follows the matching switch at reply time', () => {
+  const mateLine = (text: string) => text.split('\n').filter((line) => line.startsWith('• /mate'));
+
+  it.each([
+    ['start', '/start'],
+    ['startAfterPayload', '/start web_checker'],
+  ] as const)('%s names /mate in the wording of the current state', async (key, text) => {
+    for (const [value, enabled] of [
+      [undefined, false],
+      ['true', true],
+      ['false', false],
+    ] as const) {
+      vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
+      const { ctx, reply } = fakeContext(text);
+      await handleStart(ctx);
+
+      expect(replyKey(reply)).toBe(capabilityText('ru', key, enabled));
+      expect(mateLine(replyKey(reply))).toEqual([
+        `• /mate — ${t('ru', enabled ? 'capabilityMateOn' : 'capabilityMateOff')}`,
+      ]);
+    }
+  });
+
+  it('/help names /mate in the wording of the current state', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    for (const [value, enabled] of [
+      [undefined, false],
+      ['true', true],
+      ['TRUE', false],
+    ] as const) {
+      vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
+      const { ctx, reply } = fakeContext('/help');
+      await handleHelp(ctx);
+
+      expect(replyKey(reply)).toBe(capabilityText('uk', 'help', enabled));
+      expect(reply.mock.calls[0][1]).toEqual({ parse_mode: 'HTML' });
+      expect(mateLine(replyKey(reply))).toEqual([
+        `• /mate — ${t('uk', enabled ? 'capabilityMateOn' : 'capabilityMateOff')}`,
+      ]);
+    }
+  });
+
+  it('a building link that opens nothing falls back to the list of the current state', async () => {
+    vi.stubEnv('ROOMMATE_MATCHING_ENABLED', 'true');
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(
+      `${t('ru', 'buildingLinkFailed')}\n\n${capabilityText('ru', 'startAfterPayload', true)}`,
+    );
+  });
+});
+
 describe('handleStart', () => {
   it('greets a plain /start and records it without a payload', async () => {
     const { ctx, reply } = fakeContext('/start');
     await handleStart(ctx);
 
-    expect(replyKey(reply)).toBe(t('ru', 'start'));
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'start', false));
     expect(mocks.touchChat).toHaveBeenCalledWith({
       chatId: CHAT_ID,
       locale: 'ru',
@@ -210,7 +270,7 @@ describe('handleStart', () => {
 
     expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('atlantis');
     expect(mocks.addSubscription).not.toHaveBeenCalled();
-    expect(replyKey(reply)).toBe(t('ru', 'startAfterPayload'));
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
   });
 
   it('does not look up a malformed district slug', async () => {
@@ -218,7 +278,7 @@ describe('handleStart', () => {
     await handleStart(ctx);
 
     expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
-    expect(replyKey(reply)).toBe(t('ru', 'startAfterPayload'));
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
   });
 
   it.each([
@@ -229,7 +289,7 @@ describe('handleStart', () => {
     const { ctx, reply } = fakeContext(`/start ${payload}`);
     await handleStart(ctx);
 
-    expect(replyKey(reply)).toBe(t('ru', 'startAfterPayload'));
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
     expect(mocks.startDepositFlow).not.toHaveBeenCalled();
     expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
     expect(mocks.addSubscription).not.toHaveBeenCalled();
@@ -297,7 +357,7 @@ describe('handleStart', () => {
     const { ctx, reply } = fakeContext(text);
     await handleStart(ctx);
 
-    expect(replyKey(reply)).toBe(t('uk', key));
+    expect(replyKey(reply)).toBe(capabilityText('uk', key, false));
     expect(buttons(reply)).toEqual(['rm:start']);
     const markup = reply.mock.calls[0][1].reply_markup as {
       inline_keyboard: { text: string }[][];
@@ -332,13 +392,13 @@ describe('handleStart', () => {
     for (const word of typed.split(/\s+/).filter((w) => w.length >= 4)) {
       expect(recorded).not.toContain(word);
     }
-    expect(replyKey(reply)).toBe(t('ru', 'startAfterPayload'));
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
   });
 });
 
 describe('handleStart with a building link (b_<uuid>)', () => {
   const fallback = (locale: 'ru' | 'uk') =>
-    `${t(locale, 'buildingLinkFailed')}\n\n${t(locale, 'startAfterPayload')}`;
+    `${t(locale, 'buildingLinkFailed')}\n\n${capabilityText(locale, 'startAfterPayload', false)}`;
 
   it('replies at once with the building’s card and buttons, as for its typed address', async () => {
     const lookup = buildingLookup();
