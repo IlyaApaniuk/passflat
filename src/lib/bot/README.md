@@ -114,6 +114,27 @@ page sent the person), `tg_address_checked` (with `level`, so the district/city
 fallback rate is measurable), `tg_address_not_found`, `tg_subscribed`,
 `tg_unsubscribed`, `tg_districts_viewed`, `tg_deposit_viewed`.
 
+The check events say how the card was reached and how well it answered. Both are
+built by pure functions in `check-events.ts` over the shared `answerProperties`
+(the website's `address_checked` uses the same definition):
+
+- `tg_address_checked`: `level`, `district`, `has_building`, `report_count`,
+  `entry_source` (`typed_address` | `link_building`), `lookup_level` (= `level`),
+  `source_kind` (`tenant` | `mixed` | `asking` | `none`), `n` (the headline
+  metric's N, tenant group first) and `incomplete` (that headline is a known-part
+  total). `replyCard` is the one place it is sent, so a `b_` link fires it once.
+- `tg_district_checked`: `district`, `report_count` and `entry_source`
+  (`typed_district` | `link_district`), `source_kind`, `n`, `incomplete` of the
+  district's reference (the city's below `MIN_AREA_REPORTS`). Sent only by
+  `replyDistrict`.
+
+The `entry_source` values are the `ENTRY_SOURCE` constant in `start-payload.ts`.
+No check event carries free text; `tg_address_not_found` and
+`tg_address_outside_city` still send the typed `query` (Q-15).
+
+Events are flushed before the function ends: the webhook route registers
+`flushPostHog` with `after()` and the follow-ups cron awaits it.
+
 Distinct id is `tg_<chatId>`, which does not join to web identities — bot and
 web funnels stay separate cohorts on purpose.
 

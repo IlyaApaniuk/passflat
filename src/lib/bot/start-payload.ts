@@ -60,3 +60,5 @@ export const ENTRY_SOURCE = {
   linkBuilding: 'link_building',
   linkDistrict: 'link_district',
 } as const;
+
+export type EntrySource = (typeof ENTRY_SOURCE)[keyof typeof ENTRY_SOURCE];

@@ -1,7 +1,8 @@
 import { webhookCallback } from 'grammy';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 
 import { getBot } from '@/lib/bot/bot';
+import { flushPostHog } from '@/lib/posthog-server';
 
 /**
  * Telegram webhook.
@@ -26,6 +27,10 @@ export async function POST(request: NextRequest) {
   }
 
   const handle = webhookCallback(bot, 'std/http');
+
+  // Bot events are server events: deliver them once the update is answered, so
+  // they are not lost when the function is frozen. `flushPostHog` never throws.
+  after(flushPostHog);
 
   try {
     return await handle(request);

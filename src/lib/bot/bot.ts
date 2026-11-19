@@ -4,12 +4,14 @@ import {
   type CallbackQueryContext,
   type CommandContext,
   type Context,
+  type Filter,
 } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
 import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
 
 import { track } from './analytics';
+import { checkEventProperties, districtCheckEventProperties } from './check-events';
 import {
   cancelDepositFlow,
   handleDepositText,
@@ -46,7 +48,7 @@ import {
   setChatLocale,
   touchChat,
 } from './store';
-import { parseStartPayload } from './start-payload';
+import { ENTRY_SOURCE, parseStartPayload, type EntrySource } from './start-payload';
 import { normalizeLocale, peopleWord, t, type BotLocale } from './texts';
 
 /**
@@ -150,27 +152,23 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
     return;
   }
 
-  await replyCard(ctx, chatId, lookup, locale);
+  await replyCard(ctx, chatId, lookup, locale, ENTRY_SOURCE.typedAddress);
 }
 
 /**
  * A lookup's card with its buttons, the one way an address answer is sent, so a
- * typed address and a building link look the same. `note` is one extra line
- * after the card.
+ * typed address and a building link look the same, and the one place
+ * `tg_address_checked` is sent. `note` is one extra line after the card.
  */
 async function replyCard(
   ctx: Context,
   chatId: number,
   lookup: AddressLookup,
   locale: BotLocale,
+  entrySource: EntrySource,
   note: string | null = null,
 ) {
-  track(chatId, 'tg_address_checked', {
-    level: lookup.level,
-    district: lookup.districtSlug,
-    has_building: lookup.buildingId != null,
-    report_count: lookup.building?.reportCount ?? 0,
-  });
+  track(chatId, 'tg_address_checked', checkEventProperties(lookup, entrySource));
 
   const card = renderLookup(lookup, locale);
   await ctx.reply(note ? `${card}\n\n${note}` : card, {
@@ -210,7 +208,7 @@ async function replyBuildingLink(
 
   const note = intakeOpen ? t(locale, 'intakeStillOpen') : null;
   if (lookup) {
-    await replyCard(ctx, chatId, lookup, locale, note);
+    await replyCard(ctx, chatId, lookup, locale, ENTRY_SOURCE.linkBuilding, note);
     return;
   }
 
@@ -226,9 +224,15 @@ async function replyBuildingLink(
  * A district's answer (`renderDistrict`) with its buttons, the one way a typed
  * district name and a `d_<slug>` link are answered. The save-interest button
  * (`sub:d:<slug>`) is the only thing that saves interest. False when the slug is
- * not a district of the checker city, so the caller can reply otherwise.
+ * not a district of the checker city, so the caller can reply otherwise. The one
+ * place `tg_district_checked` is sent.
  */
-async function replyDistrict(ctx: Context, locale: BotLocale, slug: string): Promise<boolean> {
+async function replyDistrict(
+  ctx: Context,
+  locale: BotLocale,
+  slug: string,
+  entrySource: EntrySource,
+): Promise<boolean> {
   const chatId = ctx.chat?.id;
   if (!chatId) return false;
 
@@ -241,7 +245,7 @@ async function replyDistrict(ctx: Context, locale: BotLocale, slug: string): Pro
   const cityStats = city ? await getCityCostStats(city.id) : null;
 
   const position = table.findIndex((row) => row.slug === slug);
-  track(chatId, 'tg_district_checked', { district: slug, report_count: district.stats.count });
+  track(chatId, 'tg_district_checked', districtCheckEventProperties(district, entrySource));
 
   const keyboard = new InlineKeyboard()
     .text(t(locale, 'subscribeDistrict', { district: district.name }), `sub:d:${district.slug}`)
@@ -300,7 +304,12 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
   // "d_<slug>": that district's answer. Opening the link saves nothing; its
   // button does (spec 04 §District deep link). An unknown slug, "web_*" and
   // other payloads get the generic reply below.
-  if (start.kind === 'district' && (await replyDistrict(ctx, locale, start.slug))) return;
+  if (
+    start.kind === 'district' &&
+    (await replyDistrict(ctx, locale, start.slug, ENTRY_SOURCE.linkDistrict))
+  ) {
+    return;
+  }
 
   await ctx.reply(t(locale, start.kind === 'none' ? 'start' : 'startAfterPayload'), {
     parse_mode: 'HTML',
@@ -431,6 +440,37 @@ export async function handleUnsubscribe(ctx: CallbackQueryContext<Context>): Pro
   await ctx.reply(t(chat.locale as BotLocale, 'unsubscribed'));
 }
 
+/**
+ * A text message that is not a command: a deposit-flow answer, a district name
+ * or an address. Exported so tests can call it with a fake context.
+ */
+export async function handleText(ctx: Filter<Context, 'message:text'>): Promise<void> {
+  const text = ctx.message.text.trim();
+  if (text.startsWith('/')) return;
+
+  const chat = await touchChat({
+    chatId: ctx.chat.id,
+    locale: normalizeLocale(ctx.from?.language_code),
+  });
+  const locale = chat.locale as BotLocale;
+
+  // An answer to a deposit-flow question ("12.09", "4000") comes first, so it
+  // is never mistaken for an address.
+  if (await handleDepositText(ctx, chat.id, locale, text)) return;
+  if (await maybeOfferDeposit(ctx, locale, text)) return;
+
+  // A district name has no single point to geocode, so it is caught before
+  // Google sees it — otherwise "Мокотов" came back as "address not found".
+  const city = await getCity();
+  const districtSlug = city ? matchDistrict(text, city.districts) : null;
+  if (districtSlug) {
+    await replyDistrict(ctx, locale, districtSlug, ENTRY_SOURCE.typedDistrict);
+    return;
+  }
+
+  await replyLookup(ctx, locale, text);
+}
+
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
 
@@ -528,32 +568,7 @@ export function createBot(token: string): Bot {
   bot.callbackQuery(UNSUBSCRIBE_CALLBACK, handleUnsubscribe);
 
   // Anything else is treated as an address — the one thing the bot is for.
-  bot.on('message:text', async (ctx) => {
-    const text = ctx.message.text.trim();
-    if (text.startsWith('/')) return;
-
-    const chat = await touchChat({
-      chatId: ctx.chat.id,
-      locale: normalizeLocale(ctx.from?.language_code),
-    });
-    const locale = chat.locale as BotLocale;
-
-    // An answer to a deposit-flow question ("12.09", "4000") comes first, so it
-    // is never mistaken for an address.
-    if (await handleDepositText(ctx, chat.id, locale, text)) return;
-    if (await maybeOfferDeposit(ctx, locale, text)) return;
-
-    // A district name has no single point to geocode, so it is caught before
-    // Google sees it — otherwise "Мокотов" came back as "address not found".
-    const city = await getCity();
-    const districtSlug = city ? matchDistrict(text, city.districts) : null;
-    if (districtSlug) {
-      await replyDistrict(ctx, locale, districtSlug);
-      return;
-    }
-
-    await replyLookup(ctx, locale, text);
-  });
+  bot.on('message:text', handleText);
 
   bot.catch((error) => {
     console.error('[bot] unhandled error', error);

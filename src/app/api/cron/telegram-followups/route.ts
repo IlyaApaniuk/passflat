@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireCronAuth } from '@/lib/admin-auth';
 import { getBot } from '@/lib/bot/bot';
 import { clearStaleLetterParties, sendDueFollowUps } from '@/lib/bot/deposit-flow';
+import { flushPostHog } from '@/lib/posthog-server';
 
 /**
  * Daily: the bot's deposit follow-ups — "today is your landlord's deadline"
@@ -21,5 +22,7 @@ export async function GET(request: NextRequest) {
   if (!bot) return NextResponse.json({ skipped: 'bot not configured', clearedParties });
 
   const result = await sendDueFollowUps(bot.api);
+  // The follow-ups' bot events are delivered before the function ends.
+  await flushPostHog();
   return NextResponse.json({ ...result, clearedParties });
 }

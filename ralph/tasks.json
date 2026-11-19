@@ -616,7 +616,7 @@
       "title": "Extend bot check events and flush bot events in the webhook and cron",
       "spec": "docs/specs/04-telegram-bot.md#bot-analytics",
       "dependsOn": ["T035", "T024"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "tg_address_checked adds entry_source, lookup_level, source_kind, n, incomplete via answerProperties and keeps level, district, has_building, report_count; tg_district_checked adds entry_source, source_kind, n, incomplete",
         "A b_ open fires exactly one tg_address_checked with entry_source link_building",
@@ -624,7 +624,7 @@
         "A pure checkEventProperties has unit tests; no new free text in any event"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 2,
       "notes": ""
     },
     {
@@ -813,11 +813,27 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Found in T032: spec 03 says every bot consumer except the Q-2 single-number surfaces moves to the contract, and spec 04 asks for district cards with groups and N, but no task moved the typed-district answer (renderDistrict, also used by T036). T038 adds source_kind/n/incomplete to tg_district_checked and needs this FigureSummary.",
+      "notes": "Found in T032: spec 03 says every bot consumer except the Q-2 single-number surfaces moves to the contract, and spec 04 asks for district cards with groups and N, but no task moved the typed-district answer (renderDistrict, also used by T036). T038 adds source_kind/n/incomplete to tg_district_checked and needs this FigureSummary. Done in T038: getDistrictBySlug already returns `reference` from loadAreaReference (tested in lookup.test.ts) and tg_district_checked describes it; T049 renders the card from it and drops `stats` and the getCityCostStats call.",
       "id": "T049",
       "milestone": "M4",
       "title": "Bot typed-district answer: read the district figures from the contract",
       "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T038"],
+      "acceptance": [
+        "runInBackground in src/lib/bot/deposit-flow.ts awaits flushPostHog after the task settles (success or failure), so tg_deposit_contract tracked at the end of a contract reading is delivered before the after() queue goes idle",
+        "A test calls the exported background runner (or processContract through it) with after mocked and asserts flushPostHog runs after the task, also when the task rejects",
+        "No new event or property"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T038: Next runs after() callbacks concurrently (p-queue, no concurrency limit), so the webhook route after(flushPostHog) runs while the contract reading is still in progress; events the reading tracks at its end (tg_deposit_contract) are not covered by that flush.",
+      "id": "T050",
+      "milestone": "M4",
+      "title": "Flush PostHog at the end of the deposit flow background task",
+      "spec": "docs/specs/04-telegram-bot.md#bot-analytics",
       "status": "todo"
     }
   ]

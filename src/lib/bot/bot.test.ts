@@ -16,6 +16,7 @@ import {
   handleMy,
   handleStart,
   handleSubscribe,
+  handleText,
   handleUnsubscribe,
 } from './bot';
 import { renderDistrict, renderLookup } from './format';
@@ -37,6 +38,10 @@ const mocks = vi.hoisted(() => ({
   getCity: vi.fn(),
   getDistrictTable: vi.fn(),
   getCityCostStats: vi.fn(),
+  lookupAddress: vi.fn(),
+  geocodeAddress: vi.fn(),
+  handleDepositText: vi.fn(),
+  maybeOfferDeposit: vi.fn(),
 }));
 
 vi.mock('./store', () => ({
@@ -51,8 +56,8 @@ vi.mock('./deposit-flow', () => ({
   startDepositFlow: mocks.startDepositFlow,
   cancelDepositFlow: mocks.cancelDepositFlow,
   hasOpenIntake: mocks.hasOpenIntake,
-  handleDepositText: vi.fn(),
-  maybeOfferDeposit: vi.fn(),
+  handleDepositText: mocks.handleDepositText,
+  maybeOfferDeposit: mocks.maybeOfferDeposit,
   registerDepositFlow: vi.fn(),
 }));
 vi.mock('./lookup', () => ({
@@ -60,9 +65,11 @@ vi.mock('./lookup', () => ({
   getCity: mocks.getCity,
   getCityDepositFacts: mocks.getCityDepositFacts,
   getDistrictTable: mocks.getDistrictTable,
-  lookupAddress: vi.fn(),
+  lookupAddress: mocks.lookupAddress,
   lookupBuilding: mocks.lookupBuilding,
 }));
+// Geocoding is a paid Google call: never made from a test.
+vi.mock('./geocode', () => ({ geocodeAddress: mocks.geocodeAddress }));
 vi.mock('@/lib/cost-baselines', () => ({ getCityCostStats: mocks.getCityCostStats }));
 
 const UUID = '3f2c8a1e-9b4d-4c7a-8e21-5d6f0a9b1c3e';
@@ -249,8 +256,38 @@ describe('handleStart with a building link (b_<uuid>)', () => {
       district: 'mokotow',
       has_building: true,
       report_count: 2,
+      entry_source: 'link_building',
+      lookup_level: 'building',
+      source_kind: 'tenant',
+      n: 1,
+      incomplete: false,
     });
     expect(mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked')).toHaveLength(1);
+    // The link never goes through the typed-address path.
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.lookupAddress).not.toHaveBeenCalled();
+  });
+
+  it('records a building without reports as link_building with its district reference', async () => {
+    mocks.lookupBuilding.mockResolvedValue(unreportedLookup());
+    const { ctx } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_address_checked',
+        expect.objectContaining({
+          entry_source: 'link_building',
+          lookup_level: 'district',
+          has_building: true,
+          report_count: 0,
+          source_kind: 'tenant',
+          n: 5,
+        }),
+      ],
+    ]);
   });
 
   it('gives the area card starting with noBuildingData for a building without reports', async () => {
@@ -382,6 +419,7 @@ function district(name = 'Mokotów') {
       count: 12,
     },
     deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
+    reference: areaReference('district'),
   };
 }
 
@@ -455,7 +493,12 @@ describe('handleStart with a district link (d_<slug>)', () => {
     expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
       district: 'mokotow',
       report_count: 12,
+      entry_source: 'link_district',
+      source_kind: 'tenant',
+      n: 5,
+      incomplete: false,
     });
+    expect(mocks.track.mock.calls.filter(([, e]) => e === 'tg_district_checked')).toHaveLength(1);
   });
 
   it('answers in Ukrainian for a Ukrainian chat', async () => {
@@ -493,6 +536,95 @@ describe('handleStart with a district link (d_<slug>)', () => {
       citySlug: 'warsaw',
     });
     expect(replyKey(tap.reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+  });
+});
+
+/** A typed message that is not a command, as `bot.on('message:text')` receives it. */
+function fakeText(text: string) {
+  const reply = vi.fn();
+  const ctx = {
+    chat: { id: CHAT_ID },
+    from: { language_code: 'ru' },
+    message: { text },
+    reply,
+    replyWithChatAction: vi.fn(),
+  } as unknown as Parameters<typeof handleText>[0];
+  return { ctx, reply };
+}
+
+describe('handleText (typed address or district)', () => {
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({
+      id: 'city-1',
+      slug: 'warsaw',
+      districts: [{ id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' }],
+    });
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.getDistrictTable.mockResolvedValue(districtTable);
+    mocks.getCityCostStats.mockResolvedValue({ total: { median: 4_500 } });
+  });
+
+  it('records a typed address as typed_address, once, with the answer quality', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-1', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeText('Puławska 10');
+    await handleText(ctx);
+
+    expect(replyKey(reply)).toBe(renderLookup(buildingLookup(), 'ru'));
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_address_checked',
+        {
+          level: 'building',
+          district: 'mokotow',
+          has_building: true,
+          report_count: 2,
+          entry_source: 'typed_address',
+          lookup_level: 'building',
+          source_kind: 'tenant',
+          n: 1,
+          incomplete: false,
+        },
+      ],
+    ]);
+    expect(mocks.lookupBuilding).not.toHaveBeenCalled();
+  });
+
+  it('records a typed district name as typed_district, once', async () => {
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_district_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_district_checked',
+        {
+          district: 'mokotow',
+          report_count: 12,
+          entry_source: 'typed_district',
+          source_kind: 'tenant',
+          n: 5,
+          incomplete: false,
+        },
+      ],
+    ]);
+  });
+
+  it('sends no check event for an address Google cannot find', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText('Nowhere 999');
+    await handleText(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'addressNotFound'));
+    expect(mocks.track).not.toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', expect.anything());
   });
 });
 

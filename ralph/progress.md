@@ -71,6 +71,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Web-vs-bot consistency tests call `POST /api/location-score` and `lookupAddress` over one Prisma mock (example: `src/lib/bot/checker-consistency.test.ts`).
 - Bot callback handlers are tested the same way: export the body (e.g. `handleSubscribe`) and its regex, and fake `{ chat, match: data.match(REGEX), answerCallbackQuery, reply }` cast to `CallbackQueryContext<Context>` (example: `fakeCallback` in `src/lib/bot/bot.test.ts`).
 - The bot's capability list (`CAPABILITIES_RU/UK`) and command menu (`COMMAND_MENU`, published by `scripts/tg-webhook.ts`) live in `texts.ts`; a new command updates both, and `texts.test.ts` checks that they agree and that no text promises to write later.
+- A pure helper that `bot.ts` uses must not live in a module `bot.test.ts` mocks (`./analytics`, `./lookup`, ...): the mock hides it. Bot check-event properties live in `check-events.ts` for that reason.
+- A route that calls `after()` is testable by mocking `next/server` with `importOriginal` plus `after: vi.fn()` and running the recorded callbacks (example: `src/app/api/telegram/webhook/route.test.ts`). Next runs `after()` callbacks concurrently, so a flush registered there does not wait for another `after()` task.
 
 ## Log
 
@@ -719,3 +721,50 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Owner action: run `npm run bot:webhook -- https://passflat.com` once after deploy to publish the new RU and UK menus.
   - No assumptions, tables, migrations or analytics changes.
 - Next: T038 (`entry_source` and the answer properties on `tg_address_checked` / `tg_district_checked`; see the T035 and T036 entries for the single tracking places).
+
+### 2026-11-19 04:46 · T038 · done
+
+- Done:
+  - New `src/lib/bot/check-events.ts`. It has two pure functions over the shared `answerProperties` (`cost-figures.ts`):
+    - `checkEventProperties(lookup, entrySource)` → `tg_address_checked`: the existing `level`, `district`, `has_building`, `report_count`, plus `entry_source`, `lookup_level` (= `level`), `source_kind`, `n`, `incomplete`.
+    - `districtCheckEventProperties(district, entrySource)` → `tg_district_checked`: the existing `district`, `report_count`, plus `entry_source`, `source_kind`, `n`, `incomplete`.
+  - `src/lib/bot/start-payload.ts`: new `EntrySource` type over the existing `ENTRY_SOURCE` constant.
+  - `src/lib/bot/bot.ts`:
+    - `replyCard` takes the entry source and stays the only place `tg_address_checked` is sent. `replyLookup` passes `typed_address`, `replyBuildingLink` passes `link_building`.
+    - `replyDistrict` takes it too: `typed_district` from the text handler, `link_district` from `handleStart`.
+    - The `message:text` body is now the exported `handleText`. Behaviour is unchanged.
+  - `src/lib/bot/lookup.ts`: `getDistrictBySlug` also returns `reference` from `loadAreaReference` (district from `MIN_AREA_REPORTS` reports, else the city). The district event describes it; the card still renders `stats` until T049.
+  - `src/app/api/telegram/webhook/route.ts` registers `after(flushPostHog)` once the secret check passes. `src/app/api/cron/telegram-followups/route.ts` awaits `flushPostHog()` after `sendDueFollowUps`.
+  - Docs: an events paragraph in `src/lib/bot/README.md`; the bot identity line and the bot events row in `docs/architecture.md`.
+- Tests:
+  - New `check-events.test.ts` (13 tests):
+    - tenant, mixed, asking-only and known-part buildings;
+    - the district reference for an unreported building, the city reference without a building row, and none;
+    - district, thin district (city reference) and no reference;
+    - the exact key sets, with no address or area name in any value.
+  - `bot.test.ts`:
+    - a `b_` open fires exactly one `tg_address_checked` with `entry_source: 'link_building'` and the full property set, and never calls the typed-address path (`geocodeAddress` / `lookupAddress`);
+    - an unreported `b_` building records its district reference (n 5);
+    - `d_` fires one `tg_district_checked` with `link_district`;
+    - new `handleText` tests: a typed address → one event with `typed_address`; a typed district → one event with `typed_district`; not found → no check event. `./geocode` is mocked.
+  - `lookup.test.ts`: `getDistrictBySlug` gives the district reference, a thin district gives the city reference, an unknown slug gives null.
+  - New `src/app/api/telegram/webhook/route.test.ts` (4 tests): `after` is called with `flushPostHog`, and the flush runs only from that callback; it is also registered when the handler throws (200); nothing is flushed on 403 or 503.
+  - New `src/app/api/cron/telegram-followups/route.test.ts` (3 tests): the flush is awaited after sending and before the response; nothing is sent or flushed on 401; a bot that is not configured is skipped.
+- Checks:
+  - `npx vitest run src/lib/bot` passed (10 files / 223 tests), and so did the two route test files (7 tests).
+  - `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 68 files / 867 tests, build OK.
+  - `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started, and no Telegram, Google or PostHog call was made. Events are proven only with mocked `track` / `flushPostHog`.
+- Owner review:
+  - Assumption applied: the `ENTRY_SOURCE` values (`typed_address`, `typed_district`, `link_building`, `link_district`) in `start-payload.ts`, unchanged from T035/T036.
+  - Choices to confirm:
+    - (1) For a district below `MIN_AREA_REPORTS`, `tg_district_checked`'s `source_kind` / `n` describe the city reference (what the thin card falls back to). `report_count` still reflects the district (cost-baselines count), so a thin district can be told apart.
+    - (2) `tg_district_checked` has no level property, following the spec's list.
+    - (3) The flush is not registered on 403 or 503 replies, which track nothing.
+  - After deploy: check that both events carry the new properties in PostHog Live Events.
+  - Known gap, filed as T050: the contract reading's own `after()` task runs concurrently with the route's flush, so `tg_deposit_contract` can still be lost.
+  - No copy, tables or migrations.
+- Next:
+  - T049 renders the district card from `getDistrictBySlug().reference` (already loaded and tested) and drops `stats` and `getCityCostStats`.
+  - T050 flushes at the end of `runInBackground` in `deposit-flow.ts`.
+  - T039 (`submitLink` with `b=`) is independent.

@@ -360,12 +360,22 @@ export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKE
   const district = city?.districts.find((d) => d.slug === slug);
   if (!city || !district) return null;
 
-  const [stats, deposit] = await Promise.all([
+  // `reference` (the district from MIN_AREA_REPORTS reports, else the city) is
+  // what `tg_district_checked` describes; the card still renders `stats` (T049).
+  const [stats, deposit, reference] = await Promise.all([
     getDistrictCostStats(district.id),
     loadDepositReturns({ districtId: district.id }),
+    loadAreaReference({ districtId: district.id, cityId: city.id }),
   ]);
 
-  return { citySlug: city.slug, slug: district.slug, name: district.nameKey, stats, deposit };
+  return {
+    citySlug: city.slug,
+    slug: district.slug,
+    name: district.nameKey,
+    stats,
+    deposit,
+    reference,
+  };
 }
 
 /** City-wide deposit statistic, for the standalone /deposit answer. */

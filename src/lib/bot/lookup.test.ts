@@ -38,7 +38,7 @@ vi.mock('@/lib/geo/district', () => ({ resolveDistrictByPoint: h.resolveDistrict
 
 import { summarizeDepositReturns, summarizeFigures, type FigureReport } from '@/lib/cost-figures';
 import type { GeocodedAddress } from './geocode';
-import { getCityDepositFacts, lookupAddress, lookupBuilding } from './lookup';
+import { getCityDepositFacts, getDistrictBySlug, lookupAddress, lookupBuilding } from './lookup';
 
 type Where = {
   buildingId?: string;
@@ -453,5 +453,33 @@ describe('getCityDepositFacts', () => {
     expect(facts).toEqual({ deposit: summarizeDepositReturns(cityReports) });
     expect(facts!.deposit).toMatchObject({ answered: 12, gotBack: 4 });
     expect(depositQueries()).toEqual([{ isVisible: true, building: { cityId: 'city-1' } }]);
+  });
+});
+
+describe('getDistrictBySlug reference (what tg_district_checked describes)', () => {
+  it('carries the district reference from MIN_AREA_REPORTS reports', async () => {
+    const district = await getDistrictBySlug('mokotow');
+
+    expect(district).toMatchObject({ citySlug: 'warsaw', slug: 'mokotow', name: 'Mokotów' });
+    expect(district!.reference).toEqual({
+      level: 'district',
+      slug: 'mokotow',
+      name: 'Mokotów',
+      summary: summarizeFigures(districtReports, { level: 'district', rentalType: 'all' }),
+    });
+  });
+
+  it('falls back to the city reference for a thin district', async () => {
+    serveReports({ district: districtReports.slice(0, 2), city: cityReports });
+    const district = await getDistrictBySlug('mokotow');
+
+    expect(district!.reference).toMatchObject({ level: 'city', slug: 'warsaw', name: 'Warszawa' });
+    expect(district!.reference!.summary).toEqual(
+      summarizeFigures(cityReports, { level: 'city', rentalType: 'all' }),
+    );
+  });
+
+  it('gives null for a slug that is not a district of the city', async () => {
+    expect(await getDistrictBySlug('atlantis')).toBeNull();
   });
 });
