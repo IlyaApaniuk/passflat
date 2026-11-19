@@ -849,13 +849,13 @@
         "Draft keys listed in the progress entry for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found in T047: building/[slug]/client.tsx gates only the utilities detail and the (never drawn) position bar; deposit returns and tenure render publicly. Copy only, no gating change.",
       "id": "T051",
       "milestone": "M3",
       "title": "Post-submit unlock list: stop promising that login unlocks the public deposit and tenure figures",
       "spec": "docs/specs/03-building-figures.md#comparisons",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

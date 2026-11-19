@@ -1307,6 +1307,8 @@ export function CostSubmitClient({
                 {/* Anonymous submitter: their report is already saved. Hook them
                     to log in — it claims the report (shown in the dashboard beside
                     the area reference) and unlocks the gated utilities breakdown.
+                    Deposit returns and tenure are public on the building page, so
+                    the list does not offer them.
                     No ranking promise: a position bar needs `isComparable`, which
                     no PRD 1 surface meets (FR-29). The pf_anon cookie survives the redirect,
                     so the auth callback claims it and the building page lands
@@ -1324,14 +1326,6 @@ export function CostSubmitClient({
                       <li className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                         {t('costs.submit.unlockItemUtilities')}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        {t('costs.submit.unlockItemDeposit')}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        {t('costs.submit.unlockItemTenure')}
                       </li>
                       <li className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

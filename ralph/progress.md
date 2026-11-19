@@ -1070,3 +1070,29 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing. The bot was not started; no Telegram or PostHog call was made.
 - Owner review: no new event or property, no copy, assumptions, tables or migrations. After deploy: send a contract to the bot and check that `tg_deposit_contract` and `tg_deposit_verdict` show up in PostHog Live Events.
 - Next: T051, then T046 from a clean tree. T046's handoff: T050 changed no copy.
+
+### 2026-11-19 05:56 · T051 · done
+
+- Done (copy only, no gating change):
+  - Checked on the building page (`building/[slug]/client.tsx`): the deposit, return and tenure figures render outside any `GatedSection`. Only the per-utility rows (`detail`, everything except `PUBLIC_BREAKDOWN` rent / admin fee) and the never-drawn position bar are gated. `/api/cost-access` returns `false` when logged out. After login and claim it returns `true` for every building page, not only this one.
+  - `src/i18n/messages/{pl,en,ru,uk}.json`, `costs.submit`:
+    - `unlockItemDeposit` and `unlockItemTenure` are removed (dropped, not reworded). Login gives nothing about those public figures.
+    - `unlockTitle` and `unlockDesc` are reworded. Before, they said "unlock the full statistics" and "reveal the deeper numbers for this building". Now they name what login gives: the claimed report and the utilities breakdown. The description ends with "After you log in:" and leads into the two remaining items, `unlockItemUtilities` and `unlockItemPosition` (both unchanged).
+    - `unlockCta` is unchanged ("Log in to unlock").
+  - `src/app/[locale]/[city]/costs/submit/client.tsx`: the two `<li>` items are removed. The unlock-block comment says why deposit and tenure are not offered.
+  - `post-submit-copy.test.ts`: new describe, 13 tests.
+    - In all four locales, the two dropped keys are absent.
+    - `unlockTitle` / `unlockDesc` hold no deposit, tenure, "full statistics", "deeper" or "detailed data" wording (EN, PL, RU, UK), and no ranking or overpay wording. The old copy matches the pattern in every locale.
+    - The submit client reads only `costs.submit.unlock*` keys that exist in every locale, and none of the dropped ones. There is no next-intl key typing, so typecheck would not catch a stale key.
+- Namespace: `costs.submit.*` is already read by the submit client; no provider change.
+- Checks: `npx vitest run` on `post-submit-copy.test.ts` and `src/i18n/messages.test.ts`: 23/23 passed. `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 72 files / 951 tests, build OK. `next-env.d.ts` restored. Not checked in a real browser.
+- Did not work: nothing.
+- Owner review:
+  - Removed keys, all four locales: `costs.submit.unlockItemDeposit`, `costs.submit.unlockItemTenure`. The anonymous post-submit list now has two items.
+  - Draft copy, all four locales: `costs.submit.unlockTitle`, `costs.submit.unlockDesc`.
+    - EN: "Log in to claim your report and see the utilities breakdown" / "Your report is saved. Create an account or log in to claim it. After you log in:".
+    - RU: «Войди, чтобы закрепить отчёт и открыть разбивку коммуналки» / «Твой отчёт сохранён. Создай аккаунт или войди, чтобы закрепить его за собой. После входа:».
+    - PL: «Zaloguj się, aby przypisać raport do siebie i zobaczyć rozkład mediów» / «Twój raport jest zapisany. Załóż konto lub zaloguj się, aby przypisać go do siebie. Po zalogowaniu:».
+    - UK: «Увійди, щоб закріпити звіт і відкрити розбивку комуналки» / «Твій звіт збережено. Створи акаунт або увійди, щоб закріпити його за собою. Після входу:».
+  - No assumptions, tables or migrations. Analytics unchanged (`anon_unlock_cta_clicked` kept).
+- Next: T046 from a clean tree. T046's handoff should add under website draft copy: T051's two draft keys (`unlockTitle`, `unlockDesc`) and the two removed keys.
