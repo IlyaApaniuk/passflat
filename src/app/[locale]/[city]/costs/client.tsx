@@ -549,11 +549,6 @@ export function CostsOverviewClient({
                             }))}
                           citySlug={citySlug}
                           bounds={cityBounds}
-                          cityMedianTotal={
-                            median(
-                              filteredBuildings.map((b) => b.medianTotal).filter((v) => v > 0),
-                            ) ?? 0
-                          }
                         />
                       </div>
                     </Suspense>

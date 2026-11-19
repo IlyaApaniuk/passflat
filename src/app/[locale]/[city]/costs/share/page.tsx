@@ -7,33 +7,18 @@ import { Button } from '@/components/ui/button';
 import { getCostOgImage, getOgImage } from '@/lib/seo';
 import { getDistrictCostStats } from '@/lib/cost-baselines';
 
-// Personal "I pay X% below my area" share landing: the OG preview carries the
-// sharer's brag (the viral hook); the page shows the area's REAL costs (concrete
-// proof — split, typical range, sample size) and pivots the visitor to check
-// their OWN costs (submit / calculator → a new contribution). Reads query params
-// + the district stats, carries ?ref (captured by middleware). Dynamic, off the
-// build, not indexed.
+// Share landing for a district (`?d=<district>`): the OG preview and the page
+// show the area's figures neutrally (median, split, typical range, sample size),
+// never how the sharer compares to the area (spec 03 §Comparisons, FR-29), and
+// pivot the visitor to check their OWN costs (submit / calculator → a new
+// contribution). Old links still carry `pct` / `amt`; both are ignored. Carries
+// ?ref (captured by middleware). Dynamic, off the build, not indexed.
 export const dynamic = 'force-dynamic';
 
 type Props = {
   params: Promise<{ locale: string; city: string }>;
-  searchParams: Promise<{ pct?: string; d?: string; amt?: string }>;
+  searchParams: Promise<{ d?: string }>;
 };
-
-function parsePct(pct?: string): number | null {
-  if (!pct) return null;
-  const n = parseInt(pct, 10);
-  return Number.isFinite(n) ? n : null;
-}
-
-// The sharer's own monthly total, passed through the share link so the landing
-// can name a concrete number. Guarded to a sane range so a hand-edited URL can't
-// inject garbage.
-function parseAmount(amt?: string): number | null {
-  if (!amt) return null;
-  const n = parseInt(amt, 10);
-  return Number.isFinite(n) && n > 0 && n < 1_000_000 ? n : null;
-}
 
 // Deduped across generateMetadata + the page render.
 const getDistrict = cache(async (citySlug: string, slug?: string) => {
@@ -46,10 +31,9 @@ const getDistrict = cache(async (citySlug: string, slug?: string) => {
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { city } = await params;
-  const { pct, d } = await searchParams;
+  const { d } = await searchParams;
   const t = await getTranslations('share');
   const district = await getDistrict(city, d);
-  const pctNum = parsePct(pct);
   const description = t('cardDescription');
 
   let title: string;
@@ -57,37 +41,23 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (district) {
     const stats = await getDistrictCostStats(district.id); // cached → no double query
     const median = stats.total.median;
-    if (pctNum != null && pctNum < 0) {
-      // Brag: "I pay X% below {district}" — big green "-X%" + the median as proof.
-      const percent = Math.abs(pctNum);
-      title = t('cardTitle', { percent, district: district.nameKey });
-      image = getCostOgImage({
-        title: t('ogTitle'),
-        subtitle: description,
-        statLabel: t('ogStatLabel', { district: district.nameKey }),
-        stat: t('ogStat', { percent }),
-        split: median != null ? t('ogMedian', { amount: median.toLocaleString() }) : undefined,
-      });
-    } else {
-      // Overpay / equal: no self-shaming brag — a neutral "what people pay in
-      // {district}" data card (the median as the stat). Still a useful data drop.
-      // The IMAGE title stays short (no district — it goes in the stat label) so
-      // it never wraps into the subtitle; the longer text goes to og:title.
-      title = t('cardTitleArea', { district: district.nameKey });
-      image =
-        median != null
-          ? getCostOgImage({
-              title: t('ogTitleNeutral'),
-              subtitle: description,
-              statLabel: t('ogStatNeutralLabel', { district: district.nameKey }),
-              stat: `≈${median.toLocaleString()} zł`,
-              split:
-                stats.totalPerM2.median != null
-                  ? t('ogMedianPerM2', { amount: stats.totalPerM2.median.toLocaleString() })
-                  : undefined,
-            })
-          : getOgImage(title, description);
-    }
+    // A neutral "what people pay in {district}" data card (the median as the
+    // stat). The IMAGE title stays short (no district — it goes in the stat
+    // label) so it never wraps into the subtitle; the longer text goes to og:title.
+    title = t('cardTitleArea', { district: district.nameKey });
+    image =
+      median != null
+        ? getCostOgImage({
+            title: t('ogTitleNeutral'),
+            subtitle: description,
+            statLabel: t('ogStatNeutralLabel', { district: district.nameKey }),
+            stat: `≈${median.toLocaleString()} zł`,
+            split:
+              stats.totalPerM2.median != null
+                ? t('ogMedianPerM2', { amount: stats.totalPerM2.median.toLocaleString() })
+                : undefined,
+          })
+        : getOgImage(title, description);
   } else {
     title = t('cardTitleGeneric');
     image = getOgImage(title, description);
@@ -103,26 +73,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CostShareLandingPage({ params, searchParams }: Props) {
   const { city } = await params;
-  const { d, pct, amt } = await searchParams;
+  const { d } = await searchParams;
   const t = await getTranslations('share');
   const tr = await getTranslations('costs.overview');
   const district = await getDistrict(city, d);
   const stats = district ? await getDistrictCostStats(district.id) : null;
-  const pctNum = parsePct(pct);
-  const amtNum = parseAmount(amt);
-
-  // The hook: name the sharer's real rent + whether it's below/above the area
-  // market, then ask the visitor to check their own (works wherever they live).
-  // Needs both the amount and a non-zero gap; otherwise falls back to generic.
-  let bodyText = t('landingBody');
-  if (district && pctNum != null && pctNum !== 0 && amtNum != null) {
-    const base = {
-      percent: Math.abs(pctNum),
-      district: district.nameKey,
-      amount: amtNum.toLocaleString(),
-    };
-    bodyText = pctNum < 0 ? t('landingBodyBelow', base) : t('landingBodyAbove', base);
-  }
 
   const total = stats?.total.median ?? null;
   const { p25, p75 } = stats?.total ?? { p25: null, p75: null };
@@ -133,7 +88,7 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center px-4 pt-28 pb-16 text-center sm:pt-36">
       <h1 className="text-2xl font-bold sm:text-3xl">{t('landingHeading')}</h1>
-      <p className="mt-3 text-muted-foreground">{bodyText}</p>
+      <p className="mt-3 text-muted-foreground">{t('landingBody')}</p>
 
       {district && total != null && stats && (
         <div className="mt-6 w-full rounded-xl border bg-card p-5">

@@ -13,9 +13,8 @@ import MapGL, {
 } from 'react-map-gl';
 import type { GeoJSONSource } from 'mapbox-gl';
 import type { FeatureCollection, Point } from 'geojson';
-import { Building2, MapPin, Users, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Building2, MapPin, Users, X } from 'lucide-react';
 import Link from 'next/link';
-import { relativeCostColor } from '@/lib/cost-color';
 import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -43,9 +42,6 @@ export interface CostsMapProps {
   buildings: CostBuilding[];
   citySlug: string;
   bounds?: Bounds;
-  /** Median monthly total across the visible buildings — the reference the
-   *  popup compares each building against ("cheaper / pricier than typical"). */
-  cityMedianTotal?: number;
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -129,7 +125,7 @@ const unclusteredLabelLayer: LayerProps = {
   paint: { 'text-color': MAP_COLORS.pinText },
 };
 
-export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: CostsMapProps) {
+export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
   const t = useTranslations('costs.overview');
   const mapRef = useRef<MapRef>(null);
   const [popupInfo, setPopupInfo] = useState<CostBuilding | null>(null);
@@ -253,14 +249,8 @@ export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: Costs
     );
   }
 
-  // Relative read for the popup: how this building compares to the typical
-  // (median) building — the "cheaper / pricier than usual" the colour scale
-  // never made clear.
-  const medianDiffPct =
-    cityMedianTotal && cityMedianTotal > 0 && popupInfo && popupInfo.avgTotal > 0
-      ? Math.round(((popupInfo.avgTotal - cityMedianTotal) / cityMedianTotal) * 100)
-      : null;
-
+  // The popup shows the building's own figures only: no "above / below the
+  // median" conclusion (spec 03 §Comparisons, FR-29).
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg border">
       <MapGL
@@ -348,26 +338,6 @@ export function CostsMap({ buildings, citySlug, bounds, cityMedianTotal }: Costs
                         </p>
                       )}
                     </div>
-                    {medianDiffPct != null &&
-                      (Math.abs(medianDiffPct) < 1 ? (
-                        <p className="mt-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                          <Minus className="h-3 w-3" />
-                          {t('vsMedianEqual')}
-                        </p>
-                      ) : (
-                        <p
-                          className="mt-1 flex items-center gap-1 text-xs font-medium"
-                          style={{ color: relativeCostColor(medianDiffPct) }}
-                        >
-                          {medianDiffPct > 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(medianDiffPct)}%{' '}
-                          {medianDiffPct > 0 ? t('vsMedianAbove') : t('vsMedianBelow')}
-                        </p>
-                      ))}
                   </div>
                 )}
               </Link>

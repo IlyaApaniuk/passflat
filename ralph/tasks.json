@@ -420,7 +420,7 @@
       "title": "Remove the map's vs-median verdicts and the share page's brag",
       "spec": "docs/specs/03-building-figures.md#comparisons",
       "dependsOn": ["T003"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "CostsMap popups no longer show vsMedianAbove / vsMedianBelow / vsMedianEqual conclusions",
         "costs/share/page.tsx keeps its card without a 'less than X % of ...' brag and shows the area figure neutrally (draft copy, four locales)",
@@ -428,7 +428,7 @@
         "Draft keys listed in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
@@ -782,6 +782,24 @@
       "id": "T047",
       "milestone": "M3",
       "title": "Post-submit screen: drop the ranking promise and the overpay framing of the share invite",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T026"],
+      "acceptance": [
+        "share.cardDescription (OG description) no longer asks whether the visitor is overpaying; neutral draft copy in all four locales",
+        "share.landingStep2 and share.landingStep3 no longer promise a comparison with the district and city median or an overpay answer (the post-submit screen shows the own report beside one labelled area, no verdict); neutral draft copy in all four locales",
+        "share.landingRange no longer says most people pay the p25-p75 band (it holds half of the reports); draft copy in all four locales",
+        "share.landingHeading and share.cardTitleArea stay unchanged (Q-4)",
+        "Draft keys listed in the progress entry for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T026: these keys render on /[city]/costs/share next to the neutral area card. Copy only, no logic. src/app/[locale]/[city]/costs/share/page.test.ts renders the page in all four locales.",
+      "id": "T048",
+      "milestone": "M3",
+      "title": "Share page: drop the overpay framing of its description and how-it-works steps",
       "spec": "docs/specs/03-building-figures.md#comparisons",
       "status": "todo"
     }
