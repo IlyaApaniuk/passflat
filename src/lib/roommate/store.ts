@@ -101,6 +101,36 @@ export async function deleteDraft(profileId: string): Promise<boolean> {
   return count === 1;
 }
 
+/**
+ * Opens an edit step (`edit_<field>`) on a saved (active or expired) profile; the profile stays
+ * active and counted (spec 06 §Save and the own card, Edit). An edit step already open is
+ * replaced: the person picked another field.
+ */
+export async function openEditStep(profileId: string, step: string): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: { in: ['active', 'expired'] } },
+    data: { step },
+  });
+  return count === 1;
+}
+
+/**
+ * Stores an edit's answer and closes the edit step in one conditional write: false when the
+ * profile is no longer at `step` (a repeated tap, `/cancel`, another field picked), and then
+ * nothing changed. `expiresAt` is passed only by a month edit that lowers it.
+ */
+export async function saveEdit(
+  profileId: string,
+  step: string,
+  answer: StepAnswer & { expiresAt?: Date | null },
+): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, step, status: { in: ['active', 'expired'] } },
+    data: { ...answer, step: null },
+  });
+  return count === 1;
+}
+
 /** Leaves an edit or renewal step of a saved profile; the profile itself stays as it was. */
 export async function clearEditStep(profileId: string, step: string): Promise<boolean> {
   const { count } = await prisma.roommateProfile.updateMany({

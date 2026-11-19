@@ -43,6 +43,8 @@ const RU = {
     'ℹ️ Вопросы для анкеты пока открыты — чтобы выйти из них, отправь /cancel.',
   cancelledDraft: 'Ок, вопросы для анкеты закрыты — ничего не сохранено. Начать заново: /mate.',
   cancelledEdit: 'Ок, изменение отменено. Анкета осталась как была.',
+  /** `/cancel` while editing districts or languages: each tick is stored as it is tapped. */
+  cancelledEditPicked: 'Ок, вопрос закрыт. Что ты уже отметил(а), сохранено в анкете.',
   /** A stale or repeated tap; the current step follows. */
   stepDone: 'Этот шаг уже пройден.',
   tapButton: 'Нажми одну из кнопок выше.',
@@ -221,6 +223,7 @@ const UK: Record<Key, string> = {
   roommateQuestionsOpen: 'ℹ️ Питання для анкети поки відкриті — щоб вийти з них, надішли /cancel.',
   cancelledDraft: 'Ок, питання для анкети закрито — нічого не збережено. Почати знову: /mate.',
   cancelledEdit: 'Ок, зміну скасовано. Анкета лишилася як була.',
+  cancelledEditPicked: 'Ок, питання закрито. Те, що ти вже позначив(-ла), збережено в анкеті.',
   stepDone: 'Цей крок уже пройдено.',
   tapButton: 'Натисни одну з кнопок вище.',
 
@@ -383,6 +386,8 @@ const EN: Record<Key, string> = {
   cancelledDraft:
     'OK, the profile questions are closed and nothing was saved. To start again: /mate.',
   cancelledEdit: 'OK, the change is cancelled. Your profile stays as it was.',
+  cancelledEditPicked:
+    'OK, the question is closed. What you already ticked is saved in your profile.',
   stepDone: 'This step is done.',
   tapButton: 'Tap one of the buttons above.',
 

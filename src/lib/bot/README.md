@@ -97,7 +97,21 @@ the migrations are missing (`docs/architecture.md` §9).
   buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while
   expired, `showsRenew`), Edit, Delete, then "How many are looking?" and the
   opt-in toggle (switch off) or "Show people" and the daily-message toggle
-  (switch on). The handlers of the card's buttons come with their tasks.
+  (switch on). The handlers of the other card buttons come with their tasks.
+- **Edit from the own card** (spec 06 §Save and the own card, Edit): Edit
+  (`rm:c:edit`) sends a field picker (`rm:e:<field>` for `EDIT_FIELDS`, then Back
+  `rm:e:back`, which closes an open edit step and sends the card). A field opens
+  its intake step as `edit_<field>` (`openEditStep`) on the saved profile, which
+  stays active (or expired) and counted; the intake handlers, typed text included,
+  accept that step too. The answer ends the edit through `saveEdit`
+  (`updateMany where { id, step }`, that field only, `step` null), and only the
+  write that lands sends `tg_roommate_profile_edited` (`field` only), "updated" and
+  the card. Districts and languages store each tick as the intake does and always
+  keep one pick; the preferences and house-rules edits store nothing until their
+  second question, whose buttons carry the first answer
+  (`rm:p:<prefers>:<gender>`, `rm:pt:<pets>:<smoking>`). A month edit keeps
+  `expires_at` unless the new month ends earlier (`expiresAtAfterMonthEdit`).
+  No field opens while the deposit questions are open.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the

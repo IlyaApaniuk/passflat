@@ -244,7 +244,7 @@
       "title": "Edit one profile field from the own card (FR-12 edit)",
       "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
       "dependsOn": ["T074"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The field picker of spec 06 (districts, budget, month, languages, preferences, about, rules) reuses each intake step with step = 'edit_<field>'; the profile stays active; the answer changes only that field and returns to the card",
         "tg_roommate_profile_edited is sent once per change with field only",
@@ -252,7 +252,7 @@
         "Tests for each field, the expiry rule and typed text during edit_about"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

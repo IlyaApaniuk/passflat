@@ -10,14 +10,18 @@ import {
 
 import {
   BUDGET_BANDS,
+  EDIT_FIELDS,
   LANGUAGES,
   MAX_DISTRICTS,
   PETS,
   SMOKING,
   bandForAmount,
+  editFieldOf,
+  editStepOf,
   graceEnd,
   isBudgetBand,
   isDistrictPickComplete,
+  isEditField,
   isGender,
   isLanguage,
   isPets,
@@ -26,11 +30,13 @@ import {
   languageOfLocale,
   nextIntakeStep,
   profileCreatedProperties,
+  profileEditedProperties,
   reduceDistrictPick,
   setLanguage,
   showsRenew,
   type BudgetBand,
   type DistrictPick,
+  type RoommateEditField,
 } from '@/lib/roommate/rules';
 import {
   advanceStep,
@@ -40,6 +46,8 @@ import {
   findRoommateProfile,
   isStepOpen,
   loadRoommateEntry,
+  openEditStep,
+  saveEdit,
   saveProfile,
   setDistrictPick,
   setLanguages,
@@ -53,6 +61,7 @@ import {
   type AboutTextFinding,
 } from '@/lib/roommate/text-filter';
 import {
+  expiresAtAfterMonthEdit,
   formatMoveInMonth,
   formatWarsawDate,
   isMoveInMonthPast,
@@ -74,9 +83,10 @@ import { normalizeLocale, type BotLocale } from './texts';
 /**
  * The roommate conversation in the bot (spec 06): the entry and its routing, the
  * nine intake steps (districts, budget, move-in month, languages, own gender,
- * "live with", the short text, smoking and pets, 18+), the save and the own
- * card; edit, delete, renew, the counts reply and the opt-in (the handlers of
- * the card's buttons) are added here by their tasks.
+ * "live with", the short text, smoking and pets, 18+), the save, the own card
+ * and its Edit (each field reuses its intake step as `edit_<field>`); delete,
+ * renew, the counts reply and the opt-in (the handlers of the other card
+ * buttons) are added here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -286,13 +296,19 @@ async function sendGenderStep(ctx: Context, locale: BotLocale): Promise<void> {
   await ctx.reply(rt(locale, 'askGender'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
-/** Step 6 (FR-8): "anyone" in one row, "women / men" below (`rm:p:<anyone|women|men>`). */
-async function sendPrefersStep(ctx: Context, locale: BotLocale): Promise<void> {
+/**
+ * Step 6 (FR-8): "anyone" in one row, "women / men" below (`rm:p:<anyone|women|men>`). In the
+ * preferences edit the buttons also carry the own gender just tapped
+ * (`rm:p:<prefers>:<woman|man|skip>`), so both are stored in one write and `/cancel` before
+ * "live with" leaves the profile as it was.
+ */
+async function sendPrefersStep(ctx: Context, locale: BotLocale, gender?: string): Promise<void> {
+  const suffix = gender ? `:${gender}` : '';
   const keyboard = InlineKeyboard.from([
-    [InlineKeyboard.text(rt(locale, 'btnPrefersAnyone'), 'rm:p:anyone')],
+    [InlineKeyboard.text(rt(locale, 'btnPrefersAnyone'), `rm:p:anyone${suffix}`)],
     [
-      InlineKeyboard.text(rt(locale, 'btnPrefersWomen'), 'rm:p:women'),
-      InlineKeyboard.text(rt(locale, 'btnPrefersMen'), 'rm:p:men'),
+      InlineKeyboard.text(rt(locale, 'btnPrefersWomen'), `rm:p:women${suffix}`),
+      InlineKeyboard.text(rt(locale, 'btnPrefersMen'), `rm:p:men${suffix}`),
     ],
   ]);
   await ctx.reply(rt(locale, 'askPrefers'), { parse_mode: 'HTML', reply_markup: keyboard });
@@ -321,11 +337,18 @@ async function sendSmokingStep(ctx: Context, locale: BotLocale): Promise<void> {
   await ctx.reply(rt(locale, 'askSmoking'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
-/** Step 8b (FR-11): pets, one option per row, then "Skip" (`rm:pt:<no|have|fine|skip>`). */
-async function sendPetsStep(ctx: Context, locale: BotLocale): Promise<void> {
+/**
+ * Step 8b (FR-11): pets, one option per row, then "Skip" (`rm:pt:<no|have|fine|skip>`). In the
+ * house-rules edit the buttons also carry the smoking answer just tapped
+ * (`rm:pt:<pets>:<smoking>`), so both are stored in one write.
+ */
+async function sendPetsStep(ctx: Context, locale: BotLocale, smoking?: string): Promise<void> {
+  const suffix = smoking ? `:${smoking}` : '';
   const keyboard = InlineKeyboard.from([
-    ...PETS.map((value) => [InlineKeyboard.text(rt(locale, PETS_LABEL[value]), `rm:pt:${value}`)]),
-    [InlineKeyboard.text(rt(locale, 'btnSkip'), 'rm:pt:skip')],
+    ...PETS.map((value) => [
+      InlineKeyboard.text(rt(locale, PETS_LABEL[value]), `rm:pt:${value}${suffix}`),
+    ]),
+    [InlineKeyboard.text(rt(locale, 'btnSkip'), `rm:pt:skip${suffix}`)],
   ]);
   await ctx.reply(rt(locale, 'askPets'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
@@ -339,31 +362,42 @@ async function sendAdultStep(ctx: Context, locale: BotLocale): Promise<void> {
   await ctx.reply(rt(locale, 'askAdult'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
-/** The question of the profile's open step, sent again (a draft reopened, a stale answer). */
+/**
+ * The question of the profile's open step, sent again (a draft reopened, a stale answer). An edit
+ * step (`edit_<field>`) asks its intake step's question; the preferences edit starts with the own
+ * gender and the house-rules edit with smoking.
+ */
 async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocale): Promise<void> {
   switch (profile.step) {
     case 'districts':
+    case 'edit_districts':
       await sendDistrictsStep(ctx, profile, locale, await cityDistricts());
       return;
     case 'budget':
+    case 'edit_budget':
       await sendBudgetStep(ctx, locale);
       return;
     case 'month':
+    case 'edit_month':
       await sendMonthStep(ctx, locale, new Date());
       return;
     case 'languages':
+    case 'edit_languages':
       await sendLanguagesStep(ctx, profile.languages, locale);
       return;
     case 'gender':
+    case 'edit_preferences':
       await sendGenderStep(ctx, locale);
       return;
     case 'prefers':
       await sendPrefersStep(ctx, locale);
       return;
     case 'about':
+    case 'edit_about':
       await sendAboutStep(ctx, locale);
       return;
     case 'smoking':
+    case 'edit_rules':
       await sendSmokingStep(ctx, locale);
       return;
     case 'pets':
@@ -373,7 +407,7 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
       await sendAdultStep(ctx, locale);
       return;
     default:
-      // The edit steps (T075) and the renewal month (T078) add their questions here.
+      // The renewal month (T078) adds its question here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -386,20 +420,21 @@ async function resendCurrentStep(ctx: Context, chatDbId: string, locale: BotLoca
 }
 
 /**
- * The chat's profile when it is at `step`, the step a tapped button belongs to.
- * Otherwise (an older message, a repeated tap after the step moved on, a draft
- * already closed) "this step is done", the current step again if one is open,
- * and null (spec 06 "Stale and repeated taps").
+ * The chat's profile when it is at one of `steps`, the steps a tapped button
+ * belongs to (an intake step and the edit step that reuses it). Otherwise (an
+ * older message, a repeated tap after the step moved on, a draft already
+ * closed) "this step is done", the current step again if one is open, and null
+ * (spec 06 "Stale and repeated taps").
  */
 async function profileAtStep(
   ctx: Context,
   chatDbId: string,
   locale: BotLocale,
-  step: string,
+  ...steps: string[]
 ): Promise<RoommateProfile | null> {
   const profile = await findRoommateProfile(chatDbId);
   if (profile && profile.status !== 'hidden') await rememberUsername(ctx, profile);
-  if (profile && isStepOpen(profile) && profile.step === step) return profile;
+  if (profile && isStepOpen(profile) && steps.includes(profile.step!)) return profile;
 
   await ctx.reply(rt(locale, 'stepDone'));
   if (profile && isStepOpen(profile)) await sendStep(ctx, profile, locale);
@@ -407,9 +442,37 @@ async function profileAtStep(
 }
 
 /**
+ * Ends an edit (spec 06 §Save and the own card, Edit): stores the answer (that
+ * field only) and closes the step in one conditional write, so only the write
+ * that lands sends one `tg_roommate_profile_edited` (the field, never its
+ * value), "updated" and the card again. A month edit keeps `expires_at` unless
+ * the new month ends before it.
+ */
+async function finishEdit(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  field: RoommateEditField,
+  answer: StepAnswer,
+): Promise<void> {
+  const data: Parameters<typeof saveEdit>[2] = { ...answer };
+  if (answer.moveInMonth) {
+    data.expiresAt = expiresAtAfterMonthEdit(profile.expiresAt, answer.moveInMonth);
+  }
+  if (!(await saveEdit(profile.id, profile.step!, data))) {
+    await resendCurrentStep(ctx, profile.chatId, locale);
+    return;
+  }
+  track(ctx.chat!.id, 'tg_roommate_profile_edited', profileEditedProperties(field));
+  await ctx.reply(rt(locale, 'editSaved'));
+  await sendOwnCard(ctx, { ...profile, ...data, step: null }, locale);
+}
+
+/**
  * Stores the open step's answer and asks the next question, through the
  * conditional write of `advanceStep`; when another update moved the step on
- * meanwhile, nothing is stored and the current step is sent again.
+ * meanwhile, nothing is stored and the current step is sent again. At an edit
+ * step the answer ends the edit instead (`finishEdit`).
  */
 async function moveOn(
   ctx: Context,
@@ -418,6 +481,11 @@ async function moveOn(
   answer: StepAnswer = {},
 ): Promise<void> {
   const from = profile.step!;
+  const field = editFieldOf(from);
+  if (field) {
+    await finishEdit(ctx, profile, locale, field, answer);
+    return;
+  }
   const to = nextIntakeStep(from);
   if (!(await advanceStep(profile.id, from, to, answer))) {
     await resendCurrentStep(ctx, profile.chatId, locale);
@@ -658,9 +726,18 @@ export async function openRoommate(
 }
 
 /**
- * A typed district name at the districts step, toggled like a tap. False when
- * it names no district of the checker city, so the text goes on to the address
- * lookup.
+ * True when a districts edit would store an empty pick. The edit stores each
+ * tap as the intake does, so a saved profile always keeps one district or "any",
+ * also when the edit is left with `/cancel`; the intake's "Done" checks a draft.
+ */
+function keepsNoDistrict(profile: RoommateProfile, pick: DistrictPick): boolean {
+  return profile.step === 'edit_districts' && !isDistrictPickComplete(pick);
+}
+
+/**
+ * A typed district name at the districts step (or its edit), toggled like a
+ * tap. False when it names no district of the checker city, so the text goes on
+ * to the address lookup.
  */
 async function districtsText(
   ctx: Context,
@@ -679,6 +756,10 @@ async function districtsText(
   });
   if (!result.ok) {
     await ctx.reply(rt(locale, 'districtLimit', { max: String(MAX_DISTRICTS) }));
+    return true;
+  }
+  if (keepsNoDistrict(profile, result.pick)) {
+    await ctx.reply(rt(locale, 'districtsEmpty'));
     return true;
   }
   if (!(await setDistrictPick(profile.id, profile.step!, result.pick))) {
@@ -742,8 +823,8 @@ async function aboutText(
 }
 
 /**
- * The steps that take typed text, each returning false for text it cannot use.
- * The edit steps (T075) join them.
+ * The steps that take typed text, each returning false for text it cannot use;
+ * an edit step takes the same text as the intake step it reuses.
  */
 const TEXT_STEPS: Record<
   string,
@@ -753,6 +834,9 @@ const TEXT_STEPS: Record<
   districts: districtsText,
   budget: budgetText,
   about: aboutText,
+  edit_districts: districtsText,
+  edit_budget: budgetText,
+  edit_about: aboutText,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -780,12 +864,13 @@ const handleDistrictToggle = roommateCallback(async (ctx, chat, locale) => {
   const districts = await cityDistricts();
   if (!districts.some((district) => district.slug === slug)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts', 'edit_districts');
   if (!profile) return;
 
   const result = reduceDistrictPick(profile, { kind: 'district', slug, on: state === '1' });
   if (!result.ok) return rt(locale, 'districtLimit', { max: String(MAX_DISTRICTS) });
-  if (!(await setDistrictPick(profile.id, 'districts', result.pick))) {
+  if (keepsNoDistrict(profile, result.pick)) return rt(locale, 'districtsEmpty');
+  if (!(await setDistrictPick(profile.id, profile.step!, result.pick))) {
     await resendCurrentStep(ctx, chat.id, locale);
     return;
   }
@@ -796,11 +881,11 @@ const handleDistrictToggle = roommateCallback(async (ctx, chat, locale) => {
 
 /** `rm:d:any`: "Any district" stores `any_district=true` and no districts. */
 const handleAnyDistrict = roommateCallback(async (ctx, chat, locale) => {
-  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts', 'edit_districts');
   if (!profile) return;
 
   const result = reduceDistrictPick(profile, { kind: 'any' });
-  if (!(await setDistrictPick(profile.id, 'districts', result.pick))) {
+  if (!(await setDistrictPick(profile.id, profile.step!, result.pick))) {
     await resendCurrentStep(ctx, chat.id, locale);
     return;
   }
@@ -809,9 +894,12 @@ const handleAnyDistrict = roommateCallback(async (ctx, chat, locale) => {
   });
 });
 
-/** `rm:d:done`: moves on to the budget with 1 – 3 districts or "any"; with nothing picked, asks again. */
+/**
+ * `rm:d:done`: moves on to the budget (or ends the districts edit) with 1 – 3
+ * districts or "any"; with nothing picked, asks again.
+ */
 const handleDistrictsDone = roommateCallback(async (ctx, chat, locale) => {
-  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts', 'edit_districts');
   if (!profile) return;
   if (!isDistrictPickComplete(profile)) return rt(locale, 'districtsEmpty');
   await moveOn(ctx, profile, locale);
@@ -822,7 +910,7 @@ const handleBudgetTap = roommateCallback(async (ctx, chat, locale) => {
   const [band] = matchGroups(ctx);
   if (!isBudgetBand(band)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'budget');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'budget', 'edit_budget');
   if (!profile) return;
   await moveOn(ctx, profile, locale, { budgetBand: band });
 });
@@ -837,7 +925,7 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
   const month = parseMonthKey(key);
   if (!month) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'month');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'month', 'edit_month');
   if (!profile) return;
 
   const now = new Date();
@@ -847,6 +935,10 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   if (!moveInMonthOptions(now).some((option) => option.getTime() === month.getTime())) return;
+  if (profile.step === 'edit_month') {
+    await moveOn(ctx, profile, locale, { moveInMonth: month });
+    return;
+  }
   // FR-7: the languages step opens with the chat's bot language ticked in advance.
   const languages = profile.languages.length > 0 ? profile.languages : [languageOfLocale(locale)];
   await moveOn(ctx, profile, locale, { moveInMonth: month, languages });
@@ -859,7 +951,8 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
 /** A language toggle carries its target state: `1` ticks, `0` unticks. */
 export const LANGUAGE_TOGGLE = /^rm:l:([^:]+):([01])$/;
 export const GENDER_TAP = /^rm:g:([^:]+)$/;
-export const PREFERS_TAP = /^rm:p:([^:]+)$/;
+/** "Live with", and in the preferences edit the own gender tapped before it. */
+export const PREFERS_TAP = /^rm:p:([^:]+)(?::([^:]+))?$/;
 
 /**
  * `rm:l:<code>:<1|0>`: sets the language to the button's target state, so a
@@ -870,46 +963,73 @@ const handleLanguageToggle = roommateCallback(async (ctx, chat, locale) => {
   const [code, state] = matchGroups(ctx);
   if (!isLanguage(code)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'languages');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'languages', 'edit_languages');
   if (!profile) return;
 
   const languages = setLanguage(profile.languages, code, state === '1');
-  if (!(await setLanguages(profile.id, 'languages', languages))) {
+  // The edit stores each tap, so a saved profile always keeps one language (see `keepsNoDistrict`).
+  if (profile.step === 'edit_languages' && languages.length === 0) {
+    return rt(locale, 'languagesEmpty');
+  }
+  if (!(await setLanguages(profile.id, profile.step!, languages))) {
     await resendCurrentStep(ctx, chat.id, locale);
     return;
   }
   await ctx.editMessageReplyMarkup({ reply_markup: languagesKeyboard(languages, locale) });
 });
 
-/** `rm:l:done`: moves on to the own gender with at least one language; with none, asks again. */
+/**
+ * `rm:l:done`: moves on to the own gender (or ends the languages edit) with at
+ * least one language; with none, asks again.
+ */
 const handleLanguagesDone = roommateCallback(async (ctx, chat, locale) => {
-  const profile = await profileAtStep(ctx, chat.id, locale, 'languages');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'languages', 'edit_languages');
   if (!profile) return;
   if (profile.languages.length === 0) return rt(locale, 'languagesEmpty');
   await moveOn(ctx, profile, locale);
 });
 
-/** `rm:g:<woman|man|skip>`: stores the own gender (skip keeps null) and moves on to "live with". */
+/**
+ * `rm:g:<woman|man|skip>`: stores the own gender (skip keeps null) and moves on
+ * to "live with". In the preferences edit nothing is stored yet: "live with"
+ * follows with buttons that carry this answer.
+ */
 const handleGenderTap = roommateCallback(async (ctx, chat, locale) => {
   const [value] = matchGroups(ctx);
   if (value !== 'skip' && !isGender(value)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'gender');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'gender', 'edit_preferences');
   if (!profile) return;
+  if (profile.step === 'edit_preferences') {
+    await sendPrefersStep(ctx, locale, value);
+    return;
+  }
   await moveOn(ctx, profile, locale, { gender: value === 'skip' ? null : value });
 });
 
 /**
  * `rm:p:<anyone|women|men>`: stores "live with" as chosen, also "women" or "men"
  * without an own gender (FR-8 edge case), and moves on to the short text.
+ * `rm:p:<prefers>:<woman|man|skip>` belongs to the preferences edit and stores
+ * both answers in one write; each form is stale at the other's step.
  */
 const handlePrefersTap = roommateCallback(async (ctx, chat, locale) => {
-  const [value] = matchGroups(ctx);
+  const [value, gender] = matchGroups(ctx);
   if (!isPrefers(value)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'prefers');
+  if (gender === undefined) {
+    const profile = await profileAtStep(ctx, chat.id, locale, 'prefers');
+    if (!profile) return;
+    await moveOn(ctx, profile, locale, { prefers: value });
+    return;
+  }
+  if (gender !== 'skip' && !isGender(gender)) return;
+  const profile = await profileAtStep(ctx, chat.id, locale, 'edit_preferences');
   if (!profile) return;
-  await moveOn(ctx, profile, locale, { prefers: value });
+  await moveOn(ctx, profile, locale, {
+    gender: gender === 'skip' ? null : gender,
+    prefers: value,
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -917,33 +1037,57 @@ const handlePrefersTap = roommateCallback(async (ctx, chat, locale) => {
 // ---------------------------------------------------------------------------------------------
 
 export const SMOKING_TAP = /^rm:s:([^:]+)$/;
-export const PETS_TAP = /^rm:pt:([^:]+)$/;
+/** Pets, and in the house-rules edit the smoking answer tapped before it. */
+export const PETS_TAP = /^rm:pt:([^:]+)(?::([^:]+))?$/;
 
-/** `rm:t:skip`: no short text (`about = null`); moves on to smoking. */
+/**
+ * `rm:t:skip`: no short text (`about = null`); moves on to smoking. In the
+ * short-text edit it removes the stored text.
+ */
 const handleAboutSkip = roommateCallback(async (ctx, chat, locale) => {
-  const profile = await profileAtStep(ctx, chat.id, locale, 'about');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'about', 'edit_about');
   if (!profile) return;
   await moveOn(ctx, profile, locale, { about: null });
 });
 
-/** `rm:s:<no|outside|fine|skip>`: stores smoking (skip stores null) and moves on to pets. */
+/**
+ * `rm:s:<no|outside|fine|skip>`: stores smoking (skip stores null) and moves on
+ * to pets. In the house-rules edit nothing is stored yet: pets follows with
+ * buttons that carry this answer.
+ */
 const handleSmokingTap = roommateCallback(async (ctx, chat, locale) => {
   const [value] = matchGroups(ctx);
   if (value !== 'skip' && !isSmoking(value)) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'smoking');
+  const profile = await profileAtStep(ctx, chat.id, locale, 'smoking', 'edit_rules');
   if (!profile) return;
+  if (profile.step === 'edit_rules') {
+    await sendPetsStep(ctx, locale, value);
+    return;
+  }
   await moveOn(ctx, profile, locale, { smoking: value === 'skip' ? null : value });
 });
 
-/** `rm:pt:<no|have|fine|skip>`: stores pets (skip stores null) and moves on to the 18+ step. */
+/**
+ * `rm:pt:<no|have|fine|skip>`: stores pets (skip stores null) and moves on to
+ * the 18+ step. `rm:pt:<pets>:<smoking>` belongs to the house-rules edit and
+ * stores both answers in one write; each form is stale at the other's step.
+ */
 const handlePetsTap = roommateCallback(async (ctx, chat, locale) => {
-  const [value] = matchGroups(ctx);
+  const [value, smoking] = matchGroups(ctx);
   if (value !== 'skip' && !isPets(value)) return;
+  const pets = value === 'skip' ? null : value;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'pets');
+  if (smoking === undefined) {
+    const profile = await profileAtStep(ctx, chat.id, locale, 'pets');
+    if (!profile) return;
+    await moveOn(ctx, profile, locale, { pets });
+    return;
+  }
+  if (smoking !== 'skip' && !isSmoking(smoking)) return;
+  const profile = await profileAtStep(ctx, chat.id, locale, 'edit_rules');
   if (!profile) return;
-  await moveOn(ctx, profile, locale, { pets: value === 'skip' ? null : value });
+  await moveOn(ctx, profile, locale, { smoking: smoking === 'skip' ? null : smoking, pets });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -992,6 +1136,98 @@ const handleAdultNo = roommateCallback(async (ctx, chat, locale) => {
   await ctx.reply(rt(locale, 'underAge'));
 });
 
+// ---------------------------------------------------------------------------------------------
+// Edit from the own card (FR-12; spec 06 §Save and the own card, Edit)
+// ---------------------------------------------------------------------------------------------
+
+const EDIT_LABEL = {
+  districts: 'editDistricts',
+  budget: 'editBudget',
+  month: 'editMonth',
+  languages: 'editLanguages',
+  preferences: 'editPreferences',
+  about: 'editAbout',
+  rules: 'editRules',
+} as const satisfies Record<RoommateEditField, string>;
+
+/** `rm:e:<field>` from the picker; `rm:e:back` returns to the card. */
+export const EDIT_PICK = /^rm:e:([^:]+)$/;
+
+/** The field picker: the seven fields two per row (`rm:e:<field>`), then "Back" (`rm:e:back`). */
+function editPickerKeyboard(locale: BotLocale): InlineKeyboard {
+  const buttons = EDIT_FIELDS.map((field) =>
+    InlineKeyboard.text(rt(locale, EDIT_LABEL[field]), `rm:e:${field}`),
+  );
+  return InlineKeyboard.from([buttons]).toFlowed(2).row().text(rt(locale, 'btnBack'), 'rm:e:back');
+}
+
+/**
+ * The chat's saved (active or expired) profile for a card button. Otherwise
+ * "already deleted" when there is none, the FR-14 reply for a hidden profile,
+ * and for a draft (an old card of a profile deleted and started again) "this
+ * step is done" with its current step; then null.
+ */
+async function savedProfileFor(
+  ctx: Context,
+  chatDbId: string,
+  locale: BotLocale,
+): Promise<RoommateProfile | null> {
+  const profile = await findRoommateProfile(chatDbId);
+  if (!profile) {
+    await ctx.reply(rt(locale, 'alreadyDeleted'));
+    return null;
+  }
+  if (profile.status === 'hidden') {
+    await replyRefused(ctx, locale, true);
+    return null;
+  }
+  await rememberUsername(ctx, profile);
+  if (profile.status === 'draft') {
+    await ctx.reply(rt(locale, 'stepDone'));
+    if (isStepOpen(profile)) await sendStep(ctx, profile, locale);
+    return null;
+  }
+  return profile;
+}
+
+/** `rm:c:edit`: the field picker under "What do you want to change?". Opens no step yet. */
+const handleEditTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+  await ctx.reply(rt(locale, 'editPrompt'), { reply_markup: editPickerKeyboard(locale) });
+});
+
+/**
+ * `rm:e:<field>`: opens that field's intake step as `edit_<field>` on the saved
+ * profile, which stays active and counted; another open edit step is replaced.
+ * Not while the deposit questions are open (one open intake per chat). An
+ * unknown field is ignored. `rm:e:back` closes an open edit step, so the next
+ * typed text is not taken as its answer, and sends the card again.
+ */
+const handleEditPick = roommateCallback(async (ctx, chat, locale) => {
+  const [value] = matchGroups(ctx);
+  if (value !== 'back' && !isEditField(value)) return;
+
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+
+  if (value === 'back') {
+    if (editFieldOf(profile.step)) await clearEditStep(profile.id, profile.step!);
+    await sendOwnCard(ctx, { ...profile, step: null }, locale);
+    return;
+  }
+  if (await hasOpenIntake(chat.id)) {
+    await ctx.reply(rt(locale, 'depositQuestionsOpen'));
+    return;
+  }
+  const step = editStepOf(value);
+  if (!(await openEditStep(profile.id, step))) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  await sendStep(ctx, { ...profile, step }, locale);
+});
+
 /**
  * Typed text while a roommate step is open, asked before anything else reads the
  * text: `used` when the open step took it (it never reaches the deposit flow, the
@@ -1034,7 +1270,9 @@ export async function cancelRoommate(
     return true;
   }
   if (!(await clearEditStep(profile.id, profile.step!))) return false;
-  await ctx.reply(rt(locale, 'cancelledEdit'));
+  // The districts and languages edits store each tick as it is tapped; the others store nothing before their answer.
+  const ticksStored = profile.step === 'edit_districts' || profile.step === 'edit_languages';
+  await ctx.reply(rt(locale, ticksStored ? 'cancelledEditPicked' : 'cancelledEdit'));
   return true;
 }
 
@@ -1071,4 +1309,6 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery(PETS_TAP, handlePetsTap);
   bot.callbackQuery('rm:a:yes', handleAdultYes);
   bot.callbackQuery('rm:a:no', handleAdultNo);
+  bot.callbackQuery('rm:c:edit', handleEditTap);
+  bot.callbackQuery(EDIT_PICK, handleEditPick);
 }

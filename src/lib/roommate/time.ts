@@ -123,6 +123,17 @@ export function computeExpiresAt(from: Date, moveInMonth: Date): Date {
 }
 
 /**
+ * `expires_at` after the move-in month is edited (spec 06 §Save and the own card, Edit): an edit
+ * never extends a profile's life, so the date is kept, except that a new month whose end comes
+ * before it lowers it to that end (D55 "the earlier of").
+ */
+export function expiresAtAfterMonthEdit(expiresAt: Date | null, moveInMonth: Date): Date | null {
+  if (!expiresAt) return null;
+  const monthEnd = endOfWarsawMonth(moveInMonth);
+  return monthEnd.getTime() < expiresAt.getTime() ? monthEnd : expiresAt;
+}
+
+/**
  * Whole months from the Warsaw month of `now` to `moveInMonth` (0 = this month; negative once
  * the month has passed). Feeds `move_in_offset_months` of `tg_roommate_profile_created`.
  */

@@ -5,6 +5,7 @@ import {
   ROOMMATE_SEND_HOUR,
   computeExpiresAt,
   endOfWarsawMonth,
+  expiresAtAfterMonthEdit,
   formatMoveInMonth,
   formatWarsawDate,
   isMoveInMonthPast,
@@ -192,6 +193,33 @@ describe('computeExpiresAt', () => {
     expect(computeExpiresAt(at('2027-01-02T10:00:00Z'), month('2026-12')).toISOString()).toBe(
       '2026-12-31T22:59:59.000Z',
     );
+  });
+});
+
+describe('expiresAtAfterMonthEdit (an edit never extends a profile, D55)', () => {
+  const expires = at('2027-01-04T10:00:00Z');
+
+  it('keeps expires_at when the new month ends after it', () => {
+    expect(expiresAtAfterMonthEdit(expires, month('2027-01'))).toBe(expires);
+    expect(expiresAtAfterMonthEdit(expires, month('2027-03'))).toBe(expires);
+  });
+
+  it('lowers it to the end of a new month that ends before it (CET)', () => {
+    expect(expiresAtAfterMonthEdit(expires, month('2026-12'))?.toISOString()).toBe(
+      '2026-12-31T22:59:59.000Z',
+    );
+  });
+
+  it('lowers it to a summer-time month end (CEST)', () => {
+    expect(
+      expiresAtAfterMonthEdit(at('2027-04-20T08:00:00Z'), month('2027-03'))?.toISOString(),
+    ).toBe('2027-03-31T21:59:59.000Z');
+  });
+
+  it('keeps an expiry equal to the month end, and a missing one stays missing', () => {
+    const monthEnd = endOfWarsawMonth(month('2026-12'));
+    expect(expiresAtAfterMonthEdit(monthEnd, month('2026-12'))).toBe(monthEnd);
+    expect(expiresAtAfterMonthEdit(null, month('2026-12'))).toBeNull();
   });
 });
 

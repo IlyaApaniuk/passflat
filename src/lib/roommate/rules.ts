@@ -148,6 +148,23 @@ export const EDIT_FIELDS = [
 ] as const;
 export type RoommateEditField = (typeof EDIT_FIELDS)[number];
 
+/** True for a field of `EDIT_FIELDS`: an edit button's data is checked before it opens a step. */
+export function isEditField(value: string): value is RoommateEditField {
+  return (EDIT_FIELDS as readonly string[]).includes(value);
+}
+
+/** The step an edit opens on a saved profile: `edit_<field>`. */
+export function editStepOf(field: RoommateEditField): `edit_${RoommateEditField}` {
+  return `edit_${field}`;
+}
+
+/** The field of an edit step (`edit_budget` → `budget`); null for an intake or renewal step. */
+export function editFieldOf(step: string | null): RoommateEditField | null {
+  if (!step?.startsWith('edit_')) return null;
+  const field = step.slice('edit_'.length);
+  return isEditField(field) ? field : null;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Budget bands (FR-5; the bands are an Assumption, D68)
 // ---------------------------------------------------------------------------------------------

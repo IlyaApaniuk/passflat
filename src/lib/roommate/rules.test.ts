@@ -19,9 +19,12 @@ import {
   SMOKING,
   bandForAmount,
   countBand,
+  editFieldOf,
+  editStepOf,
   graceEnd,
   isBudgetBand,
   isDistrictPickComplete,
+  isEditField,
   isGender,
   isLanguage,
   isPets,
@@ -526,4 +529,23 @@ describe('profileEditedProperties', () => {
     expect(profileEditedProperties(field)).toEqual({ field });
     expect(Object.keys(profileEditedProperties(field))).toEqual(['field']);
   });
+});
+
+describe('edit steps (spec 06 §Save and the own card, Edit)', () => {
+  it.each(EDIT_FIELDS)('%s opens edit_%s and maps back to its field', (field) => {
+    expect(isEditField(field)).toBe(true);
+    expect(editStepOf(field)).toBe(`edit_${field}`);
+    expect(editFieldOf(editStepOf(field))).toBe(field);
+  });
+
+  it.each(['gender', 'prefers', 'smoking', 'back', ''])('%s is not an edit field', (value) => {
+    expect(isEditField(value)).toBe(false);
+  });
+
+  it.each([null, 'budget', 'renew_month', 'edit_', 'edit_gender', 'xedit_budget'])(
+    'the step %s has no edit field',
+    (step) => {
+      expect(editFieldOf(step)).toBeNull();
+    },
+  );
 });
