@@ -1,98 +1,93 @@
 import { describe, expect, it } from 'vitest';
-import { buildingsForRentalType, type BuildingTypeFigures } from './costs-overview-filter';
 
-const NONE: BuildingTypeFigures = { medianTotal: null, medianRent: null, reports: 0 };
+import type { RentalTypeFilter, SingleNumberFigure } from './cost-figures';
+import { buildingsForRentalType } from './costs-overview-filter';
 
-function building(
-  id: string,
-  districtSlug: string,
-  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures },
-  rentalType: string | null,
-) {
+function figure(
+  value: number,
+  n: number,
+  overrides: Partial<SingleNumberFigure> = {},
+): SingleNumberFigure {
   return {
-    id,
-    districtSlug,
-    reports: byType.apartment.reports + byType.room.reports + 1,
-    medianTotal: 4300,
-    medianRent: 3500,
-    medianAdminFee: 500,
-    medianRentPerM2: 70,
-    medianTotalPerM2: 86,
-    medianAdminFeePerM2: 10,
-    medianExpenses: 800,
-    rentalType,
-    byType,
+    group: 'tenant',
+    metric: 'completeTotal',
+    value,
+    n,
+    reportCount: n,
+    rent: null,
+    expenses: null,
+    rentPerM2: null,
+    completeTotalPerM2: null,
+    ...overrides,
   };
 }
 
-// A mixed building whose dominant type is the flat, a rooms-only building, and a building whose
-// reports all lack a rental type.
+function building(
+  id: string,
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>,
+  rentalType: string | null,
+) {
+  return { id, districtSlug: 'mokotow', rentalType, figures };
+}
+
+// A mixed building whose dominant type is the flat, a rooms-only building with asking prices,
+// and a building whose reports carry no usable value.
 const MIXED = building(
   'mixed',
-  'mokotow',
-  {
-    apartment: { medianTotal: 4400, medianRent: 3600, reports: 2 },
-    room: { medianTotal: 2200, medianRent: 1800, reports: 1 },
-  },
+  { all: figure(4300, 3), apartment: figure(4400, 2), room: figure(2200, 1) },
   'apartment',
 );
 const ROOMS = building(
   'rooms',
-  'wola',
-  { apartment: NONE, room: { medianTotal: 2000, medianRent: 1600, reports: 3 } },
+  {
+    all: figure(2000, 3, { group: 'asking', metric: 'knownPartTotal' }),
+    apartment: null,
+    room: figure(2000, 3, { group: 'asking', metric: 'knownPartTotal' }),
+  },
   'room',
 );
-const UNKNOWN = building('unknown', 'wola', { apartment: NONE, room: NONE }, null);
-const ALL = [MIXED, ROOMS, UNKNOWN];
+const EMPTY = building('empty', { all: null, apartment: null, room: null }, null);
+const ALL = [MIXED, ROOMS, EMPTY];
 
 describe('buildingsForRentalType', () => {
-  it('returns every building unchanged for "all"', () => {
-    expect(buildingsForRentalType(ALL, 'all')).toBe(ALL);
+  it('gives each building the figure of "all" and drops a building without a usable value', () => {
+    const all = buildingsForRentalType(ALL, 'all');
+
+    expect(all.map((b) => [b.id, b.figure.value, b.figure.n, b.rentalType])).toEqual([
+      ['mixed', 4300, 3, 'apartment'],
+      ['rooms', 2000, 3, 'room'],
+    ]);
   });
 
-  it('shows a mixed building under "room" with its room figures, not its dominant type', () => {
+  it('shows a mixed building under "room" with its room figure, tagged as a room', () => {
     const rooms = buildingsForRentalType(ALL, 'room');
 
     expect(rooms.map((b) => b.id)).toEqual(['mixed', 'rooms']);
     expect(rooms[0]).toMatchObject({
       id: 'mixed',
-      reports: 1,
-      medianTotal: 2200,
-      medianRent: 1800,
       rentalType: 'room',
+      figure: { value: 2200, n: 1 },
     });
   });
 
-  it('hides buildings without a report of the type', () => {
+  it('hides buildings without a figure of the type', () => {
     expect(buildingsForRentalType(ALL, 'apartment').map((b) => b.id)).toEqual(['mixed']);
-    expect(buildingsForRentalType([UNKNOWN], 'room')).toEqual([]);
+    expect(buildingsForRentalType([EMPTY], 'room')).toEqual([]);
   });
 
-  it('makes report counts follow the filter', () => {
-    const total = (type: 'all' | 'apartment' | 'room') =>
-      buildingsForRentalType(ALL, type).reduce((sum, b) => sum + b.reports, 0);
-
-    expect(total('all')).toBe(4 + 4 + 1);
-    expect(total('room')).toBe(1 + 3);
-    expect(total('apartment')).toBe(2);
-  });
-
-  it('clears the metrics byType does not carry instead of mixing types', () => {
-    const [mixed] = buildingsForRentalType(ALL, 'apartment');
-
-    expect(mixed).toMatchObject({
-      medianTotal: 4400,
-      medianRent: 3600,
-      medianAdminFee: 0,
-      medianRentPerM2: null,
-      medianTotalPerM2: null,
-      medianAdminFeePerM2: null,
-      medianExpenses: null,
-    });
+  it("keeps each figure's group and metric as the contract chose them", () => {
+    const [, rooms] = buildingsForRentalType(ALL, 'room');
+    expect(rooms.figure).toMatchObject({ group: 'asking', metric: 'knownPartTotal' });
   });
 
   it('does not change the input buildings', () => {
     buildingsForRentalType(ALL, 'room');
-    expect(MIXED).toMatchObject({ reports: 4, medianTotal: 4300, rentalType: 'apartment' });
+    expect(MIXED).toEqual(
+      building(
+        'mixed',
+        { all: figure(4300, 3), apartment: figure(4400, 2), room: figure(2200, 1) },
+        'apartment',
+      ),
+    );
   });
 });

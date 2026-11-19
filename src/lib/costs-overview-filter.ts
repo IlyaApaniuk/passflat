@@ -1,54 +1,26 @@
-import type { RentalTypeFilter } from '@/lib/cost-figures';
-
-/**
- * One rental type's reports in a building (spec 03 §Costs overview, FR-30): the same blend of
- * sources as the building's other figures, restricted to reports of that type.
- */
-export type BuildingTypeFigures = {
-  medianTotal: number | null;
-  medianRent: number | null;
-  reports: number;
-};
+import type { RentalTypeFilter, SingleNumberFigure } from '@/lib/cost-figures';
 
 interface OverviewBuilding {
-  reports: number;
-  medianTotal: number;
-  medianRent: number;
-  medianAdminFee: number;
-  medianRentPerM2: number | null;
-  medianTotalPerM2: number | null;
-  medianAdminFeePerM2: number | null;
-  medianExpenses: number | null;
+  /** The dominant rental type of the building's reports. */
   rentalType: string | null;
-  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures };
+  /** The building's single number under each rental-type filter (`getBuildingsData`). */
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
 }
 
 /**
- * The `/[city]/costs` room / flat filter. `all` returns the buildings unchanged. A type keeps only
- * the buildings with a report of that type and swaps in that type's total, rent and report count,
- * so every count and roll-up downstream follows the filter. Metrics `byType` does not carry
- * (expenses, admin fee, per m²) are cleared, never shown over all types beside a type's total.
+ * The `/[city]/costs` room / flat filter (spec 03 §Costs overview, FR-30) over the single
+ * numbers (§Single-number surfaces, D23). Each building carries the figure of the selected
+ * filter, computed over that type's reports only; a building without a usable figure under it
+ * drops out, so every count, card and map pin downstream follows the filter. Under a type the
+ * building is tagged with that type, not with its dominant one.
  */
 export function buildingsForRentalType<T extends OverviewBuilding>(
   buildings: T[],
   type: RentalTypeFilter,
-): T[] {
-  if (type === 'all') return buildings;
-  return buildings
-    .filter((b) => b.byType[type].reports > 0)
-    .map((b) => {
-      const figures = b.byType[type];
-      return {
-        ...b,
-        reports: figures.reports,
-        medianTotal: figures.medianTotal ?? 0,
-        medianRent: figures.medianRent ?? 0,
-        medianAdminFee: 0,
-        medianRentPerM2: null,
-        medianTotalPerM2: null,
-        medianAdminFeePerM2: null,
-        medianExpenses: null,
-        rentalType: type,
-      };
-    });
+): Array<T & { figure: SingleNumberFigure }> {
+  return buildings.flatMap((building) => {
+    const figure = building.figures[type];
+    if (!figure) return [];
+    return [{ ...building, rentalType: type === 'all' ? building.rentalType : type, figure }];
+  });
 }

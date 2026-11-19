@@ -454,7 +454,7 @@
       "title": "Single-number rule (slice 1): tenant group else asking prices, labelled, on the costs overview",
       "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
       "dependsOn": ["T027"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "One pure function in src/lib/cost-figures.ts picks the group per building or area as in spec 03 §Single-number surfaces §The rule, with golden examples 12-16 as tests",
         "getBuildingsData gives each building the chosen group, metric, median and N per rental type (replacing the blended byType); its cache key is renamed",
@@ -463,7 +463,7 @@
         "The same building shows the same value and N on the costs overview as the building page's headline of that group (a test)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-2. Single-number surfaces (map, cards, district roll-ups, hero, calculator, OG, blog report, bot /districts, neighbours) blend user, import and scraped (D4), while PRD 1 says not to combine listings and residents' reports into one number: (a) tenant group with fallback to asking prices, labelled; (b) keep the blend with a composition label; or (c) two numbers? Proposal: (a). May split into several tasks after the answer.\nOwner answer: Q-2 option (a) (D23, 2026-11-19): tenant group when usable, else asking prices, always labelled with group and N; supersedes D4 there. Split into four slices; this task is slice 1 (rule + costs overview), see spec 03 §Single-number surfaces."
     },
     {

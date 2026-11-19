@@ -1,7 +1,13 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
-import type { BuildingTypeFigures } from '@/lib/costs-overview-filter';
+import { median, perAreaValues } from '@/lib/cost-stats';
+import {
+  RENTAL_TYPE_FILTERS,
+  singleNumberFigure,
+  summarizeFigures,
+  type RentalTypeFilter,
+  type SingleNumberFigure,
+} from '@/lib/cost-figures';
 
 /**
  * Cost aggregation for the SEO surfaces (city hub + district pages). The mapping
@@ -28,13 +34,14 @@ export type BuildingCostData = {
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
-  /** Median total, median rent and report count over one rental type's reports only (the costs
-   *  overview's room / flat filter). The fields above stay over all reports: the SEO surfaces
-   *  and roll-ups read them (Q-2). */
-  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures };
+  /** The building's single number under each rental-type filter (spec 03 §Single-number
+   *  surfaces, D23): the tenant group, else the asking prices, with its metric and N; null = no
+   *  usable value. The costs overview reads only this. The blended fields above still feed the
+   *  surfaces of T052 – T054 until those tasks move them. */
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
 };
 
-const BUILDINGS_DATA_CACHE_KEY = 'cost-aggregates-buildings-by-type';
+const BUILDINGS_DATA_CACHE_KEY = 'cost-aggregates-buildings-figures-v1';
 
 // Buildings + their visible cost reports, reduced to per-building medians.
 // Keyed by the arguments (city + filters). Only visible reports count.
@@ -55,6 +62,8 @@ export const getBuildingsData = unstable_cache(
         costReports: {
           where: { isVisible: true },
           select: {
+            source: true,
+            utilitiesComplete: true,
             rent: true,
             adminFee: true,
             totalMonthlyAvg: true,
@@ -85,14 +94,13 @@ export const getBuildingsData = unstable_cache(
 
       const num = (v: unknown) => (v == null ? null : Number(v));
 
-      const typeFigures = (type: 'apartment' | 'room'): BuildingTypeFigures => {
-        const typed = reports.filter((r) => r.rentalType === type);
-        return {
-          medianTotal: computeStats(typed.map((r) => num(r.totalMonthlyAvg)))?.median ?? null,
-          medianRent: computeStats(typed.map((r) => num(r.rent)))?.median ?? null,
-          reports: typed.length,
-        };
-      };
+      // The contract over this building's reports, the same rule as the building page.
+      const figures = Object.fromEntries(
+        RENTAL_TYPE_FILTERS.map((rentalType) => [
+          rentalType,
+          singleNumberFigure(summarizeFigures(reports, { level: 'building', rentalType })),
+        ]),
+      ) as Record<RentalTypeFilter, SingleNumberFigure | null>;
 
       return {
         id: b.id,
@@ -127,11 +135,12 @@ export const getBuildingsData = unstable_cache(
         lat: b.lat ? Number(b.lat) : null,
         lng: b.lng ? Number(b.lng) : null,
         rentalType: dominantRentalType,
-        byType: { apartment: typeFigures('apartment'), room: typeFigures('room') },
+        figures,
       };
     });
   },
-  // Renamed when `byType` was added, so entries of the old shape are not served after deploy.
+  // Renamed whenever the shape changes (`figures` replaced `byType`), so entries of the old
+  // shape are not served after deploy.
   [BUILDINGS_DATA_CACHE_KEY],
   { revalidate: 300, tags: ['costs'] },
 );

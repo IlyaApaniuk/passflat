@@ -1088,7 +1088,12 @@
       "flaggedTitle": "Your report is under review",
       "flaggedDesc": "We noticed unusual values in your cost report. Your data is hidden until you fix it or confirm it with us.",
       "rent": "Rent",
-      "expenses": "Expenses"
+      "expenses": "Expenses",
+      "figureTenant": "Tenant reports ({count})",
+      "figureAsking": "Asking prices ({count})",
+      "figureKnownPart": "known part",
+      "figureRentOnly": "rent only",
+      "mapLegendPart": "+ after a number: only part of the costs is known"
     },
     "buyAccess": {
       "title": "Buy Access to Cost Data",

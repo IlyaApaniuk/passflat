@@ -10,12 +10,15 @@ import { unstable_cache } from 'next/cache';
 
 import {
   areaReferenceLevel,
+  RENTAL_TYPE_FILTERS,
+  singleNumberFigure,
   summarizeDepositReturns,
   summarizeFigures,
   type AreaReference,
   type DepositReturns,
   type FigureSummary,
   type RentalTypeFilter,
+  type SingleNumberFigure,
 } from '@/lib/cost-figures';
 import { prisma } from '@/lib/prisma';
 
@@ -171,6 +174,51 @@ export function loadAreaReference({
   rentalType?: RentalTypeFilter;
 }): Promise<AreaReference | null> {
   return loadAreaReferenceCached(districtId, cityId, rentalType);
+}
+
+/** One district's single number under each rental-type filter; null = no usable value. */
+export interface DistrictFigures {
+  slug: string;
+  /** Display name source: the district's `nameKey`. */
+  name: string;
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
+}
+
+const loadDistrictFiguresCached = cachedCostLoader(
+  async (cityId: string): Promise<DistrictFigures[]> => {
+    const [districts, reports] = await Promise.all([
+      prisma.district.findMany({
+        where: { cityId },
+        select: { id: true, slug: true, nameKey: true },
+      }),
+      prisma.costReport.findMany({
+        where: { isVisible: true, building: { cityId } },
+        select: { ...FIGURE_REPORT_SELECT, building: { select: { districtId: true } } },
+        take: REPORT_LIMIT,
+      }),
+    ]);
+    return districts.map((district) => {
+      const own = reports.filter((report) => report.building.districtId === district.id);
+      const figures = Object.fromEntries(
+        RENTAL_TYPE_FILTERS.map((rentalType) => [
+          rentalType,
+          singleNumberFigure(summarizeFigures(own, { level: 'district', rentalType })),
+        ]),
+      ) as Record<RentalTypeFilter, SingleNumberFigure | null>;
+      return { slug: district.slug, name: district.nameKey, figures };
+    });
+  },
+  'cost-figures-district-figures-v1',
+);
+
+/**
+ * The single number of every district of a city under each rental-type filter
+ * (spec 03 §Single-number surfaces): `summarizeFigures` over the district's
+ * visible reports, a median of reports and not of building medians, so a
+ * district shows the value and N `loadAreaReference` gives it (FR-34).
+ */
+export function loadDistrictFigures(cityId: string): Promise<DistrictFigures[]> {
+  return loadDistrictFiguresCached(cityId);
 }
 
 const loadDepositReturnsCached = cachedCostLoader(

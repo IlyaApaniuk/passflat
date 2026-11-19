@@ -6,6 +6,7 @@ type Loader = (...args: unknown[]) => Promise<unknown>;
 const h = vi.hoisted(() => ({
   findMany: vi.fn(),
   findDistrict: vi.fn(),
+  findDistricts: vi.fn(),
   findCity: vi.fn(),
   registered: [] as Array<{ keyParts: string[]; options: unknown }>,
   /** 'mock' calls the loader straight through; 'real' runs Next's own unstable_cache. */
@@ -30,12 +31,18 @@ vi.mock('next/cache', async (importOriginal) => {
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     costReport: { findMany: h.findMany },
-    district: { findUnique: h.findDistrict },
+    district: { findUnique: h.findDistrict, findMany: h.findDistricts },
     city: { findUnique: h.findCity },
   },
 }));
 
-import { loadAreaReference, loadBuildingFigures, loadDepositReturns } from './cost-figures-query';
+import { groupFigureRows } from './building-figures-view';
+import {
+  loadAreaReference,
+  loadBuildingFigures,
+  loadDepositReturns,
+  loadDistrictFigures,
+} from './cost-figures-query';
 
 const FIGURE_FIELDS = [
   'adminFee',
@@ -96,18 +103,19 @@ function findManyArgs(call = 0) {
 beforeEach(() => {
   h.findMany.mockReset();
   h.findDistrict.mockReset().mockResolvedValue(DISTRICT);
+  h.findDistricts.mockReset();
   h.findCity.mockReset().mockResolvedValue(CITY);
   h.mode.cache = 'mock';
 });
 
 describe('cache registration', () => {
   it('caches every loader under its own key with the costs tag for 300 s', () => {
-    expect(h.registered).toHaveLength(3);
+    expect(h.registered).toHaveLength(4);
     for (const { options } of h.registered) {
       expect(options).toEqual({ revalidate: 300, tags: ['costs'] });
     }
     const keys = h.registered.map(({ keyParts }) => keyParts.join('/'));
-    expect(new Set(keys).size).toBe(3);
+    expect(new Set(keys).size).toBe(4);
     expect(keys.every((key) => key.startsWith('cost-figures-'))).toBe(true);
   });
 
@@ -259,6 +267,85 @@ describe('loadAreaReference', () => {
       level: 'city',
       summary: { rentalType: 'room', reportCount: 40 },
     });
+  });
+});
+
+describe('loadDistrictFigures', () => {
+  const MOKOTOW = { id: 'd-mok', slug: 'mokotow', nameKey: 'Mokotów' };
+  const WOLA = { id: 'd-wola', slug: 'wola', nameKey: 'Wola' };
+
+  /** Reports of two districts, served per query the way Prisma would filter them. */
+  function serve(rows: Array<Record<string, unknown> & { building: { districtId: string } }>) {
+    h.findDistricts.mockResolvedValue([MOKOTOW, WOLA]);
+    h.findMany.mockImplementation(
+      async (args: { where: { building?: { districtId?: string }; rentalType?: string } }) =>
+        rows.filter(
+          (row) =>
+            (!args.where.building?.districtId ||
+              row.building.districtId === args.where.building.districtId) &&
+            (!args.where.rentalType || row.rentalType === args.where.rentalType),
+        ),
+    );
+  }
+  const inDistrict = (districtId: string, overrides: Record<string, unknown>, count = 1) =>
+    reports(count, overrides).map((row) => ({ ...row, building: { districtId } }));
+
+  it("reads the city's visible reports once, only the contract's fields and the district id", async () => {
+    serve([]);
+    await loadDistrictFigures('c1');
+
+    expect(h.findDistricts.mock.calls[0][0]).toEqual({
+      where: { cityId: 'c1' },
+      select: { id: true, slug: true, nameKey: true },
+    });
+    expect(h.findMany).toHaveBeenCalledTimes(1);
+    const args = findManyArgs();
+    expect(args.where).toEqual({ isVisible: true, building: { cityId: 'c1' } });
+    expect(args.take).toBe(5000);
+    const { building, ...fields } = args.select;
+    expect(building).toEqual({ select: { districtId: true } });
+    expect(Object.keys(fields).sort()).toEqual(FIGURE_FIELDS);
+  });
+
+  it('gives each district its own single number per rental type, a median of reports', async () => {
+    serve([
+      ...inDistrict(MOKOTOW.id, { totalMonthlyAvg: new Prisma.Decimal('4000') }, 2),
+      ...inDistrict(MOKOTOW.id, {
+        rentalType: 'room',
+        totalMonthlyAvg: new Prisma.Decimal('2200'),
+      }),
+      ...inDistrict(WOLA.id, {
+        source: 'scraped',
+        utilitiesComplete: false,
+        totalMonthlyAvg: new Prisma.Decimal('3500'),
+      }),
+    ]);
+    const [mokotow, wola] = await loadDistrictFigures('c1');
+
+    expect(mokotow).toMatchObject({ slug: 'mokotow', name: 'Mokotów' });
+    expect(mokotow.figures.all).toMatchObject({ group: 'tenant', value: 4000, n: 3 });
+    expect(mokotow.figures.apartment).toMatchObject({ value: 4000, n: 2 });
+    expect(mokotow.figures.room).toMatchObject({ value: 2200, n: 1 });
+    expect(wola.figures.all).toMatchObject({ group: 'asking', metric: 'knownPartTotal', n: 1 });
+    expect(wola.figures.room).toBeNull();
+  });
+
+  it("example 15: 3 tenant + 40 asking reports give the tenant figure of loadAreaReference's headline", async () => {
+    serve([
+      ...inDistrict(MOKOTOW.id, { totalMonthlyAvg: new Prisma.Decimal('3900') }),
+      ...inDistrict(MOKOTOW.id, { totalMonthlyAvg: new Prisma.Decimal('4100') }),
+      ...inDistrict(MOKOTOW.id, { totalMonthlyAvg: new Prisma.Decimal('4400') }),
+      ...inDistrict(MOKOTOW.id, { source: 'scraped', utilitiesComplete: false }, 40),
+    ]);
+    const [mokotow] = await loadDistrictFigures('c1');
+    h.findDistrict.mockResolvedValue({ slug: MOKOTOW.slug, nameKey: MOKOTOW.nameKey });
+    const reference = await loadAreaReference({ districtId: MOKOTOW.id, cityId: 'c1' });
+
+    expect(reference?.level).toBe('district');
+    const headline = groupFigureRows(reference!.summary.groups.tenant!).headline!;
+    expect(mokotow.figures.all).toMatchObject({ group: 'tenant', metric: headline.key, n: 3 });
+    expect(mokotow.figures.all?.value).toBe(headline.figure.median);
+    expect(mokotow.figures.all?.n).toBe(headline.figure.n);
   });
 });
 

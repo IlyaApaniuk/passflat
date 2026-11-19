@@ -4,6 +4,7 @@ import { createElement, type ComponentProps, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SingleNumberFigure } from '@/lib/cost-figures';
 import { pinLabel } from '@/lib/map-style';
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
@@ -25,11 +26,25 @@ type PopupBuilding = {
   lng: number;
   address: string;
   district: string;
-  reports: number;
-  avgTotal: number;
-  perM2?: number | null;
+  figure: SingleNumberFigure;
   hasContributed: boolean;
 };
+
+function figure(value: number, n: number, overrides: Partial<SingleNumberFigure> = {}) {
+  const shown: SingleNumberFigure = {
+    group: 'tenant',
+    metric: 'completeTotal',
+    value,
+    n,
+    reportCount: n,
+    rent: null,
+    expenses: null,
+    rentPerM2: null,
+    completeTotalPerM2: null,
+    ...overrides,
+  };
+  return shown;
+}
 
 // The token is read when the module loads; the popup is the component's
 // `popupInfo` state (the only `useState(null)`), opened here without a click.
@@ -79,7 +94,7 @@ vi.mock('react-map-gl', () => ({
     createElement('div', { 'data-popup': '' }, children),
 }));
 
-import { CostsMap } from './CostsMap';
+import { CostsMap, figurePinLabel } from './CostsMap';
 
 const building: PopupBuilding = {
   id: 'b1',
@@ -88,9 +103,7 @@ const building: PopupBuilding = {
   lng: 21.0,
   address: 'Puławska 1',
   district: 'Mokotów',
-  reports: 2,
-  avgTotal: 3900,
-  perM2: 78,
+  figure: figure(3900, 2, { reportCount: 3, completeTotalPerM2: { value: 78, n: 2 } }),
   hasContributed: true,
 };
 // A much cheaper neighbour, so the old popup would have said "% below the median".
@@ -99,8 +112,11 @@ const neighbour: PopupBuilding = {
   id: 'b2',
   slug: 'pulawska-3',
   address: 'Puławska 3',
-  avgTotal: 2000,
-  perM2: null,
+  figure: figure(2000, 2, {
+    group: 'asking',
+    metric: 'knownPartTotal',
+    completeTotalPerM2: { value: 50, n: 1 },
+  }),
 };
 
 // `cityMedianTotal` was the prop the removed verdict compared against; it is
@@ -124,15 +140,38 @@ describe('CostsMap popup', () => {
     state.sourceData = null;
   });
 
-  it("shows the building's own figures unchanged (Q-2)", () => {
+  it("shows the building's single number with its group and N (D23)", () => {
     const html = renderMap(building);
     const text = popupText(html);
     expect(text).toContain('Puławska 1');
     expect(text).toContain('Mokotów');
-    expect(text).toContain('2 reports');
+    expect(text).toContain('Tenant reports (2)');
+    // The N is the headline's, never the group's report count.
+    expect(text).not.toContain('(3)');
     expect(text).toContain(`${(3900).toLocaleString()} PLN`);
     expect(text).toContain(`${(78).toLocaleString()} PLN/m²`);
     expect(html).toContain('href="/warsaw/building/pulawska-1"');
+  });
+
+  it('labels an asking-price known part as such, without an all-in per-m² figure', () => {
+    const text = popupText(renderMap(neighbour));
+    expect(text).toContain('Asking prices (2), known part');
+    expect(text).toContain(`${(2000).toLocaleString()} PLN`);
+    expect(text).not.toContain('PLN/m²');
+  });
+
+  it('explains the pin colours and the "+" in a legend in every locale', () => {
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const html = renderMap(null);
+      const legend = (html.split('data-legend')[1] ?? '').replace(/<[^>]+>/g, ' ');
+      const figures = (messages[locale].costs as Record<string, Record<string, unknown>>).building
+        .figures as Record<string, string>;
+      const overview = (messages[locale].costs as Record<string, Record<string, string>>).overview;
+      expect(legend, locale).toContain(figures.tenantTitle);
+      expect(legend, locale).toContain(figures.askingTitle);
+      expect(legend, locale).toContain(overview.mapLegendPart);
+    }
   });
 
   it('draws no above / below / at-the-median conclusion in any locale', () => {
@@ -149,11 +188,20 @@ describe('CostsMap popup', () => {
     }
   });
 
-  it('keeps the pin labels as the building medians', () => {
+  it('labels each pin with its single number, "+" for a part of the costs, and its group', () => {
     renderMap(null);
-    const labels = state.sourceData?.features.map((f) => f.properties.label);
-    expect(labels).toEqual([pinLabel(3900), pinLabel(2000)]);
-    expect(labels).toEqual(['3.9k', '2.0k']);
+    const features = state.sourceData?.features.map((f) => f.properties);
+    expect(features?.map((f) => f.label)).toEqual([pinLabel(3900), `${pinLabel(2000)}+`]);
+    expect(features?.map((f) => f.label)).toEqual(['3.9k', '2.0k+']);
+    expect(features?.map((f) => [f.group, f.n])).toEqual([
+      ['tenant', 2],
+      ['asking', 2],
+    ]);
+  });
+
+  it('marks rent alone with "+" too, and an all-in total without it', () => {
+    expect(figurePinLabel(figure(3200, 1, { metric: 'rent' }))).toBe('3.2k+');
+    expect(figurePinLabel(figure(3200, 1))).toBe('3.2k');
   });
 
   it('renders no popup until a building is chosen', () => {

@@ -14,6 +14,10 @@ export const MAP_COLORS = {
   pinFill: '#ffffff',
   pinStroke: '#4f46e5',
   pinText: '#312e81',
+  /** Pin of a building whose number comes from asking prices (spec 03 §Single-number surfaces). */
+  askingPinFill: '#f1f5f9',
+  askingPinStroke: '#64748b',
+  askingPinText: '#334155',
   /** Cluster ramp, darkening with size. */
   cluster: ['#6366f1', '#4f46e5', '#4338ca'] as const,
   clusterText: '#ffffff',

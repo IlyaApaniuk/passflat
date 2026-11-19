@@ -82,6 +82,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Real client PostHog events can be checked in e2e: the e2e build has a dummy key and the fake host `E2E_POSTHOG_HOST`; reuse `recordPostHog` from `e2e/posthog-landing.spec.ts` (answers the route, decodes gzip, sets `navigator.webdriver` false because posthog-js drops bot events, `POSTHOG_DEBUG` logs pre-init drops).
 - In the e2e build (no DB) an unknown first segment hits `[city]`, and every city page returns 500; only non-city pages (`/en`, `/en/about`, `/en/auth/login`, ...) render 200.
 - A background `next start` is denied by the loop permissions; probe pages with a temporary spec in `e2e/` run by `npx playwright test <file>` (it builds and serves on 3100), then delete it.
+- Single-number surfaces (D23) use `singleNumberFigure` / `comparableRanks` (`cost-figures.ts`), `loadDistrictFigures` for areas, and the labels in `src/lib/single-number-view.ts`; never a new median over both groups.
+- A `node -e "..."` edit script whose text holds an apostrophe breaks zsh quoting; write the script to the scratchpad with Write and run `node <path>`.
 - Mount-time effects can be unit-tested in React's commit order (children before parents, re-run on changed deps) with the harness in `src/components/providers/posthog-provider.test.ts`.
 
 ## Log
@@ -1206,3 +1208,53 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     1. In PostHog Live Events, land on a city page and on `/auth/login` with a fresh browser; check one `$pageview` each and `auth_started`.
     2. After the first full week, compare sessions with `$pageview` against sessions with `$web_vitals` (≥ 90 %).
 - Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`).
+
+### 2026-11-19 09:26 · T028 · done
+
+- Done (slice 1 of D23: the rule and `/[city]/costs`):
+  - `src/lib/cost-figures.ts`:
+    - `singleNumberFigure(summary)` picks the tenant group when its headline metric (complete total, else known part, else rent, the contract's existing `headline` rule, now `headlineMetric`) has `SINGLE_NUMBER_MIN_N` values, else the asking group, else `null`. It returns `group`, `metric`, `value`, `n`, the group's `reportCount`, and that same group's `rent`, `expenses`, `rentPerM2`, `completeTotalPerM2` (value + N each).
+    - `comparableRanks(items)` ranks only items that pass `isComparable` and share group, single rental type and metric. Each rank has ≥ 2 items, cheapest first; under `all` there is none (example 16).
+    - `RENTAL_TYPE_FILTERS` lists the filters.
+  - `src/lib/cost-aggregates.ts`, `getBuildingsData`: `byType` is replaced by `figures.{all,apartment,room}` (`summarizeFigures` over that type's reports → `singleNumberFigure`). The select adds `source` and `utilitiesComplete`. Cache key `cost-aggregates-buildings-by-type` → `cost-aggregates-buildings-figures-v1`. The blended fields are unchanged; the home page, city hub, district pages, calculator and blog report still read them until T052 – T054.
+  - `src/lib/cost-figures-query.ts`: `loadDistrictFigures(cityId)`, cached through `cachedCostLoader` (key `cost-figures-district-figures-v1`, tag `costs`). It runs one query of the city's visible reports (contract fields + `building.districtId`, `take` 5000) and returns each district's `singleNumberFigure` per filter. This is a median of reports, not of building medians.
+  - `src/lib/costs-overview-filter.ts`: `buildingsForRentalType` attaches `figure` for the selected filter, drops buildings without one, and tags a filtered building with the filter's type.
+  - `src/lib/single-number-view.ts` (new, pure): `singleNumberGroupLabel`, `singleNumberLabel` (group with N, then "known part" / "rent only"), `singleNumberHeadingKey` ("Median monthly total" only from n ≥ 2, "Monthly total" for one value, "Known part of the costs", "Rent"), `isAllInTotal`.
+  - `costs/page.tsx` passes the client only the non-blended building fields plus `figures`, and `districtFigures` from `loadDistrictFigures`. `rollUpDistricts` and the page's own median-of-medians are no longer used here.
+  - `costs/client.tsx`:
+    - The cards render `src/components/costs/building-figure-summary.tsx` (new): heading, value, group label with N, the same group's rent / expenses / per m². Expenses and per m² appear only for an all-in total. The card's all-sources "N reports" line is removed; the label carries the N.
+    - The header count sums the chosen groups' `reportCount`.
+    - The district tab reads `districtFigures` under the filter and no longer follows the search box.
+  - `CostsMap.tsx`:
+    - Pins show the figure's value. A "+" suffix (`figurePinLabel`) marks a known part or rent only. The pin fill, stroke and text follow the group (`MAP_COLORS.askingPin*` in `map-style.ts`).
+    - A legend explains both, reusing `costs.building.figures.tenantTitle` / `askingTitle` plus the new `mapLegendPart`.
+    - The popup shows the value, the per m² figure (all-in only) and the label "Tenant reports (2)" / "Asking prices (2), known part". The translator moved to the root namespace.
+  - `district-comparison.tsx`: rows are `{ slug, name, figure }`. The label sits under the district name. The total column shows a known part (labelled) and "—" for rent only. Rent, expenses and per m² come from the same group, and "Reports" is the chosen group's size. A bar is drawn only inside a `comparableRanks` rank of all-in totals, scaled to that rank, so none appears under "All". The rent / expenses legend is shown only when a bar is drawn.
+  - `docs/architecture.md` §3: the blended-median line names the surfaces still on it; the `/[city]/costs` paragraph describes the new rule.
+- Tests:
+  - `cost-figures.test.ts`: golden examples 12–16 (labels rendered in EN), plus rules: asking fallback when tenant has no usable value, null, rent only, filter before choice, no rank across metrics.
+  - `cost-aggregates.test.ts`: example 6 as `figures`, blended fields byte-identical with `figures` last, no blend with scraped, null per type, new cache key and select.
+  - `cost-figures-query.test.ts`: `loadDistrictFigures` query shape and per-type figures; example 15 against `loadAreaReference`'s tenant headline.
+  - `costs-overview-consistency.test.ts` (new, criterion 5): for every filter, each overview building's value, N and metric equal `groupFigureRows(loadBuildingFigures(...).groups[group]).headline`, over one Prisma mock.
+  - `CostsMap.test.ts` (updated): label and N in the popup, known part, legend in 4 locales, pin labels with "+" and group.
+  - `single-number-surfaces.test.ts` (new): the card (no "median" for one value, known part without expenses or per m², labels in 4 locales); the district tab (labels, no bar under all, bars only for A and B under apartment, known part and rent only, empty state).
+  - `costs-overview-filter.test.ts` rewritten.
+- Namespace: every new key is under `costs.overview`. `costs` is in `SHARED_CLIENT_NAMESPACES`, and the costs client, `CostsMap` and `DistrictComparison` read it with the root `useTranslations()`. No provider change.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 32 unused exports / 18 types as before, Vitest 76 files / 995 tests, build OK). `npm run test:e2e` exit 0 (6/6 on port 3100, stopped afterwards; the `fetch failed` lines are the fake PostHog host as in T002). `next-env.d.ts` restored. Not looked at in a real browser.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy** (four locales), `costs.overview.*`:
+    - `figureTenant` (EN "Tenant reports ({count})", RU «Отчёты арендаторов ({count})», UK «Звіти орендарів ({count})», PL «Raporty najemców ({count})»).
+    - `figureAsking` ("Asking prices ({count})", «Цены из объявлений ({count})», «Ціни з оголошень ({count})», «Ceny ofertowe ({count})»).
+    - `figureKnownPart` ("known part", «известная часть», «відома частина», «znana część»).
+    - `figureRentOnly` ("rent only", «только аренда», «лише оренда», «tylko najem»).
+    - `mapLegendPart` ("+ after a number: only part of the costs is known", «+ после числа: известна только часть расходов», «+ після числа: відома лише частина витрат», «+ po liczbie: znana jest tylko część kosztów»).
+  - Unused keys left in place: `costs.overview.reports` (the old popup count).
+  - **Assumption:** `SINGLE_NUMBER_MIN_N = 1` in `cost-figures.ts` ("usable value" = headline n ≥ 1, spec 03).
+  - **Display choices to confirm:**
+    - "+" after a pin number for a known part or rent only; asking-price pins in grey.
+    - The label shows the headline metric's N, not the group's report count.
+    - The district tab has no bars under "All" and ignores the search box.
+    - The card no longer shows the all-sources report count.
+  - No tables or migrations. Events unchanged.
+- Next: T052 (city hub, district pages, calculator baseline, home hero and top building) can reuse `loadDistrictFigures` and `singleNumberLabel` / `singleNumberHeadingKey`.

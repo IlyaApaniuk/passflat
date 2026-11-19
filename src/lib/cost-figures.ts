@@ -11,6 +11,8 @@ import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
 export type SourceKind = 'user' | 'import' | 'scraped';
 export type FigureGroupKey = 'tenant' | 'asking';
 export type RentalTypeFilter = 'all' | 'apartment' | 'room';
+/** Every rental-type filter, in the order a surface offers them. */
+export const RENTAL_TYPE_FILTERS: RentalTypeFilter[] = ['all', 'apartment', 'room'];
 type FigureLevel = 'building' | 'district' | 'city';
 type UtilityKey = 'electricity' | 'gas' | 'heating' | 'water' | 'internet' | 'other';
 
@@ -478,11 +480,114 @@ export function isComparable(a: ComparisonSide, b: ComparisonSide): boolean {
   );
 }
 
+/** The metrics a group's headline is picked from, in the contract's order (§Rules). */
+type HeadlineMetric = 'completeTotal' | 'knownPartTotal' | 'rent';
+const HEADLINE_METRICS: HeadlineMetric[] = ['completeTotal', 'knownPartTotal', 'rent'];
+
 /** The headline metric: complete total when it has values, else the known part, else rent. */
+function headlineMetric(group: FigureGroup): HeadlineMetric | null {
+  return HEADLINE_METRICS.find((metric) => group[metric].n >= 1) ?? null;
+}
+
 function headline(group: FigureGroup): { figure: MetricFigure; incomplete: boolean } {
-  if (group.completeTotal.n >= 1) return { figure: group.completeTotal, incomplete: false };
-  if (group.knownPartTotal.n >= 1) return { figure: group.knownPartTotal, incomplete: true };
-  return { figure: group.rent, incomplete: false };
+  const metric = headlineMetric(group) ?? 'rent';
+  return { figure: group[metric], incomplete: metric === 'knownPartTotal' };
+}
+
+// --- Single-number surfaces (spec 03 §Single-number surfaces, FR-23) ---
+
+/** Decided (D23): the tenant group when it has a usable value, otherwise the asking prices. */
+const SINGLE_NUMBER_GROUP_ORDER: FigureGroupKey[] = ['tenant', 'asking'];
+/** Assumption: a group's value is usable from this many values of its headline metric. */
+export const SINGLE_NUMBER_MIN_N = 1;
+
+/** A median with its own N. */
+interface FigureValue {
+  value: number;
+  n: number;
+}
+
+/**
+ * The one number a map pin, a card or an area row shows for a building or an
+ * area: one group's headline with its N, and that same group's other figures.
+ * Never a blend of the tenant and the asking group.
+ */
+export interface SingleNumberFigure {
+  group: FigureGroupKey;
+  metric: HeadlineMetric;
+  value: number;
+  n: number;
+  /** Reports in the chosen group: its size, never the N of a metric. */
+  reportCount: number;
+  rent: FigureValue | null;
+  expenses: FigureValue | null;
+  rentPerM2: FigureValue | null;
+  completeTotalPerM2: FigureValue | null;
+}
+
+function figureValue(figure: MetricFigure): FigureValue | null {
+  return figure.n >= 1 && figure.median != null ? { value: figure.median, n: figure.n } : null;
+}
+
+/**
+ * The single number of a building or an area (D23, golden examples 12–15): the
+ * tenant group (`user` + `import`) when its headline metric has at least
+ * SINGLE_NUMBER_MIN_N values, otherwise the asking-price group (`scraped`),
+ * otherwise nothing. The group is chosen once and every figure of the item
+ * comes from it, so a card never sets tenant rent beside an asking total.
+ */
+export function singleNumberFigure(
+  summary: Pick<FigureSummary, 'groups'>,
+): SingleNumberFigure | null {
+  for (const key of SINGLE_NUMBER_GROUP_ORDER) {
+    const group = summary.groups[key];
+    const metric = group ? headlineMetric(group) : null;
+    if (!group || !metric || group[metric].n < SINGLE_NUMBER_MIN_N) continue;
+    const shown = figureValue(group[metric]);
+    if (!shown) continue;
+    return {
+      group: group.key,
+      metric,
+      value: shown.value,
+      n: shown.n,
+      reportCount: group.reportCount,
+      rent: figureValue(group.rent),
+      expenses: figureValue(group.expenses),
+      rentPerM2: figureValue(group.rentPerM2),
+      completeTotalPerM2: figureValue(group.completeTotalPerM2),
+    };
+  }
+  return null;
+}
+
+/** An item a rank may place: its single number and the rental-type filter it was computed under. */
+export interface RankCandidate {
+  figure: Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'>;
+  rentalType: RentalTypeFilter;
+}
+
+/**
+ * The ranks a surface may state ("cheapest", a position, a bar against the
+ * others), golden example 16: only items whose figures pass `isComparable`
+ * (same group, same single rental type, N ≥ MIN_COMPARABLE_N) and show the same
+ * metric are ranked together, cheapest first. A rank needs two items; under
+ * `all` there is none. Items in no rank are listed with their own label and N.
+ */
+export function comparableRanks<T extends RankCandidate>(items: T[]): T[][] {
+  const ranks = new Map<string, T[]>();
+  for (const item of items) {
+    const side: ComparisonSide = {
+      group: item.figure.group,
+      rentalType: item.rentalType,
+      n: item.figure.n,
+    };
+    if (!isComparable(side, side)) continue;
+    const key = `${item.figure.group}:${item.rentalType}:${item.figure.metric}`;
+    ranks.set(key, [...(ranks.get(key) ?? []), item]);
+  }
+  return [...ranks.values()]
+    .filter((rank) => rank.length >= 2)
+    .map((rank) => [...rank].sort((a, b) => a.figure.value - b.figure.value));
 }
 
 /**

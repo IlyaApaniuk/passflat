@@ -1,19 +1,30 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
+
+import { groupFigureRows } from './building-figures-view';
+import { singleNumberLabel } from './single-number-view';
 
 import {
   answerProperties,
   areaReferenceLevel,
+  comparableRanks,
   isComparable,
   LEGACY_NULL_IS_COMPLETE,
   MIN_AREA_REPORTS,
   MIN_COMPARABLE_N,
   MIN_DEPOSIT_ANSWERS,
+  SINGLE_NUMBER_MIN_N,
+  singleNumberFigure,
   summarizeDepositReturns,
   summarizeFigures,
   TENANCY_ONGOING,
   type ComparisonSide,
   type FigureReport,
   type FigureSummary,
+  type RankCandidate,
+  type SingleNumberFigure,
 } from './cost-figures';
 
 const building = { level: 'building', rentalType: 'all' } as const;
@@ -534,5 +545,179 @@ describe('answerProperties', () => {
         reference(summarizeFigures([], { level: 'city', rentalType: 'all' }), 'city'),
       ),
     ).toEqual({ answer_level: 'none', source_kind: 'none', n: 0, incomplete: false });
+  });
+});
+
+const en = createTranslator({
+  locale: 'en',
+  messages: JSON.parse(
+    readFileSync(join(process.cwd(), 'src/i18n/messages/en.json'), 'utf8'),
+  ) as never,
+}) as unknown as (key: string, values?: Record<string, string | number>) => string;
+
+/** The label a single-number surface renders, in English. */
+function label(figure: SingleNumberFigure): string {
+  return singleNumberLabel(figure)
+    .map((message) => en(message.key, message.values))
+    .join(', ');
+}
+
+// Golden example 1's building: 2 user + 1 import tenant reports, 2 scraped asking prices.
+const EXAMPLE_1: FigureReport[] = [
+  complete('user', { rentalType: 'apartment', rent: 3200, totalMonthlyAvg: 4000 }),
+  complete('import', { rentalType: 'apartment', rent: 3000, totalMonthlyAvg: 3700 }),
+  report('user', {
+    rentalType: 'apartment',
+    rent: 3400,
+    totalMonthlyAvg: 3900,
+    utilitiesComplete: false,
+  }),
+  report('scraped', {
+    rentalType: 'apartment',
+    rent: 3500,
+    totalMonthlyAvg: 4100,
+    utilitiesComplete: false,
+  }),
+  report('scraped', {
+    rentalType: 'apartment',
+    rent: 3300,
+    totalMonthlyAvg: 3900,
+    utilitiesComplete: false,
+  }),
+];
+
+describe('singleNumberFigure — golden examples (spec 03 §Single-number surfaces)', () => {
+  it('12. tenant wins: example 1 → tenant complete total 3,850 (n 2), "tenant reports (2)"', () => {
+    const figure = singleNumberFigure(summarizeFigures(EXAMPLE_1, building))!;
+
+    expect(figure).toMatchObject({
+      group: 'tenant',
+      metric: 'completeTotal',
+      value: 3850,
+      n: 2,
+      reportCount: 3,
+    });
+    expect(label(figure)).toBe('Tenant reports (2)');
+    // Every number of the item comes from the tenant group, none from the asking prices.
+    expect(figure.rent).toEqual({ value: 3200, n: 3 });
+    expect(figure.expenses).toEqual({ value: 750, n: 2 });
+  });
+
+  it('13. asking fallback: two scraped known parts → 4,000 (n 2), "asking prices (2), known part"', () => {
+    const figure = singleNumberFigure(
+      summarizeFigures(
+        [
+          report('scraped', { totalMonthlyAvg: 4100, utilitiesComplete: false }),
+          report('scraped', { totalMonthlyAvg: 3900, utilitiesComplete: false }),
+        ],
+        building,
+      ),
+    )!;
+
+    expect(figure).toMatchObject({ group: 'asking', metric: 'knownPartTotal', value: 4000, n: 2 });
+    expect(label(figure)).toBe('Asking prices (2), known part');
+  });
+
+  it('14. tenant with fewer reports still wins: one user known part 3,100 (n 1) over 3 scraped', () => {
+    const figure = singleNumberFigure(
+      summarizeFigures(
+        [
+          report('user', { totalMonthlyAvg: 3100, utilitiesComplete: false }),
+          ...reports(3, 'scraped'),
+        ],
+        building,
+      ),
+    )!;
+
+    expect(figure).toMatchObject({ group: 'tenant', metric: 'knownPartTotal', value: 3100, n: 1 });
+    expect(label(figure)).toBe('Tenant reports (1), known part');
+  });
+
+  it("15. area: 3 tenant and 40 asking reports → the tenant group with N 3, the reference's headline", () => {
+    const district = summarizeFigures([...reports(3, 'user'), ...reports(40, 'scraped')], {
+      level: 'district',
+      rentalType: 'all',
+    });
+    const figure = singleNumberFigure(district)!;
+    const headline = groupFigureRows(district.groups.tenant!).headline!;
+
+    expect(figure).toMatchObject({ group: 'tenant', n: 3 });
+    expect(figure.metric).toBe(headline.key);
+    expect(figure.value).toBe(headline.figure.median);
+    expect(figure.n).toBe(headline.figure.n);
+  });
+
+  it('16. no rank without comparability; under apartment only A and B are ranked, B first', () => {
+    const district = (
+      slug: string,
+      group: 'tenant' | 'asking',
+      value: number,
+      n: number,
+      rentalType: RankCandidate['rentalType'],
+    ) => ({ slug, rentalType, figure: { group, metric: 'completeTotal' as const, value, n } });
+    const items = (rentalType: RankCandidate['rentalType']) => [
+      district('A', 'tenant', 3900, 37, rentalType),
+      district('B', 'tenant', 3500, 6, rentalType),
+      district('C', 'asking', 3200, 12, rentalType),
+      district('D', 'tenant', 3000, 2, rentalType),
+    ];
+
+    expect(comparableRanks(items('all'))).toEqual([]);
+    expect(comparableRanks(items('apartment')).map((rank) => rank.map((d) => d.slug))).toEqual([
+      ['B', 'A'],
+    ]);
+  });
+});
+
+describe('singleNumberFigure — rules', () => {
+  it('uses a usable value from one headline value on (Assumption)', () => {
+    expect(SINGLE_NUMBER_MIN_N).toBe(1);
+  });
+
+  it('falls back to asking prices when the tenant group has no usable value', () => {
+    const figure = singleNumberFigure(
+      summarizeFigures(
+        [report('user', { utilitiesComplete: true }), ...reports(2, 'scraped')],
+        building,
+      ),
+    )!;
+    expect(figure).toMatchObject({ group: 'asking', metric: 'completeTotal', n: 2 });
+  });
+
+  it('is null when neither group has a usable value, or without reports', () => {
+    expect(singleNumberFigure(summarizeFigures([report('user')], building))).toBeNull();
+    expect(singleNumberFigure(summarizeFigures([], building))).toBeNull();
+  });
+
+  it('shows rent alone when no total is known, labelled "rent only"', () => {
+    const figure = singleNumberFigure(
+      summarizeFigures([complete('user', { rent: 3000 })], building),
+    )!;
+    expect(figure).toMatchObject({ metric: 'rent', value: 3000, n: 1 });
+    expect(label(figure)).toBe('Tenant reports (1), rent only');
+  });
+
+  it('applies the rental-type filter before choosing the group', () => {
+    const mixed = [
+      complete('user', { rentalType: 'room', totalMonthlyAvg: 2200 }),
+      report('scraped', { rentalType: 'apartment', totalMonthlyAvg: 4300 }),
+    ];
+    expect(
+      singleNumberFigure(summarizeFigures(mixed, { level: 'building', rentalType: 'room' })),
+    ).toMatchObject({ group: 'tenant', value: 2200 });
+    expect(
+      singleNumberFigure(summarizeFigures(mixed, { level: 'building', rentalType: 'apartment' })),
+    ).toMatchObject({ group: 'asking', metric: 'knownPartTotal', value: 4300 });
+  });
+
+  it('never ranks a known part against an all-in total', () => {
+    const item = (slug: string, metric: 'completeTotal' | 'knownPartTotal', value: number) => ({
+      slug,
+      rentalType: 'room' as const,
+      figure: { group: 'tenant' as const, metric, value, n: 9 },
+    });
+    expect(
+      comparableRanks([item('a', 'completeTotal', 2000), item('b', 'knownPartTotal', 1800)]),
+    ).toEqual([]);
   });
 });

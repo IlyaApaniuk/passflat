@@ -15,7 +15,9 @@ import type { GeoJSONSource } from 'mapbox-gl';
 import type { FeatureCollection, Point } from 'geojson';
 import { Building2, MapPin, Users, X } from 'lucide-react';
 import Link from 'next/link';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
 import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
+import { isAllInTotal, singleNumberLabel } from '@/lib/single-number-view';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 export interface CostBuilding {
@@ -25,9 +27,8 @@ export interface CostBuilding {
   lng: number;
   address: string;
   district: string;
-  reports: number;
-  avgTotal: number;
-  perM2?: number | null;
+  /** The building's single number: one group, labelled with it and its N (D23). */
+  figure: SingleNumberFigure;
   hasContributed: boolean;
 }
 
@@ -94,9 +95,10 @@ const clusterCountLayer: LayerProps = {
   paint: { 'text-color': MAP_COLORS.clusterText },
 };
 
-// Neutral price pin — a white bubble carrying the building's median monthly
-// cost as a label. The NUMBER is the information (no cost-encoding colour, so
-// nothing to decode and no legend needed).
+// Neutral price pin — a bubble carrying the building's single number as a label.
+// The NUMBER is the information (no cost-encoding colour). The fill names the
+// group the number comes from (tenant reports or asking prices, see the legend),
+// and a "+" after it says only part of the costs is known.
 const unclusteredLayer: LayerProps = {
   id: 'cost-unclustered',
   type: 'circle',
@@ -104,9 +106,21 @@ const unclusteredLayer: LayerProps = {
   filter: ['!', ['has', 'point_count']],
   paint: {
     'circle-radius': MAP_PIN.radius,
-    'circle-color': MAP_COLORS.pinFill,
+    'circle-color': [
+      'match',
+      ['get', 'group'],
+      'asking',
+      MAP_COLORS.askingPinFill,
+      MAP_COLORS.pinFill,
+    ],
     'circle-stroke-width': MAP_PIN.strokeWidth,
-    'circle-stroke-color': MAP_COLORS.pinStroke,
+    'circle-stroke-color': [
+      'match',
+      ['get', 'group'],
+      'asking',
+      MAP_COLORS.askingPinStroke,
+      MAP_COLORS.pinStroke,
+    ],
     'circle-opacity': 1,
   },
 };
@@ -122,11 +136,25 @@ const unclusteredLabelLayer: LayerProps = {
     'text-size': MAP_PIN.textSize,
     'text-allow-overlap': true,
   },
-  paint: { 'text-color': MAP_COLORS.pinText },
+  paint: {
+    'text-color': [
+      'match',
+      ['get', 'group'],
+      'asking',
+      MAP_COLORS.askingPinText,
+      MAP_COLORS.pinText,
+    ],
+  },
 };
 
+/** The pin text: the abbreviated number, with "+" when it is not an all-in total. */
+export function figurePinLabel(figure: SingleNumberFigure): string {
+  const label = pinLabel(figure.value);
+  return label && !isAllInTotal(figure) ? `${label}+` : label;
+}
+
 export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
-  const t = useTranslations('costs.overview');
+  const t = useTranslations();
   const mapRef = useRef<MapRef>(null);
   const [popupInfo, setPopupInfo] = useState<CostBuilding | null>(null);
   const [cursor, setCursor] = useState('auto');
@@ -162,11 +190,11 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
           id: b.id,
           address: b.address,
           district: b.district,
-          reports: b.reports,
-          avgTotal: b.avgTotal,
-          perM2: b.perM2 ?? null,
+          group: b.figure.group,
+          value: b.figure.value,
+          n: b.figure.n,
           hasContributed: b.hasContributed,
-          label: pinLabel(b.avgTotal),
+          label: figurePinLabel(b.figure),
         },
       })),
     }),
@@ -253,6 +281,29 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
   // median" conclusion (spec 03 §Comparisons, FR-29).
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg border">
+      <div
+        data-legend=""
+        className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-[calc(100%-1rem)] space-y-0.5 rounded-md bg-white/90 px-2 py-1.5 text-[11px] leading-tight text-slate-700 shadow-sm backdrop-blur-sm"
+      >
+        <p className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full border"
+            style={{ backgroundColor: MAP_COLORS.pinFill, borderColor: MAP_COLORS.pinStroke }}
+          />
+          {t('costs.building.figures.tenantTitle')}
+        </p>
+        <p className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full border"
+            style={{
+              backgroundColor: MAP_COLORS.askingPinFill,
+              borderColor: MAP_COLORS.askingPinStroke,
+            }}
+          />
+          {t('costs.building.figures.askingTitle')}
+        </p>
+        <p>{t('costs.overview.mapLegendPart')}</p>
+      </div>
       <MapGL
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -316,30 +367,30 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
                     <MapPin className="h-3 w-3" />
                     {popupInfo.district}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {popupInfo.reports} {t('reports')}
-                  </span>
                 </div>
 
-                {popupInfo.avgTotal > 0 && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-base font-bold text-primary">
-                        {popupInfo.avgTotal.toLocaleString()} PLN
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {' '}
-                          / {t('perMonthShort')}
-                        </span>
+                <div className="mt-2 border-t pt-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-base font-bold text-primary">
+                      {popupInfo.figure.value.toLocaleString()} PLN
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {' '}
+                        / {t('costs.overview.perMonthShort')}
+                      </span>
+                    </p>
+                    {isAllInTotal(popupInfo.figure) && popupInfo.figure.completeTotalPerM2 && (
+                      <p className="shrink-0 text-xs text-muted-foreground">
+                        {popupInfo.figure.completeTotalPerM2.value.toLocaleString()} PLN/m²
                       </p>
-                      {popupInfo.perM2 != null && popupInfo.perM2 > 0 && (
-                        <p className="shrink-0 text-xs text-muted-foreground">
-                          {popupInfo.perM2.toLocaleString()} PLN/m²
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3 shrink-0" />
+                    {singleNumberLabel(popupInfo.figure)
+                      .map((message) => t(message.key, message.values))
+                      .join(', ')}
+                  </p>
+                </div>
               </Link>
             </div>
           </Popup>

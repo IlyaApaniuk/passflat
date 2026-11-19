@@ -7,8 +7,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { CostsOverviewClient, type CostAccess } from './client';
 import { getAlternates, getOgImage } from '@/lib/seo';
-import { median } from '@/lib/cost-stats';
 import { getBuildingsData } from '@/lib/cost-aggregates';
+import { loadDistrictFigures } from '@/lib/cost-figures-query';
 import { getContributionState } from '@/lib/contribution';
 import type { CityBounds } from '@/lib/listings-data';
 
@@ -111,39 +111,32 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
   // client filter (the client filters client-side). Server-filtering here would
   // strip the data the "All districts" / other-district options need, leaving the
   // sidebar stuck on a single district when arriving via a ?district= deep-link.
-  const buildingsData = await getBuildingsData(city.id, null, searchQuery ?? null);
+  const [buildingsData, districtFigures] = await Promise.all([
+    getBuildingsData(city.id, null, searchQuery ?? null),
+    loadDistrictFigures(city.id),
+  ]);
 
-  // Median of building-level medians (used for district roll-ups).
-  const medianOf = (values: number[]) => median(values.filter((v) => v > 0)) ?? 0;
+  // The overview shows each building's single number only (spec 03 §Single-number surfaces,
+  // D23): the blended medians getBuildingsData still carries for other surfaces stay here.
+  const buildings = buildingsData.map(
+    ({ id, slug, address, district, districtSlug, lat, lng, rentalType, figures }) => ({
+      id,
+      slug,
+      address,
+      district,
+      districtSlug,
+      lat,
+      lng,
+      rentalType,
+      figures,
+    }),
+  );
 
   const districts = city.districts.map((d) => ({
     slug: d.slug,
     name: d.nameKey,
-    count: buildingsData.filter((b) => b.districtSlug === d.slug).length,
+    count: buildings.filter((b) => b.districtSlug === d.slug).length,
   }));
-
-  const districtStats = city.districts
-    .map((d) => {
-      const dBuildings = buildingsData.filter((b) => b.districtSlug === d.slug);
-      if (dBuildings.length === 0) return null;
-      const reportCount = dBuildings.reduce((s, b) => s + b.reports, 0);
-      return {
-        slug: d.slug,
-        name: d.nameKey,
-        buildingCount: dBuildings.length,
-        reportCount,
-        medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
-        medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
-        medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
-        medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
-        medianTotalPerM2: medianOf(dBuildings.map((b) => b.medianTotalPerM2 ?? 0)),
-        medianExpenses: medianOf(dBuildings.map((b) => b.medianExpenses ?? 0)),
-        // FUTURE (paid utility analytics): add medianElectricity/Gas/Heating/Water
-        // here (same medianOf pattern) and surface them in a gated "utilities" tab.
-      };
-    })
-    .filter((d): d is NonNullable<typeof d> => d !== null)
-    .sort((a, b) => b.reportCount - a.reportCount);
 
   // Fast cookie check: if no Supabase session cookie is present the visitor is
   // definitely anonymous — resolve to locked immediately (no skeleton, no TTFB
@@ -156,9 +149,9 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
 
   return (
     <CostsOverviewClient
-      buildings={buildingsData}
+      buildings={buildings}
       districts={districts}
-      districtStats={districtStats}
+      districtFigures={districtFigures}
       initialAccess={initialAccess}
       accessPromise={accessPromise}
       citySlug={citySlug}

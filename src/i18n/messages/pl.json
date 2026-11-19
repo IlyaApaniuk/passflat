@@ -1088,7 +1088,12 @@
       "flaggedTitle": "Twój raport jest weryfikowany",
       "flaggedDesc": "Zauważyliśmy nietypowe wartości w Twoim raporcie kosztów. Dane są ukryte, dopóki ich nie poprawisz lub nie potwierdzisz z nami.",
       "rent": "Najem",
-      "expenses": "Wydatki"
+      "expenses": "Wydatki",
+      "figureTenant": "Raporty najemców ({count})",
+      "figureAsking": "Ceny ofertowe ({count})",
+      "figureKnownPart": "znana część",
+      "figureRentOnly": "tylko najem",
+      "mapLegendPart": "+ po liczbie: znana jest tylko część kosztów"
     },
     "buyAccess": {
       "title": "Kup dostęp do danych o kosztach",

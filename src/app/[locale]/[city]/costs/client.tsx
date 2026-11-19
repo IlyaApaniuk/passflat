@@ -11,10 +11,11 @@ import { Footer } from '@/components/landing/footer';
 import { StickyCta, useScrolledPast } from '@/components/landing/sticky-cta';
 import { CostAccessCard } from '@/components/costs/cost-access-card';
 import type { CostAccess } from '@/components/costs/cost-access-card';
-import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
+import { DistrictComparison, type DistrictFigureRow } from '@/components/costs/district-comparison';
 import { MapSkeleton } from '@/components/map/map-skeleton';
-import { median } from '@/lib/cost-stats';
-import { buildingsForRentalType, type BuildingTypeFigures } from '@/lib/costs-overview-filter';
+import type { RentalTypeFilter, SingleNumberFigure } from '@/lib/cost-figures';
+import { buildingsForRentalType } from '@/lib/costs-overview-filter';
+import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,7 +32,6 @@ import {
   Search,
   TrendingUp,
   MapPin,
-  Users,
   ArrowRight,
   List,
   Map,
@@ -54,18 +54,18 @@ interface BuildingData {
   address: string;
   district: string;
   districtSlug: string;
-  reports: number;
-  medianTotal: number;
-  medianRent: number;
-  medianAdminFee: number;
-  medianRentPerM2: number | null;
-  medianTotalPerM2: number | null;
-  medianAdminFeePerM2: number | null;
-  medianExpenses: number | null;
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
-  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures };
+  /** The single number under each rental-type filter (spec 03 §Single-number surfaces). */
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
+}
+
+/** One district's single number under each rental-type filter (`loadDistrictFigures`). */
+interface DistrictFiguresData {
+  slug: string;
+  name: string;
+  figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
 }
 
 interface DistrictData {
@@ -84,7 +84,7 @@ interface CityBounds {
 interface CostsOverviewClientProps {
   buildings: BuildingData[];
   districts: DistrictData[];
-  districtStats: DistrictStatsData[];
+  districtFigures: DistrictFiguresData[];
   /** Pre-resolved access for anonymous users (no session cookie). */
   initialAccess: CostAccess | null;
   /** Streamed auth promise for logged-in users; omitted for anons. */
@@ -136,7 +136,7 @@ const fadeUp = {
 export function CostsOverviewClient({
   buildings,
   districts,
-  districtStats,
+  districtFigures,
   initialAccess,
   accessPromise,
   citySlug,
@@ -164,7 +164,7 @@ export function CostsOverviewClient({
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [mainTab, setMainTab] = useState<'buildings' | 'compare'>('buildings');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-  const [rentalTypeFilter, setRentalTypeFilter] = useState<'all' | 'apartment' | 'room'>('all');
+  const [rentalTypeFilter, setRentalTypeFilter] = useState<RentalTypeFilter>('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
@@ -181,9 +181,9 @@ export function CostsOverviewClient({
 
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
-  // Under the room / flat filter each building carries that type's figures and report count
-  // only, and buildings without a report of that type drop out, so every count, card, map pin
-  // and district roll-up below follows the filter.
+  // Each building carries the single number of the selected filter (tenant group, else asking
+  // prices, over that type's reports only); buildings without one drop out, so every count,
+  // card and map pin below follows the filter.
   const searchAndTypeFiltered = useMemo(() => {
     const q = stripDiacritics(searchQuery.toLowerCase());
     return buildingsForRentalType(buildings, rentalTypeFilter).filter(
@@ -202,46 +202,22 @@ export function CostsOverviewClient({
     [searchAndTypeFiltered, selectedDistrict],
   );
 
-  // Total cost reports across the currently filtered buildings — shown next to
-  // the building count so the header reflects both supply dimensions.
+  // Reports behind the numbers shown (each building's chosen group), next to the building count.
   const totalReports = useMemo(
-    () => filteredBuildings.reduce((sum, b) => sum + b.reports, 0),
+    () => filteredBuildings.reduce((sum, b) => sum + b.figure.reportCount, 0),
     [filteredBuildings],
   );
 
-  // A median of building medians, so it can differ from `loadAreaReference`'s median of
-  // reports for the same district: a single-number surface, accepted until Q-2 (spec 03).
-  const computedDistrictStats = useMemo(
+  // District rows: each district's own single number over its visible reports (a median of
+  // reports, as `loadAreaReference`), under the rental-type filter. The search box filters the
+  // building list only, never a district's figure.
+  const districtRows = useMemo<DistrictFigureRow[]>(
     () =>
-      districtStats.map((ds) => {
-        if (rentalTypeFilter === 'all') return ds;
-        const dBuildings = searchAndTypeFiltered.filter((b) => b.districtSlug === ds.slug);
-        if (dBuildings.length === 0)
-          return {
-            ...ds,
-            buildingCount: 0,
-            reportCount: 0,
-            medianTotal: 0,
-            medianRent: 0,
-            medianAdminFee: 0,
-            medianRentPerM2: 0,
-            medianTotalPerM2: 0,
-            medianExpenses: 0,
-          };
-        const medianOf = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
-        return {
-          ...ds,
-          buildingCount: dBuildings.length,
-          reportCount: dBuildings.reduce((s, b) => s + b.reports, 0),
-          medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
-          medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
-          medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
-          medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
-          medianTotalPerM2: medianOf(dBuildings.map((b) => b.medianTotalPerM2 ?? 0)),
-          medianExpenses: medianOf(dBuildings.map((b) => b.medianExpenses ?? 0)),
-        };
+      districtFigures.flatMap((d) => {
+        const figure = d.figures[rentalTypeFilter];
+        return figure ? [{ slug: d.slug, name: d.name, figure }] : [];
       }),
-    [districtStats, rentalTypeFilter, searchAndTypeFiltered],
+    [districtFigures, rentalTypeFilter],
   );
 
   // Sidebar is now a plain filter: districts with reports, in server order.
@@ -544,9 +520,7 @@ export function CostsOverviewClient({
                               lng: b.lng!,
                               address: b.address,
                               district: b.district,
-                              reports: b.reports,
-                              avgTotal: b.medianTotal,
-                              perM2: b.medianTotalPerM2,
+                              figure: b.figure,
                               hasContributed: true,
                             }))}
                           citySlug={citySlug}
@@ -584,12 +558,6 @@ export function CostsOverviewClient({
                                             <MapPin className="h-3.5 w-3.5" />
                                             {building.district}
                                           </span>
-                                          <span className="flex items-center gap-1">
-                                            <Users className="h-3.5 w-3.5" />
-                                            {t('costs.overview.nReports', {
-                                              count: building.reports,
-                                            })}
-                                          </span>
                                           {building.rentalType && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                                               {building.rentalType === 'apartment' ? (
@@ -607,31 +575,7 @@ export function CostsOverviewClient({
                                     </div>
 
                                     <div className="flex items-center justify-between gap-6 sm:justify-end">
-                                      <div className="text-left tabular-nums sm:text-right">
-                                        <p className="text-xs text-muted-foreground">
-                                          {t('costs.overview.medianMonthlyTotal')}
-                                        </p>
-                                        <p className="text-lg font-bold text-primary">
-                                          ≈ {building.medianTotal.toLocaleString()} PLN
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {t('costs.overview.rent')} ≈{' '}
-                                          {building.medianRent.toLocaleString()}
-                                          {building.medianExpenses != null && (
-                                            <>
-                                              {' · '}
-                                              {t('costs.overview.expenses')} ≈{' '}
-                                              {building.medianExpenses.toLocaleString()}
-                                            </>
-                                          )}
-                                        </p>
-                                        {building.medianTotalPerM2 ? (
-                                          <p className="text-xs text-muted-foreground">
-                                            ≈ {building.medianTotalPerM2.toLocaleString()}{' '}
-                                            {t('costs.overview.perM2')}
-                                          </p>
-                                        ) : null}
-                                      </div>
+                                      <BuildingFigureSummary figure={building.figure} />
                                       <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                                     </div>
                                   </div>
@@ -686,7 +630,11 @@ export function CostsOverviewClient({
                 </TabsContent>
 
                 <TabsContent value="compare">
-                  <DistrictComparison stats={computedDistrictStats} citySlug={citySlug} />
+                  <DistrictComparison
+                    rows={districtRows}
+                    rentalType={rentalTypeFilter}
+                    citySlug={citySlug}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
