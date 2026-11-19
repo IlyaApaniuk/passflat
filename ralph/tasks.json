@@ -760,7 +760,8 @@
         "T047",
         "T048",
         "T049",
-        "T050"
+        "T050",
+        "T051"
       ],
       "status": "todo",
       "acceptance": [
@@ -781,13 +782,13 @@
         "Draft keys listed in the progress entry for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found in T025: both keys render on the post-submit screen next to the neutral area reference. Copy only, no logic.",
       "id": "T047",
       "milestone": "M3",
       "title": "Post-submit screen: drop the ranking promise and the overpay framing of the share invite",
       "spec": "docs/specs/03-building-figures.md#comparisons",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T026"],
@@ -838,6 +839,22 @@
       "milestone": "M4",
       "title": "Flush PostHog at the end of the deposit flow background task",
       "spec": "docs/specs/04-telegram-bot.md#bot-analytics",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T047"],
+      "acceptance": [
+        "costs.submit.unlockItemDeposit and costs.submit.unlockItemTenure no longer present the deposit-return and tenure figures as unlocked by login: the building page shows both publicly (only the per-utility breakdown sits behind GatedSection / useHasContributed). Drop the two list items or reword them neutrally; draft copy in all four locales, identical key sets",
+        "costs.submit.unlockTitle / unlockDesc stay consistent with what login actually gives (the report claimed and shown in the dashboard, the utilities breakdown)",
+        "Draft keys listed in the progress entry for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T047: building/[slug]/client.tsx gates only the utilities detail and the (never drawn) position bar; deposit returns and tenure render publicly. Copy only, no gating change.",
+      "id": "T051",
+      "milestone": "M3",
+      "title": "Post-submit unlock list: stop promising that login unlocks the public deposit and tenure figures",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
       "status": "todo"
     }
   ]

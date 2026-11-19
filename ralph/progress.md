@@ -966,3 +966,22 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Assumption constants: T004, T005, T009, T010, T017 (Q-3 block in `cost-figures.ts`), T022 (`MIN_COMPARABLE_N`), T031/T038 (`ENTRY_SOURCE`). T044 set one in its doc only (the Telegram address funnel window).
   - Owner actions: T037 (`npm run bot:webhook -- https://passflat.com`), T041 (send the scenario list to a lawyer), T044 (run the queries once, fill in the deploy date), T045 (confirm the bot's production status).
   - No entry added a table or a migration.
+
+### 2026-11-19 05:40 · T047 · done
+
+- Done (copy only, no logic):
+  - `src/i18n/messages/{pl,en,ru,uk}.json`:
+    - `costs.submit.unlockItemPosition` no longer promises where the building ranks in its district. It now names what login gives: the report in the dashboard, next to the district or city figures (the dashboard sets each own report beside `loadAreaReference`).
+    - `costs.submit.shareInviteDesc` no longer asks friends whether they overpay. It now says friends who rent will see this district's figures and can add their own costs (the link opens `costs/share?d=<district>`).
+  - `src/app/[locale]/[city]/costs/submit/client.tsx`: two code comments updated (the unlock block no longer lists "district position"; the share block no longer says "check if THEY over/underpay").
+  - New `src/app/[locale]/[city]/costs/submit/post-submit-copy.test.ts`: both keys exist in all four locales and contain no ranking or overpay wording (rank/position/overpay/cheaper/pricier in EN, PL, RU, UK).
+  - New task T051, also added to T046's `dependsOn`: `unlockItemDeposit` and `unlockItemTenure` say login unlocks deposit-return and tenure figures, but the building page already shows both publicly. Only the per-utility breakdown sits behind `GatedSection` / `useHasContributed`.
+- Namespace: `costs.submit.*` is already read by the submit client; no provider change.
+- Checks: `npx vitest run` on the new test and `src/i18n/messages.test.ts`: 10/10 passed. `npm run verify` exit 0: lint, typecheck, knip (33 unused exports, as before), Vitest 72 files / 924 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review:
+  - Draft copy, all four locales: `costs.submit.unlockItemPosition`, `costs.submit.shareInviteDesc`.
+    - EN `unlockItemPosition`: "Your report in your dashboard, next to the figures for your district or city".
+    - EN `shareInviteDesc`: "Send it to friends who rent: they'll see the figures for this district and can add their own costs."
+  - No assumptions, tables or migrations.
+- Next: T048 (share page copy), T049, T050, T051, then T046 from a clean tree. T046's handoff should add T047's two draft keys under website draft copy.

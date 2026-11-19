@@ -1305,9 +1305,10 @@ export function CostSubmitClient({
                   </div>
                 )}
                 {/* Anonymous submitter: their report is already saved. Hook them
-                    to log in — it claims the report and unlocks the deeper, gated
-                    building stats (utilities breakdown, deposit return, tenure,
-                    district position). The pf_anon cookie survives the redirect,
+                    to log in — it claims the report (shown in the dashboard beside
+                    the area reference) and unlocks the gated utilities breakdown.
+                    No ranking promise: a position bar needs `isComparable`, which
+                    no PRD 1 surface meets (FR-29). The pf_anon cookie survives the redirect,
                     so the auth callback claims it and the building page lands
                     already-unlocked. */}
                 {isAnonymous && (
@@ -1357,9 +1358,9 @@ export function CostSubmitClient({
                   </div>
                 )}
 
-                {/* Share the comparison — invite friends/acquaintances (wherever
-                    they live) to check if THEY over/underpay and add their own
-                    costs. Primary for logged-in submitters (virality is the goal);
+                {/* Share the district's figures — invite friends who rent to look
+                    at them and add their own costs, with no overpay framing
+                    (FR-29). Primary for logged-in submitters (virality is the goal);
                     demoted to a neutral, outline card for anonymous — their share
                     carries no peer-ref and the claim-via-login above is the
                     higher-value next step. */}
