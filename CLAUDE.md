@@ -77,8 +77,9 @@ conversation is Russian and is independent of repository language.
 - The building page, the checker and the bot read the figure contract (`src/lib/cost-figures.ts`)
   and show the tenant group (`user` + `import`) and the asking-price group (`scraped`)
   separately, each with its N (PRD 1 package C). Single-number surfaces (map, cards, district
-  roll-ups, calculator, OG, bot `/districts`, neighbours) still blend all three sources by the
-  owner's decision D4 (cold start) until Q-2 is answered. Never call a blended figure "market",
+  roll-ups, calculator, OG, bot `/districts`, neighbours) move by D23 to the tenant group when it
+  has a usable value, else the asking-price group, labelled with group and N (T028, T052 – T054);
+  until those tasks ship they still blend all three sources. Never call a blended figure "market",
   never write "verified" or "checked by tenants", never invent statistics, and gate any
   percentage comparison at N ≥ 5.
 - Reviews and tags describe buildings, never named private persons.

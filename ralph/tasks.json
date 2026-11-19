@@ -9,18 +9,18 @@
     {
       "id": "T002",
       "milestone": "M1",
-      "title": "Fix landing events lost before posthog.init (PRD 2 FR-1, if moved into PRD 1)",
+      "title": "Fix landing events lost before posthog.init (FR-13, moved from PRD 2 FR-1)",
       "spec": "docs/specs/01-analytics-context.md#landing-capture",
       "dependsOn": [],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
-        "Built exactly as PRD 2 FR-1 acceptance criteria 1-7 (docs/product/prd/prd-2-deposit-sprint.md): a test that fails on the current code first; if the loss cannot be reproduced, block with the finding instead of changing the provider",
+        "Built exactly as criteria 1-8 of spec 01 §Landing capture: a test that fails on the current code first; if the loss cannot be reproduced, block with the finding instead of changing the provider",
         "The before_send page context of T005 still attaches to every event after init moves",
         "Consent model and analytics identity unchanged (D10); existing consent tests pass unchanged"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: Q-1 (prd-1-decision-review.md). Should PRD 2 FR-1 (landing $pageview and mount-time events dropped because PostHogPageView captures before the parent effect runs posthog.init; 86 % of visits have no $pageview) move into PRD 1 now, so E8 and E9 can be read? Proposal: yes."
+      "notes": "Blocked: Q-1 (prd-1-decision-review.md). Should PRD 2 FR-1 (landing $pageview and mount-time events dropped because PostHogPageView captures before the parent effect runs posthog.init; 86 % of visits have no $pageview) move into PRD 1 now, so E8 and E9 can be read? Proposal: yes.\nOwner answer: Q-1 yes (D22, 2026-11-19): PRD 2 FR-1 moves into PRD 1; build it from spec 01 §Landing capture, which now holds the criteria (PRD 2 v0.2 drops FR-1)."
     },
     {
       "id": "T003",
@@ -451,17 +451,20 @@
     {
       "id": "T028",
       "milestone": "M3",
-      "title": "Single-number surfaces: apply the owner's rule for a mixed base",
+      "title": "Single-number rule (slice 1): tenant group else asking prices, labelled, on the costs overview",
       "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
       "dependsOn": ["T027"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
-        "Map markers, list cards, district roll-ups, city hub, district pages, calculator baseline, home hero and district medians, home top building, blog data report, OG images, the bot /districts table and rank, and neighbour medians follow the owner's answer to Q-2, each labelled with its group and N",
-        "Golden tests for the chosen rule; the same metric shows the same value as the building page"
+        "One pure function in src/lib/cost-figures.ts picks the group per building or area as in spec 03 §Single-number surfaces §The rule, with golden examples 12-16 as tests",
+        "getBuildingsData gives each building the chosen group, metric, median and N per rental type (replacing the blended byType); its cache key is renamed",
+        "/[city]/costs map markers and popups, list cards and the district tab (district-level summaries instead of rollUpDistricts) show that figure with its group label and N; a known part is labelled as such; no blended number is shown there",
+        "Label keys added in all four locale files (draft), namespaces checked; keys and the namespace named in the progress entry",
+        "The same building shows the same value and N on the costs overview as the building page's headline of that group (a test)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: Q-2. Single-number surfaces (map, cards, district roll-ups, hero, calculator, OG, blog report, bot /districts, neighbours) blend user, import and scraped (D4), while PRD 1 says not to combine listings and residents' reports into one number: (a) tenant group with fallback to asking prices, labelled; (b) keep the blend with a composition label; or (c) two numbers? Proposal: (a). May split into several tasks after the answer."
+      "notes": "Blocked: Q-2. Single-number surfaces (map, cards, district roll-ups, hero, calculator, OG, blog report, bot /districts, neighbours) blend user, import and scraped (D4), while PRD 1 says not to combine listings and residents' reports into one number: (a) tenant group with fallback to asking prices, labelled; (b) keep the blend with a composition label; or (c) two numbers? Proposal: (a). May split into several tasks after the answer.\nOwner answer: Q-2 option (a) (D23, 2026-11-19): tenant group when usable, else asking prices, always labelled with group and N; supersedes D4 there. Split into four slices; this task is slice 1 (rule + costs overview), see spec 03 §Single-number surfaces."
     },
     {
       "id": "T029",
@@ -469,14 +472,14 @@
       "title": "Rewrite marketing copy that claims verified or actually-paid figures",
       "spec": "docs/specs/03-building-figures.md#marketing-copy",
       "dependsOn": ["T018"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Every key listed in the spec section follows the owner's answer to Q-4 in all four locale files",
         "The home hero and blog report deposit numbers use summarizeDepositReturns (no partial returns or current tenants counted as returned in full)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: Q-4. About 25 marketing keys say 'verified', 'checked by tenants', 'actually pay' or 'returned in full' (D3 kept them; CLAUDE.md and PRD 1 forbid them): rewrite to 'costs tenants reported' wording drafted by the agent, or keep them?"
+      "notes": "Blocked: Q-4. About 25 marketing keys say 'verified', 'checked by tenants', 'actually pay' or 'returned in full' (D3 kept them; CLAUDE.md and PRD 1 forbid them): rewrite to 'costs tenants reported' wording drafted by the agent, or keep them?\nOwner answer: Q-4 rewrite (D25, 2026-11-19): reported-costs wording in four locales drafted by the agent for review; faqA3 = got it back, fully or partly; hero and blog deposit numbers use summarizeDepositReturns; supersedes D3 for honesty copy."
     },
     {
       "id": "T030",
@@ -484,13 +487,13 @@
       "title": "Apply the owner's answer on the figure parameters",
       "spec": "docs/specs/03-building-figures.md#parameters-to-confirm",
       "dependsOn": ["T017"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "The Q-3 constants in src/lib/cost-figures.ts match the owner's answer; golden tests and the spec section are updated; every surface still passes its tests"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-3. Confirm the cautious defaults: tenant group = user + import; legacy utilitiesComplete=null counts as not established; untrimmed medians; expenses never below 0; 'one observation' = a group with one report; dates as month/year and tenancy as years; deposit share only from 3 answers; reference level by the district's report count?"
+      "notes": "Blocked: Q-3. Confirm the cautious defaults: tenant group = user + import; legacy utilitiesComplete=null counts as not established; untrimmed medians; expenses never below 0; 'one observation' = a group with one report; dates as month/year and tenancy as years; deposit share only from 3 answers; reference level by the district's report count?\nOwner answer: Q-3 confirmed (D24, 2026-11-19): every cautious default stays as built; mark the constants decided, keep values and golden tests."
     },
     {
       "id": "T031",
@@ -681,14 +684,14 @@
       "title": "Deposit flow wording for an unread contract, a non-lease and unsupported cases",
       "spec": "docs/specs/04-telegram-bot.md#deposit-helper-scope",
       "dependsOn": ["T041"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "The texts and the verdict presentation for contractFailed, contractNotLease, unsupported files and the owner-defined unsupported cases follow the owner's wording (RU and UK), with no confident personal conclusion",
         "Tests cover each state's message"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-5. Approve the RU/UK wording when the lease was not read or is not a lease (general rule, not a conclusion about your contract), replacing the «Разбор» header and strength word there, what counts as an unsupported case, and how to point disputed cases to qualified help (drafts in the decision review)."
+      "notes": "Blocked: Q-5. Approve the RU/UK wording when the lease was not read or is not a lease (general rule, not a conclusion about your contract), replacing the «Разбор» header and strength word there, what counts as an unsupported case, and how to point disputed cases to qualified help (drafts in the decision review).\nOwner answer: Q-5 approved (D26, 2026-11-19): RU wording verbatim from the decision review, UK drafted in the same sense; texts and rules in spec 04 §Deposit helper scope. A14 lawyer review still needed before wide promotion."
     },
     {
       "id": "T043",
@@ -696,14 +699,14 @@
       "title": "wants_lawyer: explain before and after the tap that no service exists yet",
       "spec": "docs/specs/04-telegram-bot.md#lawyer-interest",
       "dependsOn": [],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "btnWantLawyer and lawyerAck follow the owner's wording (RU and UK): no promise of a response time, a consultation or a future message",
         "tg_lawyer_interest unchanged and separate from any outcome event; a test covers the confirmation text"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-6. Approve the button text and confirmation for wants_lawyer (draft: interest recorded, no legal help through Passflat yet, no promise to write), or hide the button until a partner exists?"
+      "notes": "Blocked: Q-6. Approve the button text and confirmation for wants_lawyer (draft: interest recorded, no legal help through Passflat yet, no promise to write), or hide the button until a partner exists?\nOwner answer: Q-6 keep the button (D27, 2026-11-19): RU texts verbatim from the decision review, UK drafted in the same sense; texts in spec 04 §Lawyer interest."
     },
     {
       "id": "T044",
@@ -735,44 +738,6 @@
       "checks": ["npm run verify"],
       "attempts": 1,
       "notes": ""
-    },
-    {
-      "id": "T046",
-      "milestone": "M5",
-      "title": "Final check of PRD 1 and handoff for the owner",
-      "spec": "docs/specs/05-measurement-docs.md#final-check",
-      "dependsOn": [
-        "T003",
-        "T006",
-        "T008",
-        "T012",
-        "T014",
-        "T016",
-        "T022",
-        "T025",
-        "T026",
-        "T027",
-        "T034",
-        "T039",
-        "T041",
-        "T044",
-        "T045",
-        "T047",
-        "T048",
-        "T049",
-        "T050",
-        "T051"
-      ],
-      "status": "done",
-      "acceptance": [
-        "npm run verify and npm run test:e2e pass; node scripts/ralph-tasks.mjs summary shows every non-blocked PRD 1 task done",
-        "docs/specs/README.md requirement map marks each FR Done or Blocked with its task",
-        "CLAUDE.md 'Cost data honesty' says the building page, checker and bot show tenant and asking-price groups separately (PRD 1 package C) while single-number surfaces follow D4 until Q-2",
-        "The progress entry lists all draft copy keys (website and bot), the Assumption constants, the blocked tasks with their questions, that no table or migration was added, the owner step npm run bot:webhook for the new command menu, and what remains unverified (mobile flows by eye, Live Events after deploy, the bot in production)"
-      ],
-      "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 2,
-      "notes": "Failed: T047-T050 (runnable PRD 1 tasks added after T046) were still todo, so 'every non-blocked PRD 1 task done' could not pass; added them to dependsOn so the loop runs them first. verify and test:e2e pass at 050ae06."
     },
     {
       "dependsOn": ["T025"],
@@ -856,6 +821,179 @@
       "title": "Post-submit unlock list: stop promising that login unlocks the public deposit and tenure figures",
       "spec": "docs/specs/03-building-figures.md#comparisons",
       "status": "done"
+    },
+    {
+      "id": "T046",
+      "milestone": "M5",
+      "title": "Final check of PRD 1 and handoff for the owner",
+      "spec": "docs/specs/05-measurement-docs.md#final-check",
+      "dependsOn": [
+        "T003",
+        "T006",
+        "T008",
+        "T012",
+        "T014",
+        "T016",
+        "T022",
+        "T025",
+        "T026",
+        "T027",
+        "T034",
+        "T039",
+        "T041",
+        "T044",
+        "T045",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051"
+      ],
+      "status": "done",
+      "acceptance": [
+        "npm run verify and npm run test:e2e pass; node scripts/ralph-tasks.mjs summary shows every non-blocked PRD 1 task done",
+        "docs/specs/README.md requirement map marks each FR Done or Blocked with its task",
+        "CLAUDE.md 'Cost data honesty' says the building page, checker and bot show tenant and asking-price groups separately (PRD 1 package C) while single-number surfaces follow D4 until Q-2",
+        "The progress entry lists all draft copy keys (website and bot), the Assumption constants, the blocked tasks with their questions, that no table or migration was added, the owner step npm run bot:webhook for the new command menu, and what remains unverified (mobile flows by eye, Live Events after deploy, the bot in production)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 2,
+      "notes": "Failed: T047-T050 (runnable PRD 1 tasks added after T046) were still todo, so 'every non-blocked PRD 1 task done' could not pass; added them to dependsOn so the loop runs them first. verify and test:e2e pass at 050ae06."
+    },
+    {
+      "dependsOn": ["T028"],
+      "acceptance": [
+        "The city hub ([city]/page.tsx), district pages ([city]/[district]/page.tsx), the calculator baseline ([city]/calculator/page.tsx) and the home hero district medians and top building ([locale]/page.tsx) show the figure chosen by the T028 function, each with its group label and N; no blended number remains on them",
+        "Area figures are district- or city-level summaries over reports and equal the loadAreaReference headline for the same area and rental type (a test)",
+        "Calculator tariffs unchanged; every cache key whose shape changes is renamed; draft label keys in all four locale files named in the progress entry"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 2 of 4 (spec 03 §Single-number surfaces §Slices).",
+      "id": "T052",
+      "milestone": "M3",
+      "title": "Single-number rule (slice 2): city hub, district pages, calculator baseline and the home page",
+      "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T052"],
+      "acceptance": [
+        "The blog data report (blog/warsaw-rent-prices/page.tsx) shows the chosen figure per area with its group label and N",
+        "/api/og and every generateMetadata that passes a cost number to it (the building page included) use the chosen figure and render its group label and N; no blended number in titles, descriptions or images",
+        "The share page and its OG card show the district figure by the same rule",
+        "Tests for the metadata and OG parameter builders as pure functions; draft label keys in all four locale files named in the progress entry"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 3 of 4 (spec 03 §Single-number surfaces §Slices).",
+      "id": "T053",
+      "milestone": "M3",
+      "title": "Single-number rule (slice 3): blog data report, OG images and the share page",
+      "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T053"],
+      "acceptance": [
+        "The bot /districts table, the typed-district rank line and tg_district_checked.report_count read area summaries by the T028 rule; a rank or cheapest line only for items that pass isComparable (golden example 16), otherwise none",
+        "Neighbour medians in the bot (lookup.ts) and the checker (location-score route, aggregateLocationCheckerCosts) show the chosen group with its label and N; RU and UK bot labels drafted and named in the progress entry",
+        "cost-baselines.ts and the blended getBuildingsData fields are removed when nothing reads them (knip passes); any remaining consumer is named in the progress entry",
+        "CLAUDE.md Cost data honesty, spec 03, docs/specs/README.md, src/lib/bot/README.md and docs/architecture.md no longer say that single-number surfaces blend sources"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 4 of 4 (spec 03 §Single-number surfaces §Slices).",
+      "id": "T054",
+      "milestone": "M3",
+      "title": "Single-number rule (slice 4): bot /districts and neighbour medians, then remove the blend",
+      "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
+      "status": "todo"
+    },
+    {
+      "dependsOn": [],
+      "acceptance": [
+        "New CRON_SECRET-authorised route src/app/api/cron/cleanup-listing-interest/route.ts deletes city_notify_subscriptions rows with a non-empty listingType whose createdAt is more than 12 months ago (one constant); city-launch rows are never deleted",
+        "vercel.json runs it daily (30 4 * * *); docs/architecture.md lists the cron",
+        "The route logs and returns only the deleted count; no e-mail in logs or the response",
+        "Route tests with mocked Prisma: the where clause for a fixed now, 401 without auth, the count",
+        "Account deletion is unchanged (Open for the owner in the spec)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Owner answer Q-14 option (a), D31, 2026-11-19.",
+      "id": "T055",
+      "milestone": "M6",
+      "title": "Delete listings-interest rows older than 12 months with a daily cron",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#listings-interest-retention",
+      "status": "todo"
+    },
+    {
+      "dependsOn": [],
+      "acceptance": [
+        "A purpose-scoped token pair in src/lib/email/unsubscribe.ts signs interest:<rowId> with the CRON_SECRET key and the same production refusal; a profile unsubscribe token never verifies as an interest token and the reverse (tests)",
+        "Page src/app/[locale]/email/remove-interest/page.tsx (force-dynamic, noindex) deletes that one listings-interest row for a valid token and shows success; an invalid token or a missing row shows the error text (tests with mocked Prisma)",
+        "POST /api/city-notify returns removeUrl for both listings classes, also on the P2002 success path, and not for city-launch rows; the ListingsEmptyState success message links to it",
+        "Draft copy in all four locale files in namespaces the components already receive; keys and namespaces named in the progress entry"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Owner answer Q-14 option (a), D31, 2026-11-19. Where the link appears is an Assumption (spec).",
+      "id": "T056",
+      "milestone": "M6",
+      "title": "Remove-interest link with a signed token for listings-interest rows",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#remove-interest-link",
+      "status": "todo"
+    },
+    {
+      "dependsOn": [],
+      "acceptance": [
+        "POST /api/city-notify no longer sends city_notify_subscribed or district_notify_subscribed, and its captureServerException calls no longer pass the e-mail as distinctId; other route behaviour unchanged (route tests)",
+        "tg_address_not_found sends no query; tg_address_outside_city sends only the resolved city name, or no property when none resolves (spec 04 §Typed text in bot events; tests with a fake track)",
+        "Other e-mail distinct ids found by a search of src/ are listed in the progress entry, not changed",
+        "docs/analytics/activation-funnels.md, docs/specs/05-measurement-docs.md and src/lib/bot/README.md no longer describe e-mail-keyed waitlist events or typed text in bot events"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Owner answer Q-15, D32, 2026-11-19.",
+      "id": "T057",
+      "milestone": "M6",
+      "title": "Stop e-mail-keyed waitlist events and typed text in bot address events",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#waitlist-server-events",
+      "status": "todo"
+    },
+    {
+      "dependsOn": [],
+      "acceptance": [
+        "The city-launch e-mail links to the locale URL of /<city>/costs instead of /<city>/replacement",
+        "Each row is claimed with updateMany on notifiedAt null before the send and sent only when count is 1; a failed send sets notifiedAt back to null; the selection is unchanged",
+        "Route tests with mocked Prisma and sendEmail: the link, two runs over one row send once, a failed send restores the row, 401 without auth; Resend is never called"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Owner answer Q-16, D33, 2026-11-19.",
+      "id": "T058",
+      "milestone": "M6",
+      "title": "City-launch e-mail: link to the costs page and claim each row before sending",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T002", "T029", "T030", "T042", "T043", "T054", "T055", "T056", "T057", "T058"],
+      "acceptance": [
+        "npm run verify and npm run test:e2e pass; the summary shows no other PRD 1 task left to do",
+        "The requirement map in docs/specs/README.md marks every FR and owner follow-up Done or names what is left; no row is Blocked on Q-1 to Q-6",
+        "No document under docs/ (except dated reviews and decision records) or CLAUDE.md still says single-number surfaces blend sources, that Q-1 to Q-16 are open, or that waitlist events are keyed by e-mail",
+        "The progress entry is the owner handoff for the PRD 1 deploy as listed in spec 05 §Final check after the owner answers (draft copy keys, Assumption constants, the new cron, no table or migration, the PostHog EU checklist, the four bot migrations one by one, RLS on three tables, token, webhook, bot:webhook, what remains unverified)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Added in the day run of 2026-11-19 (D38).",
+      "id": "T059",
+      "milestone": "M5",
+      "title": "Final check of PRD 1 after the owner answers of 2026-11-19, with the deploy handoff",
+      "spec": "docs/specs/05-measurement-docs.md#final-check-after-the-owners-answers",
+      "status": "todo"
     }
   ]
 }

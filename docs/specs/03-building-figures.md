@@ -215,8 +215,8 @@ FR-22, FR-24 – FR-28, FR-31 – FR-33. `src/app/[locale]/[city]/building/[slug
 - **Badges:** `costs.trust.reliable` ("reliable", N ≥ 5) and similar words must not claim
   verification or representativeness (FR-31). Replace "reliable" with a neutral sample-size
   badge ("5+ observations", draft); `earlyData` stays.
-- **Metadata:** `generateMetadata` (title, OG image) is a single-number surface: unchanged until
-  Q-2.
+- **Metadata:** `generateMetadata` (title, OG image) is a single-number surface: §Single-number
+  surfaces, slice 3 (T053).
 - **What else the page computes today** (`page.tsx:444-640`) and where it goes:
 
   | Today                                                        | After                                                                                          |
@@ -290,18 +290,91 @@ example 6 as buildings data (`byType.room.medianTotal 2,200`, `byType.apartment.
 
 ## Single-number surfaces
 
-FR-23, **Open** (Q-2). Map markers and popups (`CostsMap`), list cards, district roll-ups
-(`rollUpDistricts`), the city hub, district pages, the calculator baseline, the home hero and
-district medians, the home "top building", the blog data report and OG images show one number
-per building or area. So do the bot's `/districts` table with its "cheapest" rank
-(`lookup.ts:245-266`, `format.ts:269-277`, labelled "по отчётам жильцов") and the neighbour
-medians in the bot and the checker (`lookup.ts:138`, `location-score/route.ts:384`). Whether
-that number is the tenant group with fallback to asking prices, a labelled blend, or two
-numbers is the owner's decision. Do not build until Q-2 is answered.
+FR-23, **Decided** (Q-2 option (a), D23, 2026-11-19; supersedes D4 for these surfaces). Map
+markers and popups (`CostsMap`), list cards, district roll-ups (`rollUpDistricts`), the city
+hub, district pages, the calculator baseline, the home hero and district medians, the home "top
+building", the blog data report and OG images show one number per building or area. So do the
+bot's `/districts` table with its "cheapest" rank (`lookup.ts:245-266`, `format.ts:269-277`,
+labelled "по отчётам жильцов") and the neighbour medians in the bot and the checker
+(`lookup.ts:138`, `location-score/route.ts:384`). The share page and its OG card show one
+district figure too and follow the same rule. Every "until Q-2" note elsewhere in this spec
+(costs overview, building metadata, `cost-baselines` consumers) ends with these tasks.
+
+### The rule
+
+- **Decided:** each building or area shows the tenant group (`user` + `import`) when that group
+  has a usable value, otherwise the asking-price group (`scraped`); the number is always
+  labelled with its group and its N. Scraped reports stay in the database and on the building
+  page, where both groups are shown (§Building page). A blended number over both groups is never
+  shown again on these surfaces.
+- **Assumption (one function in `src/lib/cost-figures.ts`, for example
+  `singleNumberFigure(summary)`):** "usable value" means the group's headline metric of the
+  contract has `n ≥ 1` (`completeTotal`, else `knownPartTotal`, else `rent`, as in §Rules). The
+  group is chosen once per building or area and every number of that item comes from it (a
+  card never mixes tenant rent with an asking total). A known-part total is labelled "known
+  part" (FR-25); one report is shown with N 1 and no range (FR-24).
+- **Area figures** (district roll-ups, district pages, city hub, home district medians, the bot's
+  `/districts`) are `summarizeFigures` over the area's visible reports (median of reports, not a
+  median of building medians), so a district shows the same value and N as `loadAreaReference`
+  (FR-34). The rental-type filter of a surface is applied before the summary (FR-30).
+- **Ranks and "cheapest" lines** follow §Comparisons: a rank, "cheapest" or position statement
+  only across items whose figures pass `isComparable` (same group, same single rental type, both
+  N ≥ 5). With `rentalType: 'all'` (the bot's `/districts`, the typed-district rank line) no
+  rank is shown; the table lists each area's value with its group and N. Sorting a list by
+  value is a display order, not a claim, and is allowed.
+- **Labels (draft copy, four locales and bot RU/UK):** "tenant reports (N)", "asking prices
+  (N)", "known part". Existing keys such as the bot's «по отчётам жильцов» are used only when the
+  figure is the tenant group. Name the keys in the progress entry (Q-8: the owner reviews draft
+  copy before deploy).
+- **Caching:** every cache key whose result shape changes gets a new name (§Loaders).
+
+### Golden examples (tests in `src/lib/cost-figures.test.ts`)
+
+12. **Tenant wins.** Example 1's building → tenant, `completeTotal` 3,850 (n 2), label "tenant
+    reports (2)".
+13. **Asking fallback.** Two `scraped` reports, totals 4,100 and 3,900, `utilitiesComplete=false`
+    → asking, known part 4,000 (n 2), label "asking prices (2), known part".
+14. **Tenant with fewer reports still wins.** One `user` report, total 3,100,
+    `utilitiesComplete=false`, and three `scraped` reports → tenant, known part 3,100 (n 1).
+15. **Area.** A district with 3 tenant and 40 asking reports → the district figure is the tenant
+    group with N 3; its value equals `loadAreaReference(...).summary.groups.tenant`'s headline.
+16. **No rank without comparability.** Districts A tenant 3,900 (37), B tenant 3,500 (6), C
+    asking 3,200 (12), D tenant 3,000 (2), all `rentalType: 'all'` → no "cheapest" line; with
+    `rentalType: 'apartment'` and the same figures, only A and B may be ranked (B before A).
+
+### Slices (one loop iteration each)
+
+1. **T028:** the rule function with examples 12–16, and the costs overview (`/[city]/costs`):
+   `getBuildingsData` gives each building the chosen group, metric, median and N (per rental
+   type, replacing the blended `byType`); map markers and popups, list cards and the district
+   tab (district-level summaries instead of `rollUpDistricts`) show it with the label.
+2. **T052:** the city hub (`[city]/page.tsx`), district pages (`[city]/[district]/page.tsx`),
+   the calculator baseline (`[city]/calculator/page.tsx`, tariffs unchanged), the home hero's
+   district medians and the home "top building" (`[locale]/page.tsx`).
+3. **T053:** the blog data report (`blog/warsaw-rent-prices/page.tsx`), OG images (`/api/og`
+   and every `generateMetadata` that passes a number to it, the building page included) and the
+   share page with its OG card.
+4. **T054:** the bot's `/districts` table and rank, the typed-district rank line and its
+   `tg_district_checked.report_count`, the neighbour medians in the bot and the checker
+   (`aggregateLocationCheckerCosts`); then remove `cost-baselines.ts` and the blended
+   `getBuildingsData` fields when nothing reads them (knip), and update `CLAUDE.md` "Cost data
+   honesty", this spec, `README.md`, `src/lib/bot/README.md` and `docs/architecture.md` so no
+   text says single-number surfaces blend sources.
 
 ## Marketing copy
 
-FR-31, **Open** (Q-4; D3 kept this copy). Keys that claim verification or that a blended figure
+FR-31, **Decided** (Q-4, D25, 2026-11-19; supersedes D3 for honesty copy). Rewrite every key
+below in all four locale files to "costs tenants reported" / "reported costs" wording (RU «расходы,
+о которых сообщили жильцы» / «сообщённые расходы» or the closest natural phrase; the agent
+drafts PL, EN, RU, UK and lists every key in the progress entry for the owner's review, Q-8).
+No key may say "verified", "checked by tenants", "actually pay" or "returned in full" about
+reported figures. `faqA3` becomes "got it back, fully or partly". Where a key states a number
+of tenant reports for a count that includes asking prices, the count becomes the tenant group's
+count or the wording names both groups. The home hero and the blog-report deposit numbers use
+`summarizeDepositReturns` (gate `MIN_DEPOSIT_ANSWERS`, "X of N who answered got it back, fully or
+partly"); below the gate the claim is not shown.
+
+The list as found on 2026-11-19. Keys that claim verification or that a blended figure
 is what tenants pay (same key in all four locale files): `landing.hero.subtitle`,
 `landing.hero.trustRealCostDesc`, `landing.hero.trustVerified`, `trustVerifiedDesc`,
 `landing.bentoGrid.realCostDataDesc`, `landing.costTransparency.subtitle`,
@@ -316,23 +389,27 @@ is what tenants pay (same key in all four locale files): `landing.hero.subtitle`
 building page task fixes the latter two through the groups). The numbers behind the deposit
 claims are in the same decision: the home hero (`src/app/[locale]/page.tsx:50-54`,
 `landing.hero.statsDeposit`) and the blog report (`blog/warsaw-rent-prices/page.tsx:68-83`)
-count partial returns and current tenants as "returned"; with Q-4 they switch to
-`summarizeDepositReturns`. Do not change the marketing keys or these numbers until Q-4 is
-answered.
+count partial returns and current tenants as "returned"; they switch to
+`summarizeDepositReturns` (above). A search of `src/i18n/messages/en.json` for "verified",
+"checked", "actually" and "in full" after the rewrite finds no claim about reported figures;
+the progress entry lists any match left and why.
 
 ## Parameters to confirm
 
-Q-3 (**Assumption**, built with the cautious default, each one constant in
-`src/lib/cost-figures.ts`): `tenant = user + import`; `LEGACY_NULL_IS_COMPLETE = false`; medians
-untrimmed everywhere; expenses `max(0, total − rent)`; `observation one` = a group with exactly
-one report; dates as month and year, tenancy as years, area rounded to 5 m² for one report;
-`MIN_DEPOSIT_ANSWERS = 3` also for a building's own deposit statistic; the reference level
-chosen by the district's total report count and shown per group. The confirmation task applies
-the owner's answer, updates the golden tests and this section.
+Q-3, **Decided** (D24, 2026-11-19): the owner confirmed every cautious default as built, each
+one constant in `src/lib/cost-figures.ts`: `tenant = user + import`, with `import` labelled as
+entered by Passflat from a tenant's answers; `LEGACY_NULL_IS_COMPLETE = false` (legacy
+`utilitiesComplete = null` is not established); medians untrimmed everywhere
+(`TRIM_OUTLIERS = false`); expenses `max(0, total − rent)` (`CLAMP_EXPENSES_AT_ZERO`);
+`observation one` = a group with exactly one report; dates as month and year, tenancy as years,
+area rounded to 5 m² for one report; `MIN_DEPOSIT_ANSWERS = 3`, also for a building's own
+deposit statistic; the reference level chosen by the district's total report count and shown
+per group with its own N. T030 keeps the values, marks the constants' comments as decided (D24)
+instead of pending Q-3, and keeps the golden tests unchanged.
 
 ## Consistency
 
-FR-34. For the same reports, the building page, the checker, the bot and (after Q-2) the map
-and cards show the same median and N of the same metric and group. A test in the checker task
+FR-34. For the same reports, the building page, the checker, the bot and (after T028–T054) the
+map, cards and area pages show the same median and N of the same metric and group. A test in the checker task
 and one in the bot task feed the same fixture through both paths and compare. Every new cached
 loader carries the `costs` tag.

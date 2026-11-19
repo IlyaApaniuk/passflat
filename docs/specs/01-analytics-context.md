@@ -52,7 +52,7 @@ segment is a city when it is not one of the static top-level routes under `src/a
 | `/<city>`, `/<city>/<district>`, `/<city>/costs`, `/<city>/costs/share`, `/<city>/calculator` | `costs`          |                                 |
 | `/<city>/costs/submit`                                                                        | `cost_submit`    |                                 |
 | `/resources`                                                                                  | `resources`      |                                 |
-| `/blog`, `/blog/<slug>`                                                                       | `blog`           | Assumption, Q-12                |
+| `/blog`, `/blog/<slug>`                                                                       | `blog`           | Decided (Q-12, D28)             |
 | anything else (`/<city>/review`, `/about`, `/auth/...`, ...)                                  | `other`          |                                 |
 
 Examples (golden tests): `/` → `{home, pl, null}`; `/ru/warsaw/roommate` →
@@ -160,10 +160,36 @@ when the headline is a known-part total). One pure function in `src/lib/cost-fig
 
 ## Landing capture
 
-FR-13, **Open** (Q-1): moving PRD 2 FR-1 into PRD 1. If the owner says yes, build PRD 2 FR-1 as
-written in `../product/prd/prd-2-deposit-sprint.md` (failing test first; block with the finding
-if the loss cannot be reproduced). The `before_send` context above must keep working after
-`init` moves.
+FR-13, **Decided** (Q-1, D22, 2026-11-19): PRD 2 FR-1 moved into PRD 1. PRD 2 version 0.2 no
+longer holds it; the criteria below are the source. Consent model and identity unchanged (D10).
+
+Who and when: any visitor's browser, on a full page load of any route. Result: the landing
+`$pageview` and every capture issued while the first page mounts reach PostHog exactly once.
+The cause (captures before `posthog.init`, because the child `PostHogPageView` effect runs
+before the provider's own effect) is an **Assumption** that the first test must prove.
+
+1. The agent first writes a test that fails on the current code. If it cannot reproduce the
+   loss, the task is blocked with the finding instead of changing the provider.
+2. Given `NEXT_PUBLIC_POSTHOG_KEY` is set and a test double of posthog-js that drops `capture`
+   calls made before `init` (posthog-js has such an uninitialised-capture guard), when a page
+   mounts, then the double records exactly one `$pageview` with `$current_url` after `init`.
+3. Given the same double, when the building page mounts, then it records one
+   `building_detail_viewed` (a mount-time capture is not dropped).
+4. Given a client-side navigation to another route, then exactly one more `$pageview` is
+   recorded; a re-render with the same pathname and search params records none.
+5. Given no key, then neither `init` nor `capture` runs and every page renders (unchanged).
+6. Persistence stays `memory` until consent and upgrades to `localStorage+cookie` on accept;
+   the analytics identity is unchanged (D10); the existing consent tests pass unchanged.
+7. The `before_send` page context above still attaches to every event after `init` moves.
+8. `docs/architecture.md` §5 states where `init` runs and why no capture can precede it;
+   the validity note and §Limitations of `docs/analytics/activation-funnels.md` say the fix is
+   built and must be verified in Live Events after deploy.
+
+Edge cases: SDK blocked by an ad blocker → pages work, nothing sent; consent accepted on the
+landing page → same identity (existing); `init` throws → pages still render. Where `init` runs
+(`posthog-provider.tsx` or an earlier point such as `src/instrumentation-client.ts`) is the
+agent's choice. After deploy (owner): in the first full week, sessions with `$pageview` on
+passflat.com are at least 90 % of sessions with `$web_vitals` (**Assumption**).
 
 ## Locale key parity
 

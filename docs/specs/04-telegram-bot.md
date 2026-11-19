@@ -160,8 +160,8 @@ FR-41 (**Decided**); values **Assumption**.
 - `tg_district_checked` adds `entry_source`, `source_kind`, `n`, `incomplete`.
 - A building opened by `b_` fires one `tg_address_checked` with `entry_source=link_building`
   and no second event from the address path.
-- `tg_address_not_found` and `tg_address_outside_city` keep sending the typed `query` (free
-  text) until the owner answers Q-15; do not add free text to any new event.
+- `tg_address_not_found` and `tg_address_outside_city` stop sending the typed `query` (Q-15,
+  **Decided**, D32): §Typed text in bot events (T057). Do not add free text to any new event.
 - A pure `checkEventProperties(lookup, entrySource)` is tested.
 
 ## Links to the website
@@ -179,9 +179,48 @@ submit page's param parsing (extract it into a pure function) asserts the prefil
 
 ## Deposit helper scope
 
-FR-43, **Open** (Q-5): wording for an unread contract, a non-lease and an unsupported case, the
-"⚖️ Разбор" header, and pointing disputed cases to qualified help. Do not change the verdict, the
-rules, the letter or these texts until the owner answers. Drafts are in the decision review.
+FR-43, **Decided** (Q-5, D26, 2026-11-19). The owner approved the RU drafts of the decision
+review exactly as written; UK is the agent's draft in the same sense (review before deploy,
+Q-8). The rules in `deposit.ts`, the deadline computation and the letter text do not change.
+The Polish lawyer review (BRD A14) is still needed before the deposit flow is promoted widely.
+
+- **General-rule states.** (1) The contract could not be read (`contractFailed`); (2) the file
+  is not a lease (`contractNotLease`); (3) an unsupported case: reason `other`, or a returned
+  amount above the deposit. In these states the verdict:
+  - uses the header RU «⚖️ <b>Общее правило</b>», UK «⚖️ <b>Загальне правило</b>» instead of
+    «Разбор» / «Розбір»;
+  - shows no strength word: none of the bold verdict phrases («Скорее всего, закон на твоей
+    стороне», «Закон на твоей стороне», «Шансы хорошие», «Позиция слабее», «Здесь тоньше», «Это
+    может быть законно» and their UK forms) and no ✅ / ⚠️ strength mark; the statutory deadline
+    line and the factual explanation stay;
+  - for (1) and (2) adds the approved sentence right after the contract message.
+- **Approved RU (verbatim), contract not read:** «Договор прочитать не удалось, поэтому ниже —
+  общее правило закона, а не вывод по вашему договору. Срок в вашем договоре может быть
+  другим.»
+- **Not a lease (RU, the approved sentence with its first clause adapted; draft):** «Это не похоже
+  на договор аренды, поэтому ниже — общее правило закона, а не вывод по вашему договору. Срок в
+  вашем договоре может быть другим.»
+- **UK drafts:** «Договір прочитати не вдалося, тому нижче — загальне правило закону, а не
+  висновок щодо вашого договору. Строк у вашому договорі може бути іншим.» and «Це не схоже на
+  договір оренди, тому нижче — загальне правило закону, а не висновок щодо вашого договору.
+  Строк у вашому договорі може бути іншим.»
+- **Disputed sums (approved RU, verbatim):** «Если сумма спорная, лучше показать документы
+  юристу или в бесплатный пункт помощи (nieodpłatna pomoc prawna).» UK draft: «Якщо сума
+  спірна, краще показати документи юристу або в безоплатний пункт допомоги (nieodpłatna pomoc
+  prawna).» Shown in every general-rule state (**Assumption**: placement; the owner may widen it
+  to every verdict where the landlord withheld part of the deposit).
+- **Returned amount above the deposit:** no verdict and no letter (there is no claim). Reply RU
+  draft «Вернули больше, чем был залог, — такой случай бот не разбирает.» UK draft «Повернули
+  більше, ніж була застава, — такий випадок бот не розбирає.», followed by the disputed-sums
+  line. The case is not recorded as outcome `full` (**Assumption**: status as today, outcome
+  left empty). A returned amount equal to the deposit keeps `nothingOwed` as today.
+- **Register:** the approved RU sentences use «вы» while the rest of the flow uses «ты». They
+  are kept verbatim; the UK drafts follow the approved RU. The progress entry names this for the
+  owner.
+- `docs/legal-review/deposit-scenarios.md` is updated to the new texts in the same task.
+- Tests: one per state (contract failed, not a lease, reason `other`, returned above the
+  deposit, returned equal to the deposit) asserting the header, the absence of every strength
+  phrase and the presence of the approved sentences, in RU and UK.
 
 ## Scenarios for a lawyer
 
@@ -195,9 +234,20 @@ been reviewed by a lawyer. It does not add or change any rule.
 
 ## Lawyer interest
 
-FR-45, **Open** (Q-6): text before the `wants_lawyer` tap and the confirmation. `lawyerAck`
-currently promises «напишу сюда первым». Do not change until the owner answers. Keep
-`tg_lawyer_interest` separate from any outcome event.
+FR-45, **Decided** (Q-6, D27, 2026-11-19): keep the `wants_lawyer` button with the drafted
+texts. RU approved verbatim; UK is the agent's draft in the same sense (review before deploy,
+Q-8). `lawyerAck` today promises «напишу сюда первым»; that promise goes.
+
+- `btnWantLawyer` RU: «⚖️ Хочу помощь юриста (сервиса пока нет — отметим интерес)»; UK draft:
+  «⚖️ Хочу допомогу юриста (сервісу поки немає — відзначимо інтерес)».
+- `lawyerAck` RU: «Записал ваш интерес. Юридической помощи через Passflat пока нет, и мы не
+  обещаем, что напишем об этом. Если срок важен, обратитесь к юристу напрямую.» UK draft:
+  «Записав ваш інтерес. Юридичної допомоги через Passflat поки немає, і ми не обіцяємо, що
+  напишемо про це. Якщо строк важливий, зверніться до юриста напряму.»
+- `tg_lawyer_interest` is unchanged and stays separate from any outcome event; it is the only
+  money-interest signal of PRD 2 (D34). A test covers the confirmation text in RU and UK and that
+  it promises no reply, date or consultation.
+- `docs/legal-review/deposit-scenarios.md` is updated to the new texts in the same task.
 
 ## Deposit reminders
 
@@ -216,3 +266,17 @@ FR-46 (**Decided**); copy **agent draft**.
 - Tests with mocked Prisma and a fake `api.sendMessage`: two runs over the same due row send
   once; a failed send restores the row; `/cancel` clears pending follow-ups; the cron route
   without auth → 401.
+
+## Typed text in bot events
+
+Owner follow-up (M6), Q-15, **Decided** (D32, 2026-11-19). Today `src/lib/bot/bot.ts:124`
+sends `tg_address_not_found` with `{ query }` and `bot.ts:134` sends `tg_address_outside_city`
+with `{ query, city }`, where `query` is the address the user typed.
+
+- `tg_address_not_found` sends no `query` (geocoding resolved nothing, so no city exists).
+- `tg_address_outside_city` sends only `city`, the resolved city name from geocoding; when no
+  city resolves, the property is absent (not `null`, not the typed text).
+- Event names stay. No other bot event gains or keeps typed text.
+- Tests assert both property sets with a fake `track`.
+- `src/lib/bot/README.md` (event table and the note under it) and
+  `docs/analytics/activation-funnels.md` stop saying these events carry the typed text.

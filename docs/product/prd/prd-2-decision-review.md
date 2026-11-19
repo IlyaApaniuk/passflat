@@ -9,7 +9,9 @@
   English guide prompt stays hidden, draft copy is flagged). Starting the experiment (E10 day 0)
   cannot: it needs the owner's decisions 1, 2, 4, 5 and 6 below.
 - **Decisions for the owner:** 12, of which 5 block the start of E10 and 2 block parts of the
-  build (FR-3 Polish and English, FR-4 activation).
+  build (FR-3 Polish and English, FR-4 activation). **All 12 answered by the owner on
+  2026-11-19** (D22, D29, D30, D34 – D37; see [Answers, 2026-11-19](#answers-2026-11-19)); PRD 2
+  is at version 0.2, status Decided.
 - **Size:** about 12–14 tasks (M1 3, M2 3, M3 3, M4 3, M5 2); roughly 3–5 hours of loop time
   (two bot-flow tasks of 10–30 minutes, the rest 2–5 minutes each), within one day after
   PRD 1.
@@ -55,6 +57,25 @@
 | 10  | Move FR-1 into PRD 1 now (Q-5)                                                                                                                                                                   | Changes the scope of a PRD already in the loop                                                       | Proposal: yes; it is half a day and E8 and E9 cannot be read without it. If moved, FR-1 is removed here in version 0.2                                                                                                                                                                                                                                                                       | Order only                              |
 | 11  | Does E10 replace E6 (Q-10)?                                                                                                                                                                      | Experiment records are the owner's                                                                   | Proposal: mark E6 Stopped "replaced by E10" when E10 starts                                                                                                                                                                                                                                                                                                                                  | Records only                            |
 | 12  | A Polish deposit flow in the bot later (Q-3)                                                                                                                                                     | Product scope; legal copy in Polish                                                                  | Proposal: not now; decide after E10 shows which languages start cases                                                                                                                                                                                                                                                                                                                        | Nothing in PRD 2                        |
+
+## Answers, 2026-11-19
+
+The owner answered every decision in a chat on 2026-11-19 (in Russian; recorded in English).
+
+| #   | Answer, 2026-11-19                                                                                                                                                                                                                          | Decision |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1   | No paid next step in PRD 2: the paid-probe button, its event and `claim_band` are removed; `wants_lawyer` stays the only money-interest signal; 79 zł named as an indicative price for a possible future paid step, not live, nothing built | D34      |
+| 2   | Option (c): start E10 without naming the statutory deadline in the prompt and invitation copy ("prepares a letter in Polish"); the owner sends the scenario list to a Polish lawyer in parallel                                             | D35      |
+| 3   | Accepted: show the guide prompt on Polish and English pages with "the bot speaks Russian and Ukrainian"                                                                                                                                     | D37      |
+| 4   | The bot launches with the PRD 1 deploy; E10 day 0 is that date                                                                                                                                                                              | D29, D36 |
+| 5   | The owner commits 3–4 hours a week for 14 days: two 30-minute slots a day in the two largest RU/UA chats and Facebook groups                                                                                                                | D36      |
+| 6   | Continue at ≥ 15 started cases and ≥ 5 letters in 14 days; stop the deposit hook below 5 started; extend once in between. No paid-interest threshold                                                                                        | D36      |
+| 7   | Same as PRD 1 Q-11: PostHog moves to an EU project                                                                                                                                                                                          | D30      |
+| 8   | Moot after decision 1 (no `claim_band`)                                                                                                                                                                                                     | D34      |
+| 9   | Accepted: the owner tests only on the dev bot (no PostHog key); readouts count chats whose first `tg_bot_started` is on or after day 0                                                                                                      | D37      |
+| 10  | FR-1 moved into PRD 1 (T002); removed from PRD 2 in version 0.2                                                                                                                                                                             | D22      |
+| 11  | Accepted: E6 is marked Stopped "replaced by E10" when E10 starts                                                                                                                                                                            | D37      |
+| 12  | Accepted: no Polish deposit flow now                                                                                                                                                                                                        | D37      |
 
 ## Proposed new BRD assumptions
 

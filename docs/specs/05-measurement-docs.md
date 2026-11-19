@@ -51,8 +51,9 @@ as it is (event names and properties checked with a search of `src/`, not copied
    Split city-launch rows by `created_at` before and after the PRD 1 deploy: earlier whole-city
    roommate and sublet requests were stored as city-launch rows and are still selected by the
    city-launch mailing.
-   The two waitlist server events use the e-mail as their identity (existing; Q-15): the doc
-   names this and never copies an e-mail into a query result.
+   The two waitlist server events used the e-mail as their identity; T057 removes them (Q-15,
+   D32), after which the doc counts the waitlist by `listing_interest_saved` and database rows
+   and never copies an e-mail into a query result.
 5. **Two full weeks after the release:** compare week 1 and week 2 (Monday–Sunday): entries by
    `page_type` and `entry_page_type`, useful actions, saved requests (DB), sources (`ref`, UTM,
    referring domain) and errors (`listing_interest_failed` by `error_code`,
@@ -60,7 +61,9 @@ as it is (event names and properties checked with a search of `src/`, not copied
 6. **Limitations:** landing capture (FR-13) until the owner's fix is verified; memory mode drops
    context and `ref`/UTM on a full reload; `entry_page_type` restarts on reload (spec 01); the
    owner's anonymous visits cannot be excluded; numbers before 2026-07-28 are not comparable
-   (D10); PostHog region not stated until Q-11; E8 and E9 thresholds are the owner's (Q-9).
+   (D10); PostHog moves to a new EU Cloud project with the PRD 1 deploy, history before the
+   move stays in the US project (Q-11, D30, `docs/ops/posthog-eu-migration.md`); E8 and E9
+   thresholds are in `docs/product/experiments.md` (Q-9, D28).
 
 ## Bot README
 
@@ -86,3 +89,22 @@ FR-49. One task at the end:
   Assumption constants applied, the blocked tasks with their questions, that no table and no
   migration were added, and what remains unverified (mobile flows by eye, Live Events after
   deploy, the bot in production).
+
+## Final check after the owner's answers
+
+T059, after the tasks the owner's answers of 2026-11-19 unblocked or added (T002, T028 – T030,
+T042, T043, T052 – T058):
+
+- `npm run verify` and `npm run test:e2e` pass; `node scripts/ralph-tasks.mjs summary` shows
+  no todo task of PRD 1 left except this one.
+- The requirement map in `README.md` marks every FR and owner follow-up Done or names what is
+  left; no row says Blocked on Q-1 – Q-6.
+- No document under `docs/` (except dated reviews and decision records) or `CLAUDE.md` still
+  says that single-number surfaces blend sources, that Q-1 – Q-16 are open, or that the
+  waitlist events are keyed by e-mail.
+- The progress entry is the owner's handoff for the PRD 1 deploy (D29): every draft copy key
+  (website and bot, T029, T042, T043, T028 – T054, T056), the Assumption constants, the new
+  cron in `vercel.json`, that no table and no migration were added, the steps of
+  `docs/ops/posthog-eu-migration.md`, the four bot migrations to apply one by one, RLS on
+  `telegram_chats`, `telegram_subscriptions` and `deposit_cases`, the token, the webhook and
+  `npm run bot:webhook`, and what remains unverified.

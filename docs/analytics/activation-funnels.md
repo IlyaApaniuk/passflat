@@ -9,12 +9,13 @@ by a search of `src/` (see [How this was checked](#how-this-was-checked)), not c
 specs. None of the queries has been run: loop iterations never query PostHog. HogQL and SQL were
 checked by reading only, so run each one on a short interval before you rely on it.
 
-> **Validity.** E8 and E9 readouts are **valid only after FR-13 (landing capture, PRD 2 FR-1;
-> task T002, blocked on Q-1) is fixed and verified** in PostHog Live Events. Until then the first
+> **Validity.** E8 and E9 readouts are **valid only after FR-13 (landing capture, moved from
+> PRD 2 FR-1 by D22; task T002) is fixed and verified** in PostHog Live Events. Until then the first
 > page of a full page load usually sends no `$pageview` and no mount-time event, so entries are
 > undercounted and every split by entry page is wrong (see [Limitations](#6-limitations)).
 
-This document sets no targets. E8 and E9 thresholds are the owner's (Q-9). It contains no A/B
+This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
+§6 and `docs/product/experiments.md`). It contains no A/B
 tests and no revenue forecasts. Read counts, not rates, while the samples are small.
 
 ## 1. Event table
@@ -691,8 +692,13 @@ ORDER BY week, event, code
 - **The owner's anonymous visits cannot be excluded** in memory mode; a readout says so.
 - **Numbers before 2026-07-28 are not comparable** (D10): they counted only consenting
   visitors.
-- **PostHog region** is not stated here until Q-11 is answered.
-- **E8 and E9 thresholds** are the owner's (Q-9).
+- **PostHog project.** Production moves to a new PostHog EU Cloud project with the PRD 1
+  deploy (D30, 2026-11-19); history before the move stays in the US project. A readout that
+  spans the move date queries both and reports them separately
+  (`docs/ops/posthog-eu-migration.md`).
+- **E8 and E9 thresholds** (D28, counts over two full weeks): E8 ≥ 5 roommate sessions with a
+  role chosen and ≥ 2 with an offer viewed or interest saved; E9 ≥ 5 answered addresses and
+  ≥ 1 `cost_form_started` from them.
 - **Server and bot events cannot be joined** to client sessions: `listing_created`,
   `conversation_started` and `cost_report_submitted` use the account id or the `pf_anon` id, the
   waitlist events the e-mail, the bot `tg_<chatId>`.

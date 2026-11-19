@@ -1,9 +1,10 @@
 # PRD 1: Activation measurement and the Telegram bot
 
 - **Version:** 0.1 (draft), 2026-11-18
-- **Status:** In progress, 2026-11-19: 45 tasks (T002–T046) in `ralph/tasks.json`, 6 blocked
-  on owner questions; specs in `docs/specs/01`–`05`. Evaluated 2026-11-19
-  (`prd-1-decision-review.md`: ready with assumptions, 16 decisions, 6 of them blocking a task)
+- **Status:** In progress, 2026-11-19: 58 tasks (T002–T059) in `ralph/tasks.json`, none
+  blocked; specs in `docs/specs/01`–`05`. Evaluated 2026-11-19
+  (`prd-1-decision-review.md`: ready with assumptions, 16 decisions, 6 of them blocking a
+  task); all 16 answered by the owner on 2026-11-19 (D22 – D33)
 - **Serves:** H2 and H3 (measurement for E8 and E9), H5 and H1 (bot handoff and honest promises before E5 and E6); BRD A5, A8, A16
 - **Source:** the owner's implementation brief of 2026-10-07 (Russian; removed from the tree on 2026-11-18, kept in git history), translated without changes of substance. No code has been changed for it yet.
 - **Format:** not yet in the requirement format of `docs/product/prd-rules.md` (FR ids, acceptance criteria per requirement, Decided / Assumption / Open marks); the `prd-intake` skill restructures it in the decision review.
