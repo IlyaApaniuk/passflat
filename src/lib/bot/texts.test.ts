@@ -61,6 +61,11 @@ const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // `closingMessage` to every profile and deletes it (spec 06 §Closing route).
   optInClosing:
     'the closing route of FR-20: POST /api/cron/roommate-close, runRoommateClose, roommate-close.ts (T083)',
+  // The report receipt (spec 07 §Report, FR-31): "I'll tell you when that
+  // happens" is the notice to every reporter of a hidden profile (§Automatic
+  // hiding, FR-32 criterion 4, DSA Art. 16(6)); T095 builds that sender and adds
+  // its file and code to a backing map here.
+  reportReceipt: 'the hide notice to every reporter of spec 07 §Automatic hiding (T095)',
 };
 
 /**
@@ -210,12 +215,14 @@ describe('bot texts: no notification promises', () => {
     }
   });
 
-  it('allows exactly the three named promises, each with its backing code', () => {
+  it('allows exactly the four named promises, each with its backing code', () => {
     expect(Object.keys(ROOMMATE_PROMISE_EXCEPTIONS).sort()).toEqual([
       'openNobodyDaily',
       'optInClosing',
       'optInConfirm',
+      'reportReceipt',
     ]);
+    expect(ROOMMATE_PROMISE_EXCEPTIONS.reportReceipt).toMatch(/§Automatic hiding/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInConfirm).toMatch(/\bsendMatchingOpenMessages\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInClosing).toMatch(/\/api\/cron\/roommate-close\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.openNobodyDaily).toMatch(/\bsendDailyPushes\b/);

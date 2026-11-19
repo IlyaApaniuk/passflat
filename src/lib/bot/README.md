@@ -246,6 +246,24 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   thanks; a second tap or a profile never asked changes and sends nothing. A
   deleted partner's reactions cascade, so a person whose only match deleted their
   profile before day 21 is not asked.
+- **Report** (spec 07 §Report, FR-31; `roommate-safety.ts`): "Report" under every
+  card and every reveal (`rm:r:<id>`) offers five reasons (`REPORT_REASONS` in
+  `../roommate/rules.ts`: `money`, `fake`, `offensive`, `under_18`, `other`;
+  `rm:rr:<reason>:<id>`). Who may report whom is `findReportableProfile`: an active
+  or expired reporter who holds a reaction to the target (a card answered, or a
+  reveal, which is claimed on the reporter's own reaction), already reported it, or
+  may be shown it as a card now; otherwise "no longer available". A reason tap
+  stores one row per reporter and target (`storeReport`, `createMany` with
+  `skipDuplicates`), sends `tg_roommate_reported` (`reason` only) and the receipt
+  (`reportReceipt`: the check is automated, hidden from you now, from everyone at a
+  second reporter or at once for "looks under 18", you are told when that happens;
+  the promise check's exception, backed by the hide notice of spec 07 §Automatic
+  hiding). From then on the pair is out of each other's counts
+  (`loadRoommateCounts`), cards and `findCompatible` (`notReportedWith` in
+  `../roommate/counts.ts`); others still see the target. A repeat or an overlapping
+  tap → "already reported", nothing else; a target already hidden →
+  `reportReceiptHidden` only (nothing stored, no event). The switch is not read:
+  Report keeps working with it off.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -361,6 +379,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Interested, Done, steps, push, outcome   |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
+| `roommate-safety.ts`                             | Moderation (spec 07): Report and its reasons (FR-31)               |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
@@ -416,8 +435,9 @@ moment in the posting log and as a PostHog annotation (spec 07 §Switch).
 With it off, `/mate` shows the stage 1 intro and card, and every stage 2 button
 (`rm:show*`, `rm:i:*`, `rm:x:*`, `rm:u:done`, `rm:push:on`) replies "matching is
 paused". Turning it off again keeps stored reactions and sent reveals; the next
-steps, "Stop daily messages", the outcome question and its answers, and the
-send-hour retry of waiting reveals keep working (`roommate-switch.test.ts`).
+steps, "Stop daily messages", Report (`rm:r:*`, `rm:rr:*`), the outcome question
+and its answers, and the send-hour retry of waiting reveals keep working
+(`roommate-switch.test.ts`).
 
 ## Deep links
 

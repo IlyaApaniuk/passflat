@@ -80,6 +80,7 @@ vi.mock('./roommate-flow', () => ({
 }));
 // It builds its handlers from the (mocked) flow's helpers at import time.
 vi.mock('./roommate-matching', () => ({ registerRoommateMatching: vi.fn() }));
+vi.mock('./roommate-safety', () => ({ registerRoommateSafety: vi.fn() }));
 vi.mock('./lookup', () => ({
   getDistrictBySlug: mocks.getDistrictBySlug,
   getCity: mocks.getCity,

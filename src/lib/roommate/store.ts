@@ -3,8 +3,8 @@ import { Prisma, type RoommateProfile } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 import { isCompatible, type CompatibilityProfile } from './compatibility';
-import { activeProfilesWhere } from './counts';
-import { INTAKE_STEPS, type DistrictPick, type Outcome } from './rules';
+import { activeProfilesWhere, notReportedWith } from './counts';
+import { INTAKE_STEPS, type DistrictPick, type Outcome, type ReportReason } from './rules';
 import { computeExpiresAt } from './time';
 
 /**
@@ -291,8 +291,7 @@ function candidatesWhere(profile: Pick<RoommateProfile, 'id'>, now: Date) {
     id: { not: profile.id },
     reactionsGot: { none: { fromProfileId: profile.id } },
     reactionsGiven: { none: { toProfileId: profile.id, kind: 'skip' } },
-    reportsReceived: { none: { reporterProfileId: profile.id } },
-    reportsMade: { none: { targetProfileId: profile.id } },
+    ...notReportedWith(profile.id),
   } satisfies Prisma.RoommateProfileWhereInput;
 }
 
@@ -335,6 +334,65 @@ export async function findVisibleProfile(
     where: { ...candidatesWhere(viewer, now), id: targetId },
   });
   return target && isCompatible(viewer, target) ? target : null;
+}
+
+/** A profile `reporter` may report, and whether `reporter` already did. */
+export type ReportableProfile = { target: RoommateProfile; alreadyReported: boolean };
+
+/**
+ * Who may report whom (spec 07 §Report): the profile a Report button names (`rm:r:<id>`,
+ * `rm:rr:<reason>:<id>`) when `reporter` holds a reaction to it (a card they answered, or a reveal
+ * of it: a reveal is claimed on the receiving person's own `interest` reaction), already reported
+ * it, or may be shown it as a card now (`findVisibleProfile`: a card not answered yet). Else null:
+ * gone, never a card for this person, the reporter itself, or an id of the wrong shape. Not the
+ * card visibility rule alone, which hides reacted and reported profiles, so the Report button under
+ * a reveal works; the id from the callback is checked here, never trusted. A hidden or expired
+ * target is returned as it is (the caller decides).
+ */
+export async function findReportableProfile(
+  reporter: CompatibilityProfile & Pick<RoommateProfile, 'id'>,
+  targetId: string,
+  now: Date,
+): Promise<ReportableProfile | null> {
+  if (!PROFILE_ID_SHAPE.test(targetId) || targetId === reporter.id) return null;
+  const [reports, reactions] = await Promise.all([
+    prisma.roommateReport.count({
+      where: { reporterProfileId: reporter.id, targetProfileId: targetId },
+    }),
+    prisma.roommateReaction.count({
+      where: { fromProfileId: reporter.id, toProfileId: targetId },
+    }),
+  ]);
+  const target =
+    reports + reactions > 0
+      ? await prisma.roommateProfile.findUnique({ where: { id: targetId } })
+      : await findVisibleProfile(reporter, targetId, now);
+  return target ? { target, alreadyReported: reports > 0 } : null;
+}
+
+/**
+ * Stores a report (spec 07 §Report, FR-31): one row per reporter and target, created at `now`.
+ * `already` when the pair already holds one (the unique pair inserts nothing: a repeat or an
+ * overlapping tap), `gone` when the target was deleted since the check.
+ */
+export async function storeReport(
+  reporterProfileId: string,
+  targetProfileId: string,
+  reason: ReportReason,
+  now: Date,
+): Promise<'stored' | 'already' | 'gone'> {
+  try {
+    const { count } = await prisma.roommateReport.createMany({
+      data: [{ reporterProfileId, targetProfileId, reason, createdAt: now }],
+      skipDuplicates: true,
+    });
+    return count === 1 ? 'stored' : 'already';
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return 'gone';
+    }
+    throw error;
+  }
 }
 
 /**

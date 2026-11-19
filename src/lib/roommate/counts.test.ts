@@ -19,10 +19,26 @@ type Row = {
 type Where = Record<string, unknown>;
 
 const db = vi.hoisted(() => {
-  const state = { rows: [] as Row[], fail: null as Error | null };
+  const state = {
+    rows: [] as Row[],
+    reports: [] as { reporterProfileId: string; targetProfileId: string }[],
+    fail: null as Error | null,
+  };
+  /** `relation: { none: {...} }` over the reports: the field that points at the profile. */
+  const REPORTS = { reportsReceived: 'targetProfileId', reportsMade: 'reporterProfileId' } as const;
 
   function matches(row: Record<string, unknown>, where: Where): boolean {
     return Object.entries(where).every(([key, cond]) => {
+      if (key in REPORTS) {
+        const { none, ...rest } = cond as { none?: Record<string, string> };
+        if (!none || Object.keys(rest).length) throw new Error(`only none on ${key}`);
+        const own = REPORTS[key as keyof typeof REPORTS];
+        return !state.reports.some(
+          (report) =>
+            report[own] === row.id &&
+            Object.entries(none).every(([field, id]) => report[field as typeof own] === id),
+        );
+      }
       const value = row[key];
       if (cond === null) return value === null;
       if (cond instanceof Date || typeof cond !== 'object') return value === cond;
@@ -109,6 +125,7 @@ const P8_ANY = counted('P8', 'any');
 beforeEach(() => {
   vi.clearAllMocks();
   db.state.rows = structuredClone(EXAMPLE_1);
+  db.state.reports = [];
   db.state.fail = null;
 });
 
@@ -182,8 +199,34 @@ describe('loadRoommateCounts', () => {
         status: 'active',
         expiresAt: { gt: NOW },
         chat: { blockedAt: null, roommateBannedAt: null },
+        reportsReceived: { none: { reporterProfileId: 'P8' } },
+        reportsMade: { none: { targetProfileId: 'P8' } },
       },
       select: { id: true, districtSlugs: true, anyDistrict: true },
+    });
+  });
+
+  it('leaves out the profiles the viewer reported or was reported by (spec 07 §Report)', async () => {
+    db.state.reports = [
+      { reporterProfileId: 'P8', targetProfileId: 'P1' },
+      { reporterProfileId: 'P4', targetProfileId: 'P8' },
+      { reporterProfileId: 'P2', targetProfileId: 'P3' },
+    ];
+    expect(await loadRoommateCounts(P8, NOW)).toEqual({
+      kind: 'districts',
+      districts: [
+        { slug: 'mokotow', count: 1 },
+        { slug: 'wola', count: 0 },
+      ],
+      anyDistrict: 1,
+      total: 3,
+    });
+    // The website has no viewer: every active profile counts, reported or not.
+    expect(await loadRoommateCounts(null, NOW)).toMatchObject({ total: 6 });
+    expect(db.prisma.roommateProfile.findMany.mock.calls[1][0].where).toEqual({
+      status: 'active',
+      expiresAt: { gt: NOW },
+      chat: { blockedAt: null, roommateBannedAt: null },
     });
   });
 

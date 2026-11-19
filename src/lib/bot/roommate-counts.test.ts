@@ -15,12 +15,27 @@ type Row = Record<string, unknown>;
 type Where = Record<string, unknown>;
 
 const db = vi.hoisted(() => {
-  const state = { profiles: [] as Row[], chats: [] as Row[], fail: null as Error | null };
+  const state = {
+    profiles: [] as Row[],
+    chats: [] as Row[],
+    reports: [] as Row[],
+    fail: null as Error | null,
+  };
   const chatOf = (row: Row) => state.chats.find((chat) => chat.id === row.chatId) ?? {};
+  /** `relation: { none: {...} }` over the reports: the field that points at the profile. */
+  const REPORTS: Record<string, string> = {
+    reportsReceived: 'targetProfileId',
+    reportsMade: 'reporterProfileId',
+  };
 
   function matches(row: Row, where: Where): boolean {
     return Object.entries(where).every(([key, cond]) => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
+      if (key in REPORTS) {
+        const { none, ...rest } = cond as { none?: Where };
+        if (!none || Object.keys(rest).length) throw new Error(`only none on ${key}`);
+        return !state.reports.some((item) => item[REPORTS[key]] === row.id && matches(item, none));
+      }
       const value = row[key];
       if (cond === null) return value === null;
       if (cond instanceof Date) return value instanceof Date && value.getTime() === cond.getTime();
@@ -143,6 +158,7 @@ type Other = {
 function seed(own: Partial<RoommateProfile> | null, others: Other[] = []) {
   db.state.chats = [{ id: CHAT_ROW, blockedAt: null, roommateBannedAt: null }];
   db.state.profiles = own ? [profile(own) as unknown as Row] : [];
+  db.state.reports = [];
   for (const other of others) {
     const chatId = `chat-${other.id}`;
     db.state.chats.push({
@@ -338,6 +354,22 @@ describe('"How many are looking?" (rm:c:counts)', () => {
     expect(reply.mock.calls[0][1]).toEqual(WITH_OPT_IN);
     expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
     expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('leaves out a profile the viewer reported and one that reported the viewer (spec 07 §Report)', async () => {
+    seed({}, EXAMPLE_1);
+    db.state.reports = [
+      { reporterProfileId: 'P8', targetProfileId: 'P1', reason: 'fake' },
+      { reporterProfileId: 'P4', targetProfileId: 'P8', reason: 'other' },
+      // Between two other people: it changes nothing for P8.
+      { reporterProfileId: 'P2', targetProfileId: 'P3', reason: 'money' },
+    ];
+    const { texts } = await tap('rm:c:counts');
+
+    // Mokotów: P2 (P1 left out); Wola: nobody (P4 left out); any: P3; Warsaw: P2, P3, P7.
+    expect(texts).toEqual([
+      'Кроме тебя, анкеты есть у: Mokotów — 1 человек, Wola — пока никого, готовы к любому району — 1. Всего в Варшаве — 3 человека. Подбор откроется, когда людей станет больше.',
+    ]);
   });
 
   it.each<[RoommateLocale, string]>([

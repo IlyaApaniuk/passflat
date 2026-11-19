@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * (`rm:i:*`), the opt-in button, and the cron's stage 2 jobs, each with the switch on and off;
  * every stage 2 button with the switch off ("matching is paused" in RU / UK / EN, nothing else
  * changes); and turning the switch off again: stored reactions and sent reveals stay, the next
- * steps, the waiting reveals' retry and the outcome question keep working, and an opt-in made
+ * steps, Report, the waiting reveals' retry and the outcome question keep working, and an opt-in made
  * after an earlier opening holds for the next one. The `/mate` line of the capability list in
  * both states is `bot.test.ts` (`/start`, `/help`).
  *
@@ -131,8 +131,10 @@ const db = vi.hoisted(() => {
         ),
       },
       roommateProfile: {
-        findUnique: vi.fn(async ({ where }: { where: { chatId: string } }) => {
-          const row = state.profiles.find((profile) => profile.chatId === where.chatId);
+        findUnique: vi.fn(async ({ where }: { where: { chatId?: string; id?: string } }) => {
+          const row = state.profiles.find((profile) =>
+            where.id !== undefined ? profile.id === where.id : profile.chatId === where.chatId,
+          );
           return row ? structuredClone(row) : null;
         }),
         findMany: vi.fn(async (args: Read) =>
@@ -195,7 +197,28 @@ const db = vi.hoisted(() => {
           updateMany(state.reactions, args),
         ),
       },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        count: vi.fn(
+          async ({ where }: { where: Where }) =>
+            state.reports.filter((row) => matches(row, where)).length,
+        ),
+        /** One report per reporter and target (the unique pair; `skipDuplicates`). */
+        createMany: vi.fn(async ({ data }: { data: Row[] }) => {
+          let count = 0;
+          for (const item of data) {
+            const exists = state.reports.some(
+              (r) =>
+                r.reporterProfileId === item.reporterProfileId &&
+                r.targetProfileId === item.targetProfileId,
+            );
+            if (exists) continue;
+            state.reports.push({ id: `rep-${state.reports.length + 1}`, ...item });
+            count += 1;
+          }
+          return { count };
+        }),
+      },
       /** `formMutualMatch`'s statement, applied in memory (as in `roommate-cards.test.ts`). */
       $executeRaw: vi.fn(
         async (_sql: TemplateStringsArray, ...values: unknown[]): Promise<number> => {
@@ -233,6 +256,7 @@ vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }
 import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
+import { registerRoommateSafety } from './roommate-safety';
 import { rt, type RoommateLocale } from './roommate-texts';
 
 /** 10:00 Warsaw in winter: the send hour of the roommate cron. */
@@ -376,6 +400,7 @@ const ROUTES: Route[] = [];
   } as unknown as Bot;
   registerRoommateFlow(bot);
   registerRoommateMatching(bot);
+  registerRoommateSafety(bot);
 }
 
 type Who = { who?: string; locale?: RoommateLocale; username?: string | null };
@@ -731,6 +756,31 @@ describe('turning the switch off again', () => {
 
     expect(db.state.reactions).toEqual(reactions);
     expect(api.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('Report under a sent reveal and on a skipped card still works (moderation)', async () => {
+    await matchedThenOff();
+    const [reasons] = await tap(`rm:r:${B}`);
+    expect(reasons.text).toBe(rt('ru', 'reportAsk'));
+    expect(reasons.data).toHaveLength(5);
+
+    for (const [target, reason] of [
+      [B, 'money'],
+      [C, 'fake'],
+    ]) {
+      const replies = await tap(`rm:rr:${reason}:${target}`);
+      expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'reportReceipt')]);
+    }
+    expect(db.state.reports).toMatchObject([
+      { reporterProfileId: A, targetProfileId: B, reason: 'money' },
+      { reporterProfileId: A, targetProfileId: C, reason: 'fake' },
+    ]);
+    expect(mocks.track.mock.calls).toEqual([
+      [A_CHAT, 'tg_roommate_reported', { reason: 'money' }],
+      [A_CHAT, 'tg_roommate_reported', { reason: 'fake' }],
+    ]);
+    const again = await tap(`rm:rr:other:${B}`);
+    expect(again.map((reply) => reply.text)).toEqual([rt('ru', 'reportAlready')]);
   });
 
   it('the next steps under a sent reveal still answer', async () => {

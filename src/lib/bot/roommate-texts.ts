@@ -305,6 +305,21 @@ const RU = {
   btnOutcomeTalking: 'Ещё общаемся',
   btnOutcomeNoFit: 'Не сложилось',
   btnOutcomeDontAsk: 'Не спрашивай',
+
+  // --- the report (spec 07 §Report, FR-31); the receipt is the PRD 3 §8 draft with the hiding rule
+  // spelled out (agent draft, D56); it names `btnReportUnder18` ---
+  reportAsk: 'Что не так с этой анкетой? Выбери причину.',
+  btnReportMoney: 'Просит деньги или залог',
+  btnReportFake: 'Фейковая анкета',
+  btnReportOffensive: 'Оскорбления',
+  btnReportUnder18: 'Похоже, младше 18',
+  btnReportOther: 'Другое',
+  /** A stored report; backed by the hide notice to every reporter (spec 07 §Automatic hiding). */
+  reportReceipt:
+    'Жалоба получена. Проверка автоматическая. Эта анкета теперь скрыта от тебя. От всех она скроется, когда пожалуется ещё один человек, а по причине «Похоже, младше 18» — сразу. Когда это случится, напишу тебе.',
+  /** A report on a profile already hidden: nothing is stored, so nothing more is promised. */
+  reportReceiptHidden: 'Жалоба получена. Проверка автоматическая. Эта анкета уже скрыта от всех.',
+  reportAlready: 'Жалоба на эту анкету уже отправлена.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -525,6 +540,17 @@ const UK: Record<Key, string> = {
   btnOutcomeTalking: 'Ще спілкуємося',
   btnOutcomeNoFit: 'Не склалося',
   btnOutcomeDontAsk: 'Не питай',
+
+  reportAsk: 'Що не так із цією анкетою? Обери причину.',
+  btnReportMoney: 'Просить гроші чи заставу',
+  btnReportFake: 'Фейкова анкета',
+  btnReportOffensive: 'Образи',
+  btnReportUnder18: 'Схоже, молодше 18',
+  btnReportOther: 'Інше',
+  reportReceipt:
+    'Скаргу отримано. Перевірка автоматична. Ця анкета тепер прихована від тебе. Від усіх вона сховається, коли поскаржиться ще одна людина, а з причини «Схоже, молодше 18» — одразу. Коли це станеться, напишу тобі.',
+  reportReceiptHidden: 'Скаргу отримано. Перевірка автоматична. Ця анкета вже прихована від усіх.',
+  reportAlready: 'Скаргу на цю анкету вже надіслано.',
 };
 
 const EN: Record<Key, string> = {
@@ -744,6 +770,18 @@ const EN: Record<Key, string> = {
   btnOutcomeTalking: 'Still talking',
   btnOutcomeNoFit: 'Did not work out',
   btnOutcomeDontAsk: "Don't ask",
+
+  reportAsk: "What's wrong with this profile? Pick a reason.",
+  btnReportMoney: 'Asks for money or a deposit',
+  btnReportFake: 'Fake profile',
+  btnReportOffensive: 'Offensive',
+  btnReportUnder18: 'Looks under 18',
+  btnReportOther: 'Other',
+  reportReceipt:
+    "Report received. The check is automated. This profile is now hidden from you. It is hidden from everyone once one more person reports it, or at once for 'Looks under 18'. I'll tell you when that happens.",
+  reportReceiptHidden:
+    'Report received. The check is automated. This profile is already hidden from everyone.',
+  reportAlready: 'You already reported this profile.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

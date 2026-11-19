@@ -96,8 +96,20 @@ export function activeProfilesWhere(now: Date) {
 }
 
 /**
+ * The profiles with no report between them and `profileId` in either direction (spec 07 §Report:
+ * a stored report hides the pair from each other at once, in the counts and the cards).
+ */
+export function notReportedWith(profileId: string) {
+  return {
+    reportsReceived: { none: { reporterProfileId: profileId } },
+    reportsMade: { none: { targetProfileId: profileId } },
+  } satisfies Prisma.RoommateProfileWhereInput;
+}
+
+/**
  * Loads the district fields of the active profiles in one query and counts them:
- * for the bot with its viewer, for the website without one (the Warsaw total and
+ * for the bot with its viewer (leaving out the profiles the viewer reported or was
+ * reported by, `notReportedWith`), for the website without one (the Warsaw total and
  * the top `TOP_DISTRICTS_ON_WEBSITE` districts). A database error is thrown to the
  * caller, which says the counts are not available now.
  */
@@ -106,7 +118,7 @@ export async function loadRoommateCounts(
   now: Date = new Date(),
 ): Promise<RoommateCounts> {
   const others = await prisma.roommateProfile.findMany({
-    where: activeProfilesWhere(now),
+    where: { ...activeProfilesWhere(now), ...(viewer ? notReportedWith(viewer.id) : {}) },
     select: { id: true, districtSlugs: true, anyDistrict: true },
   });
   return countRoommates(viewer, others);

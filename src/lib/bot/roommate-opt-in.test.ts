@@ -22,6 +22,12 @@ const db = vi.hoisted(() => {
     return Object.entries(where).every(([key, cond]) => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
       if (key === 'OR') return (cond as Where[]).some((part) => matches(row, part));
+      // The counts' reported-pair filter (spec 07 §Report): this fake holds no reports, so `none`
+      // always holds; anything else is unsupported.
+      if (key === 'reportsReceived' || key === 'reportsMade') {
+        if (!('none' in (cond as object))) throw new Error(`only none on ${key}`);
+        return true;
+      }
       const value = row[key];
       if (cond === null) return value === null;
       if (cond instanceof Date) return value instanceof Date && value.getTime() === cond.getTime();

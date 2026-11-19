@@ -44,7 +44,8 @@ import type { BotLocale } from './texts';
 /**
  * Stage 2 of roommate matching in the bot (spec 07; spec 06 §Module layout): for now the cards
  * (§Cards, FR-25), one at a time with "Interested" (`rm:i:<id>`, §Interest and mutual match,
- * FR-26, FR-28), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`, T093), the username prompt before
+ * FR-26, FR-28), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`, handled in `roommate-safety.ts`,
+ * §Report), the username prompt before
  * them (§Usernames), the reveal of a formed pair (§Reveal, `roommate-reveal.ts`) with its next
  * steps (`rm:ns:<choice>`, FR-30), the daily push's toggle (`rm:push:off` / `rm:push:on`,
  * §Daily push, FR-27; the push itself is a cron job in `roommate-daily.ts`), the answers to the

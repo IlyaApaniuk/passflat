@@ -576,7 +576,7 @@
       "title": "Report with reasons and a receipt (FR-31)",
       "spec": "docs/specs/07-roommate-matching.md#report",
       "dependsOn": ["T087", "T089"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Who may report whom follows spec 07 §Report (a reaction to the target or a reveal of it, the callback id checked, never trusted), so the Report button under a reveal works",
         "Report offers the five reasons (rm:rr:<reason>:<id>), stores one report per reporter and target, sends tg_roommate_reported with reason once, hides the target from the reporter at once (counts, cards, compatibility) and sends the receipt of spec 07 §Report",
@@ -584,7 +584,7 @@
         "Tests for each case; the receipt copy in ru, uk and en is listed for review"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49.\nFrom T092: spec 07 §Switch keeps moderation working with the switch off, so rm:r:* and rm:rr:* must not read the switch (a Report under a reveal sent before a switch-off still works); add a switch-off case to its tests (roommate-switch.test.ts has a fake for taps plus whole runs)."
     },
     {
@@ -602,7 +602,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "D62 (the rule), D55 (the ban marker is kept). The messages of a hide are T095."
+      "notes": "D62 (the rule), D55 (the ban marker is kept). The messages of a hide are T095.\nFrom T093: the hide runs in handleReportReason (src/lib/bot/roommate-safety.ts) after storeReport returns 'stored' and the tg_roommate_reported event, before the receipt; a report on an already hidden target stores nothing (reportReceiptHidden only). roommate-report.test.ts has a fake for taps over profiles, reactions and reports (createMany with the unique pair and P2003)."
     },
     {
       "id": "T095",
@@ -619,7 +619,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "DSA Art. 16(6), Art. 17; D56."
+      "notes": "DSA Art. 16(6), Art. 17; D56.\nFrom T093: the report receipt (reportReceipt, roommate-texts.ts) promises 'I'll tell you when that happens'; it is a ROOMMATE_PROMISE_EXCEPTIONS entry in src/lib/bot/texts.test.ts naming this notice. Once the notice sender exists, add its file and code strings to a backing map there (like DAILY_PUSH_PROMISE_BACKING) so a rename fails the check."
     },
     {
       "id": "T096",

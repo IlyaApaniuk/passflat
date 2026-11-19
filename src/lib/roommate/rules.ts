@@ -41,6 +41,14 @@ export const OUTCOME_QUESTION_DAYS = 21;
 export const OUTCOMES = ['renting_together', 'talking', 'no_fit', 'dont_ask'] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
+/**
+ * The reasons of a report, in button order (spec 07 §Report, FR-31; Assumption): asks for money or
+ * a deposit, fake profile, offensive, looks under 18, other. The values of `roommate_reports.reason`
+ * and of `tg_roommate_reported.reason`; `under_18` hides at once (§Automatic hiding).
+ */
+export const REPORT_REASONS = ['money', 'fake', 'offensive', 'under_18', 'other'] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
