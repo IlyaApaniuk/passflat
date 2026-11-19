@@ -693,7 +693,7 @@
       "title": "The en bot locale: detection, /lang, menus and the deposit gate (FR-37, FR-38, D63)",
       "spec": "docs/specs/04-telegram-bot.md#english-bot-locale",
       "dependsOn": ["T069", "T098"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "BotLocale is 'ru' | 'uk' | 'en'; normalizeLocale maps uk… → uk, en… and pl… → en, anything else → ru, with the six unit tests of spec 04; existing chats keep their stored locale; roommate-texts.ts uses BotLocale",
         "/lang offers three languages (lang:(ru|uk|en)) with English prompt texts; scripts/tg-webhook.ts publishes COMMAND_MENU.en for language_code en and pl (a test of the menu table, never a call)",
@@ -702,7 +702,7 @@
         "Tests for detection, the three /lang buttons, each deposit entry in an en chat and both language buttons"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D50, D63, D68 (pl → English). The owner runs npm run bot:webhook after the deploy."
     },
     {

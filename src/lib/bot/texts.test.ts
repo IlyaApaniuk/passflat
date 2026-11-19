@@ -3,24 +3,26 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { dt } from './deposit-texts';
-import { ROOMMATE_TEXT_KEYS, rt, rtPeople, type RoommateLocale } from './roommate-texts';
+import { DEPOSIT_TEXT_KEYS, dt } from './deposit-texts';
+import { ROOMMATE_TEXT_KEYS, rt, rtPeople } from './roommate-texts';
 import {
   answeredWord,
   capabilityText,
   COMMAND_MENU,
+  COMMAND_MENUS,
   listingsWord,
+  normalizeLocale,
   observationsWord,
   peopleWord,
   reportsWord,
   TEXT_KEYS,
   t,
+  type BotLocale,
   type CapabilityTextKey,
-  type TextLocale,
 } from './texts';
 
-/** Every locale of `texts.ts`; English is not reachable from a chat yet (T099). */
-const LOCALES: TextLocale[] = ['ru', 'uk', 'en'];
+/** Every locale of `texts.ts`, each one a chat can be answered in. */
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 
 /**
  * Promises of a message the bot never sends (spec 04 §Promises and
@@ -123,7 +125,7 @@ const REPORT_RECEIPT_PROMISE_BACKING: Record<string, { file: string; holds: stri
   },
 };
 
-const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const ROOMMATE_LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 
 /** Words that would describe a notification as a feature. */
 const NOT_A_CAPABILITY =
@@ -135,13 +137,13 @@ const SWITCH_STATES = [false, true] as const;
 const CAPABILITY_KEYS: CapabilityTextKey[] = ['start', 'startAfterPayload', 'help'];
 
 /** The capability list is the first paragraph of `help`. */
-function capabilities(locale: TextLocale, matchingEnabled: boolean): string {
+function capabilities(locale: BotLocale, matchingEnabled: boolean): string {
   return capabilityText(locale, 'help', matchingEnabled).split('\n\n')[0];
 }
 
 /** Per-locale wording the capability checks look for. */
 const CAPABILITY_WORDING: Record<
-  TextLocale,
+  BotLocale,
   {
     address: RegExp;
     district: RegExp;
@@ -470,7 +472,7 @@ describe('bot texts: one set of real capabilities', () => {
 
 describe('COMMAND_MENU', () => {
   it('has the same commands in RU, UK and EN, with /mate, /cancel and /my as saved interests', () => {
-    const commands = (locale: TextLocale) => COMMAND_MENU[locale].map((item) => item.command);
+    const commands = (locale: BotLocale) => COMMAND_MENU[locale].map((item) => item.command);
     expect(commands('ru')).toEqual([
       'mate',
       'districts',
@@ -483,7 +485,7 @@ describe('COMMAND_MENU', () => {
     expect(commands('uk')).toEqual(commands('ru'));
     expect(commands('en')).toEqual(commands('ru'));
 
-    const item = (locale: TextLocale, command: string) =>
+    const item = (locale: BotLocale, command: string) =>
       COMMAND_MENU[locale].find((entry) => entry.command === command)?.description;
     expect(item('ru', 'my')).toBe('Сохранённые интересы');
     expect(item('uk', 'my')).toBe('Збережені інтереси');
@@ -646,5 +648,96 @@ describe('bot texts: English (spec 04 §English bot locale)', () => {
         area: 'Ochota',
       }),
     ).toBe('Got the deposit back, fully or partly: 2 of 3 who answered (Ochota)');
+  });
+});
+
+describe('the en bot locale (spec 04 §English bot locale)', () => {
+  it.each<[string | undefined, BotLocale]>([
+    ['uk-UA', 'uk'],
+    ['en-GB', 'en'],
+    ['pl', 'en'],
+    ['ru', 'ru'],
+    ['de', 'ru'],
+    [undefined, 'ru'],
+  ])('detects %s as %s', (languageCode, locale) => {
+    expect(normalizeLocale(languageCode)).toBe(locale);
+  });
+
+  it('detects the bare codes and any letter case the same way', () => {
+    expect(['uk', 'UK', 'en', 'en-US', 'PL', 'pl-PL', 'ru-RU', ''].map(normalizeLocale)).toEqual([
+      'uk',
+      'uk',
+      'en',
+      'en',
+      'en',
+      'en',
+      'ru',
+      'ru',
+    ]);
+  });
+
+  it('publishes the RU menu by default, UK for uk and EN for en and pl', () => {
+    expect(COMMAND_MENUS).toEqual([
+      { commands: COMMAND_MENU.ru },
+      { languageCode: 'uk', commands: COMMAND_MENU.uk },
+      { languageCode: 'en', commands: COMMAND_MENU.en },
+      { languageCode: 'pl', commands: COMMAND_MENU.en },
+    ]);
+  });
+
+  it('the menu of each client language is the locale the bot detects for it', () => {
+    for (const { languageCode, commands } of COMMAND_MENUS) {
+      expect(commands).toBe(COMMAND_MENU[normalizeLocale(languageCode)]);
+    }
+  });
+
+  it('the webhook script publishes every menu of the table and no other', () => {
+    const source = readFileSync(join(process.cwd(), 'scripts/tg-webhook.ts'), 'utf8');
+    expect(source).toContain("import { COMMAND_MENUS } from '../src/lib/bot/texts';");
+    expect(source).toContain('for (const { languageCode, commands } of COMMAND_MENUS) {');
+    expect(source.match(/setMyCommands\(/g)).toHaveLength(1);
+    expect(source).toContain('languageCode ? { language_code: languageCode } : undefined');
+  });
+
+  it('the /lang line and prompt name all three languages', () => {
+    for (const locale of LOCALES) {
+      const line = bullets(capabilities(locale, false)).find((entry) =>
+        entry.startsWith('• /lang'),
+      );
+      expect(line, locale).toMatch(/English/);
+      expect(line, locale).toMatch(/русский/);
+      expect(line, locale).toMatch(/українська/);
+      expect(t(locale, 'langPrompt'), locale).toMatch(/Choose a language/);
+      expect(t(locale, 'langPrompt'), locale).toMatch(/Выбери язык/);
+      expect(t(locale, 'langPrompt'), locale).toMatch(/Обери мову/);
+    }
+    expect(t('en', 'langSet')).toBe('Done. Send an address.');
+  });
+
+  it('keeps the RU and UK /cancel replies and the deposit button as they were', () => {
+    expect(t('ru', 'cancelled')).toBe('Ок, отменил. Если понадобится — напиши «залог».');
+    expect(t('ru', 'remindersOff')).toBe('Напоминания отключены.');
+    expect(t('ru', 'nothingToCancel')).toBe('Сейчас нечего отменять 🙂');
+    expect(t('ru', 'btnStartFlow')).toBe('😤 Мне не возвращают залог');
+    expect(t('uk', 'cancelled')).toBe('Ок, скасував. Якщо знадобиться — напиши «застава».');
+    expect(t('uk', 'remindersOff')).toBe('Нагадування вимкнено.');
+    expect(t('uk', 'nothingToCancel')).toBe('Зараз нема чого скасовувати 🙂');
+    expect(t('uk', 'btnStartFlow')).toBe('😤 Мені не повертають заставу');
+  });
+
+  it('gives the /cancel replies, the deposit button and the gate in English', () => {
+    expect(t('en', 'cancelled')).toBe('OK, cancelled. If you need it again, type “deposit”.');
+    expect(t('en', 'remindersOff')).toBe('Reminders are off.');
+    expect(t('en', 'nothingToCancel')).toBe('Nothing to cancel right now 🙂');
+    expect(t('en', 'btnStartFlow')).toBe('😤 I’m not getting my deposit back');
+    expect(t('en', 'depositGate')).toMatch(
+      /^The deposit helper speaks Russian and Ukrainian for now\. /,
+    );
+  });
+
+  it('moved the /cancel replies and the button out of the deposit copy', () => {
+    for (const key of ['cancelled', 'remindersOff', 'nothingToCancel', 'btnStartFlow']) {
+      expect(DEPOSIT_TEXT_KEYS as string[], key).not.toContain(key);
+    }
   });
 });

@@ -29,11 +29,11 @@ import {
   type DepositReason,
   type LetterParties,
 } from './deposit';
-import { dt } from './deposit-texts';
+import { depositLocale, dt, type DepositLocale } from './deposit-texts';
 import { escapeHtml, money, submitLink } from './format';
 import { rt } from './roommate-texts';
-import { touchChat } from './store';
-import type { BotLocale } from './texts';
+import { setChatLocale, touchChat } from './store';
+import { LANGUAGE_NAMES, t, type BotLocale } from './texts';
 
 /**
  * The deposit-recovery conversation: five questions, a verdict, a demand
@@ -112,7 +112,7 @@ async function findOwnCase(chatDbId: string, caseId: string) {
   return prisma.depositCase.findFirst({ where: { id: caseId, chatId: chatDbId } });
 }
 
-function reasonKeyboard(locale: BotLocale): InlineKeyboard {
+function reasonKeyboard(locale: DepositLocale): InlineKeyboard {
   const labels: Record<DepositReason, Parameters<typeof dt>[1]> = {
     wear: 'reasonWear',
     paint: 'reasonPaint',
@@ -127,7 +127,7 @@ function reasonKeyboard(locale: BotLocale): InlineKeyboard {
   return keyboard;
 }
 
-function protocolKeyboard(locale: BotLocale): InlineKeyboard {
+function protocolKeyboard(locale: DepositLocale): InlineKeyboard {
   const labels: Record<DepositProtocol, Parameters<typeof dt>[1]> = {
     both: 'protocolBoth',
     one: 'protocolOne',
@@ -140,7 +140,7 @@ function protocolKeyboard(locale: BotLocale): InlineKeyboard {
   return keyboard;
 }
 
-function outcomeKeyboard(locale: BotLocale, caseId: string): InlineKeyboard {
+function outcomeKeyboard(locale: DepositLocale, caseId: string): InlineKeyboard {
   return new InlineKeyboard()
     .text(dt(locale, 'btnOutcomeFull'), `dep:o:${caseId}:full`)
     .row()
@@ -215,7 +215,7 @@ export type ContractIssue = 'failed' | 'not_lease';
  */
 export function renderVerdict(
   row: CaseRow,
-  locale: BotLocale,
+  locale: DepositLocale,
   today: Date,
   contractIssue: ContractIssue | null = null,
 ): string {
@@ -303,7 +303,7 @@ export function renderVerdict(
   ].join('\n');
 }
 
-function verdictKeyboard(row: CaseRow, locale: BotLocale, today: Date): InlineKeyboard {
+function verdictKeyboard(row: CaseRow, locale: DepositLocale, today: Date): InlineKeyboard {
   const verdict = assessDeposit(factsOf(row)!, today);
   const keyboard = new InlineKeyboard().text(dt(locale, 'btnLetter'), `dep:letter:${row.id}`);
   if (!verdict.overdue && verdict.days > 0) {
@@ -316,7 +316,7 @@ async function sendVerdict(
   api: Api,
   chatId: number,
   row: CaseRow,
-  locale: BotLocale,
+  locale: DepositLocale,
   contractIssue: ContractIssue | null = null,
 ) {
   const today = new Date();
@@ -337,7 +337,7 @@ async function sendVerdict(
   });
 }
 
-function contractPromptKeyboard(locale: BotLocale, withDone: boolean): InlineKeyboard {
+function contractPromptKeyboard(locale: DepositLocale, withDone: boolean): InlineKeyboard {
   const keyboard = new InlineKeyboard();
   if (withDone) keyboard.text(dt(locale, 'btnContractDone'), 'dep:cdone').row();
   return keyboard.text(dt(locale, 'btnNoContract'), 'dep:nocontract');
@@ -359,7 +359,12 @@ async function downloadTelegramFile(api: Api, fileId: string): Promise<Buffer> {
  * verdict needs are kept; names and addresses wait in `letterParties` until the
  * letter is generated, and the files themselves are never stored.
  */
-export async function processContract(api: Api, chatId: number, caseId: string, locale: BotLocale) {
+export async function processContract(
+  api: Api,
+  chatId: number,
+  caseId: string,
+  locale: DepositLocale,
+) {
   const row = await prisma.depositCase.findUnique({ where: { id: caseId } });
   if (!row) return;
 
@@ -421,7 +426,7 @@ export async function processContract(api: Api, chatId: number, caseId: string, 
 }
 
 /** Starts reading once — a double tap on "done" must not read the contract twice. */
-async function startContractReading(ctx: Context, row: CaseRow, locale: BotLocale) {
+async function startContractReading(ctx: Context, row: CaseRow, locale: DepositLocale) {
   const { count } = await prisma.depositCase.updateMany({
     // NULL needs its own branch: in SQL `NULL <> 'pending'` is not true.
     where: {
@@ -438,17 +443,37 @@ async function startContractReading(ctx: Context, row: CaseRow, locale: BotLocal
   runInBackground(() => processContract(api, chatId, row.id, locale));
 }
 
+/** Callback data of the deposit gate's language buttons (spec 04 §English bot locale). */
+export const DEPOSIT_LANG_CALLBACK = /^dep:lang:(ru|uk)$/;
+
+/**
+ * The deposit gate (D63): the helper speaks only Russian and Ukrainian, so an
+ * English chat is asked to pick one of them before any deposit text is sent.
+ */
+async function replyDepositGate(ctx: Context, locale: BotLocale) {
+  await ctx.reply(t(locale, 'depositGate'), {
+    reply_markup: new InlineKeyboard()
+      .text(LANGUAGE_NAMES.ru, 'dep:lang:ru')
+      .text(LANGUAGE_NAMES.uk, 'dep:lang:uk'),
+  });
+}
+
 /**
  * Every way into the intake (the `dep` link, the `dep:start` button under
- * `/deposit` and under the keyword offer) starts here. One intake is open per
- * chat (spec 06 §Entry and routing): while the roommate questions are open the
- * deposit questions do not start, and the reply says how to leave them.
+ * `/deposit` and under the keyword offer, a deposit-gate language button)
+ * starts here. One intake is open per chat (spec 06 §Entry and routing): while
+ * the roommate questions are open the deposit questions do not start, and the
+ * reply says how to leave them. An English chat gets the deposit gate instead.
  */
 export async function startDepositFlow(ctx: Context, chatDbId: string, locale: BotLocale) {
   const chatId = ctx.chat!.id;
 
   if (await hasOpenRoommateStep(chatDbId)) {
     await ctx.reply(rt(locale, 'roommateQuestionsOpen'));
+    return;
+  }
+  if (locale === 'en') {
+    await replyDepositGate(ctx, locale);
     return;
   }
 
@@ -467,16 +492,18 @@ export async function startDepositFlow(ctx: Context, chatDbId: string, locale: B
 
 /**
  * Typed answers to the intake questions. Returns true when the message was
- * one, so the caller does not also treat "4000" as an address.
+ * one, so the caller does not also treat "4000" as an address. A chat that
+ * switched to English mid-intake gets the next question in Russian.
  */
 export async function handleDepositText(
   ctx: Context,
   chatDbId: string,
-  locale: BotLocale,
+  chatLocale: BotLocale,
   text: string,
 ): Promise<boolean> {
   const row = await findOpenCase(chatDbId);
   if (!row || row.status !== 'intake') return false;
+  const locale = depositLocale(chatLocale);
   const step = row.step as Step | null;
   const today = new Date();
 
@@ -534,7 +561,7 @@ export async function handleDepositText(
   return false;
 }
 
-async function saveReturned(ctx: Context, row: CaseRow, locale: BotLocale, returned: number) {
+async function saveReturned(ctx: Context, row: CaseRow, locale: DepositLocale, returned: number) {
   // More back than was paid: no claim, so no verdict and no letter (FR-43). The
   // case closes without an outcome: it is not a "returned in full" answer.
   if (row.depositAmount != null && returned > row.depositAmount) {
@@ -566,7 +593,8 @@ async function saveReturned(ctx: Context, row: CaseRow, locale: BotLocale, retur
 /**
  * Offers the flow when a message mentions a deposit but is not an address.
  * While the roommate questions are open (`roommateOpen`, read by the caller)
- * the offer is not made: the reply says how to leave them instead.
+ * the offer is not made: the reply says how to leave them instead. An English
+ * chat is offered the deposit gate.
  */
 export async function maybeOfferDeposit(
   ctx: Context,
@@ -580,8 +608,12 @@ export async function maybeOfferDeposit(
     return true;
   }
   track(ctx.chat!.id, 'tg_deposit_offered');
+  if (locale === 'en') {
+    await replyDepositGate(ctx, locale);
+    return true;
+  }
   await ctx.reply(dt(locale, 'keywordOffer'), {
-    reply_markup: new InlineKeyboard().text(dt(locale, 'btnStartFlow'), 'dep:start'),
+    reply_markup: new InlineKeyboard().text(t(locale, 'btnStartFlow'), 'dep:start'),
   });
   return true;
 }
@@ -589,7 +621,8 @@ export async function maybeOfferDeposit(
 /**
  * /cancel: leaves the intake questions and turns off pending follow-ups. Only
  * the date is cleared; `followUpKind` stays because the outcome buttons of
- * follow-ups already sent branch on it.
+ * follow-ups already sent branch on it. Its replies are in `texts.ts`, so an
+ * English chat gets them in English.
  */
 export async function cancelDepositFlow(ctx: Context, chatDbId: string, locale: BotLocale) {
   const intake = await prisma.depositCase.updateMany({
@@ -601,9 +634,9 @@ export async function cancelDepositFlow(ctx: Context, chatDbId: string, locale: 
     data: { followUpAt: null },
   });
   const replies: string[] = [];
-  if (intake.count) replies.push(dt(locale, 'cancelled'));
-  if (reminders.count) replies.push(dt(locale, 'remindersOff'));
-  await ctx.reply(replies.length ? replies.join('\n') : dt(locale, 'nothingToCancel'));
+  if (intake.count) replies.push(t(locale, 'cancelled'));
+  if (reminders.count) replies.push(t(locale, 'remindersOff'));
+  await ctx.reply(replies.length ? replies.join('\n') : t(locale, 'nothingToCancel'));
 }
 
 function botLink(payload: string): string | null {
@@ -611,17 +644,32 @@ function botLink(payload: string): string | null {
   return username ? `https://t.me/${username}?start=${payload}` : null;
 }
 
+/**
+ * A deposit-gate language button: the chat now speaks that language, and the
+ * deposit questions start in it. Exported so tests can call it with a fake context.
+ */
+export async function handleDepositLanguage(ctx: CallbackQueryContext<Context>): Promise<void> {
+  const locale = ctx.match[1] as DepositLocale;
+  const chat = await touchChat({ chatId: ctx.chat!.id });
+  await setChatLocale(ctx.chat!.id, locale);
+  await ctx.answerCallbackQuery();
+  await startDepositFlow(ctx, chat.id, locale);
+}
+
 export function registerDepositFlow(bot: Bot) {
+  /** Every handler of a case already open: an English chat gets it in Russian. */
   const localeOf = async (ctx: Context) => {
     const chat = await touchChat({ chatId: ctx.chat!.id });
-    return { chat, locale: chat.locale as BotLocale };
+    return { chat, locale: depositLocale(chat.locale as BotLocale) };
   };
 
   bot.callbackQuery('dep:start', async (ctx) => {
-    const { chat, locale } = await localeOf(ctx);
+    const chat = await touchChat({ chatId: ctx.chat!.id });
     await ctx.answerCallbackQuery();
-    await startDepositFlow(ctx, chat.id, locale);
+    await startDepositFlow(ctx, chat.id, chat.locale as BotLocale);
   });
+
+  bot.callbackQuery(DEPOSIT_LANG_CALLBACK, handleDepositLanguage);
 
   bot.callbackQuery('dep:ret0', async (ctx) => {
     const { chat, locale } = await localeOf(ctx);
@@ -866,7 +914,7 @@ export const LAWYER_CALLBACK = /^dep:lawyer:([0-9a-f-]{36})$/;
  */
 export async function handleLawyerInterest(ctx: CallbackQueryContext<Context>): Promise<void> {
   const chat = await touchChat({ chatId: ctx.chat!.id });
-  const locale = chat.locale as BotLocale;
+  const locale = depositLocale(chat.locale as BotLocale);
   await ctx.answerCallbackQuery();
   const row = await findOwnCase(chat.id, ctx.match[1]);
   if (!row) return;
@@ -907,7 +955,8 @@ export async function sendDueFollowUps(api: Api, now = new Date()) {
     });
     if (claim.count !== 1) continue; // another run has it, or /cancel cleared it
 
-    const locale = row.chat.locale as BotLocale;
+    // An English chat with a case open gets its follow-up in Russian (D63).
+    const locale = depositLocale(row.chat.locale as BotLocale);
     const text = dt(
       locale,
       row.followUpKind === 'deadline' ? 'followUpDeadline' : 'followUpLetter',

@@ -261,7 +261,8 @@ import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
 import { registerRoommateSafety } from './roommate-safety';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 /** 10:00 Warsaw in winter: the send hour of the roommate cron. */
 const NOW = new Date('2026-12-05T09:00:00Z');
@@ -269,11 +270,11 @@ const DAY = 24 * 60 * 60 * 1000;
 /** The send hour 21 days later (`OUTCOME_QUESTION_DAYS`), still winter time. */
 const DAY_21 = new Date(NOW.getTime() + 21 * DAY);
 const EXPIRES = new Date(NOW.getTime() + 30 * DAY);
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 const DISTRICTS = [{ slug: 'mokotow', nameKey: 'Mokotów' }];
 
 /** "Matching is paused" as each locale reads it (spec 07 §Switch, agent draft). */
-const PAUSED: Record<RoommateLocale, string> = {
+const PAUSED: Record<BotLocale, string> = {
   ru: 'Подбор сейчас на паузе.',
   uk: 'Підбір зараз на паузі.',
   en: 'Matching is paused right now.',
@@ -339,7 +340,7 @@ function profile(id: string, fields: Partial<RoommateProfile> = {}): Row {
 }
 
 /** Profiles in their own chats (RU unless named); Telegram knows the stored usernames. */
-function seed(rows: Row[], locales: Record<string, RoommateLocale> = {}) {
+function seed(rows: Row[], locales: Record<string, BotLocale> = {}) {
   db.state.profiles = rows;
   db.state.chats = rows.map((row) => ({
     id: row.chatId,
@@ -407,7 +408,7 @@ const ROUTES: Route[] = [];
   registerRoommateSafety(bot);
 }
 
-type Who = { who?: string; locale?: RoommateLocale; username?: string | null };
+type Who = { who?: string; locale?: BotLocale; username?: string | null };
 
 function fakeContext(data: string | null, { who = A, locale = 'ru', username }: Who) {
   mocks.touchChat.mockResolvedValue({ id: `chat-${who}`, locale, isNew: false });
@@ -515,19 +516,17 @@ describe('/mate with the switch on and off', () => {
     async (locale, state, value) => {
       switchTo(value);
       seed([]);
-      const [intro, step] = await mate({ locale: locale as RoommateLocale, username: 'anna_w' });
+      const [intro, step] = await mate({ locale: locale as BotLocale, username: 'anna_w' });
       const privacyUrl = `https://passflat.com/${locale}/privacy?utm_source=telegram&amp;utm_medium=bot&amp;utm_campaign=roommate#roommate-matching`;
 
       expect(intro.text).toBe(
-        rt(locale as RoommateLocale, state === 'on' ? 'introMatching' : 'intro', { privacyUrl }),
+        rt(locale as BotLocale, state === 'on' ? 'introMatching' : 'intro', { privacyUrl }),
       );
-      expect(step.text.startsWith(rt(locale as RoommateLocale, 'askDistricts').slice(0, 12))).toBe(
-        true,
-      );
+      expect(step.text.startsWith(rt(locale as BotLocale, 'askDistricts').slice(0, 12))).toBe(true);
     },
   );
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     [
       'ru',
       'Анкету видят только подходящие тебе люди, а твой username — только при взаимном интересе.',
@@ -602,14 +601,14 @@ describe('every stage 2 button with the switch off', () => {
     '%s replies "matching is paused" in %s and changes nothing else',
     async (data, locale) => {
       switchTo('');
-      seed([profile(A, { pushOff: true }), profile(B)], { [A]: locale as RoommateLocale });
+      seed([profile(A, { pushOff: true }), profile(B)], { [A]: locale as BotLocale });
       const before = snapshot();
-      const replies = await tap(data, { locale: locale as RoommateLocale });
+      const replies = await tap(data, { locale: locale as BotLocale });
 
       expect(replies).toEqual([
-        { text: PAUSED[locale as RoommateLocale], options: undefined, data: [] },
+        { text: PAUSED[locale as BotLocale], options: undefined, data: [] },
       ]);
-      expect(rt(locale as RoommateLocale, 'matchingPaused')).toBe(PAUSED[locale as RoommateLocale]);
+      expect(rt(locale as BotLocale, 'matchingPaused')).toBe(PAUSED[locale as BotLocale]);
       expect(snapshot()).toEqual(before);
       expect(mocks.track).not.toHaveBeenCalled();
       expect(api.sendMessage).not.toHaveBeenCalled();

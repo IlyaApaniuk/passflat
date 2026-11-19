@@ -324,7 +324,7 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   about X each" from the tenant all-in median of whole flats (its own level, N ≥ 2,
   half rounded half up to 10 zł; never a known part or asking prices). A loader
   error leaves only this part out. An English chat gets it in English (the area
-  texts of `texts.ts`), once chats can be English (T099).
+  texts of `texts.ts`).
 - **Compatibility** (spec 07 §Compatibility, FR-24; no handler uses it yet):
   `isCompatible(a, b)` (`../roommate/compatibility.ts`, pure, symmetric) needs a
   shared district (or "any" on either side), budget bands at most 1 apart, move-in
@@ -339,7 +339,22 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
-  matching switch), **`/lang`** (RU / UK; `TelegramChat.locale` defaults to `ru`).
+  matching switch), **`/lang`** (Русский / Українська / English, `lang:(ru|uk|en)`).
+- **Bot locales** (spec 04 §English bot locale): `BotLocale` is `ru`, `uk` or
+  `en`. A new chat's `TelegramChat.locale` comes from Telegram's `language_code`
+  (`normalizeLocale`: `uk…` → `uk`, `en…` and `pl…` → `en`, anything else or
+  none → `ru`; the map is `CLIENT_LANGUAGE_LOCALES` in `texts.ts`, `pl` → English
+  is an **Assumption**, D68). An existing chat keeps its stored locale; `/lang`
+  changes it, and the next message of an open intake comes in the new language.
+- **Deposit gate** (D63): the deposit helper (`deposit-texts.ts`, `dt()`) speaks
+  only `ru` and `uk`. In an `en` chat every entry (the `dep` link, the `dep:start`
+  button under `/deposit` and under the keyword offer) replies `depositGate` with
+  Русский (`dep:lang:ru`) and Українська (`dep:lang:uk`); a tap sets the chat's
+  locale and starts the questions in it. Every `dt()` call goes through
+  `depositLocale(locale)`, which reads `en` as `ru`, so a case already open in a
+  chat that switched to English (follow-ups, verdict and outcome buttons) goes on in
+  Russian. `/cancel`'s replies (`cancelled`, `remindersOff`, `nothingToCancel`) and
+  the `/deposit` button (`btnStartFlow`) are in `texts.ts`, in English too.
 - A rate limit of 12 text messages per minute per chat (`bot.ts`), because
   geocoding is paid.
 - **Blocked chats** (spec 06 §Blocked chats): a `my_chat_member` update in a
@@ -449,8 +464,9 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 
 1. **BotFather** — `/newbot`, then keep the token. Set the description and
    about text; the command menu is published by the webhook script
-   (`COMMAND_MENU` in `texts.ts`: RU by default, UK for `language_code: 'uk'`).
-   A menu change takes effect only after `npm run bot:webhook` is run again.
+   (`COMMAND_MENUS` in `texts.ts`: RU by default, UK for `language_code: 'uk'`,
+   EN for `en` and `pl`). A menu change takes effect only after
+   `npm run bot:webhook` is run again.
 2. **Google key** — a _server_ Geocoding key. The existing
    `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` is referrer-restricted for the browser
    and will be rejected from a server call. Restrict the new one by IP/API to
@@ -686,9 +702,8 @@ roommate questions. `texts.test.ts` fails if a text in `texts.ts` promises to
 write later, if a listed command is missing from the menu (or a menu command
 from the list), or if the roommate line does not name `/mate`, in RU, UK and EN.
 It also fails on a key without an EN value or with other placeholders than RU.
-EN (`TextLocale`) exists before any chat can be English: `BotLocale` stays
-`'ru' | 'uk'` until T099. `plural(locale, count, forms)` takes Slavic one / few /
-many for RU and UK and one / other for EN.
+`plural(locale, count, forms)` takes Slavic one / few / many for RU and UK and
+one / other for EN.
 
 ## Events
 
@@ -794,7 +809,7 @@ mark; blocking the bot sets it without a send, see "Blocked chats" above). Deliv
 claim and the send loses that reminder. `/cancel` abandons an open intake and
 clears `followUpAt` (not `followUpKind`, which the outcome buttons of sent
 reminders read) on the chat's `verdict` and `letter_sent` cases, replying
-`remindersOff`.
+`remindersOff`. An English chat's reminder is sent in Russian (`depositLocale`).
 
 Outcomes by reason:
 

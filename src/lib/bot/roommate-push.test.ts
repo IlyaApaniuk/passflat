@@ -190,7 +190,8 @@ vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }
 import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching } from './roommate-matching';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const at = (iso: string) => new Date(iso);
 const DAY = 24 * 60 * 60 * 1000;
@@ -359,7 +360,7 @@ const ROUTES = registeredRoutes();
 /** A tap by the person of profile `who` (the viewer by default) on a button with `data`. */
 async function tap(
   data: string,
-  { who = VIEWER, locale = 'ru' }: { who?: string; locale?: RoommateLocale } = {},
+  { who = VIEWER, locale = 'ru' }: { who?: string; locale?: BotLocale } = {},
 ) {
   mocks.touchChat.mockResolvedValue({ id: `chat-${who}`, locale, isNew: false });
   const routes = ROUTES.filter(([trigger]) =>
@@ -746,7 +747,7 @@ describe('the daily push: who gets it (edge cases)', () => {
 });
 
 describe('the daily push: wording, buttons and count_band (criterion 5)', () => {
-  it.each<[RoommateLocale, number, string, string, string]>([
+  it.each<[BotLocale, number, string, string, string]>([
     ['ru', 1, 'Новых подходящих людей: 1.', '👀 Показать', 'Остановить ежедневные сообщения'],
     ['ru', 3, 'Новых подходящих людей: 3.', '👀 Показать', 'Остановить ежедневные сообщения'],
     [
@@ -819,7 +820,7 @@ describe('rm:push:off and rm:push:on (criterion 4)', () => {
     return replies[0];
   };
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     '%s: "Stop daily messages" sets push_off, sends one opt-out event and the card with the way back',
     async (locale) => {
       seedViewer({}, { locale });
@@ -890,7 +891,7 @@ describe('rm:push:off and rm:push:on (criterion 4)', () => {
     expect(reply.data).toContainEqual(['rm:c:renew']);
   });
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     '%s, switch off: "Stop" is still honoured; "on" replies "matching is paused" and stores nothing',
     async (locale) => {
       vi.stubEnv('ROOMMATE_MATCHING_ENABLED', 'false');

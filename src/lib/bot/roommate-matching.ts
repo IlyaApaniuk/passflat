@@ -36,7 +36,7 @@ import {
   type District,
 } from './roommate-flow';
 import { NEXT_STEPS, USERNAME_DONE, revealPair, type NextStepChoice } from './roommate-reveal';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
 import { ROOMMATE_ENTRY_SOURCE } from './start-payload';
 import type { TouchedChat } from './store';
 import type { BotLocale } from './texts';
@@ -83,7 +83,7 @@ const OUTCOME_TAP = new RegExp(`^rm:o:(${OUTCOMES.join('|')})$`);
 export function renderRoommateCard(
   profile: RoommateProfile,
   districts: readonly District[],
-  locale: RoommateLocale,
+  locale: BotLocale,
 ): string {
   return [
     rt(locale, 'browseCardHeader'),

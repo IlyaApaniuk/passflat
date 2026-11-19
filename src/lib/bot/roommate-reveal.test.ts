@@ -237,7 +237,8 @@ import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
 import { revealKeyboard, revealText } from './roommate-reveal';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 /** 10:00 Warsaw in winter: the send hour of the roommate cron. */
 const NOW = new Date('2026-12-05T09:00:00Z');
@@ -302,7 +303,7 @@ function profile(id: string, fields: Partial<RoommateProfile> = {}): Row {
 let telegramUsernames = new Map<number, string | undefined>();
 
 /** Profiles in their own chats (locale per chat); Telegram knows the stored usernames. */
-function seed(rows: Row[], locales: Record<string, RoommateLocale> = {}) {
+function seed(rows: Row[], locales: Record<string, BotLocale> = {}) {
   db.state.profiles = rows;
   db.state.chats = rows.map((row) => ({
     id: row.chatId,
@@ -407,7 +408,7 @@ async function tap(
     who = VIEWER,
     locale = 'ru',
     username = row(who)?.tgUsername as string | null,
-  }: { who?: string; locale?: RoommateLocale; username?: string | null } = {},
+  }: { who?: string; locale?: BotLocale; username?: string | null } = {},
 ) {
   mocks.touchChat.mockResolvedValue({ id: `chat-${who}`, locale, isNew: false });
   const routes = ROUTES.filter(([trigger]) =>
@@ -462,7 +463,7 @@ beforeEach(() => {
 });
 
 describe('the reveal text and buttons (PRD 3 §8 "Reveal with safety lines")', () => {
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     [
       'ru',
       'Интерес взаимный. Напиши @user_03.\n\nPassflat никогда не просит денег. Не плати залог или «бронь» до просмотра квартиры и подписанного договора. Если человек просит деньги или документы — нажми «Пожаловаться».',
@@ -479,7 +480,7 @@ describe('the reveal text and buttons (PRD 3 §8 "Reveal with safety lines")', (
     expect(revealText(locale, 'user_03')).toBe(text);
   });
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     '%s: the safety lines name the Report button it carries',
     (locale) => {
       const keyboard = revealKeyboard(locale, B).inline_keyboard;
@@ -656,7 +657,7 @@ describe('a missing username holds both reveals until Done', () => {
     ]);
   });
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     '%s: the prompt goes out in the chat language',
     async (locale) => {
       seed([profile(VIEWER, { tgUsername: 'anna_w' }), profile(B, { tgUsername: null })], {
@@ -853,7 +854,7 @@ describe('the next steps under a reveal (FR-30)', () => {
     }
   }
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     ['ru', 'umowa-wspollokatorska-ru.pdf'],
     ['uk', 'umowa-wspollokatorska-uk.pdf'],
   ])('%s: agreement → the template in the locale and the Polish original', async (locale, file) => {

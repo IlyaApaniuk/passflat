@@ -53,13 +53,13 @@ vi.mock('./analytics', () => ({ track: mocks.track }));
 import { recordAppeal } from '@/lib/roommate/store';
 
 import { handleAppeal, registerRoommateSafety } from './roommate-safety';
-import { ROOMMATE_TEXT_KEYS, rt, type RoommateLocale } from './roommate-texts';
+import { ROOMMATE_TEXT_KEYS, rt } from './roommate-texts';
 import { COMMAND_MENU, type BotLocale } from './texts';
 
 const NOW = new Date('2026-12-05T09:00:00Z');
 const HIDDEN_AT = new Date('2026-12-01T09:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 const APPEAL_KEYS = ['appealReceived', 'appealAlready', 'appealByEmail', 'appealNothing'] as const;
 const PROFILE_ID = '00000000-0000-4000-8000-000000000010';
 const CHAT = 'chat-x';

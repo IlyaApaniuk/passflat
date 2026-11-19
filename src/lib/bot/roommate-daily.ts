@@ -19,7 +19,8 @@ import { formatWarsawDate, isRoommateSendHour, isSameWarsawDay } from '@/lib/roo
 import { track } from './analytics';
 import { retryHideNotices, retryStatements } from './roommate-hide-messages';
 import { retryPendingReveals } from './roommate-reveal';
-import { roommateLocale, rt, rtPeople, type RoommateLocale } from './roommate-texts';
+import { roommateLocale, rt, rtPeople } from './roommate-texts';
+import type { BotLocale } from './texts';
 import { plural } from './texts';
 
 /**
@@ -330,7 +331,7 @@ export type MessageJob = (sender: CronSender, now: Date) => Promise<void>;
  * (`rm:c:renew`, `rm:c:del`), which this module does not import (it would pull the whole
  * conversation into the cron).
  */
-function renewalReminderKeyboard(locale: RoommateLocale): InlineKeyboard {
+function renewalReminderKeyboard(locale: BotLocale): InlineKeyboard {
   return InlineKeyboard.from([
     [InlineKeyboard.text(rt(locale, 'btnRenew'), 'rm:c:renew')],
     [InlineKeyboard.text(rt(locale, 'btnDelete'), 'rm:c:del')],
@@ -402,7 +403,7 @@ const OUTCOME_LABEL = {
  * The outcome question's buttons (`rm:o:<outcome>`), handled in `roommate-matching.ts`, which this
  * module does not import.
  */
-function outcomeKeyboard(locale: RoommateLocale): InlineKeyboard {
+function outcomeKeyboard(locale: BotLocale): InlineKeyboard {
   return InlineKeyboard.from(
     OUTCOMES.map((outcome) => [
       InlineKeyboard.text(rt(locale, OUTCOME_LABEL[outcome]), `rm:o:${outcome}`),
@@ -470,7 +471,7 @@ function switchOnOnly(job: MessageJob): MessageJob {
  * nobody fits yet and, only while the daily push is on (it is what backs the sentence), that the
  * bot writes once a day when someone new fits (FR-19 criterion 4).
  */
-function matchingOpenText(locale: RoommateLocale, count: number, pushOn: boolean): string {
+function matchingOpenText(locale: BotLocale, count: number, pushOn: boolean): string {
   if (count === 0) {
     const nobody = rt(locale, 'openNobody');
     return pushOn ? `${nobody} ${rt(locale, 'openNobodyDaily')}` : nobody;
@@ -539,7 +540,7 @@ const sendMatchingOpenMessages: MessageJob = async (sender, now) => {
 };
 
 /** "<N> new people fit you" (PRD 3 §8 "Daily push"); RU / UK read the same for every N. */
-function dailyPushText(locale: RoommateLocale, count: number): string {
+function dailyPushText(locale: BotLocale, count: number): string {
   return rt(locale, count === 1 ? 'pushNewOne' : 'pushNewMany', { count: String(count) });
 }
 

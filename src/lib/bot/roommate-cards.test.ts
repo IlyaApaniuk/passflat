@@ -176,14 +176,15 @@ vi.mock('./roommate-reveal', async (importOriginal) => ({
 
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const CHAT_ID = 4242;
 const CHAT_ROW = 'chat-row';
 const NOW = new Date('2026-12-05T10:00:00Z');
 const LATER = new Date('2027-01-04T10:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 
 const DISTRICTS = [
   { slug: 'mokotow', nameKey: 'Mokotów' },
@@ -295,10 +296,7 @@ type Options = { reply_markup?: { inline_keyboard: Button[][] }; parse_mode?: st
 /** A tap on a button with `data`, routed to the one handler registered for it. */
 async function tap(
   data: string,
-  {
-    locale = 'ru',
-    username = 'anna_w',
-  }: { locale?: RoommateLocale; username?: string | null } = {},
+  { locale = 'ru', username = 'anna_w' }: { locale?: BotLocale; username?: string | null } = {},
 ) {
   mocks.touchChat.mockResolvedValue({ id: CHAT_ROW, locale, isNew: false });
   const routes = ROUTES.filter(([trigger]) =>
@@ -328,7 +326,7 @@ async function tap(
 }
 
 /** The card of profile `id` as the viewer gets it, from the stored row. */
-function cardOf(id: string, locale: RoommateLocale = 'ru'): string {
+function cardOf(id: string, locale: BotLocale = 'ru'): string {
   const row = db.state.profiles.find((profileRow) => profileRow.id === id)!;
   return renderRoommateCard(row as unknown as RoommateProfile, DISTRICTS, locale);
 }
@@ -1048,7 +1046,7 @@ describe('the switch off', () => {
   it.each(
     LOCALES.flatMap((locale) =>
       ['rm:show:c', 'rm:show:o', `rm:x:${A}`, `rm:i:${A}`, 'rm:u:done'].map(
-        (data) => [data, locale] as [string, RoommateLocale],
+        (data) => [data, locale] as [string, BotLocale],
       ),
     ),
   )('%s replies "matching is paused" and does nothing else (%s)', async (data, locale) => {

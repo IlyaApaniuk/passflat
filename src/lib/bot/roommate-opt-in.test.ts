@@ -92,13 +92,14 @@ vi.mock('./lookup', () => ({ getCity: mocks.getCity }));
 vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }));
 
 import { registerRoommateFlow } from './roommate-flow';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const CHAT_ID = 4242;
 const CHAT_ROW = 'chat-row';
 const NOW = new Date('2026-12-05T10:00:00Z');
 const LATER = new Date('2027-01-04T10:00:00Z');
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 
 function profile(fields: Partial<RoommateProfile> = {}): RoommateProfile {
   return {
@@ -183,7 +184,7 @@ type Button = { text: string; callback_data?: string };
 type Options = { reply_markup?: { inline_keyboard: Button[][] }; parse_mode?: string } | undefined;
 
 /** A tap on a button with `data`, routed to the one handler registered for it. */
-async function tap(data: string, locale: RoommateLocale = 'ru') {
+async function tap(data: string, locale: BotLocale = 'ru') {
   mocks.touchChat.mockResolvedValue({ id: CHAT_ROW, locale, isNew: false });
   const routes = ROUTES.filter(([trigger]) =>
     typeof trigger === 'string' ? trigger === data : trigger.test(data),
@@ -217,14 +218,14 @@ const optInEvents = () =>
   mocks.track.mock.calls.filter(([, event]) => event === 'tg_roommate_browse_opted_in');
 
 /** The reply of a first tap, PRD 3 §8 "Opt-in" with the FR-18 edge case, in each locale. */
-const CONFIRMATION: Record<RoommateLocale, string> = {
+const CONFIRMATION: Record<BotLocale, string> = {
   ru: 'Напишу один раз, когда подбор откроется. Если анкета скроется раньше, этого сообщения не будет. Если подбор не откроется, напишу об этом и удалю анкету.',
   uk: 'Напишу один раз, коли підбір відкриється. Якщо анкета сховається раніше, цього повідомлення не буде. Якщо підбір не відкриється, напишу про це й видалю анкету.',
   en: "I'll message you once when matching opens. If your profile hides before then, this message won't come. If matching does not open, we'll tell you and delete your profile.",
 };
 
 /** PRD 3 §8 "Opt-in" verbatim: the first sentence and the D64 closing sentence. */
-const PRD_SENTENCES: Record<RoommateLocale, [first: string, closing: string]> = {
+const PRD_SENTENCES: Record<BotLocale, [first: string, closing: string]> = {
   ru: [
     'Напишу один раз, когда подбор откроется.',
     'Если подбор не откроется, напишу об этом и удалю анкету.',
@@ -239,7 +240,7 @@ const PRD_SENTENCES: Record<RoommateLocale, [first: string, closing: string]> = 
   ],
 };
 
-const BUTTON: Record<RoommateLocale, string> = {
+const BUTTON: Record<BotLocale, string> = {
   ru: 'Напиши мне, когда откроется подбор',
   uk: 'Напиши мені, коли відкриється підбір',
   en: 'Message me when matching opens',

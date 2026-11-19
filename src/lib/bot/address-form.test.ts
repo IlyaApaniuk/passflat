@@ -34,8 +34,11 @@ function findAll(pattern: RegExp, text: string): string[] {
   return [...text.matchAll(new RegExp(pattern.source, 'giu'))].map((match) => match[0]);
 }
 
+/** The locales with a «ты» / «вы» distinction; English has none. */
+type SlavicLocale = Exclude<BotLocale, 'en'>;
+
 /** «вы», «вас», «вам», «вами» and every word starting with «ваш», any letter case. */
-const FORMAL_PRONOUNS: Record<BotLocale, RegExp> = {
+const FORMAL_PRONOUNS: Record<SlavicLocale, RegExp> = {
   ru: wholeWords(String.raw`вы|вас|вам|вами|ваш\p{L}*`),
   uk: wholeWords(String.raw`ви|вас|вам|вами|ваш\p{L}*`),
 };
@@ -45,7 +48,7 @@ const FORMAL_PRONOUNS: Record<BotLocale, RegExp> = {
  * «оставьте»; UK «зверніться», «напишіть», «спробуйте». Both languages build
  * them from the singular form plus «-те» (RU) or «-іть» / «-те» (UK).
  */
-const FORMAL_IMPERATIVES: Record<BotLocale, RegExp> = {
+const FORMAL_IMPERATIVES: Record<SlavicLocale, RegExp> = {
   ru: wholeWords(String.raw`\p{L}+(?:ите|йте|ьте)(?:сь)?`),
   uk: wholeWords(String.raw`\p{L}+(?:іть|йте|ьте)(?:ся|сь)?`),
 };
@@ -54,7 +57,7 @@ const FORMAL_IMPERATIVES: Record<BotLocale, RegExp> = {
  * Words the imperative pattern catches that are not verbs, each with its reason.
  * Add a word only when it is not an address to the user.
  */
-const NOT_IMPERATIVES: Record<BotLocale, Record<string, string>> = {
+const NOT_IMPERATIVES: Record<SlavicLocale, Record<string, string>> = {
   ru: {
     сайте: 'prepositional of «сайт» («Открыть на сайте»), a noun',
   },
@@ -67,11 +70,11 @@ const FORMAL_ALLOWED: Record<string, string> = {
     'PRD 3 §8 verbatim: «если вы уже обменялись контактами» / «якщо ви вже обмінялися» means the person and the other person, a plural, not the polite address',
 };
 
-const LOCALES: BotLocale[] = ['ru', 'uk'];
+const LOCALES: SlavicLocale[] = ['ru', 'uk'];
 const COUNTS = [1, 2, 5, 11, 21];
 
 /** A sample value for each placeholder name the templates use. */
-function sampleVars(locale: BotLocale): Record<string, string> {
+function sampleVars(locale: SlavicLocale): Record<string, string> {
   return {
     about: 'Спокойная, работаю в IT',
     address: 'Grójecka 45',
@@ -125,7 +128,7 @@ function sampleVars(locale: BotLocale): Record<string, string> {
 type BotString = { source: string; key: string; text: string; filled: boolean };
 
 /** Every user-facing string of one locale, named by where it comes from. */
-function botStrings(locale: BotLocale): BotString[] {
+function botStrings(locale: SlavicLocale): BotString[] {
   const vars = sampleVars(locale);
   const strings: BotString[] = [];
   for (const key of TEXT_KEYS) {

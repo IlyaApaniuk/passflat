@@ -15,11 +15,14 @@ import {
 } from '@/lib/cost-figures';
 
 import {
+  LANG_CALLBACK,
   SUBSCRIBE_CALLBACK,
   UNSUBSCRIBE_CALLBACK,
   handleCancel,
   handleDeposit,
   handleHelp,
+  handleLang,
+  handleLangChoice,
   handleMy,
   handleStart,
   handleSubscribe,
@@ -30,7 +33,7 @@ import {
 import { renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
 import { rt } from './roommate-texts';
-import { capabilityText, t } from './texts';
+import { capabilityText, t, type BotLocale } from './texts';
 
 const mocks = vi.hoisted(() => ({
   touchChat: vi.fn(),
@@ -53,6 +56,7 @@ const mocks = vi.hoisted(() => ({
   openRoommate: vi.fn(),
   handleRoommateText: vi.fn(),
   cancelRoommate: vi.fn(),
+  setChatLocale: vi.fn(),
 }));
 
 vi.mock('./store', () => ({
@@ -61,7 +65,7 @@ vi.mock('./store', () => ({
   listSubscriptions: mocks.listSubscriptions,
   removeSubscription: mocks.removeSubscription,
   setChatBlocked: vi.fn(),
-  setChatLocale: vi.fn(),
+  setChatLocale: mocks.setChatLocale,
 }));
 vi.mock('./analytics', () => ({ track: mocks.track }));
 vi.mock('./deposit-flow', () => ({
@@ -1329,5 +1333,121 @@ describe('handleDeposit', () => {
       expect(text).toContain(t('ru', 'depositNoData'));
       expect(text).not.toContain('ответивших');
     }
+  });
+
+  it('answers in English for an English chat, its button opening the deposit gate', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: false });
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain(
+      `${t('en', 'depositHeader')}\n\nGot the deposit back, fully or partly: 2 of 3 who answered (Warsaw)\n`,
+    );
+    expect(text).toContain(t('en', 'depositAdvice'));
+    expect(text).not.toMatch(/\p{Script=Cyrillic}/u);
+    expect(buttonTexts(reply)[0]).toBe('😤 I’m not getting my deposit back');
+    expect(buttons(reply)[0]).toBe('dep:start');
+  });
+});
+
+describe('the en bot locale (spec 04 §English bot locale)', () => {
+  function fakeStart(text: string, languageCode: string | undefined) {
+    const reply = vi.fn();
+    const ctx = {
+      chat: { id: CHAT_ID },
+      from: languageCode ? { language_code: languageCode } : {},
+      message: { text },
+      reply,
+    } as unknown as CommandContext<Context>;
+    return { ctx, reply };
+  }
+
+  it.each<[string | undefined, BotLocale]>([
+    ['en-GB', 'en'],
+    ['pl', 'en'],
+    ['uk-UA', 'uk'],
+    ['ru', 'ru'],
+    ['de', 'ru'],
+    [undefined, 'ru'],
+  ])('a new chat with language code %s is stored as %s', async (languageCode, locale) => {
+    mocks.touchChat.mockImplementation(async (input: { locale?: BotLocale }) => ({
+      id: 'chat-row',
+      locale: input.locale ?? 'ru',
+      isNew: true,
+    }));
+    const { ctx, reply } = fakeStart('/start', languageCode);
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith({ chatId: CHAT_ID, locale, startPayload: null });
+    expect(replyKey(reply)).toBe(capabilityText(locale, 'start', false));
+  });
+
+  it('an existing chat keeps its stored locale whatever the client language', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeStart('/start', 'en-GB');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(capabilityText('uk', 'start', false));
+  });
+
+  it('the dep link of an English chat goes to the deposit flow, which gates it', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: true });
+    const { ctx, reply } = fakeStart('/start dep', 'en');
+    await handleStart(ctx);
+
+    expect(mocks.startDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('/cancel in an English chat passes the English locale on', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: false });
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+    expect(mocks.cancelDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+  });
+
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
+    '/lang in a %s chat offers the three languages, each in its own words',
+    async (locale) => {
+      mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale, isNew: false });
+      const { ctx, reply } = fakeContext('/lang');
+      await handleLang(ctx);
+
+      expect(replyKey(reply)).toBe(t(locale, 'langPrompt'));
+      expect(buttonTexts(reply)).toEqual(['Русский', 'Українська', 'English']);
+      expect(buttons(reply)).toEqual(['lang:ru', 'lang:uk', 'lang:en']);
+      for (const data of buttons(reply)) expect(data).toMatch(LANG_CALLBACK);
+    },
+  );
+
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
+    'a lang:%s tap sets the chat locale and answers in it',
+    async (locale) => {
+      const reply = vi.fn();
+      const answerCallbackQuery = vi.fn();
+      const ctx = {
+        chat: { id: CHAT_ID },
+        match: `lang:${locale}`.match(LANG_CALLBACK),
+        answerCallbackQuery,
+        reply,
+      } as unknown as CallbackQueryContext<Context>;
+      await handleLangChoice(ctx);
+
+      expect(mocks.setChatLocale).toHaveBeenCalledWith(CHAT_ID, locale);
+      expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+      expect(reply.mock.calls).toEqual([[t(locale, 'langSet')]]);
+    },
+  );
+
+  it('matches only the three languages', () => {
+    expect('lang:pl').not.toMatch(LANG_CALLBACK);
+    expect('lang:de').not.toMatch(LANG_CALLBACK);
+    expect('lang:english').not.toMatch(LANG_CALLBACK);
   });
 });

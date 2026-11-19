@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { MAX_DISTRICTS, PROFILE_LIFE_DAYS } from '@/lib/roommate/rules';
 
-import { ROOMMATE_TEXT_KEYS, rt, rtPeople, type RoommateLocale } from './roommate-texts';
+import { ROOMMATE_TEXT_KEYS, rt, rtPeople } from './roommate-texts';
+import type { BotLocale } from './texts';
 
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 
 /** Placeholders a locale may leave out because its grammar needs no agreement word. */
-const GRAMMAR_ONLY_VARS: Record<RoommateLocale, string[]> = { ru: [], uk: [], en: ['people'] };
+const GRAMMAR_ONLY_VARS: Record<BotLocale, string[]> = { ru: [], uk: [], en: ['people'] };
 
 function placeholders(text: string): string[] {
   return [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
@@ -109,7 +110,7 @@ describe('roommate texts: PRD 3 §8 drafts verbatim', () => {
       "A few words about you, up to 280 characters. No links, phone numbers or @handles: contacts appear only when the interest is mutual. Don't include health, religion or other personal details.",
     );
 
-    const adult = (locale: RoommateLocale) =>
+    const adult = (locale: BotLocale) =>
       (['askAdult', 'btnAdultYes', 'btnAdultNo', 'underAge'] as const).map((key) =>
         rt(locale, key),
       );
@@ -154,7 +155,7 @@ describe('roommate texts: PRD 3 §8 drafts verbatim', () => {
     );
     expect(rt('en', 'askGender')).toContain('You are: a woman / a man / skip.');
     expect(rt('en', 'askPrefers')).toContain("Who you'd live with: anyone / women / men.");
-    const why: Record<RoommateLocale, string> = {
+    const why: Record<BotLocale, string> = {
       ru: 'Это нужно только для взаимного подбора и никому не показывается.',
       uk: 'Це потрібно лише для взаємного підбору й нікому не показується.',
       en: 'Used only for mutual matching and never shown to anyone.',
@@ -183,7 +184,7 @@ describe('roommate texts: PRD 3 §8 drafts verbatim', () => {
   });
 
   it('composes the counts of example 1 exactly', () => {
-    const reply = (locale: RoommateLocale) => {
+    const reply = (locale: BotLocale) => {
       const items = [
         rt(locale, 'countsItemPeople', {
           name: 'Mokotów',

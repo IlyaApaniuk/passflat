@@ -224,12 +224,13 @@ import { findCompatible } from '@/lib/roommate/store';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching, renderRoommateCard } from './roommate-matching';
 import { registerRoommateSafety } from './roommate-safety';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const NOW = new Date('2026-12-05T09:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
 const EXPIRES = new Date(NOW.getTime() + 30 * DAY);
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 const DISTRICTS = [{ slug: 'mokotow', nameKey: 'Mokotów' }];
 
 /** A profile id of the database's shape. */
@@ -285,7 +286,7 @@ function profile(id: string, fields: Partial<RoommateProfile> = {}): Row {
 }
 
 /** Profiles in their own chats (RU unless named). */
-function seed(rows: Row[], locales: Record<string, RoommateLocale> = {}) {
+function seed(rows: Row[], locales: Record<string, BotLocale> = {}) {
   db.state.profiles = rows;
   db.state.chats = rows.map((row) => ({
     id: row.chatId,
@@ -347,7 +348,7 @@ const routesFor = (data: string) =>
     typeof trigger === 'string' ? trigger === data : trigger.test(data),
   );
 
-type Who = { who?: string; locale?: RoommateLocale; username?: string | null };
+type Who = { who?: string; locale?: BotLocale; username?: string | null };
 
 /** A tap on a button with `data`, routed to the one handler registered for it. */
 async function tap(data: string, { who = A, locale = 'ru', username }: Who = {}) {
@@ -387,24 +388,24 @@ const texts = async (data: string, who: Who = {}) =>
 const events = () => mocks.track.mock.calls;
 
 /** The receipt and the other replies of a report, as each locale reads them (agent drafts). */
-const RECEIPT: Record<RoommateLocale, string> = {
+const RECEIPT: Record<BotLocale, string> = {
   ru: 'Жалоба получена. Проверка автоматическая. Эта анкета теперь скрыта от тебя. От всех она скроется, когда пожалуется ещё один человек, а по причине «Похоже, младше 18» — сразу. Когда это случится, напишу тебе.',
   uk: 'Скаргу отримано. Перевірка автоматична. Ця анкета тепер прихована від тебе. Від усіх вона сховається, коли поскаржиться ще одна людина, а з причини «Схоже, молодше 18» — одразу. Коли це станеться, напишу тобі.',
   en: "Report received. The check is automated. This profile is now hidden from you. It is hidden from everyone once one more person reports it, or at once for 'Looks under 18'. I'll tell you when that happens.",
 };
-const RECEIPT_HIDDEN: Record<RoommateLocale, string> = {
+const RECEIPT_HIDDEN: Record<BotLocale, string> = {
   ru: 'Жалоба получена. Проверка автоматическая. Эта анкета уже скрыта от всех.',
   uk: 'Скаргу отримано. Перевірка автоматична. Ця анкета вже прихована від усіх.',
   en: 'Report received. The check is automated. This profile is already hidden from everyone.',
 };
-const ALREADY: Record<RoommateLocale, string> = {
+const ALREADY: Record<BotLocale, string> = {
   ru: 'Жалоба на эту анкету уже отправлена.',
   uk: 'Скаргу на цю анкету вже надіслано.',
   en: 'You already reported this profile.',
 };
 const UNAVAILABLE = 'Эта анкета больше недоступна.';
 
-const REASON_LABELS: Record<RoommateLocale, string[]> = {
+const REASON_LABELS: Record<BotLocale, string[]> = {
   ru: ['Просит деньги или залог', 'Фейковая анкета', 'Оскорбления', 'Похоже, младше 18', 'Другое'],
   uk: ['Просить гроші чи заставу', 'Фейкова анкета', 'Образи', 'Схоже, молодше 18', 'Інше'],
   en: ['Asks for money or a deposit', 'Fake profile', 'Offensive', 'Looks under 18', 'Other'],

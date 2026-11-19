@@ -145,6 +145,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `vi.clearAllMocks()` keeps a `mockImplementation`: a test that makes `api.sendMessage` fail leaks into the next one unless `beforeEach` resets it (example: `roommate-hide.test.ts`).
 - `node scripts/ralph-tasks.mjs add` needs an explicit `id` (the next free `T…`; check `grep -o '"id": "T1[0-9][0-9]"' ralph/tasks.json`).
 - A page render test proves its keys exist and parse in every locale when the mocked `useTranslations(namespace)` passes `namespace` and `onError: (e) => { throw e }` to `createTranslator` (a missing key otherwise renders its path silently); example: `src/app/[locale]/terms/matching-sections.test.ts`.
+- `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
 
 ## Log
 
@@ -2802,3 +2803,91 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     6. **`money()` keeps the Polish/Russian grouping** ("1 700 zł" with no-break spaces) in English too. It is unchanged.
   - No new event, constant, table or migration. `scripts/tg-webhook.ts` is unchanged: it publishes `COMMAND_MENU.en` for `en` and `pl` in T099, and the owner runs `npm run bot:webhook` after that deploy.
 - Next: T099 (the `en` bot locale). Widen `BotLocale` to `TextLocale` (or alias it), `normalizeLocale` (uk → uk, en/pl → en), `/lang` with three buttons, the deposit gate through `depositLocale`, and move `cancelled` / `nothingToCancel` / `remindersOff` into `texts.ts` with EN. Also `roommate-texts.ts` uses `BotLocale`, and tg-webhook publishes `COMMAND_MENU.en` for `en` and `pl`. The `'en' as BotLocale` casts in `format.test.ts` and `roommate-room-costs.test.ts` can then go.
+
+### 2026-11-19 20:35 · T099 · done
+
+- Done:
+  - `src/lib/bot/texts.ts`:
+    - `BotLocale = 'ru' | 'uk' | 'en'`. `TextLocale` is gone; every user of it now takes `BotLocale`.
+    - `normalizeLocale` reads `CLIENT_LANGUAGE_LOCALES` (`uk…` → uk, `en…` / `pl…` → en, else ru).
+    - `COMMAND_MENUS` is the menu table: RU by default, then one entry per client language.
+    - `LANGUAGE_NAMES` holds the button labels.
+    - New keys in RU / UK / EN: `cancelled`, `remindersOff`, `nothingToCancel` and `btnStartFlow`, moved from `deposit-texts.ts` with RU / UK unchanged, plus `depositGate`.
+    - RU / UK `langPrompt` and the `/lang` capability line now name English.
+  - `deposit-texts.ts`:
+    - `DepositLocale = 'ru' | 'uk'`, and `dt()` takes only that.
+    - `depositLocale(locale)` reads `en` as `ru`.
+    - The four keys above left the file. No deposit copy or letter changed.
+  - `deposit-flow.ts`:
+    - Every `dt()` caller takes a `DepositLocale`, reached through `depositLocale`: `localeOf` of the registered handlers, `handleDepositText`, `handleLawyerInterest` and `sendDueFollowUps`.
+    - `startDepositFlow` checks for an open roommate step first, then replies with the gate (`replyDepositGate`) in an `en` chat.
+    - `maybeOfferDeposit` in an `en` chat replies with the gate. It still tracks `tg_deposit_offered`.
+    - `dep:start` reads the raw chat locale.
+    - New `DEPOSIT_LANG_CALLBACK` / `handleDepositLanguage` (`dep:lang:(ru|uk)`): `setChatLocale`, then `startDepositFlow` in that language.
+    - `cancelDepositFlow` replies through `t()`.
+  - `bot.ts`:
+    - `handleLang` / `handleLangChoice` / `LANG_CALLBACK` (`lang:(ru|uk|en)`) are exported, with buttons Русский, Українська, English.
+    - `/deposit`'s button is `t(locale, 'btnStartFlow')`.
+  - `format.ts`: `webLink` takes `BotLocale`.
+  - `scripts/tg-webhook.ts` loops over `COMMAND_MENUS`, so `pl` and `en` get `COMMAND_MENU.en`.
+  - `roommate-texts.ts`: `RoommateLocale` is removed, `BotLocale` is used. A scratchpad script made the same rename across 18 modules and tests.
+  - `src/lib/bot/README.md`: bot locales, the deposit gate, `/lang`, the menu table and the follow-up locale. `docs/specs/README.md`: FR-37 and FR-38 → Done.
+- Tests:
+  - `texts.test.ts`:
+    - the six detection cases plus bare codes and letter case;
+    - `COMMAND_MENUS` (RU default, uk → UK, en and pl → EN), and that each client language's menu is the locale it is detected as;
+    - the webhook source loops over the table with one `setMyCommands`;
+    - the /lang line and prompt name all three languages;
+    - the moved keys: RU / UK unchanged, EN values, and no longer in `DEPOSIT_TEXT_KEYS`;
+    - the gate's sentence.
+  - `deposit-gate.test.ts` (new):
+    - the gate for the `dep` link, `dep:start` and the keyword offer;
+    - an open roommate step takes precedence over the gate;
+    - RU and UK chats get no gate;
+    - `dep:lang:ru` / `dep:lang:uk` set the locale before the first deposit text and start the flow; the handler is registered;
+    - in an `en` chat with an open case, the next intake question and a reason button come in RU.
+  - `deposit-flow.test.ts`:
+    - `sendDueFollowUps` with an `en` chat sends the RU follow-up and RU outcome buttons, and the same run still sends to the RU chat;
+    - `/cancel` in `en` gives three English replies.
+  - `bot.test.ts`:
+    - `/start` detection for the six codes;
+    - an existing `uk` chat stays `uk` under `en-GB`;
+    - the `dep` link passes `en` on;
+    - `/cancel` passes `en`;
+    - `/lang` in three locales; each `lang:*` tap; `LANG_CALLBACK` rejects `pl`;
+    - English `/deposit` with its button.
+  - `store.test.ts`: `touchChat` stores `en` for a new `pl` chat and never writes the locale of an existing chat.
+  - `deposit-lawyer.test.ts`: an `en` chat's case gets the RU acknowledgement.
+  - The `'en' as BotLocale` casts are gone. The room-costs honesty check now runs over `en` too.
+  - Mutation check: `depositLocale` passing `en` through plus no gate in `startDepositFlow` → 6 failures; reverted.
+- Checks: `npm run verify` exit 0:
+  - lint, typecheck;
+  - knip: 26 unused exports / 17 types, as before;
+  - Vitest: 136 files / 2854 tests;
+  - build OK.
+
+  `next-env.d.ts` restored. Nothing deployed, no migration, no message sent, `bot:webhook` not run.
+
+- Did not work: the rename script added a second `BotLocale` import to `texts.test.ts`, which imported `TextLocale` from `./texts`. Fixed by hand.
+- Owner review:
+  - **Assumption applied:** `pl` → English (D68), one entry in `CLIENT_LANGUAGE_LOCALES` (`texts.ts`). It drives both detection and the `pl` command menu.
+  - **Draft copy (texts.ts, agent draft, approve before the deploy):**
+    - `depositGate`:
+      - EN "The deposit helper speaks Russian and Ukrainian for now. Pick a language and it starts; the bot then answers you in that language (/lang changes it)."
+      - RU «Помощник с залогом пока говорит по-русски и по-украински. Выбери язык, и он начнёт; дальше бот будет отвечать на этом языке (сменить — /lang).»
+      - UK «Помічник із заставою поки говорить російською та українською. Обери мову, і він почне; далі бот відповідатиме цією мовою (змінити — /lang).»
+      - RU and UK are never sent; they only complete the dictionary.
+    - EN `cancelled` "OK, cancelled. If you need it again, type “deposit”."
+    - EN `remindersOff` "Reminders are off."
+    - EN `nothingToCancel` "Nothing to cancel right now 🙂"
+    - EN `btnStartFlow` "😤 I’m not getting my deposit back"
+    - RU / UK `langPrompt` «Выбери язык / Обери мову / Choose a language»
+    - RU / UK `/lang` capability line «/lang — русский / українська / English»
+  - **Agent's readings to confirm:**
+    1. **`btnStartFlow` moved to `texts.ts`** (the acceptance names only the three /cancel texts). Without it, an English `/deposit` would show a Russian button.
+    2. **The gate keeps `tg_deposit_offered`** on the keyword path; no new event. `tg_deposit_flow_started` fires only after a language tap.
+    3. **An open roommate step wins over the gate**: an English chat gets the English "/cancel first" line.
+    4. **The gate tap switches the whole chat's language**, as the spec says, and the gate text says so.
+  - No new table, migration or event.
+  - **Owner action after the deploy:** run `npm run bot:webhook` so the `en` and `pl` menus are published.
+- Next: `node scripts/ralph-tasks.mjs next` (T100, website bot languages FR-39, is now unblocked).

@@ -104,8 +104,11 @@ beforeEach(() => {
 const districts = (...slugs: string[]) => ({ districtSlugs: slugs, anyDistrict: false });
 const ANY = { districtSlugs: [], anyDistrict: true };
 
-async function reply(profile: { districtSlugs: string[]; anyDistrict: boolean }, locale = 'ru') {
-  const text = await roomCostsReply(profile, locale as BotLocale);
+async function reply(
+  profile: { districtSlugs: string[]; anyDistrict: boolean },
+  locale: BotLocale = 'ru',
+) {
+  const text = await roomCostsReply(profile, locale);
   expect(text).not.toBeNull();
   return text!;
 }
@@ -375,7 +378,7 @@ describe('honesty (CLAUDE.md, D23)', () => {
     'the %s reply has no "market", percentage, comparison or "verified"',
     async (_name, setup, profile) => {
       setup();
-      for (const locale of ['ru', 'uk']) {
+      for (const locale of ['ru', 'uk', 'en'] as const) {
         const text = await reply(profile, locale);
         expect(text).not.toMatch(
           /%|рын|ринк|market|дешев|дешевш|дорож|cheaper|verified|провер|перевір|рейтинг|место/i,

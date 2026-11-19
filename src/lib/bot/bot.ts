@@ -20,7 +20,6 @@ import {
   registerDepositFlow,
   startDepositFlow,
 } from './deposit-flow';
-import { dt } from './deposit-texts';
 import { matchDistrict } from './districts';
 import { geocodeAddress } from './geocode';
 import {
@@ -64,7 +63,14 @@ import {
   recordedStartPayload,
   type EntrySource,
 } from './start-payload';
-import { capabilityText, normalizeLocale, peopleWord, t, type BotLocale } from './texts';
+import {
+  capabilityText,
+  LANGUAGE_NAMES,
+  normalizeLocale,
+  peopleWord,
+  t,
+  type BotLocale,
+} from './texts';
 
 /**
  * The bot itself: a thin conversational shell over the same data the website's
@@ -362,8 +368,9 @@ export async function handleHelp(ctx: CommandContext<Context>): Promise<void> {
 
 /**
  * `/deposit`: the city's deposit statistic in the cards' wording and gate
- * (`depositStatement`), then the advice and the deposit helper. Exported so
- * tests can call it with a fake context.
+ * (`depositStatement`), then the advice and the deposit helper, all in the
+ * chat's language; in an English chat the helper's button opens the deposit
+ * gate (`startDepositFlow`). Exported so tests can call it with a fake context.
  */
 export async function handleDeposit(ctx: CommandContext<Context>): Promise<void> {
   const chat = await touchChat({ chatId: ctx.chat.id });
@@ -386,7 +393,7 @@ export async function handleDeposit(ctx: CommandContext<Context>): Promise<void>
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
     reply_markup: new InlineKeyboard()
-      .text(dt(locale, 'btnStartFlow'), 'dep:start')
+      .text(t(locale, 'btnStartFlow'), 'dep:start')
       .row()
       .url(t(locale, 'btnSubmit'), webLink('/warsaw/costs/submit', locale, 'deposit')),
   });
@@ -534,6 +541,32 @@ export async function handleCancel(ctx: CommandContext<Context>): Promise<void> 
   await cancelDepositFlow(ctx, chat.id, locale);
 }
 
+/** The /lang buttons, in this order (spec 04 §English bot locale). */
+const LANG_CHOICES: readonly BotLocale[] = ['ru', 'uk', 'en'];
+
+/** Callback data of the /lang buttons: `lang:ru`, `lang:uk`, `lang:en`. */
+export const LANG_CALLBACK = /^lang:(ru|uk|en)$/;
+
+/** `/lang`: the three languages, each in its own words. Exported for tests. */
+export async function handleLang(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat.id });
+  const keyboard = new InlineKeyboard();
+  for (const locale of LANG_CHOICES) keyboard.text(LANGUAGE_NAMES[locale], `lang:${locale}`);
+  await ctx.reply(t(chat.locale as BotLocale, 'langPrompt'), { reply_markup: keyboard });
+}
+
+/**
+ * A /lang button: the chat's language from now on. An open intake goes on, its
+ * next message in the new language (deposit texts in Russian for English,
+ * `depositLocale`). Exported for tests.
+ */
+export async function handleLangChoice(ctx: CallbackQueryContext<Context>): Promise<void> {
+  const locale = ctx.match[1] as BotLocale;
+  await setChatLocale(ctx.chat!.id, locale);
+  await ctx.answerCallbackQuery();
+  await ctx.reply(t(locale, 'langSet'));
+}
+
 /**
  * `bot.catch`: the error's message and the update's type, nothing else. A
  * `BotError` carries the context, whose update holds the chat id and the typed
@@ -599,19 +632,9 @@ export function createBot(token: string): Bot {
 
   bot.command('my', handleMy);
 
-  bot.command('lang', async (ctx) => {
-    const chat = await touchChat({ chatId: ctx.chat.id });
-    await ctx.reply(t(chat.locale as BotLocale, 'langPrompt'), {
-      reply_markup: new InlineKeyboard().text('Русский', 'lang:ru').text('Українська', 'lang:uk'),
-    });
-  });
+  bot.command('lang', handleLang);
 
-  bot.callbackQuery(/^lang:(ru|uk)$/, async (ctx) => {
-    const locale = ctx.match![1] as BotLocale;
-    await setChatLocale(ctx.chat!.id, locale);
-    await ctx.answerCallbackQuery();
-    await ctx.reply(t(locale, 'langSet'));
-  });
+  bot.callbackQuery(LANG_CALLBACK, handleLangChoice);
 
   bot.callbackQuery('districts', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat!.id });

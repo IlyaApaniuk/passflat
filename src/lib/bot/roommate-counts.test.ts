@@ -91,7 +91,8 @@ vi.mock('./lookup', () => ({ getCity: mocks.getCity }));
 vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }));
 
 import { registerRoommateFlow } from './roommate-flow';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const CHAT_ID = 4242;
 const CHAT_ROW = 'chat-row';
@@ -223,7 +224,7 @@ const ROUTES = registeredRoutes();
 type Button = { text: string; callback_data?: string };
 
 /** A tap on a button with `data`, routed to the one handler registered for it. */
-async function tap(data: string, locale: RoommateLocale = 'ru') {
+async function tap(data: string, locale: BotLocale = 'ru') {
   mocks.touchChat.mockResolvedValue({ id: CHAT_ROW, locale, isNew: false });
   const routes = ROUTES.filter(([trigger]) =>
     typeof trigger === 'string' ? trigger === data : trigger.test(data),
@@ -300,7 +301,7 @@ describe('after the save (golden case, PRD 3 §5 example 1)', () => {
     expect(reply.mock.calls[1][1]).toEqual(WITH_OPT_IN);
   });
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     ['uk', UK_GOLDEN],
     ['en', EN_GOLDEN],
   ])('writes the counts in %s', async (locale, expected) => {
@@ -309,7 +310,7 @@ describe('after the save (golden case, PRD 3 §5 example 1)', () => {
     expect(last).toBe(expected);
   });
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     ['ru', RU_ANY],
     ['uk', UK_ANY],
     ['en', EN_ANY],
@@ -372,7 +373,7 @@ describe('"How many are looking?" (rm:c:counts)', () => {
     ]);
   });
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     ['uk', UK_GOLDEN],
     ['en', EN_GOLDEN],
   ])('writes them in %s', async (locale, expected) => {
@@ -440,7 +441,7 @@ describe('"How many are looking?" (rm:c:counts)', () => {
 });
 
 describe('zero', () => {
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     ['ru', 'Кроме тебя, анкет пока ни у кого нет. Подбор откроется, когда людей станет больше.'],
     ['uk', 'Окрім тебе, анкет поки ні в кого немає. Підбір відкриється, коли людей стане більше.'],
     ['en', 'Besides you, nobody has a profile yet. Matching opens when there are more people.'],
@@ -461,7 +462,7 @@ describe('zero', () => {
     ]);
   });
 
-  it.each<[RoommateLocale, string]>([
+  it.each<[BotLocale, string]>([
     [
       'ru',
       'Кроме тебя, анкеты есть у: Bielany — пока никого, Mokotów — 2 человека, готовых к любому району пока нет. Всего в Варшаве — 3 человека. Подбор откроется, когда людей станет больше.',
@@ -578,7 +579,7 @@ describe('a database error', () => {
     expect(JSON.stringify(errorLog.mock.calls)).not.toMatch(/4242|anna|chat-row|mokotow|P8/);
   });
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     'on "How many are looking?" says so in %s',
     async (locale) => {
       seed({}, EXAMPLE_1);

@@ -14,19 +14,38 @@
  * costs"); never "market", "verified", "checked" or "actually".
  */
 
-/** The locales this file holds texts for: every key has a value in each (`texts.test.ts`). */
-export type TextLocale = 'ru' | 'uk' | 'en';
+/**
+ * The locales a chat is answered in (`TelegramChat.locale`), and the ones this
+ * file holds texts for: every key has a value in each (`texts.test.ts`). The
+ * deposit helper speaks only RU and UK (`depositLocale`, D63).
+ */
+export type BotLocale = 'ru' | 'uk' | 'en';
 
 /**
- * The locales a chat is answered in. English texts exist (`TextLocale`), but a
- * chat reaches them only once this widens to `'en'` with the deposit gate
- * (spec 04 §English bot locale, T099).
+ * Telegram client languages (`language_code` prefixes) answered in a locale
+ * other than the default RU (spec 04 §English bot locale). **Assumption** (D68):
+ * Polish clients get English, as there is no Polish bot locale (D50).
+ * `normalizeLocale` reads it for a new chat, and `COMMAND_MENUS` publishes each
+ * entry's menu, so the bot's language and its menu agree.
  */
-export type BotLocale = 'ru' | 'uk';
+const CLIENT_LANGUAGE_LOCALES = [
+  ['uk', 'uk'],
+  ['en', 'en'],
+  ['pl', 'en'],
+] as const;
 
+/** `uk…` → uk; `en…` and `pl…` → en; anything else, or no language code, → ru. */
 export function normalizeLocale(languageCode: string | undefined): BotLocale {
-  return languageCode?.toLowerCase().startsWith('uk') ? 'uk' : 'ru';
+  const code = languageCode?.toLowerCase() ?? '';
+  return CLIENT_LANGUAGE_LOCALES.find(([prefix]) => code.startsWith(prefix))?.[1] ?? 'ru';
 }
+
+/** Language names in their own words, for the /lang and deposit-gate buttons. */
+export const LANGUAGE_NAMES: Record<BotLocale, string> = {
+  ru: 'Русский',
+  uk: 'Українська',
+  en: 'English',
+};
 
 /**
  * The forms of a counted word per locale: Slavic one / few / many ("1 отчёт",
@@ -39,7 +58,7 @@ type PluralForms = {
 };
 
 /** The form of `forms` that agrees with `count` in `locale`. */
-export function plural<L extends TextLocale>(
+export function plural<L extends BotLocale>(
   locale: L,
   count: number,
   forms: PluralForms[L],
@@ -88,19 +107,19 @@ const ANSWERED_FORMS: PluralForms = {
   en: ['who answered', 'who answered'],
 };
 
-export function reportsWord(locale: TextLocale, count: number): string {
+export function reportsWord(locale: BotLocale, count: number): string {
   return plural(locale, count, REPORT_FORMS[locale]);
 }
 
-export function listingsWord(locale: TextLocale, count: number): string {
+export function listingsWord(locale: BotLocale, count: number): string {
   return plural(locale, count, LISTING_FORMS[locale]);
 }
 
-export function observationsWord(locale: TextLocale, count: number): string {
+export function observationsWord(locale: BotLocale, count: number): string {
   return plural(locale, count, OBSERVATION_FORMS[locale]);
 }
 
-export function answeredWord(locale: TextLocale, count: number): string {
+export function answeredWord(locale: BotLocale, count: number): string {
   return plural(locale, count, ANSWERED_FORMS[locale]);
 }
 
@@ -110,7 +129,7 @@ const PEOPLE_FORMS: PluralForms = {
   en: ['person', 'people'],
 };
 
-export function peopleWord(locale: TextLocale, count: number): string {
+export function peopleWord(locale: BotLocale, count: number): string {
   return plural(locale, count, PEOPLE_FORMS[locale]);
 }
 
@@ -134,7 +153,7 @@ const CAPABILITIES_RU =
   '• /districts — расходы по всем районам Варшавы\n' +
   '• /deposit — как часто возвращают залог и как вернуть свой\n' +
   '• /my — сохранённые интересы: дома, районы, города\n' +
-  '• /lang — русский / українська\n' +
+  '• /lang — русский / українська / English\n' +
   '• /cancel — выйти из вопросов: о залоге или для анкеты';
 
 const CAPABILITIES_UK =
@@ -145,7 +164,7 @@ const CAPABILITIES_UK =
   '• /districts — витрати по всіх районах Варшави\n' +
   '• /deposit — як часто повертають заставу і як повернути свою\n' +
   '• /my — збережені інтереси: будинки, райони, міста\n' +
-  '• /lang — русский / українська\n' +
+  '• /lang — русский / українська / English\n' +
   '• /cancel — вийти з питань: про заставу або для анкети';
 
 /** The /lang line names each language in its own words, as the RU and UK lists do. */
@@ -298,8 +317,17 @@ const RU = {
   shareHint:
     'Перешли это сообщение в чат дома или района — так данных станет больше, и цифры станут точнее.',
 
-  langPrompt: 'Выбери язык / Обери мову',
+  langPrompt: 'Выбери язык / Обери мову / Choose a language',
   langSet: 'Готово. Пиши адрес.',
+
+  // --- /cancel and the deposit entry: in every bot locale, unlike deposit-texts.ts (D63) ---
+  cancelled: 'Ок, отменил. Если понадобится — напиши «залог».',
+  remindersOff: 'Напоминания отключены.',
+  nothingToCancel: 'Сейчас нечего отменять 🙂',
+  btnStartFlow: '😤 Мне не возвращают залог',
+  /** Sent only to an English chat (spec 04 §English bot locale); RU and UK fill the dictionary. */
+  depositGate:
+    'Помощник с залогом пока говорит по-русски и по-украински. Выбери язык, и он начнёт; дальше бот будет отвечать на этом языке (сменить — /lang).',
 } as const;
 
 export type TextKey = keyof typeof RU;
@@ -431,8 +459,15 @@ const UK: Record<Key, string> = {
   shareHint:
     'Перешли це повідомлення в чат будинку або району — так даних стане більше, і цифри стануть точнішими.',
 
-  langPrompt: 'Выбери язык / Обери мову',
+  langPrompt: 'Выбери язык / Обери мову / Choose a language',
   langSet: 'Готово. Пиши адресу.',
+
+  cancelled: 'Ок, скасував. Якщо знадобиться — напиши «застава».',
+  remindersOff: 'Нагадування вимкнено.',
+  nothingToCancel: 'Зараз нема чого скасовувати 🙂',
+  btnStartFlow: '😤 Мені не повертають заставу',
+  depositGate:
+    'Помічник із заставою поки говорить російською та українською. Обери мову, і він почне; далі бот відповідатиме цією мовою (змінити — /lang).',
 };
 
 /**
@@ -571,9 +606,16 @@ const EN: Record<Key, string> = {
 
   langPrompt: 'Choose a language / Выбери язык / Обери мову',
   langSet: 'Done. Send an address.',
+
+  cancelled: 'OK, cancelled. If you need it again, type “deposit”.',
+  remindersOff: 'Reminders are off.',
+  nothingToCancel: 'Nothing to cancel right now 🙂',
+  btnStartFlow: '😤 I’m not getting my deposit back',
+  depositGate:
+    'The deposit helper speaks Russian and Ukrainian for now. Pick a language and it starts; the bot then answers you in that language (/lang changes it).',
 };
 
-const DICTS: Record<TextLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
+const DICTS: Record<BotLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
 
 /** Every text key, so tests can check all copy (for example for removed promises). */
 export const TEXT_KEYS = Object.keys(RU) as TextKey[];
@@ -581,13 +623,12 @@ export const TEXT_KEYS = Object.keys(RU) as TextKey[];
 type MenuCommand = { command: string; description: string };
 
 /**
- * The Telegram command menu, published by `scripts/tg-webhook.ts`: RU as the
- * default menu, UK for `language_code: 'uk'`; EN is published for `en` and
- * `pl` with the English bot locale (T099). Same commands as the capability
- * list in `start` and `help`. `/mate` reads the same in both switch states;
- * `/cancel` leaves the deposit questions and the roommate questions.
+ * The Telegram command menu, published by `scripts/tg-webhook.ts` through
+ * `COMMAND_MENUS`. Same commands as the capability list in `start` and `help`.
+ * `/mate` reads the same in both switch states; `/cancel` leaves the deposit
+ * questions and the roommate questions.
  */
-export const COMMAND_MENU: Record<TextLocale, readonly MenuCommand[]> = {
+export const COMMAND_MENU: Record<BotLocale, readonly MenuCommand[]> = {
   ru: [
     { command: 'mate', description: 'Найти, с кем снять квартиру' },
     { command: 'districts', description: 'Районы Варшавы по расходам' },
@@ -617,8 +658,25 @@ export const COMMAND_MENU: Record<TextLocale, readonly MenuCommand[]> = {
   ],
 };
 
+/**
+ * The menus `scripts/tg-webhook.ts` publishes, one `setMyCommands` call each:
+ * RU as the default (no `languageCode`), then each client language of
+ * `CLIENT_LANGUAGE_LOCALES` with its locale's menu (UK for `uk`, EN for `en`
+ * and `pl`). It takes effect only when the owner runs `npm run bot:webhook`.
+ */
+export const COMMAND_MENUS: readonly {
+  languageCode?: (typeof CLIENT_LANGUAGE_LOCALES)[number][0];
+  commands: readonly MenuCommand[];
+}[] = [
+  { commands: COMMAND_MENU.ru },
+  ...CLIENT_LANGUAGE_LOCALES.map(([languageCode, locale]) => ({
+    languageCode,
+    commands: COMMAND_MENU[locale],
+  })),
+];
+
 /** A text with `{name}` placeholders filled; no fallback to another locale (every key has each). */
-export function t(locale: TextLocale, key: Key, vars?: Vars): string {
+export function t(locale: BotLocale, key: Key, vars?: Vars): string {
   const template = DICTS[locale][key];
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => vars[name] ?? match);
@@ -633,7 +691,7 @@ export type CapabilityTextKey = 'start' | 'startAfterPayload' | 'help';
  * greeting, `/help` and the roommate flow agree on the state.
  */
 export function capabilityText(
-  locale: TextLocale,
+  locale: BotLocale,
   key: CapabilityTextKey,
   matchingEnabled: boolean,
 ): string {

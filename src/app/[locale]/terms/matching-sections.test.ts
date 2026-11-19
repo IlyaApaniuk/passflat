@@ -4,7 +4,8 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { rt, type RoommateLocale } from '@/lib/bot/roommate-texts';
+import { rt } from '@/lib/bot/roommate-texts';
+import type { BotLocale } from '@/lib/bot/texts';
 
 // Spec 07 §Terms and privacy drafts (FR-36): the matching sections of the privacy policy
 // (`#roommate-matching`, linked from the bot's intake intro) and of the terms (`#matching`,
@@ -163,7 +164,7 @@ describe('the bot and the pages agree', () => {
     expect(source('src/lib/bot/roommate-hide-messages.ts')).toContain("webLink('/terms#matching'");
   });
 
-  it.each<RoommateLocale>(['ru', 'uk', 'en'])(
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
     'the terms name the report reasons as the bot buttons do (%s)',
     (locale) => {
       const reports = leaf(locale, 'termsPage.matching.reports');

@@ -20,8 +20,7 @@ import {
 import type { AddressLookup, DistrictRow } from './lookup';
 import { plural, reportsWord, t, type BotLocale } from './texts';
 
-/** English texts exist, but no chat is in English before T099 widens `BotLocale`. */
-const EN = 'en' as BotLocale;
+const EN: BotLocale = 'en';
 const CYRILLIC = /\p{Script=Cyrillic}/u;
 
 function report(source: string, fields: Partial<FigureReport> = {}): FigureReport {

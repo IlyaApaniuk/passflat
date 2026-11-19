@@ -86,7 +86,7 @@ import { matchDistrict } from './districts';
 import { escapeHtml, webLink } from './format';
 import { getCity } from './lookup';
 import { roomCostsReply } from './roommate-room-costs';
-import { rt, rtPeople, type RoommateLocale } from './roommate-texts';
+import { rt, rtPeople } from './roommate-texts';
 import { ROOMMATE_ENTRY_SOURCE, type RoommateEntrySource } from './start-payload';
 import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
@@ -237,7 +237,7 @@ function amount(value: number): string {
  * A band's label from the bounds in `BUDGET_BANDS`: "до 1 199 zł", "1 200 – 1 599 zł",
  * "2 500 zł и больше". A band runs up to the next band's `min` minus one złoty.
  */
-function budgetBandLabel(band: BudgetBand, locale: RoommateLocale): string {
+function budgetBandLabel(band: BudgetBand, locale: BotLocale): string {
   const index = BUDGET_BANDS.findIndex((b) => b.band === band);
   const next = BUDGET_BANDS[index + 1];
   if (index === 0) return rt(locale, 'bandUpTo', { max: amount(next.min - 1) });
@@ -552,7 +552,7 @@ type CardFields = Pick<
 export function cardFieldLines(
   profile: CardFields,
   districts: readonly District[],
-  locale: RoommateLocale,
+  locale: BotLocale,
   aboutKey: 'cardAbout' | 'browseAbout',
   privateLines: readonly string[] = [],
 ): string[] {

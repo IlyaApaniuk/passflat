@@ -272,7 +272,7 @@ import { openRoommate, registerRoommateFlow } from './roommate-flow';
 import { statementText } from './roommate-hide-messages';
 import { registerRoommateMatching } from './roommate-matching';
 import { registerRoommateSafety } from './roommate-safety';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
 import type { TouchedChat } from './store';
 import type { BotLocale } from './texts';
 
@@ -280,7 +280,7 @@ import type { BotLocale } from './texts';
 const NOW = new Date('2026-12-05T09:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
 const EXPIRES = new Date(NOW.getTime() + 30 * DAY);
-const LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
+const LOCALES: BotLocale[] = ['ru', 'uk', 'en'];
 const DISTRICTS = [{ slug: 'mokotow', nameKey: 'Mokotów' }];
 
 /** A profile id of the database's shape. */
@@ -344,7 +344,7 @@ function profile(id: string, fields: Partial<RoommateProfile> = {}): Row {
 }
 
 /** Profiles in their own chats (RU unless named). */
-function seed(rows: Row[], locales: Record<string, RoommateLocale> = {}) {
+function seed(rows: Row[], locales: Record<string, BotLocale> = {}) {
   db.state.profiles = rows;
   db.state.chats = rows.map((row) => ({
     id: row.chatId,
@@ -446,7 +446,7 @@ const ROUTES: Route[] = [];
   registerRoommateSafety(bot);
 }
 
-type Who = { who?: string; locale?: RoommateLocale };
+type Who = { who?: string; locale?: BotLocale };
 
 /** The `reply` of the last fake context, to order a tap's receipt against the API's sends. */
 let lastReply: Mock = vi.fn();
@@ -928,7 +928,7 @@ function failSends(codes: Record<string, number>) {
 const failSendsTo = (code: number, ...ids: string[]) =>
   failSends(Object.fromEntries(ids.map((id) => [id, code])));
 
-const quoted = (locale: RoommateLocale, key: Parameters<typeof rt>[1]) =>
+const quoted = (locale: BotLocale, key: Parameters<typeof rt>[1]) =>
   locale === 'en' ? `'${rt(locale, key)}'` : `«${rt(locale, key)}»`;
 
 describe('the statement of reasons (spec 07 §Statement of reasons, FR-33)', () => {

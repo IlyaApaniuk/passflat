@@ -65,6 +65,7 @@ import { flushPostHog } from '@/lib/posthog-server';
 
 import { track } from './analytics';
 import { cancelDepositFlow, runInBackground, sendDueFollowUps } from './deposit-flow';
+import { dt } from './deposit-texts';
 
 const NOW = new Date('2026-11-20T09:00:00Z');
 const DUE = new Date('2026-11-20T00:00:00Z');
@@ -272,6 +273,32 @@ describe('sendDueFollowUps', () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
+  it('sends an English chat its follow-up in Russian, and the run goes on (spec 04 §English bot locale)', async () => {
+    seedChat('chat-en', 'en', BigInt(888000222));
+    seedChat('chat-ru', 'ru');
+    seedCase({ id: 'case-en', chatId: 'chat-en', followUpKind: 'letter', status: 'letter_sent' });
+    seedCase({ id: 'case-ru', chatId: 'chat-ru' });
+    const { api, sendMessage } = fakeApi();
+
+    expect(await sendDueFollowUps(api, NOW)).toEqual({ due: 2, sent: 2, blocked: 0 });
+
+    const calls = sendMessage.mock.calls as unknown as [
+      number,
+      string,
+      { reply_markup: { inline_keyboard: { text: string; callback_data: string }[][] } },
+    ][];
+    const [chatId, text, options] = calls.find(([id]) => id === 888000222)!;
+    expect(chatId).toBe(888000222);
+    expect(text).toBe(dt('ru', 'followUpLetter'));
+    expect(options.reply_markup.inline_keyboard.flat()).toEqual([
+      { text: dt('ru', 'btnOutcomeFull'), callback_data: 'dep:o:case-en:full' },
+      { text: dt('ru', 'btnOutcomePartial'), callback_data: 'dep:o:case-en:partial' },
+      { text: dt('ru', 'btnOutcomeNone'), callback_data: 'dep:o:case-en:none' },
+    ]);
+    expect(calls.find(([id]) => id === TG_CHAT_ID)?.[1]).toBe(dt('ru', 'followUpDeadline'));
+    expect(caseById('case-en').followUpAt).toBeNull();
+  });
+
   it('leaves rows that are not due, or not open, alone', async () => {
     seedChat('chat-db-1');
     seedCase({ id: 'future', followUpAt: LATER });
@@ -354,6 +381,45 @@ describe('cancelDepositFlow', () => {
     expect(reply).toHaveBeenCalledWith('Сейчас нечего отменять 🙂');
     expect(caseById('other-chat').followUpAt).toEqual(DUE);
     expect(caseById('resolved').status).toBe('resolved');
+  });
+
+  describe('in an English chat (spec 04 §English bot locale)', () => {
+    it('turns off a reminder and the intake, and replies in English', async () => {
+      seedChat('chat-db-1', 'en');
+      seedCase({ id: 'reminder', status: 'verdict' });
+      seedCase({ id: 'intake', status: 'intake', followUpAt: null, followUpKind: null });
+      const { ctx, reply } = fakeCtx();
+
+      await cancelDepositFlow(ctx, 'chat-db-1', 'en');
+
+      expect(caseById('reminder')).toMatchObject({ followUpAt: null, followUpKind: 'deadline' });
+      expect(caseById('intake').status).toBe('abandoned');
+      expect(reply.mock.calls).toEqual([
+        ['OK, cancelled. If you need it again, type “deposit”.\nReminders are off.'],
+      ]);
+    });
+
+    it('with nothing to cancel, says so in English', async () => {
+      seedChat('chat-db-1', 'en');
+      const { ctx, reply } = fakeCtx();
+
+      await cancelDepositFlow(ctx, 'chat-db-1', 'en');
+
+      expect(reply.mock.calls).toEqual([['Nothing to cancel right now 🙂']]);
+    });
+
+    it('and the next run sends nothing', async () => {
+      seedChat('chat-db-1', 'en');
+      seedCase({ id: 'case-1', status: 'letter_sent', followUpKind: 'letter' });
+      const { ctx, reply } = fakeCtx();
+      const { api, sendMessage } = fakeApi();
+
+      await cancelDepositFlow(ctx, 'chat-db-1', 'en');
+
+      expect(reply.mock.calls).toEqual([['Reminders are off.']]);
+      expect(await sendDueFollowUps(api, NOW)).toEqual({ due: 0, sent: 0, blocked: 0 });
+      expect(sendMessage).not.toHaveBeenCalled();
+    });
   });
 });
 

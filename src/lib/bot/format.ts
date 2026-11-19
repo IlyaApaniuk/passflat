@@ -63,8 +63,8 @@ function appUrl(path: string): string {
   return `${base}${path}`;
 }
 
-/** `en` too: roommate copy has English already, and the website has `/en` (spec 07 §Statement of reasons). */
-export function webLink(path: string, locale: BotLocale | 'en', source = 'tgbot'): string {
+/** A website page in the chat's language: the website has `/ru`, `/uk` and `/en`. */
+export function webLink(path: string, locale: BotLocale, source = 'tgbot'): string {
   const localePath = path.startsWith('/') ? path : `/${path}`;
   const url = new URL(appUrl(`/${locale}${localePath}`));
   url.searchParams.set('utm_source', 'telegram');

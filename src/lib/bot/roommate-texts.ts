@@ -1,13 +1,10 @@
-import { peopleWord } from './texts';
+import { peopleWord, type BotLocale } from './texts';
 
 /**
- * Bot copy for roommate matching (spec 06), in RU, UK and EN.
+ * Bot copy for roommate matching (spec 06), in RU, UK and EN, the three bot
+ * locales (`BotLocale`, spec 04 §English bot locale).
  *
- * Kept apart from `texts.ts` like the deposit copy: it is its own conversation,
- * and it already has English, which the rest of the bot gets only with the `en`
- * bot locale (spec 04 §English bot locale). Until that lands, `BotLocale` is
- * `'ru' | 'uk'`, so these texts carry their own locale type; T099 replaces it
- * with `BotLocale`.
+ * Kept apart from `texts.ts` like the deposit copy: it is its own conversation.
  *
  * Every text is a draft for the owner's review. PRD 3 §8 drafts are used
  * verbatim where they exist (intro, gender and "live with", short text, 18+,
@@ -33,10 +30,8 @@ import { peopleWord } from './texts';
  * that nobody sees the profile until matching opens is replaced by who sees what.
  */
 
-export type RoommateLocale = 'ru' | 'uk' | 'en';
-
 /** Roommate copy in the chat's stored bot language (`telegram_chats.locale`). */
-export function roommateLocale(locale: string): RoommateLocale {
+export function roommateLocale(locale: string): BotLocale {
   return locale === 'uk' || locale === 'en' ? locale : 'ru';
 }
 
@@ -848,13 +843,13 @@ const EN: Record<Key, string> = {
   appealNothing: "There's nothing to appeal: this chat has no matching decision.",
 };
 
-const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
+const DICTS: Record<BotLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
 
 /** Every roommate text key, so tests can walk all copy (values, promises, the address form). */
 export const ROOMMATE_TEXT_KEYS = Object.keys(RU) as Key[];
 
 /** A roommate text with `{name}` placeholders filled, like `t()`; no fallback to another locale. */
-export function rt(locale: RoommateLocale, key: Key, vars?: Vars): string {
+export function rt(locale: BotLocale, key: Key, vars?: Vars): string {
   const template = DICTS[locale][key];
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => vars[name] ?? match);
@@ -864,6 +859,6 @@ export function rt(locale: RoommateLocale, key: Key, vars?: Vars): string {
  * The `{people}` word of the counts texts: the plural agreement of `texts.ts`
  * (Slavic for RU/UK, one / other for EN); English templates do not use it.
  */
-export function rtPeople(locale: RoommateLocale, count: number): string {
+export function rtPeople(locale: BotLocale, count: number): string {
   return peopleWord(locale, count);
 }

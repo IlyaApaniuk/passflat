@@ -12,7 +12,8 @@ import {
 
 import { track } from './analytics';
 import type { CronMessage, CronSender, MessageJob } from './roommate-daily';
-import { roommateLocale, rt, type RoommateLocale } from './roommate-texts';
+import { roommateLocale, rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 /**
  * The reveal of a formed pair (spec 07 §Reveal, FR-26 criteria 3 – 4, FR-30): "It's mutual.
@@ -47,12 +48,12 @@ export type NextStepChoice = keyof typeof NEXT_STEPS;
 const DUE_PAIRS_PER_RUN = 500;
 
 /** The reveal's text: the match line with the partner's username, then the safety lines. */
-export function revealText(locale: RoommateLocale, username: string): string {
+export function revealText(locale: BotLocale, username: string): string {
   return `${rt(locale, 'revealMatch', { username })}\n\n${rt(locale, 'revealSafety')}`;
 }
 
 /** The three next steps (`rm:ns:<choice>`), then "Report" for the partner (`rm:r:<profileId>`). */
-export function revealKeyboard(locale: RoommateLocale, partnerProfileId: string): InlineKeyboard {
+export function revealKeyboard(locale: BotLocale, partnerProfileId: string): InlineKeyboard {
   return InlineKeyboard.from([
     [InlineKeyboard.text(rt(locale, 'btnNextAgreement'), 'rm:ns:agreement')],
     [InlineKeyboard.text(rt(locale, 'btnNextAddress'), 'rm:ns:address')],

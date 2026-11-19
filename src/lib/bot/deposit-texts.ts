@@ -150,10 +150,6 @@ const RU = {
 
   keywordOffer:
     'Похоже, вопрос про залог. Помочь его вернуть? Разберу ситуацию по закону и составлю письмо хозяину на польском.',
-  btnStartFlow: '😤 Мне не возвращают залог',
-  cancelled: 'Ок, отменил. Если понадобится — напиши «залог».',
-  remindersOff: 'Напоминания отключены.',
-  nothingToCancel: 'Сейчас нечего отменять 🙂',
   caseNotFound: 'Этот разбор уже неактуален. Чтобы начать заново — напиши «залог».',
 };
 
@@ -300,16 +296,25 @@ const UK: Record<Key, string> = {
 
   keywordOffer:
     'Схоже, питання про заставу. Допомогти її повернути? Розберу ситуацію за законом і складу лист власнику польською.',
-  btnStartFlow: '😤 Мені не повертають заставу',
-  cancelled: 'Ок, скасував. Якщо знадобиться — напиши «застава».',
-  remindersOff: 'Нагадування вимкнено.',
-  nothingToCancel: 'Зараз нема чого скасовувати 🙂',
   caseNotFound: 'Цей розбір уже неактуальний. Щоб почати заново — напиши «застава».',
 };
 
-const DICTS: Record<BotLocale, Record<Key, string>> = { ru: RU, uk: UK };
+/** The deposit helper's languages (D63): an English chat gets the language gate first. */
+export type DepositLocale = 'ru' | 'uk';
 
-export function dt(locale: BotLocale, key: Key, vars?: Record<string, string>): string {
+/**
+ * The language of every deposit text (spec 04 §English bot locale). An English
+ * chat never starts a case (the entry points reply with the gate), but one that
+ * switched to English with a case open gets its follow-ups, buttons and verdict
+ * in Russian.
+ */
+export function depositLocale(locale: BotLocale): DepositLocale {
+  return locale === 'en' ? 'ru' : locale;
+}
+
+const DICTS: Record<DepositLocale, Record<Key, string>> = { ru: RU, uk: UK };
+
+export function dt(locale: DepositLocale, key: Key, vars?: Record<string, string>): string {
   const template = DICTS[locale][key] ?? DICTS.ru[key];
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => vars[name] ?? match);

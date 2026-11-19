@@ -5,7 +5,8 @@ import { REPORT_REASONS, type ReportReason } from '@/lib/roommate/rules';
 
 import { escapeHtml, webLink } from './format';
 import type { CronSender, MessageJob } from './roommate-daily';
-import { roommateLocale, rt, type RoommateLocale } from './roommate-texts';
+import { roommateLocale, rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 /**
  * The messages of an automatic hide (spec 07 §Automatic hiding, §Statement of reasons; FR-32
@@ -42,7 +43,7 @@ export const REPORT_REASON_LABEL = {
 
 const CHAT_SELECT = { chatId: true, blockedAt: true, locale: true } as const;
 
-function quoted(locale: RoommateLocale, label: string): string {
+function quoted(locale: BotLocale, label: string): string {
   return locale === 'en' ? `'${label}'` : `«${label}»`;
 }
 
@@ -53,7 +54,7 @@ function quoted(locale: RoommateLocale, label: string): string {
  * its rule (`hidden_reason`) and the terms' moderation section; the redress. Never a reporter.
  */
 export function statementText(
-  locale: RoommateLocale,
+  locale: BotLocale,
   hiddenReason: string | null,
   reasons: readonly string[],
 ): string {

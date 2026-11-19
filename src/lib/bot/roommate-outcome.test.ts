@@ -192,7 +192,8 @@ import { OUTCOMES, OUTCOME_QUESTION_DAYS, type Outcome } from '@/lib/roommate/ru
 import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { registerRoommateFlow } from './roommate-flow';
 import { registerRoommateMatching } from './roommate-matching';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt } from './roommate-texts';
+import type { BotLocale } from './texts';
 
 const at = (iso: string) => new Date(iso);
 const DAY = 24 * 60 * 60 * 1000;
@@ -379,7 +380,7 @@ async function tap(
     who = A,
     locale = 'ru',
     username = `user_${who.slice(-2)}`,
-  }: { who?: string; locale?: RoommateLocale; username?: string } = {},
+  }: { who?: string; locale?: BotLocale; username?: string } = {},
 ) {
   mocks.touchChat.mockResolvedValue({ id: `chat-${who}`, locale, isNew: false });
   const routes = routesFor(data);
@@ -597,7 +598,7 @@ describe('the outcome question: who is asked, and when (FR-29)', () => {
     }
   });
 
-  it.each<[RoommateLocale, string, string[]]>([
+  it.each<[BotLocale, string, string[]]>([
     [
       'uk',
       'Вдалося знайти, з ким винаймати квартиру?',

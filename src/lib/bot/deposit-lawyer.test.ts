@@ -23,15 +23,14 @@ vi.mock('@/lib/posthog-server', () => ({ flushPostHog: vi.fn(async () => {}) }))
 
 import { track } from './analytics';
 import { handleLawyerInterest, LAWYER_CALLBACK } from './deposit-flow';
-import { dt } from './deposit-texts';
+import { dt, type DepositLocale } from './deposit-texts';
 import { touchChat } from './store';
-import type { BotLocale } from './texts';
 
 const CHAT_ID = 777000111;
 const CHAT_DB_ID = 'chat-db-1';
 const CASE_ID = '0b9f7c1e-2a4d-4e8f-9c3b-5d6a7e8f9a0b';
 
-const LOCALES: BotLocale[] = ['ru', 'uk'];
+const LOCALES: DepositLocale[] = ['ru', 'uk'];
 
 const APPROVED = {
   ru: {
@@ -137,6 +136,27 @@ describe('handleLawyerInterest', () => {
       expect(tap.reply.mock.calls[0]).toEqual([APPROVED[locale].ack]);
     },
   );
+
+  it('an English chat with a case gets the confirmation in Russian (spec 04 §English bot locale)', async () => {
+    vi.mocked(touchChat).mockResolvedValue({ id: CHAT_DB_ID, locale: 'en' } as Awaited<
+      ReturnType<typeof touchChat>
+    >);
+    prismaFake.depositCase.findFirst.mockResolvedValue({
+      id: CASE_ID,
+      chatId: CHAT_DB_ID,
+      depositAmount: 3000,
+      returnedAmount: 500,
+    });
+
+    const tap = fakeTap();
+    await handleLawyerInterest(tap.ctx);
+
+    expect(prismaFake.depositCase.update).toHaveBeenCalledWith({
+      where: { id: CASE_ID },
+      data: { wantsLawyer: true },
+    });
+    expect(tap.reply.mock.calls).toEqual([[APPROVED.ru.ack]]);
+  });
 
   it('sends a null claim when the deposit amount is unknown', async () => {
     vi.mocked(touchChat).mockResolvedValue({ id: CHAT_DB_ID, locale: 'ru' } as Awaited<
