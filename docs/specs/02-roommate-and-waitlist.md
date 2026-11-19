@@ -109,7 +109,7 @@ FR-18 (**Decided**). `/api/cron/city-launch` selects only `cityNormalized = <cit
 was lost are not relabelled (whole-city roommate or sublet requests saved before the release
 look like city-launch rows and stay selectable; spec 05 counts them by `created_at`). Route
 test with mocked Prisma and `sendEmail`: listings rows are not selected (assert the `where`),
-unauthorised call → 401 as today, `notifiedAt` set only after a successful send. Tests never
+unauthorised call → 401 as today, `notifiedAt` kept only for a successful send. Tests never
 call Resend. Overlapping manual runs and the link to the frozen `/replacement` page are fixed
 by §City-launch e-mail link and send guard (Q-16, T058).
 
@@ -240,3 +240,7 @@ reminders).
 - The selection of §City-launch mailing is unchanged. Tests never call Resend.
 - Route tests with mocked Prisma and `sendEmail`: the link, two runs over the same row send once,
   a failed send restores `notifiedAt`, 401 without auth.
+- **Open** (owner, Q-17, T060): the e-mail copy (`emails.cityLaunch.body` and `.cta`, four
+  locales) still promises browsing and posting listings while the button opens the costs page.
+  Agents do not draft it until the owner answers; the city-launch e-mail should not be sent
+  before then.

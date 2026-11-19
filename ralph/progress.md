@@ -1538,3 +1538,18 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **After deploy:** no new `city_notify_subscribed` / `district_notify_subscribed` events; saved waitlist interest is read from `listing_interest_saved` and `city_notify_subscriptions` rows (activation-funnels §4). Older e-mail-keyed events stay in PostHog (the US project, D30); deleting them is the owner's.
   - No copy, tables, migrations or new events.
 - Next: T058 (spec 02 §City-launch e-mail link and send guard).
+
+### 2026-11-19 11:25 · T058 · done
+
+- Done:
+  - `src/app/api/cron/city-launch/route.ts`: `cityUrl` = `localeUrl(locale, /<citySlug>/costs)` (was `/replacement`). Per row: claim with `updateMany({ where: { id, notifiedAt: null }, data: { notifiedAt: claimedAt } })`, skip unless `count === 1`; a failed `sendEmail` releases it with `updateMany({ where: { id, notifiedAt: claimedAt }, data: { notifiedAt: null } })` (only while it still holds this run's claim); no `update` after the send any more. The selection, the 401 and the 400s are unchanged; the response keeps `matched` / `sent` / `failed` (a row another run claimed counts in neither). The comment states at-most-once.
+  - Docs: `docs/architecture.md` (cron row: costs link, claim and release, at most once), `docs/specs/02-roommate-and-waitlist.md` (§City-launch mailing wording; **Open** Q-17 under §City-launch e-mail link and send guard), `docs/specs/README.md` (T058 → Done, new Q-17 / T060 row Blocked).
+  - New task **T060** (M6, blocked, Q-17), added to T059's `dependsOn`: the e-mail copy still says "You can now browse listings and post your own" / button "Browse listings" (`emails.cityLaunch.body`, `.cta`, four locales) while the button now opens the costs page. Spec 02 does not allow draft copy here, so it waits for the owner.
+- Tests: `src/app/api/cron/city-launch/route.test.ts` rewritten over an in-memory table (9): the selection `where` and its exact keys (unchanged); 401 for no / wrong / bare secret with no read, claim or send; the link `^https?://<host>/ru/krakow/costs$` (and `/pl/` for a second row), never `replacement`; claim-then-send order with the exact claim call; two overlapping runs (both select before either claims) send once, one claim gets count 0; a second run after the first sends nothing; a failed send releases the row (exact release call, `notifiedAt` back to null), the other row stays notified, and the next run sends it; 400s before any query. `sendEmail` is mocked; Resend is never reached.
+- Checks: `npx vitest run src/app/api/cron/city-launch/route.test.ts` 9/9. `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 88 files / 1181 tests, build OK with `ƒ /api/cron/city-launch`). `next-env.d.ts` restored. No e-mail sent; nothing deployed.
+- Did not work: nothing.
+- Owner review:
+  - **Q-17 (blocks T060 and so T059):** what the city-launch e-mail body and button should say now that the button opens `/<city>/costs`, or whether the agent may draft the four locales for review. Until then, do not trigger `POST /api/cron/city-launch` in production.
+  - **Behaviour to know:** a crash between the claim and the send loses that e-mail (accepted, D33). A row claimed by an overlapping run is counted in neither `sent` nor `failed`, so two overlapping responses add up to one send.
+  - No tables, migrations, copy or events.
+- Next: the owner answers Q-17 (`ralph-answer` T060); then T060, then T059 (final check of PRD 1).

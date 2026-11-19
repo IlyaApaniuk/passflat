@@ -114,7 +114,8 @@ tasks waited for answers Q-1 – Q-6, which the owner gave on 2026-11-19 (rows b
 | — (Q-14)             | Listings-interest rows deleted after 12 months by a daily cron           | [02 §Owner follow-ups](02-roommate-and-waitlist.md#owner-follow-ups-m6)                                     | T055                          | Done    |
 | — (Q-14)             | Remove-interest link with a signed token                                 | [02 §Owner follow-ups](02-roommate-and-waitlist.md#owner-follow-ups-m6)                                     | T056                          | Done    |
 | — (Q-15)             | No e-mail-keyed waitlist events; no typed text in bot address events     | [02](02-roommate-and-waitlist.md#waitlist-server-events), [04](04-telegram-bot.md#typed-text-in-bot-events) | T057                          | Done    |
-| — (Q-16)             | City-launch e-mail links to the costs page; claim before send            | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T058                          | Planned |
+| — (Q-16)             | City-launch e-mail links to the costs page; claim before send            | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T058                          | Done    |
+| — (Q-17)             | City-launch e-mail copy matches the costs-page link                      | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T060                          | Blocked |
 | FR-49                | Final check after the owner's answers                                    | [05](05-measurement-docs.md#final-check-after-the-owners-answers)                                           | T059                          | Planned |
 
 ## Related references

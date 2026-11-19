@@ -1,8 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
+type Row = {
+  id: string;
+  email: string;
+  city: string;
+  cityNormalized: string;
+  districtSlug: string;
+  listingType: string;
+  locale: string | null;
+  consent: boolean;
+  createdAt: Date;
+  notifiedAt: Date | null;
+};
+
+type Where = { id?: string; notifiedAt?: Date | null };
+
 const h = vi.hoisted(() => ({
+  rows: [] as Row[],
   findMany: vi.fn(),
+  updateMany: vi.fn(),
   update: vi.fn(),
   sendEmail: vi.fn(),
   calls: [] as string[],
@@ -10,7 +27,11 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    cityNotifySubscription: { findMany: h.findMany, update: h.update },
+    cityNotifySubscription: {
+      findMany: h.findMany,
+      updateMany: h.updateMany,
+      update: h.update,
+    },
   },
 }));
 
@@ -34,7 +55,7 @@ function req(body: unknown, auth: string | null = `Bearer ${SECRET}`): NextReque
 
 const BODY = { city: ' Kraków ', citySlug: 'krakow', cityName: 'Kraków' };
 
-function row(id: string, email: string, locale: string | null = 'ru') {
+function row(id: string, email: string, locale: string | null = 'ru'): Row {
   return {
     id,
     email,
@@ -49,14 +70,42 @@ function row(id: string, email: string, locale: string | null = 'ru') {
   };
 }
 
+function matches(r: Row, where: Where): boolean {
+  if (where.id !== undefined && r.id !== where.id) return false;
+  if ('notifiedAt' in where) {
+    const want = where.notifiedAt ?? null;
+    const have = r.notifiedAt;
+    if (want === null ? have !== null : have?.getTime() !== want.getTime()) return false;
+  }
+  return true;
+}
+
+function notifiedAt(id: string): Date | null {
+  return h.rows.find((r) => r.id === id)?.notifiedAt ?? null;
+}
+
 beforeEach(() => {
   process.env.CRON_SECRET = SECRET;
+  h.rows = [];
   h.calls.length = 0;
-  h.findMany.mockReset().mockResolvedValue([]);
-  h.update.mockReset().mockImplementation(async ({ where }: { where: { id: string } }) => {
-    h.calls.push(`update:${where.id}`);
-    return {};
-  });
+  // The in-memory table: findMany returns copies of the unclaimed rows (the
+  // route's selection is asserted separately); updateMany applies its where.
+  h.findMany
+    .mockReset()
+    .mockImplementation(async () =>
+      h.rows.filter((r) => r.notifiedAt === null).map((r) => ({ ...r })),
+    );
+  h.updateMany
+    .mockReset()
+    .mockImplementation(
+      async ({ where, data }: { where: Where; data: { notifiedAt: Date | null } }) => {
+        const hit = h.rows.filter((r) => matches(r, where));
+        for (const r of hit) r.notifiedAt = data.notifiedAt;
+        h.calls.push(`${data.notifiedAt === null ? 'release' : 'claim'}:${where.id}:${hit.length}`);
+        return { count: hit.length };
+      },
+    );
+  h.update.mockReset();
   h.sendEmail.mockReset().mockImplementation(async ({ to }: { to: string }) => {
     h.calls.push(`send:${to}`);
     return { success: true, id: 'email-id' };
@@ -98,48 +147,120 @@ describe('POST /api/cron/city-launch', () => {
   });
 
   it('returns 401 without the cron secret and touches nothing', async () => {
+    h.rows = [row('a', 'a@example.com')];
     for (const auth of [null, 'Bearer wrong-secret', SECRET]) {
       const res = await POST(req(BODY, auth));
       expect(res.status).toBe(401);
     }
     expect(h.findMany).not.toHaveBeenCalled();
+    expect(h.updateMany).not.toHaveBeenCalled();
     expect(h.sendEmail).not.toHaveBeenCalled();
-    expect(h.update).not.toHaveBeenCalled();
+    expect(notifiedAt('a')).toBeNull();
   });
 
-  it('sends the city-launch e-mail and sets notifiedAt after each successful send', async () => {
-    h.findMany.mockResolvedValue([row('a', 'a@example.com'), row('b', 'b@example.com', 'xx')]);
+  it('links to the locale URL of the city costs page, not /replacement', async () => {
+    h.rows = [row('a', 'a@example.com', 'ru'), row('b', 'b@example.com', 'pl')];
+
+    await POST(req(BODY));
+
+    expect(h.sendEmail).toHaveBeenCalledWith({
+      to: 'a@example.com',
+      locale: 'ru',
+      template: 'cityLaunch',
+      data: {
+        cityName: 'Kraków',
+        cityUrl: expect.stringMatching(/^https?:\/\/[^/]+\/ru\/krakow\/costs$/),
+      },
+    });
+    expect(h.sendEmail.mock.calls[1][0].data.cityUrl).toMatch(/\/pl\/krakow\/costs$/);
+    for (const [args] of h.sendEmail.mock.calls) {
+      expect(args.data.cityUrl).not.toContain('replacement');
+    }
+  });
+
+  it('claims each row before its send and keeps notifiedAt after a successful send', async () => {
+    h.rows = [row('a', 'a@example.com'), row('b', 'b@example.com', 'xx')];
 
     const res = await POST(req(BODY));
     const json = await res.json();
 
     expect(json).toMatchObject({ success: true, matched: 2, sent: 2, failed: 0 });
-    expect(h.calls).toEqual(['send:a@example.com', 'update:a', 'send:b@example.com', 'update:b']);
-    expect(h.sendEmail).toHaveBeenCalledWith({
-      to: 'a@example.com',
-      locale: 'ru',
-      template: 'cityLaunch',
-      data: { cityName: 'Kraków', cityUrl: expect.stringMatching(/\/ru\/krakow\/replacement$/) },
-    });
-    expect(h.update).toHaveBeenCalledWith({
-      where: { id: 'a' },
+    expect(h.calls).toEqual(['claim:a:1', 'send:a@example.com', 'claim:b:1', 'send:b@example.com']);
+    expect(h.updateMany).toHaveBeenCalledWith({
+      where: { id: 'a', notifiedAt: null },
       data: { notifiedAt: expect.any(Date) },
     });
+    expect(notifiedAt('a')).toBeInstanceOf(Date);
+    expect(notifiedAt('b')).toBeInstanceOf(Date);
+    // An unknown stored locale falls back to the default e-mail locale.
+    expect(h.sendEmail.mock.calls[1][0].locale).toBe('pl');
+    expect(h.update).not.toHaveBeenCalled();
   });
 
-  it('leaves notifiedAt unset when the send fails', async () => {
-    h.findMany.mockResolvedValue([row('a', 'a@example.com'), row('b', 'b@example.com')]);
+  it('sends once when two runs overlap on the same row', async () => {
+    h.rows = [row('a', 'a@example.com')];
+    // Both runs read the row before either claims it: each selection waits
+    // until the other run has selected too.
+    let releaseSelections: () => void = () => {};
+    const bothSelected = new Promise<void>((resolve) => (releaseSelections = resolve));
+    h.findMany.mockImplementation(async () => {
+      const copies = h.rows.filter((r) => r.notifiedAt === null).map((r) => ({ ...r }));
+      if (h.findMany.mock.calls.length === 2) releaseSelections();
+      await bothSelected;
+      return copies;
+    });
+
+    const [first, second] = await Promise.all([POST(req(BODY)), POST(req(BODY))]);
+    const results = [await first.json(), await second.json()];
+
+    expect(h.sendEmail).toHaveBeenCalledTimes(1);
+    expect(results.map((r) => r.matched)).toEqual([1, 1]);
+    expect(results.map((r) => r.sent).sort()).toEqual([0, 1]);
+    expect(results.map((r) => r.failed)).toEqual([0, 0]);
+    expect(h.calls.filter((c) => c.startsWith('claim:a:'))).toEqual(['claim:a:1', 'claim:a:0']);
+    expect(notifiedAt('a')).toBeInstanceOf(Date);
+  });
+
+  it('sends nothing on a second run after the first one finished', async () => {
+    h.rows = [row('a', 'a@example.com')];
+
+    await POST(req(BODY));
+    const again = await (await POST(req(BODY))).json();
+
+    expect(h.sendEmail).toHaveBeenCalledTimes(1);
+    expect(again).toMatchObject({ matched: 0, sent: 0, failed: 0 });
+  });
+
+  it('restores notifiedAt to null when the send fails, so a later run retries', async () => {
+    h.rows = [row('a', 'a@example.com'), row('b', 'b@example.com')];
     h.sendEmail.mockImplementation(async ({ to }: { to: string }) => {
       h.calls.push(`send:${to}`);
       return to === 'a@example.com' ? { success: false, error: 'boom' } : { success: true };
     });
 
-    const res = await POST(req(BODY));
-    const json = await res.json();
+    const json = await (await POST(req(BODY))).json();
 
     expect(json).toMatchObject({ matched: 2, sent: 1, failed: 1 });
-    expect(h.calls).toEqual(['send:a@example.com', 'send:b@example.com', 'update:b']);
-    expect(h.update).toHaveBeenCalledTimes(1);
+    expect(h.calls).toEqual([
+      'claim:a:1',
+      'send:a@example.com',
+      'release:a:1',
+      'claim:b:1',
+      'send:b@example.com',
+    ]);
+    expect(h.updateMany).toHaveBeenCalledWith({
+      where: { id: 'a', notifiedAt: expect.any(Date) },
+      data: { notifiedAt: null },
+    });
+    expect(notifiedAt('a')).toBeNull();
+    expect(notifiedAt('b')).toBeInstanceOf(Date);
+
+    // The next run picks the released row up again and sends it.
+    h.sendEmail.mockResolvedValue({ success: true });
+    const retry = await (await POST(req(BODY))).json();
+    expect(retry).toMatchObject({ matched: 1, sent: 1, failed: 0 });
+    expect(h.sendEmail).toHaveBeenLastCalledWith(expect.objectContaining({ to: 'a@example.com' }));
+    expect(notifiedAt('a')).toBeInstanceOf(Date);
   });
 
   it('rejects a missing city or citySlug with 400 before querying', async () => {
@@ -150,6 +271,7 @@ describe('POST /api/cron/city-launch', () => {
     const bad = await POST(req('{not json'));
     expect(bad.status).toBe(400);
     expect(h.findMany).not.toHaveBeenCalled();
+    expect(h.updateMany).not.toHaveBeenCalled();
     expect(h.sendEmail).not.toHaveBeenCalled();
   });
 });

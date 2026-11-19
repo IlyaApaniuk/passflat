@@ -970,16 +970,28 @@
         "Route tests with mocked Prisma and sendEmail: the link, two runs over one row send once, a failed send restores the row, 401 without auth; Resend is never called"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-16, D33, 2026-11-19.",
       "id": "T058",
       "milestone": "M6",
       "title": "City-launch e-mail: link to the costs page and claim each row before sending",
       "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard",
-      "status": "todo"
+      "status": "done"
     },
     {
-      "dependsOn": ["T002", "T029", "T030", "T042", "T043", "T054", "T055", "T056", "T057", "T058"],
+      "dependsOn": [
+        "T002",
+        "T029",
+        "T030",
+        "T042",
+        "T043",
+        "T054",
+        "T055",
+        "T056",
+        "T057",
+        "T058",
+        "T060"
+      ],
       "acceptance": [
         "npm run verify and npm run test:e2e pass; the summary shows no other PRD 1 task left to do",
         "The requirement map in docs/specs/README.md marks every FR and owner follow-up Done or names what is left; no row is Blocked on Q-1 to Q-6",
@@ -994,6 +1006,21 @@
       "title": "Final check of PRD 1 after the owner answers of 2026-11-19, with the deploy handoff",
       "spec": "docs/specs/05-measurement-docs.md#final-check-after-the-owners-answers",
       "status": "todo"
+    },
+    {
+      "dependsOn": ["T058"],
+      "acceptance": [
+        "emails.cityLaunch.body and emails.cityLaunch.cta in all four locales (identical key sets) no longer promise browsing or posting listings and describe the costs page the button opens, in the wording the owner approves",
+        "A test renders the cityLaunch e-mail in four locales and finds no listings promise and the costs URL on the button"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T058: the e-mail body says \"You can now browse listings and post your own\" and the button \"Browse listings\", but since D33 the button opens /<city>/costs and listings are frozen. Spec 02 does not allow draft copy for this e-mail.\nBlocked: Q-17 (owner): the city-launch e-mail button now opens /<city>/costs (D33), but emails.cityLaunch.body says \"You can now browse listings and post your own\" and the cta \"Browse listings\" (four locales). What should the body and button say, or may the agent draft them (RU/PL/EN/UK) for review? Until then do not send the city-launch e-mail.",
+      "id": "T060",
+      "milestone": "M6",
+      "title": "City-launch e-mail copy that matches the costs-page link",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard",
+      "status": "blocked"
     }
   ]
 }
