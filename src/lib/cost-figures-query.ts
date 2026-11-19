@@ -113,7 +113,8 @@ const loadBuildingFiguresCached = cachedCostLoader(
       level: 'building',
       rentalType,
     }),
-  'cost-figures-building-v1',
+  // v2: `adminFeePerM2` added to every group (T052).
+  'cost-figures-building-v2',
 );
 
 /** Figures of one building's visible reports. */
@@ -154,7 +155,8 @@ const loadAreaReferenceCached = cachedCostLoader(
     if (!city || areaReferenceLevel(null, summary) !== 'city') return null;
     return { level: 'city', slug: city.slug, name: city.nameKey, summary };
   },
-  'cost-figures-area-reference-v1',
+  // v2: `adminFeePerM2` added to every group (T052).
+  'cost-figures-area-reference-v2',
 );
 
 /**
@@ -174,6 +176,19 @@ export function loadAreaReference({
   rentalType?: RentalTypeFilter;
 }): Promise<AreaReference | null> {
   return loadAreaReferenceCached(districtId, cityId, rentalType);
+}
+
+/**
+ * A city's single number (spec 03 §Single-number surfaces): the city-level
+ * `loadAreaReference` summary through `singleNumberFigure`, so the home hero
+ * and the calculator's city fallback show that headline's value and N (FR-34).
+ */
+export async function loadCityFigure(
+  cityId: string,
+  rentalType: RentalTypeFilter = 'all',
+): Promise<SingleNumberFigure | null> {
+  const reference = await loadAreaReference({ districtId: null, cityId, rentalType });
+  return reference ? singleNumberFigure(reference.summary) : null;
 }
 
 /** One district's single number under each rental-type filter; null = no usable value. */
@@ -208,7 +223,8 @@ const loadDistrictFiguresCached = cachedCostLoader(
       return { slug: district.slug, name: district.nameKey, figures };
     });
   },
-  'cost-figures-district-figures-v1',
+  // v2: `adminFeePerM2` added to every figure (T052).
+  'cost-figures-district-figures-v2',
 );
 
 /**

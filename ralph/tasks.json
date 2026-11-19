@@ -868,13 +868,13 @@
         "Calculator tariffs unchanged; every cache key whose shape changes is renamed; draft label keys in all four locale files named in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 2 of 4 (spec 03 §Single-number surfaces §Slices).",
       "id": "T052",
       "milestone": "M3",
       "title": "Single-number rule (slice 2): city hub, district pages, calculator baseline and the home page",
       "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T052"],

@@ -55,6 +55,7 @@ interface FigureGroup {
   rent: MetricFigure;
   rentPerM2: MetricFigure; // perAreaValues over reports with areaM2 > 0
   completeTotalPerM2: MetricFigure;
+  adminFeePerM2: MetricFigure; // perAreaValues of adminFee (0 counts); the calculator's czynsz anchor (T052)
   expenses: MetricFigure; // complete reports with rent: max(0, total − rent)
   characteristics: {
     rentalType: string | null;

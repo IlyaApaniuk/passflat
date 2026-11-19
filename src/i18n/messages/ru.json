@@ -954,7 +954,7 @@
       "perMonth": "/мес",
       "areaSummary": "{area} м²",
       "rent": "Аренда",
-      "basisData": "на основе {count, plural, one {# отчёта} few {# отчётов} many {# отчётов} other {# отчётов}} в районе",
+      "basisData": "по данным района",
       "basisCityWide": "по медиане всего города",
       "basisCityFallback": "по медиане города · мало данных по этому району",
       "basisNone": "пока нет данных по аренде",

@@ -954,7 +954,7 @@
       "perMonth": "/mies.",
       "areaSummary": "{area} m²",
       "rent": "Czynsz najmu",
-      "basisData": "na podstawie {count, plural, one {# zgłoszenia} few {# zgłoszeń} many {# zgłoszeń} other {# zgłoszeń}} w dzielnicy",
+      "basisData": "na podstawie danych z dzielnicy",
       "basisCityWide": "z mediany całego miasta",
       "basisCityFallback": "z mediany miasta · mało danych w tej dzielnicy",
       "basisNone": "brak danych o czynszu najmu",

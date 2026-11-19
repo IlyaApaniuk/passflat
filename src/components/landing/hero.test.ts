@@ -46,10 +46,56 @@ const text = (html: string) =>
     .replace(/&#x27;/g, "'")
     .replace(/\s+/g, ' ');
 
-const baseStats = { buildingsWithCosts: 0, pricePerM2: null, expensesMonthly: null };
+const baseStats = { buildingsWithCosts: 0, cityFigure: null };
 
 const render = (deposit: ReturnType<typeof depositClaim>) =>
   text(renderToStaticMarkup(createElement(Hero, { stats: { ...baseStats, deposit } })));
+
+type CityFigure = NonNullable<Parameters<typeof Hero>[0]['stats']>['cityFigure'];
+const renderCity = (cityFigure: CityFigure) =>
+  text(
+    renderToStaticMarkup(
+      createElement(Hero, { stats: { buildingsWithCosts: 0, cityFigure, deposit: null } }),
+    ),
+  );
+
+describe('Hero city tiles (D23)', () => {
+  beforeEach(() => {
+    state.locale = 'en';
+  });
+
+  it('shows per m² and expenses from the city group, each with that group and its own N', () => {
+    const page = renderCity({
+      group: 'tenant',
+      completeTotalPerM2: { value: 87.6, n: 41 },
+      expenses: { value: 742, n: 38 },
+    });
+    expect(page).toContain('≈88 zł/m² Warsaw median Tenant reports (41)');
+    expect(page).toContain('≈742 zł/mo costs on top of rent Tenant reports (38)');
+  });
+
+  it('names the asking prices when the city falls back to them, in every locale', () => {
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const page = renderCity({
+        group: 'asking',
+        completeTotalPerM2: { value: 90, n: 12 },
+        expenses: null,
+      });
+      const figureAsking = (messages[locale].costs as { overview: Record<string, string> }).overview
+        .figureAsking;
+      expect(page, locale).toContain(figureAsking.replace('{count}', '12'));
+      expect(page, locale).not.toContain(
+        (messages[locale].landing as { hero: Record<string, string> }).hero.statsExpenses,
+      );
+    }
+  });
+
+  it('shows no cost tile without an all-in city figure', () => {
+    const page = renderCity({ group: 'tenant', completeTotalPerM2: null, expenses: null });
+    expect(page).not.toMatch(/zł|Tenant reports/);
+  });
+});
 
 describe('Hero deposit stat', () => {
   beforeEach(() => {

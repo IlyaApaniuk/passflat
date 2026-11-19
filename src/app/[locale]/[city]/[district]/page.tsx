@@ -10,8 +10,17 @@ import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
+import { loadDistrictFigures } from '@/lib/cost-figures-query';
+import { buildingsForRentalType } from '@/lib/costs-overview-filter';
+import {
+  isAllInTotal,
+  singleNumberHeadingKey,
+  singleNumberLabelText,
+} from '@/lib/single-number-view';
 import { ShareButton } from '@/components/costs/share-button';
-import { ArrowLeft, ArrowRight, Building2, Calculator, Plus, Users } from 'lucide-react';
+import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { ArrowLeft, ArrowRight, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
 export const revalidate = 3600;
@@ -46,7 +55,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     city: cityName,
   });
 
-  // Rich cost share-card from the district roll-up; generic OG when no data.
+  // Rich cost share-card from the district roll-up; generic OG when no data. Still the
+  // blended roll-up: OG images move to the single-number rule in T053.
   const buildings = await getBuildingsData(cityRec.id, district, null);
   const [rollup] = rollUpDistricts(buildings, [districtRec]);
   const ogImage =
@@ -71,6 +81,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+type Translate = Awaited<ReturnType<typeof getTranslations>>;
+
+/**
+ * The district's one number (D23): its tenant group, else its asking prices, with
+ * the group and N, and that same group's rent, expenses and per m² (the last two
+ * only for an all-in total, as on the overview cards).
+ */
+function DistrictFigureCard({
+  figure,
+  buildingCount,
+  t,
+}: {
+  figure: SingleNumberFigure;
+  buildingCount: number;
+  t: Translate;
+}) {
+  const allIn = isAllInTotal(figure);
+  const details = [
+    figure.metric !== 'rent' && figure.rent
+      ? `${t('costs.overview.rent')} ≈ ${figure.rent.value.toLocaleString()}`
+      : null,
+    allIn && figure.expenses
+      ? `${t('costs.overview.expenses')} ≈ ${figure.expenses.value.toLocaleString()}`
+      : null,
+    allIn && figure.completeTotalPerM2
+      ? `${t('costs.building.totalPerM2Compare')} ≈ ${Math.round(figure.completeTotalPerM2.value).toLocaleString()} ${t('costs.overview.perM2')}`
+      : null,
+  ].filter((detail): detail is string => detail !== null);
+
+  return (
+    <Card className="mt-6 border-primary/20 bg-primary/5">
+      <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
+        <div>
+          <p className="text-xs text-muted-foreground">{t(singleNumberHeadingKey(figure))}</p>
+          <p className="text-3xl font-bold text-primary">≈ {figure.value.toLocaleString()} PLN</p>
+          <p className="mt-1 text-xs text-muted-foreground">{singleNumberLabelText(t, figure)}</p>
+          {details.length > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">{details.join(' · ')}</p>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {t('costs.overview.nBuildings', { count: buildingCount })}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function DistrictCostsPage({ params }: PageProps) {
   const { locale, city, district } = await params;
   setRequestLocale(locale);
@@ -83,8 +141,16 @@ export default async function DistrictCostsPage({ params }: PageProps) {
   const t = await getTranslations();
   const cityName = t(cityRec.nameKey);
 
-  const buildings = await getBuildingsData(cityRec.id, district, null);
-  const [rollup] = rollUpDistricts(buildings, [districtRec]);
+  // One number per building and for the district by D23 (spec 03 §Single-number
+  // surfaces): the district figure is a summary over the district's reports, the
+  // value and N `loadAreaReference` gives it; a building without a usable figure is
+  // not listed.
+  const [buildingsData, districtFigures] = await Promise.all([
+    getBuildingsData(cityRec.id, district, null),
+    loadDistrictFigures(cityRec.id),
+  ]);
+  const buildings = buildingsForRentalType(buildingsData, 'all');
+  const figure = districtFigures.find((d) => d.slug === district)?.figures.all ?? null;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -112,40 +178,8 @@ export default async function DistrictCostsPage({ params }: PageProps) {
               {t('costsSeo.districtIntro', { district: districtRec.nameKey, city: cityName })}
             </p>
 
-            {rollup && (
-              <Card className="mt-6 border-primary/20 bg-primary/5">
-                <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('costs.overview.medianMonthlyTotal')}
-                    </p>
-                    <p className="text-3xl font-bold text-primary">
-                      ≈ {rollup.medianTotal.toLocaleString()} PLN
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t('costs.overview.rent')} ≈ {rollup.medianRent.toLocaleString()}
-                      {rollup.medianExpenses > 0 && (
-                        <>
-                          {' · '}
-                          {t('costs.overview.expenses')} ≈ {rollup.medianExpenses.toLocaleString()}
-                        </>
-                      )}
-                      {rollup.medianTotalPerM2 > 0 && (
-                        <>
-                          {' · '}
-                          {t('costs.building.totalPerM2Compare')} ≈{' '}
-                          {Math.round(rollup.medianTotalPerM2).toLocaleString()}{' '}
-                          {t('costs.overview.perM2')}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('costs.overview.nBuildings', { count: rollup.buildingCount })} ·{' '}
-                    {t('costs.overview.nReports', { count: rollup.reportCount })}
-                  </p>
-                </CardContent>
-              </Card>
+            {figure && (
+              <DistrictFigureCard figure={figure} buildingCount={buildings.length} t={t} />
             )}
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -188,20 +222,9 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                           <h3 className="font-semibold transition-colors group-hover:text-primary">
                             {b.address}
                           </h3>
-                          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                            <Users className="h-3.5 w-3.5" />
-                            {t('costs.overview.nReports', { count: b.reports })}
-                          </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-4">
-                          <div className="text-right tabular-nums">
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.medianMonthlyTotal')}
-                            </p>
-                            <p className="text-lg font-bold text-primary">
-                              ≈ {b.medianTotal.toLocaleString()} PLN
-                            </p>
-                          </div>
+                          <BuildingFigureSummary figure={b.figure} />
                           <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
                       </CardContent>

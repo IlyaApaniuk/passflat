@@ -14,6 +14,7 @@ function figure(
     value,
     n,
     reportCount: n,
+    adminFeePerM2: null,
     rent: null,
     expenses: null,
     rentPerM2: null,

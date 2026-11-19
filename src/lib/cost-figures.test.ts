@@ -738,3 +738,34 @@ describe('singleNumberFigure — rules', () => {
     ).toEqual([]);
   });
 });
+
+describe('admin fee per m² (the calculator anchor, T052)', () => {
+  const reports = [
+    { source: 'user', adminFee: 500, areaM2: 50, totalMonthlyAvg: 4000, utilitiesComplete: true },
+    // A stored 0 is a confirmed zero and counts; no area or no fee is left out.
+    { source: 'user', adminFee: 0, areaM2: 40, totalMonthlyAvg: 3500, utilitiesComplete: true },
+    {
+      source: 'import',
+      adminFee: 450,
+      areaM2: null,
+      totalMonthlyAvg: 3700,
+      utilitiesComplete: true,
+    },
+    { source: 'user', adminFee: null, areaM2: 45, totalMonthlyAvg: 3600, utilitiesComplete: true },
+    { source: 'scraped', adminFee: 900, areaM2: 30, totalMonthlyAvg: 5000 },
+  ];
+
+  it('is a median of per-report ratios within each group, with its own N', () => {
+    const summary = summarizeFigures(reports, { level: 'district', rentalType: 'all' });
+    expect(summary.groups.tenant?.adminFeePerM2).toMatchObject({ median: 5, n: 2 });
+    expect(summary.groups.asking?.adminFeePerM2).toMatchObject({ median: 30, n: 1 });
+  });
+
+  it('comes from the single number group only', () => {
+    const figure = singleNumberFigure(
+      summarizeFigures(reports, { level: 'district', rentalType: 'all' }),
+    );
+    expect(figure?.group).toBe('tenant');
+    expect(figure?.adminFeePerM2).toEqual({ value: 5, n: 2 });
+  });
+});

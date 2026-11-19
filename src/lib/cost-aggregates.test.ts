@@ -166,7 +166,7 @@ describe('getBuildingsData', () => {
     });
 
     expect(cacheCalls).toHaveLength(1);
-    expect(cacheCalls[0].keys).toEqual(['cost-aggregates-buildings-figures-v1']);
+    expect(cacheCalls[0].keys).toEqual(['cost-aggregates-buildings-figures-v2']);
     for (const old of ['cost-aggregates-buildings', 'cost-aggregates-buildings-by-type']) {
       expect(cacheCalls[0].keys).not.toContain(old);
     }

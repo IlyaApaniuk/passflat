@@ -4,7 +4,10 @@
 // the number is only a known part of the costs (FR-25) or only the rent.
 
 import type { FigureMessage } from '@/lib/building-figures-view';
-import type { FigureGroupKey, SingleNumberFigure } from '@/lib/cost-figures';
+import type { FigureGroupKey, RentalTypeFilter, SingleNumberFigure } from '@/lib/cost-figures';
+
+/** A translator as `getTranslations()` / `useTranslations()` return it. */
+type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 const GROUP_LABEL_KEY: Record<FigureGroupKey, string> = {
   tenant: 'costs.overview.figureTenant',
@@ -36,6 +39,32 @@ export function singleNumberLabel(
 ): FigureMessage[] {
   const part = partLabel(figure);
   return part ? [singleNumberGroupLabel(figure), part] : [singleNumberGroupLabel(figure)];
+}
+
+/** `singleNumberLabel` rendered and joined: "Asking prices (2), known part". */
+export function singleNumberLabelText(
+  t: Translate,
+  figure: Pick<SingleNumberFigure, 'group' | 'n' | 'metric'>,
+): string {
+  return singleNumberLabel(figure)
+    .map((message) => t(message.key, message.values))
+    .join(', ');
+}
+
+/**
+ * The areas (or buildings) that have a single number under the filter, each with
+ * that figure, the most observed first and then by name: a display order, not a
+ * rank (spec 03 §Single-number surfaces).
+ */
+export function areasWithFigure<
+  T extends { name: string; figures: Record<RentalTypeFilter, SingleNumberFigure | null> },
+>(areas: T[], rentalType: RentalTypeFilter = 'all'): Array<T & { figure: SingleNumberFigure }> {
+  return areas
+    .flatMap((area) => {
+      const figure = area.figures[rentalType];
+      return figure ? [{ ...area, figure }] : [];
+    })
+    .sort((a, b) => b.figure.n - a.figure.n || a.name.localeCompare(b.name));
 }
 
 /**

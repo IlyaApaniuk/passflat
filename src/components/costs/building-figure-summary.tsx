@@ -11,7 +11,8 @@ import {
 } from '@/lib/single-number-view';
 
 /**
- * A costs-overview card's number (spec 03 §Single-number surfaces, D23): the chosen group's
+ * The number of a costs-overview card, a city-hub district row or a district-page building
+ * row (spec 03 §Single-number surfaces, D23): the chosen group's
  * headline under a heading that names it (never "median" for one value, never "monthly total"
  * for a known part), the group label with its N, and that same group's rent, expenses and
  * per-m² figures. Nothing from the other group.

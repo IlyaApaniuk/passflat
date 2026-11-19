@@ -48,6 +48,7 @@ function figure(value: number, n: number, overrides: Partial<SingleNumberFigure>
     value,
     n,
     reportCount: n,
+    adminFeePerM2: null,
     rent: null,
     expenses: null,
     rentPerM2: null,

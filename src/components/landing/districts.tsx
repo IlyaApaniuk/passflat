@@ -3,6 +3,8 @@ import { TrackedLink } from '@/components/analytics/tracked-link';
 import { Reveal } from '@/components/ui/reveal';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { TRUST_THRESHOLDS } from '@/lib/cost-stats';
+import type { HomeDistrictFigure } from '@/lib/home-figures';
+import { singleNumberLabelText } from '@/lib/single-number-view';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -109,23 +111,18 @@ const districts: DistrictConfig[] = [
   },
 ];
 
-export interface DistrictMedian {
-  slug: string;
-  medianTotal: number;
-  reportCount: number;
-}
-
-export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }) {
+export async function Districts({ medians = [] }: { medians?: HomeDistrictFigure[] }) {
   const t = await getTranslations('landing.districts');
-  const tCosts = await getTranslations('costs.overview');
+  const tRoot = await getTranslations();
 
   // Only districts at the "reliable" threshold get a figure on a card that a
   // visitor reads as a fact about the district. Below it the card keeps its
-  // vibe line, same gate the cost pages apply.
+  // vibe line, same gate the cost pages apply. The gate reads the N of the
+  // number shown (the district's single-number group, D23), not all reports.
   const medianBySlug = new Map(
     medians
-      .filter((d) => d.reportCount >= TRUST_THRESHOLDS.reliableMin && d.medianTotal > 0)
-      .map((d) => [d.slug, d]),
+      .filter((d) => d.figure.n >= TRUST_THRESHOLDS.reliableMin && d.figure.value > 0)
+      .map((d) => [d.slug, d.figure]),
   );
 
   return (
@@ -154,10 +151,10 @@ export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }
                   <h3 className="text-sm font-semibold sm:text-base">{t(district.key)}</h3>
                 </div>
                 {(() => {
-                  const stat = medianBySlug.get(
+                  const figure = medianBySlug.get(
                     DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key,
                   );
-                  if (!stat) {
+                  if (!figure) {
                     return (
                       <p className="text-xs text-muted-foreground sm:text-sm">
                         {t(district.vibeKey)}
@@ -167,10 +164,10 @@ export async function Districts({ medians = [] }: { medians?: DistrictMedian[] }
                   return (
                     <div>
                       <p className="font-mono text-sm font-semibold tabular-nums sm:text-base">
-                        ≈{stat.medianTotal.toLocaleString('pl-PL')} zł
+                        ≈{figure.value.toLocaleString('pl-PL')} zł
                       </p>
                       <p className="text-[11px] text-muted-foreground sm:text-xs">
-                        {tCosts('nReports', { count: stat.reportCount })}
+                        {singleNumberLabelText(tRoot, figure)}
                       </p>
                     </div>
                   );

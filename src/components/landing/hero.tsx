@@ -6,7 +6,9 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { useIsTouch } from '@/hooks/use-reveal';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
 import type { DepositClaim } from '@/lib/deposit-claim';
+import { singleNumberGroupLabel } from '@/lib/single-number-view';
 import { BarChart3, MapPinned, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -15,14 +17,22 @@ const MIN_STAT_THRESHOLD = 5;
 interface HeroProps {
   stats?: {
     buildingsWithCosts: number;
-    pricePerM2: number | null;
-    expensesMonthly: number | null;
+    /** The city's single number (D23): the per m² and expenses tiles come from its group. */
+    cityFigure: Pick<SingleNumberFigure, 'group' | 'completeTotalPerM2' | 'expenses'> | null;
     deposit: DepositClaim | null;
   };
 }
 
+interface HeroStat {
+  value: string;
+  label: string;
+  /** The group and N of the value ("Tenant reports (57)"), for cost figures. */
+  source?: string;
+}
+
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
+  const tRoot = useTranslations();
   const posthog = usePostHog();
   const isTouch = useIsTouch();
 
@@ -48,17 +58,34 @@ export function Hero({ stats: liveStats }: HeroProps) {
       : null;
 
   // Per-m² median (the product wedge) and the monthly "Расходы" (komunalka on
-  // top of rent) are values, not counts, so they show whenever present.
-  const pricePerM2 = liveStats?.pricePerM2 ?? null;
-  const priceStat =
-    pricePerM2 && pricePerM2 > 0
-      ? { value: `≈${pricePerM2} ${t('statsPriceUnit')}`, label: t('statsPricePerM2') }
+  // top of rent) are values, not counts, so they show whenever present. Both come
+  // from the city's single-number group (tenant reports, else asking prices) and
+  // say which, with the N of that value; they exist only for all-in totals.
+  const cityFigure = liveStats?.cityFigure ?? null;
+  const sourceOf = (n: number) => {
+    if (!cityFigure) return undefined;
+    const label = singleNumberGroupLabel({ group: cityFigure.group, n });
+    return tRoot(label.key, label.values);
+  };
+
+  const perM2 = cityFigure?.completeTotalPerM2 ?? null;
+  const priceStat: HeroStat | null =
+    perM2 && perM2.value > 0
+      ? {
+          value: `≈${Math.round(perM2.value)} ${t('statsPriceUnit')}`,
+          label: t('statsPricePerM2'),
+          source: sourceOf(perM2.n),
+        }
       : null;
 
-  const expensesMonthly = liveStats?.expensesMonthly ?? null;
-  const expensesStat =
-    expensesMonthly && expensesMonthly > 0
-      ? { value: `≈${expensesMonthly} ${t('statsExpensesUnit')}`, label: t('statsExpenses') }
+  const expenses = cityFigure?.expenses ?? null;
+  const expensesStat: HeroStat | null =
+    expenses && expenses.value > 0
+      ? {
+          value: `≈${Math.round(expenses.value)} ${t('statsExpensesUnit')}`,
+          label: t('statsExpenses'),
+          source: sourceOf(expenses.n),
+        }
       : null;
 
   // Deposit (upfront cash) + "X of N who answered got it back, fully or
@@ -73,7 +100,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
     : null;
 
   // Per-m² value, coverage, then the two hidden costs (monthly extras + deposit).
-  const stats = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>
+  const stats: HeroStat[] = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>
     s ? [s] : [],
   );
 
@@ -162,6 +189,11 @@ export function Hero({ stats: liveStats }: HeroProps) {
                     {stat.value}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground sm:text-sm">{stat.label}</div>
+                  {stat.source && (
+                    <div className="mt-0.5 text-[11px] text-muted-foreground/80 sm:text-xs">
+                      {stat.source}
+                    </div>
+                  )}
                 </Reveal>
               ))}
             </Reveal>

@@ -16,14 +16,17 @@ import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
-import { median, perAreaValues } from '@/lib/cost-stats';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { depositClaim } from '@/lib/deposit-claim';
+import {
+  loadFeaturedBuilding,
+  loadHomeCityFigure,
+  loadHomeDistrictFigures,
+} from '@/lib/home-figures';
 
 const DEFAULT_CITY = 'warsaw';
 
 async function getStats() {
-  const [listings, costReports, districts, buildings, users, buildingsWithCosts, perM2Reports] =
+  const [listings, costReports, districts, buildings, users, buildingsWithCosts, cityFigure] =
     await Promise.all([
       prisma.listing.count({ where: { status: 'active' } }),
       prisma.costReport.count(),
@@ -35,15 +38,9 @@ async function getStats() {
       prisma.building.count({
         where: { city: { slug: DEFAULT_CITY }, costReports: { some: { isVisible: true } } },
       }),
-      prisma.costReport.findMany({
-        where: {
-          building: { city: { slug: DEFAULT_CITY } },
-          isVisible: true,
-          totalMonthlyAvg: { not: null },
-        },
-        select: { totalMonthlyAvg: true, rent: true, areaM2: true },
-        take: 5000,
-      }),
+      // The city's single number (D23): the hero's per m² and expenses tiles come
+      // from its group, labelled with that group and N.
+      loadHomeCityFigure(DEFAULT_CITY),
     ]);
 
   // Deposit data lives on real reports regardless of whether they carry a
@@ -60,32 +57,6 @@ async function getStats() {
     take: 5000,
   });
 
-  const round10 = (n: number) => Math.round(n / 10) * 10;
-
-  // Median all-in cost per m² across Warsaw — same method as the /costs city
-  // baseline (perAreaValues + median), so the hero figure matches the tool.
-  const perM2 = median(
-    perAreaValues(
-      perM2Reports.map((r) => ({
-        value: r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg),
-        areaM2: r.areaM2 == null ? null : Number(r.areaM2),
-      })),
-    ),
-  );
-  const pricePerM2 = perM2 == null ? null : round10(perM2);
-
-  // Median monthly "Расходы" = total − rent: the komunalka/utilities paid on top
-  // of rent — the hidden cost listings never show. Same definition as the
-  // Аренда/Расходы split on /costs.
-  const expenses = median(
-    perM2Reports.map((r) =>
-      r.totalMonthlyAvg != null && r.rent != null
-        ? Number(r.totalMonthlyAvg) - Number(r.rent)
-        : null,
-    ),
-  );
-  const expensesMonthly = expenses == null ? null : round10(expenses);
-
   // Deposit: the tenant group's median amount and "X of N who answered got it
   // back, fully or partly" (spec 03 §Marketing copy), or nothing below
   // MIN_DEPOSIT_ANSWERS answers.
@@ -98,105 +69,43 @@ async function getStats() {
     buildings,
     users,
     buildingsWithCosts,
-    pricePerM2,
-    expensesMonthly,
+    cityFigure,
     deposit,
   };
 }
 
 // Rotate the featured cost building once per day instead of always showing the
-// single top building. We take the top-N buildings by report count (best data)
-// and deterministically pick one by the day (days since epoch), so the address
-// is stable within a day and cycles between days. The pick lives inside the
-// cached function (not in render) — within-day stability comes from the cache's
-// revalidate, and the rotation flips on the first revalidate after midnight.
-const FEATURED_BUILDING_POOL_SIZE = 20;
-
-async function getTopBuildingCostData() {
-  const dayBucket = Math.floor(Date.now() / 86_400_000);
-  const buildings = await prisma.building.findMany({
-    orderBy: { costReports: { _count: 'desc' } },
-    where: { costReports: { some: { isVisible: true } } },
-    take: FEATURED_BUILDING_POOL_SIZE,
-    include: {
-      district: true,
-      costReports: {
-        where: { isVisible: true },
-        select: {
-          rent: true,
-          adminFee: true,
-          electricityAvg: true,
-          internet: true,
-          gas: true,
-          heating: true,
-        },
-      },
-    },
-  });
-
-  const pool = buildings.filter((b) => b.costReports.length > 0);
-  if (pool.length === 0) return undefined;
-
-  const building = pool[dayBucket % pool.length];
-  const reports = building.costReports;
-  const avg = (field: keyof (typeof reports)[0]) => {
-    const values = reports.map((r) => Number(r[field] ?? 0)).filter((v) => v > 0);
-    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
-  };
-
-  const avgRent = avg('rent');
-  const avgAdminFee = avg('adminFee');
-  const avgElectricity = avg('electricityAvg');
-  const avgInternet = avg('internet');
-  const avgGas = avg('gas');
-  const avgHeating = avg('heating');
-  const avgGasHeating = avgGas + avgHeating;
-  const totalMonthly = avgRent + avgAdminFee + avgElectricity + avgInternet + avgGasHeating;
-
-  return {
-    address: building.addressFull,
-    district: building.district?.nameKey ?? '',
-    reportsCount: reports.length,
-    avgRent,
-    avgAdminFee,
-    avgElectricity,
-    avgInternet,
-    avgGasHeating,
-    totalMonthly,
-  };
+// single top building: the most-reported buildings, one picked by the day (days
+// since epoch), so the address is stable within a day and cycles between days.
+// The pick lives inside the cached function (not in render) — within-day
+// stability comes from the cache's revalidate, and the rotation flips on the
+// first revalidate after midnight.
+function getTopBuildingCostData() {
+  return loadFeaturedBuilding(Math.floor(Date.now() / 86_400_000));
 }
 
 /**
- * Per-district medians for the district cards. Same roll-up the district pages
- * use, so a card and the page it links to can never disagree.
+ * Per-district single numbers for the district cards: the same
+ * `loadDistrictFigures` the district pages read, so a card and the page it
+ * links to can never disagree.
  */
-async function getDistrictMedians() {
-  const city = await prisma.city.findUnique({
-    where: { slug: DEFAULT_CITY },
-    select: { id: true, districts: { select: { slug: true, nameKey: true } } },
-  });
-  if (!city) return [];
-
-  const buildings = await getBuildingsData(city.id, null, null);
-  return rollUpDistricts(buildings, city.districts).map((d) => ({
-    slug: d.slug,
-    medianTotal: d.medianTotal,
-    reportCount: d.reportCount,
-  }));
+function getDistrictMedians() {
+  return loadHomeDistrictFigures(DEFAULT_CITY);
 }
 
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
-const getStatsCached = unstable_cache(getStats, ['home-stats-v2'], { revalidate: 300 });
-const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians'], {
+// Keys are renamed whenever the result shape changes (v3 / v2: D23 figures, T052).
+const getStatsCached = unstable_cache(getStats, ['home-stats-v3'], { revalidate: 300 });
+const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians-v2'], {
   revalidate: 300,
   tags: ['costs'],
 });
 const getTopBuildingCostDataCached = unstable_cache(
   getTopBuildingCostData,
-  ['home-top-building-cost'],
-  { revalidate: 600 },
+  ['home-top-building-cost-v2'],
+  { revalidate: 600, tags: ['costs'] },
 );
 
 // Title, description and OG come from the locale layout; only the canonical

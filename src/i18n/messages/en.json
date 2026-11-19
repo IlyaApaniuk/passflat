@@ -954,7 +954,7 @@
       "perMonth": "/mo",
       "areaSummary": "{area} m²",
       "rent": "Rent",
-      "basisData": "based on {count, plural, one {# report} other {# reports}} in the district",
+      "basisData": "from district data",
       "basisCityWide": "from the whole-city median",
       "basisCityFallback": "from city median · little data in this district",
       "basisNone": "no rent data yet",

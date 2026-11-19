@@ -43,6 +43,8 @@ export interface FigureGroup {
   rent: MetricFigure;
   rentPerM2: MetricFigure;
   completeTotalPerM2: MetricFigure;
+  /** Admin fee (czynsz) per m² over reports with areaM2 > 0; a stored 0 counts (the calculator's anchor). */
+  adminFeePerM2: MetricFigure;
   /** Complete reports with rent: max(0, total − rent). */
   expenses: MetricFigure;
   /** Only for a one-observation group; area rounded to AREA_STEP_M2. */
@@ -352,6 +354,14 @@ function summarizeGroup(
         })),
       ),
     ),
+    adminFeePerM2: metricFigure(
+      perAreaValues(
+        reports.map((report) => ({
+          value: nonNegative(report.adminFee),
+          areaM2: positive(report.areaM2),
+        })),
+      ),
+    ),
     expenses: metricFigure(
       complete.map((report) => {
         const total = positive(report.totalMonthlyAvg);
@@ -525,6 +535,7 @@ export interface SingleNumberFigure {
   expenses: FigureValue | null;
   rentPerM2: FigureValue | null;
   completeTotalPerM2: FigureValue | null;
+  adminFeePerM2: FigureValue | null;
 }
 
 function figureValue(figure: MetricFigure): FigureValue | null {
@@ -557,6 +568,7 @@ export function singleNumberFigure(
       expenses: figureValue(group.expenses),
       rentPerM2: figureValue(group.rentPerM2),
       completeTotalPerM2: figureValue(group.completeTotalPerM2),
+      adminFeePerM2: figureValue(group.adminFeePerM2),
     };
   }
   return null;

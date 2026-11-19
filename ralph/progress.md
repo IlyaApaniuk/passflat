@@ -88,6 +88,9 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Bulk copy edits across the four locale files: a scratchpad script that replaces `"<lastKey>": <JSON.stringify(old)>` exactly once per file keeps the formatting; it is idempotent, but a rewritten value equal to a sibling's reports "found 2 times" (harmless).
 - `src/i18n/honesty-copy.test.ts` fails on any en.json value matching "verified", "checked", "actually" or "in full"; a legitimate new match goes into its `ALLOWED_EN_MATCHES` with a reason.
 - Deposit verdict lines are a `strength*` phrase key plus a `rule*` explanation key, composed by `RULE_LINES` in `deposit-flow.ts`; a general-rule case (FR-43) shows the `rule*` key alone. `renderVerdict` and `processContract` are exported for tests (example: `src/lib/bot/deposit-general-rule.test.ts`).
+- A new `FigureGroup` / `SingleNumberFigure` field means: bump every figure cache key (`cost-figures-building`, `-area-reference`, `-district-figures`, `cost-aggregates-buildings-figures`, the pinned one in `cost-aggregates.test.ts`) and add it to the `figure()` fixture factories of `single-number-surfaces.test.ts`, `CostsMap.test.ts` and `costs-overview-filter.test.ts`.
+- Area pages (`/[city]`, `/[city]/[district]`) and landing components render end-to-end in Vitest over one Prisma mock with `Footer` and `ShareButton` mocked to `null` (example: `src/lib/area-figures-consistency.test.ts`).
+- `toLocaleString('pl-PL')` does not group four-digit numbers ("4000", but "12 000" with a no-break space): match with `\s?`; rendered HTML keeps `&amp;`, so assert on text without `&`.
 
 ## Log
 
@@ -1362,3 +1365,41 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Display:** the button text is long (about 55 characters); Telegram may wrap or cut it on narrow phones. Check it in the dev bot.
   - Events unchanged (`tg_lawyer_interest`, `claim`). No tables or migrations.
 - Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`).
+
+### 2026-11-19 10:17 · T052 · done
+
+- Done (slice 2 of D23):
+  - Contract (`src/lib/cost-figures.ts`): every `FigureGroup` gets `adminFeePerM2` (perAreaValues of `adminFee`, a stored 0 counts) and `SingleNumberFigure` gets it from the chosen group. It is the calculator's czynsz anchor, the only number these surfaces needed that the contract lacked.
+  - Loaders (`src/lib/cost-figures-query.ts`): new `loadCityFigure(cityId, rentalType)` = `singleNumberFigure` of the city-level `loadAreaReference` summary.
+  - `src/lib/single-number-view.ts`: `singleNumberLabelText(t, figure)` ("Asking prices (2), known part") and `areasWithFigure(areas, rentalType)` (areas with a figure, most observed first, then by name; display order, not a rank).
+  - City hub (`[city]/page.tsx`): rows from `loadDistrictFigures` via `areasWithFigure`, each rendered by `BuildingFigureSummary` (heading, value, group label with N, same-group rent / expenses / per m²). The building count and the all-sources "N reports" line are gone.
+  - District page (`[city]/[district]/page.tsx`): the header card shows the district's `loadDistrictFigures` figure (`DistrictFigureCard`: heading, value, label, same-group rent · expenses · per m², "N buildings"); building rows show `getBuildingsData`'s `figures.all` through `buildingsForRentalType(…, 'all')` and `BuildingFigureSummary`. A building without a usable figure is not listed.
+  - Calculator: new `src/lib/calculator-baseline.ts` (`calculatorBaseline`, `DistrictCalcData` moved here). Each district's rent per m² and czynsz per m² come from its chosen group; the czynsz anchor is used from `TRUST_THRESHOLDS.reliableMin` (5) values of that group's `adminFeePerM2` (before: 5 reports over all sources). The city fallback comes from `loadCityFigure`. `page.tsx` renders the labels; `client.tsx` shows the group label with the N under the rent badge (district or city) and after the czynsz-from-data note. `hasData` replaces `reportCount` for the "see data" link. Tariffs (`cost-calculator.ts`) unchanged.
+  - Home: new `src/lib/home-figures.ts` (`loadHomeCityFigure`, `loadHomeDistrictFigures`, `loadFeaturedBuilding`). `[locale]/page.tsx`:
+    - The hero gets `cityFigure` instead of the blended `pricePerM2` / `expensesMonthly`. Per m² is `completeTotalPerM2` and expenses is `expenses` of the city's group, each tile with a third line "Tenant reports (N)" (N of that value).
+    - The district cards read `loadDistrictFigures`, gated on the N of the number shown (≥ 5) and labelled.
+    - The featured building reads `loadBuildingFigures`; rent, czynsz, electricity, internet and gas + heating are that group's medians (before: means over all sources), the total is the headline (before: a sum of means), with heading and label. An unknown line shows "—"; the sample numbers stay only when there is no building at all. A building without a figure is skipped in the daily rotation.
+  - Cache keys renamed: `cost-figures-building-v2`, `cost-figures-area-reference-v2`, `cost-figures-district-figures-v2`, `cost-aggregates-buildings-figures-v2`, `home-stats-v3`, `home-district-medians-v2`, `home-top-building-cost-v2` (which now also carries the `costs` tag).
+  - Docs: `docs/architecture.md` §3 (remaining blended surfaces; new T052 paragraph), spec 03 contract shape (`adminFeePerM2`).
+- Tests:
+  - `src/lib/area-figures-consistency.test.ts` (new, 14, one Prisma mock): every district figure with a district-level reference equals `loadAreaReference`'s headline (value, N, metric, whole figure) under each filter. The city figure equals the city reference's headline. Pages and components rendered end to end: hub rows and district page (labels and values, no "N reports"), calculator baseline and `CalculatorClient` (district and city-fallback labels), landing district cards (gate on N), hero tiles, featured building and its card, the day rotation that skips a building without a figure.
+  - `hero.test.ts` (+3: tenant and asking labels in four locales, no tile without an all-in city figure).
+  - `cost-figures.test.ts` (+2: `adminFeePerM2` per group with zeros, from the chosen group only).
+  - Fixtures and the pinned cache key updated in `single-number-surfaces`, `CostsMap`, `costs-overview-filter` and `cost-aggregates` tests.
+- Namespace: the hub, the district page and the landing district cards render on the server with the root `getTranslations()`. `BuildingFigureSummary`, the hero (new root `useTranslations()` beside `landing.hero`) and the featured-building card read `costs.*`, which is in `SHARED_CLIENT_NAMESPACES`. The calculator's scoped provider (`calculator`, `common`, `share`) is unchanged: its group labels are rendered by `page.tsx` and passed as strings.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 83 files / 1093 tests, build OK). `npm run test:e2e` exit 0 (6/6 on port 3100; `fetch failed` lines are the fake PostHog host). `next-env.d.ts` restored. Not looked at in a real browser.
+- Did not work: two assertions of the new test at first (Polish number grouping and an escaped `&`); fixed in the test.
+- Owner review:
+  - **Draft copy:** `calculator.result.basisData` loses its all-sources count (the N is now in the group label line under the badge): EN "from district data", PL «na podstawie danych z dzielnicy», RU «по данным района», UK «за даними району». The labels reuse T028's `costs.overview.figureTenant` / `figureAsking` / `figureKnownPart` / `figureRentOnly`.
+  - **Assumptions:**
+    - The czynsz anchor is used from `TRUST_THRESHOLDS.reliableMin` values of the group's `adminFeePerM2` (`calculator-baseline.ts`).
+    - The landing district cards show a figure from that many values of the number shown (`districts.tsx`).
+    - The calculator stays on `rentalType: 'all'`, as before. Rooms and flats are mixed in rent per m²; `apartment` would fit a flat estimate better.
+  - **Display choices to confirm:**
+    - Hero per m² and expenses are no longer rounded to tens, so they equal the other surfaces. They now count complete tenant reports only, and the tiles disappear when the city group has no all-in total.
+    - The hub drops the building count. Districts are sorted by the N of their number.
+    - The featured card's "Gas/Heating" is the gas median plus the heating median of the group.
+  - **Left for T053:** the OG images that `generateMetadata` of the hub and the district page still build from the blended roll-up.
+  - **Copy not changed, for the owner:** `calculator.intro` ("Rent comes from the median of tenant reports") and `calculator.disclaimer` ("tenant rent medians") are now wrong where a district falls back to asking prices; the badge line names the group. The featured card's sample numbers ("ul. Puławska 45", 4,199 PLN) still show when the database has no building (pre-existing).
+  - No tables, migrations or events.
+- Next: T053 (blog data report, OG images including the hub's and district page's `generateMetadata`, the share page). `loadCityFigure`, `areasWithFigure` and `singleNumberLabelText` are ready for it.

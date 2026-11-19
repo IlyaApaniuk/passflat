@@ -36,12 +36,13 @@ export type BuildingCostData = {
   rentalType: string | null;
   /** The building's single number under each rental-type filter (spec 03 §Single-number
    *  surfaces, D23): the tenant group, else the asking prices, with its metric and N; null = no
-   *  usable value. The costs overview reads only this. The blended fields above still feed the
-   *  surfaces of T052 – T054 until those tasks move them. */
+   *  usable value. The costs overview and the district pages read only this. The blended fields
+   *  above still feed the surfaces of T053 – T054 until those tasks move them. */
   figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
 };
 
-const BUILDINGS_DATA_CACHE_KEY = 'cost-aggregates-buildings-figures-v1';
+// v2: `adminFeePerM2` added to every figure (T052).
+const BUILDINGS_DATA_CACHE_KEY = 'cost-aggregates-buildings-figures-v2';
 
 // Buildings + their visible cost reports, reduced to per-building medians.
 // Keyed by the arguments (city + filters). Only visible reports count.

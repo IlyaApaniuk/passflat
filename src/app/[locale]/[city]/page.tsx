@@ -11,7 +11,10 @@ import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { median } from '@/lib/cost-stats';
+import { loadDistrictFigures } from '@/lib/cost-figures-query';
+import { areasWithFigure } from '@/lib/single-number-view';
 import { ShareButton } from '@/components/costs/share-button';
+import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
 import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
@@ -46,7 +49,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = t('costsSeo.cityMetaDescription', { city: cityName });
 
   // Rich cost share-card from the city-wide roll-up (median of district medians);
-  // generic OG when there's no data yet.
+  // generic OG when there's no data yet. Still the blended roll-up: OG images move
+  // to the single-number rule in T053.
   const buildings = await getBuildingsData(cityRec.id, null, null);
   const districts = rollUpDistricts(buildings, cityRec.districts);
   const pos = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
@@ -86,8 +90,10 @@ export default async function CityCostsHub({ params }: PageProps) {
   const t = await getTranslations();
   const cityName = t(cityRec.nameKey);
 
-  const buildings = await getBuildingsData(cityRec.id, null, null);
-  const districts = rollUpDistricts(buildings, cityRec.districts);
+  // One number per district by D23 (spec 03 §Single-number surfaces): the district's
+  // tenant group, else its asking prices, over the district's reports, labelled with
+  // the group and N, the value `loadAreaReference` gives the district.
+  const districts = areasWithFigure(await loadDistrictFigures(cityRec.id));
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -142,30 +148,9 @@ export default async function CityCostsHub({ params }: PageProps) {
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             {d.name}
                           </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {d.buildingCount} ·{' '}
-                            {t('costs.overview.nReports', { count: d.reportCount })}
-                          </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-4">
-                          <div className="text-right tabular-nums">
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.medianMonthlyTotal')}
-                            </p>
-                            <p className="text-lg font-bold text-primary">
-                              ≈ {d.medianTotal.toLocaleString()} PLN
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
-                              {d.medianExpenses > 0 && (
-                                <>
-                                  {' · '}
-                                  {t('costs.overview.expenses')} ≈{' '}
-                                  {d.medianExpenses.toLocaleString()}
-                                </>
-                              )}
-                            </p>
-                          </div>
+                          <BuildingFigureSummary figure={d.figure} />
                           <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
                       </CardContent>
