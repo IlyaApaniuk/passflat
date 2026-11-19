@@ -78,7 +78,7 @@
       "title": "Profile rules: budget bands, district picks, languages, preferences, retention constants and event properties",
       "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/roommate/rules.ts exports BUDGET_BANDS (b1 – b5 as spec 06 step 2) with bandForAmount ('1650' → b3, '1 650 zł' → b3, '2500' → b5, text without a number → null), a pure district-pick reducer (toggle, at most 3, 'any' clears the districts and a district clears 'any'), the language, gender, prefers, smoking and pets value sets, and the retention constants of spec 06 §Retention plus INTEREST_DAILY_LIMIT = 20",
         "profileCreatedProperties(profile, now) returns exactly the keys of spec 06 §Events for tg_roommate_profile_created; a test fails if any other key (gender, prefers, about, district slugs, username) appears",
@@ -86,7 +86,7 @@
         "Every Assumption constant is named in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Bands, the 3-district cap and the daily limit are Assumptions accepted by the owner (D68)."
     },
     {
