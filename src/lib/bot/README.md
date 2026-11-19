@@ -73,6 +73,7 @@ the migrations are missing (`docs/architecture.md` §9).
 | `analytics.ts`, `check-events.ts`                | `track` (`tg_<chatId>`); check-event properties                    |
 | `deposit-flow.ts`                                | Deposit conversation, reminders (`sendDueFollowUps`), `/cancel`    |
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
+| `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |

@@ -205,7 +205,7 @@ How each source is counted:
 - **Rule**: all four files keep identical key sets. On 2026-11-18 each had 2,081 leaf keys and 37 top-level namespaces, with no differences. No test or hook enforces this, so check by hand when adding keys.
 - **Elsewhere**:
   - Blog content is per locale (`-pl/-en/-ru/-uk.mdx`).
-  - The bot has its own RU/UK copy (`src/lib/bot/texts.ts`, `deposit-texts.ts`).
+  - The bot has its own RU/UK copy (`src/lib/bot/texts.ts`, `deposit-texts.ts`) and RU/UK/EN roommate copy (`roommate-texts.ts`).
   - Stripe Checkout has no `uk`, so it falls back to `auto` (`toStripeLocale`).
 
 ## 7. Environment variables (names from `.env.example`)

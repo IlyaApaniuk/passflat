@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEPOSIT_TEXT_KEYS, dt } from './deposit-texts';
+import { ROOMMATE_TEXT_KEYS, rt, rtPeople } from './roommate-texts';
 import {
   answeredWord,
   COMMAND_MENU,
@@ -15,9 +16,10 @@ import {
 
 /**
  * The bot addresses the user with «ты» in RU and «ти» in UK everywhere (spec 04
- * §Address form «ты», D42). Every RU and UK string of `texts.ts` and
- * `deposit-texts.ts` is walked: each template as written, each template filled
- * with sample values, the plural helpers and the command menu.
+ * §Address form «ты», D42). Every RU and UK string of `texts.ts`,
+ * `deposit-texts.ts` and `roommate-texts.ts` is walked: each template as
+ * written, each template filled with sample values, the plural helpers and the
+ * command menu.
  */
 
 /** A letter or a combining mark, or the apostrophe inside a UK word (з’явиться). */
@@ -59,8 +61,11 @@ const NOT_IMPERATIVES: Record<BotLocale, Record<string, string>> = {
   uk: {},
 };
 
-/** Keys whose text may keep a formal pronoun, each with its reason. Starts empty. */
-const FORMAL_ALLOWED: Record<string, string> = {};
+/** Texts (by source) that may keep a «вы» / «ви» form, each with its reason. */
+const FORMAL_ALLOWED: Record<string, string> = {
+  'roommate-texts.deleteConfirm':
+    'PRD 3 §8 verbatim: «если вы уже обменялись контактами» / «якщо ви вже обмінялися» means the person and the other person, a plural, not the polite address',
+};
 
 const LOCALES: BotLocale[] = ['ru', 'uk'];
 const COUNTS = [1, 2, 5, 11, 21];
@@ -68,6 +73,7 @@ const COUNTS = [1, 2, 5, 11, 21];
 /** A sample value for each placeholder name the templates use. */
 function sampleVars(locale: BotLocale): Record<string, string> {
   return {
+    about: 'Спокойная, работаю в IT',
     address: 'Grójecka 45',
     answered: '21',
     area: 'Mokotów',
@@ -76,19 +82,30 @@ function sampleVars(locale: BotLocale): Record<string, string> {
     city: 'Kraków',
     claim: '2 500 zł',
     count: '3',
+    date: '2 января 2027',
     deadline: '02.11.2026',
     days: '5',
+    deleteDate: '16 января 2027',
     distance: '120',
     district: 'Mokotów',
+    districts: 'Mokotów, Wola',
     expenses: dt(locale, 'claimLine', { claim: '600 zł' }),
     extra: dt(locale, 'letterExtraWear'),
+    found: rt(locale, 'foundPhone'),
     gotBack: '2',
     imported: t(locale, 'groupTenantImported', { count: '1' }),
+    items: rt(locale, 'countsItem', { name: 'Wola', count: '1' }),
+    languages: `${rt(locale, 'langPl')}, ${rt(locale, 'langEn')}`,
+    length: '291',
+    max: '3',
     metric: t(locale, 'referenceKnownPart'),
+    min: '5',
+    month: 'февраль 2027',
     n: t(locale, 'medianN', { count: '3', word: reportsWord(locale, 3) }),
     name: 'Mokotów',
     people: peopleWord(locale, 3),
     position: '2',
+    privacyUrl: 'https://passflat.com/ru/privacy#roommate-matching',
     quote: 'Kaucja zostanie zwrócona w terminie 30 dni.',
     source: t(locale, 'figureSourceTenant'),
     term: dt(locale, 'termDays', { n: '30' }),
@@ -117,11 +134,23 @@ function botStrings(locale: BotLocale): BotString[] {
       filled: true,
     });
   }
+  for (const key of ROOMMATE_TEXT_KEYS) {
+    const source = `roommate-texts.${key}`;
+    strings.push({ source, key, text: rt(locale, key), filled: false });
+    strings.push({ source, key, text: rt(locale, key, vars), filled: true });
+  }
   for (const item of COMMAND_MENU[locale]) {
     const source = `COMMAND_MENU.${item.command}`;
     strings.push({ source, key: source, text: item.description, filled: true });
   }
-  const helpers = { reportsWord, listingsWord, observationsWord, answeredWord, peopleWord };
+  const helpers = {
+    reportsWord,
+    listingsWord,
+    observationsWord,
+    answeredWord,
+    peopleWord,
+    rtPeople,
+  };
   for (const [name, helper] of Object.entries(helpers)) {
     for (const count of COUNTS) {
       const source = `${name}(${count})`;
@@ -135,7 +164,11 @@ describe('bot texts: the user is addressed with «ты» / «ти»', () => {
   it.each(LOCALES)('%s: walks every text of both files, the menu and the helpers', (locale) => {
     const strings = botStrings(locale);
     expect(new Set(strings.map((item) => item.source)).size).toBe(
-      TEXT_KEYS.length + DEPOSIT_TEXT_KEYS.length + COMMAND_MENU[locale].length + 5 * COUNTS.length,
+      TEXT_KEYS.length +
+        DEPOSIT_TEXT_KEYS.length +
+        ROOMMATE_TEXT_KEYS.length +
+        COMMAND_MENU[locale].length +
+        6 * COUNTS.length,
     );
     for (const item of strings.filter((entry) => entry.filled)) {
       expect(item.text, `${locale} ${item.source}`).not.toMatch(/\{\w+\}/);
@@ -144,7 +177,7 @@ describe('bot texts: the user is addressed with «ты» / «ти»', () => {
 
   it.each(LOCALES)('%s: no formal pronoun in any text', (locale) => {
     const found = botStrings(locale)
-      .filter((item) => !(item.key in FORMAL_ALLOWED))
+      .filter((item) => !(item.source in FORMAL_ALLOWED))
       .flatMap((item) =>
         findAll(FORMAL_PRONOUNS[locale], item.text).map((word) => `${item.source}: «${word}»`),
       );

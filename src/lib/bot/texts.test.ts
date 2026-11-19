@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { dt } from './deposit-texts';
+import { ROOMMATE_TEXT_KEYS, rt, type RoommateLocale } from './roommate-texts';
 import { COMMAND_MENU, TEXT_KEYS, t, type BotLocale } from './texts';
 
 const LOCALES: BotLocale[] = ['ru', 'uk'];
@@ -18,6 +19,32 @@ const REMOVED_PROMISES = [
   /напишу\s+сюди/i,
   /напишу,?\s*щойно/i,
 ];
+
+/**
+ * Any first-person promise to write later, RU, UK and EN. The roommate texts
+ * get it on top of REMOVED_PROMISES: there every "we will write" fails except
+ * the keys of ROOMMATE_PROMISE_EXCEPTIONS (spec 06 §Opt-in). `напиши` /
+ * "message me" is the person's request, not a promise, and passes.
+ */
+const LATER_MESSAGE_PROMISES = [
+  /напиш(?:у|ем)(?!\p{L})/iu,
+  /сообщ(?:у|им)(?!\p{L})/iu,
+  /уведом(?:лю|им)(?!\p{L})/iu,
+  /напиш(?:у|емо)(?!\p{L})/iu,
+  /повідом(?:лю|имо)(?!\p{L})/iu,
+  /сповіщ(?:у|имо)(?!\p{L})/iu,
+  /\b(?:I|we)(?:'ll|’ll|\s+will)\s+(?:write|message|text|notify|tell|send|remind|let you know)\b/i,
+];
+
+/**
+ * Roommate keys that may promise a message, each with the code that sends it.
+ * Empty for the stage 1 copy: T084 adds the opt-in confirmation
+ * (`sendMatchingOpenMessages`, roommate-daily.ts) and its closing sentence
+ * (the roommate-close route, T083). Every other promise fails.
+ */
+const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {};
+
+const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
 
 /** Words that would describe a notification or a roommate search as a feature. */
 const NOT_A_CAPABILITY =
@@ -95,6 +122,51 @@ describe('bot texts: no notification promises', () => {
       for (const key of ['subscribeBuilding', 'subscribeDistrict', 'btnCityWait'] as const) {
         expect(t(locale, key)).not.toMatch(/🔔|Следить|Стежити/);
       }
+    }
+  });
+
+  it('no roommate text promises to write later, outside the named exceptions', () => {
+    const found: string[] = [];
+    for (const locale of ROOMMATE_LOCALES) {
+      for (const key of ROOMMATE_TEXT_KEYS) {
+        if (key in ROOMMATE_PROMISE_EXCEPTIONS) continue;
+        for (const phrase of [...REMOVED_PROMISES, ...LATER_MESSAGE_PROMISES]) {
+          if (phrase.test(rt(locale, key))) found.push(`${locale}.${key} ~ ${phrase.source}`);
+        }
+      }
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('the later-message check catches promises and passes requests', () => {
+    const promises = [
+      'Напишу один раз, когда подбор откроется.',
+      'Если подбор не откроется, напишем об этом.',
+      'Сообщим, когда появятся люди.',
+      'Напишу один раз, коли підбір відкриється.',
+      'Повідомимо, коли зʼявляться люди.',
+      "I'll message you once when matching opens.",
+      "If matching does not open, we'll tell you and delete your profile.",
+      'We will notify you.',
+    ];
+    for (const text of promises) {
+      expect(
+        LATER_MESSAGE_PROMISES.some((phrase) => phrase.test(text)),
+        text,
+      ).toBe(true);
+    }
+    const requests = [
+      'Напиши мне, когда откроется подбор',
+      'Напиши мені, коли відкриється підбір',
+      'Message me when matching opens',
+      'Сообщение, когда откроется подбор: включено',
+      'Повідомлення, коли відкриється підбір: увімкнено',
+    ];
+    for (const text of requests) {
+      expect(
+        LATER_MESSAGE_PROMISES.some((phrase) => phrase.test(text)),
+        text,
+      ).toBe(false);
     }
   });
 

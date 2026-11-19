@@ -111,7 +111,7 @@
       "title": "Roommate bot texts in RU, UK and EN, and the copy exception for the new file",
       "spec": "docs/specs/06-roommate-profiles.md#module-layout",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/bot/roommate-texts.ts exports rt(locale, key, vars) for 'ru' | 'uk' | 'en' with the stage 1 copy: intro with the privacy link variable, every intake step of spec 06 §Intake steps, the own card, edit, delete with its reasons, renewal reminder and renewal, counts and the room reference lead-ins, 'nobody yet', the FR-14 ban reply, the one-open-intake lines, 'this step is done', 'tap a button'; PRD 3 §8 drafts verbatim where they exist, «ты» / «ти» (D42)",
         "A test fails if any key lacks a ru, uk or en value, and the existing notification-promise check runs over these texts (the opt-in confirmation and the closing message are added later by T084 and T083 with their named exceptions)",
@@ -119,7 +119,7 @@
         "Every key is listed in the progress entry as draft copy for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Typed with its own 'ru' | 'uk' | 'en' locale until T099 widens BotLocale (spec 06 §Module layout). Stage 2 keys are added by the stage 2 tasks."
     },
     {

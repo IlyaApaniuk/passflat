@@ -42,11 +42,11 @@ test descriptions and developer-facing messages. Translate non-English prose whe
 existing file.
 
 Exceptions are product content in its audience's language: `src/i18n/messages/` (the four
-locales), `src/content/` (articles per locale), bot copy in `src/lib/bot/texts.ts` and
-`deposit-texts.ts`, `docs/legal-templates/` (Polish legal templates and their translations),
-`docs/marketing/` (copy and briefs written for an external audience), and literal external data
-(Polish legal terms, provider field names, quotes). The language used with the owner in
-conversation is Russian and is independent of repository language.
+locales), `src/content/` (articles per locale), bot copy in `src/lib/bot/texts.ts`,
+`deposit-texts.ts` and `roommate-texts.ts`, `docs/legal-templates/` (Polish legal templates and
+their translations), `docs/marketing/` (copy and briefs written for an external audience), and
+literal external data (Polish legal terms, provider field names, quotes). The language used with
+the owner in conversation is Russian and is independent of repository language.
 
 ## Working agreements
 
