@@ -26,7 +26,8 @@ import { peopleWord } from './texts';
  * "Interested" (§Interest) adds the daily limit and "already answered". The
  * reveal (§Reveal) adds the match line, the safety lines (PRD 3 §8 verbatim), the
  * reveal's username prompt and the three next steps. The daily push (§Daily push)
- * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages".
+ * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages". The
+ * outcome question (§Outcome question) adds the question and its four answers.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -291,6 +292,14 @@ const RU = {
   // --- the daily push (spec 07 §Daily push, FR-27): PRD 3 §8 verbatim; the EN verb agrees with N ---
   pushNewOne: 'Новых подходящих людей: {count}.',
   pushNewMany: 'Новых подходящих людей: {count}.',
+
+  // --- the outcome question (spec 07 §Outcome question, FR-29); no PRD 3 §8 draft; the answer is
+  // thanked with `reasonThanks` ---
+  outcomeQuestion: 'Получилось найти, с кем снимать квартиру?',
+  btnOutcomeRenting: 'Снимаем вместе',
+  btnOutcomeTalking: 'Ещё общаемся',
+  btnOutcomeNoFit: 'Не сложилось',
+  btnOutcomeDontAsk: 'Не спрашивай',
 } as const;
 
 type Key = keyof typeof RU;
@@ -503,6 +512,12 @@ const UK: Record<Key, string> = {
     'Витрати на оренду у Варшаві по будинках і районах: <a href="{url}">passflat.com</a>',
   pushNewOne: 'Нових людей, які тобі підходять: {count}.',
   pushNewMany: 'Нових людей, які тобі підходять: {count}.',
+
+  outcomeQuestion: 'Вдалося знайти, з ким винаймати квартиру?',
+  btnOutcomeRenting: 'Винаймаємо разом',
+  btnOutcomeTalking: 'Ще спілкуємося',
+  btnOutcomeNoFit: 'Не склалося',
+  btnOutcomeDontAsk: 'Не питай',
 };
 
 const EN: Record<Key, string> = {
@@ -714,6 +729,12 @@ const EN: Record<Key, string> = {
   nextStepCost: 'Rental costs in Warsaw by building and district: <a href="{url}">passflat.com</a>',
   pushNewOne: '{count} new person fits you.',
   pushNewMany: '{count} new people fit you.',
+
+  outcomeQuestion: 'Did you find someone to rent with?',
+  btnOutcomeRenting: 'Renting together',
+  btnOutcomeTalking: 'Still talking',
+  btnOutcomeNoFit: 'Did not work out',
+  btnOutcomeDontAsk: "Don't ask",
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

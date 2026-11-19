@@ -26,6 +26,12 @@ const db = vi.hoisted(() => {
   function matches(row: Row, where: Where): boolean {
     return Object.entries(where).every(([key, cond]) => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
+      // No reactions here: the outcome question's `reactionsGiven: { some }` finds no match.
+      if (key === 'reactionsGiven') {
+        const c = cond as { some?: Where; none?: Where };
+        if (!c.some === !c.none) throw new Error('only none or some on reactionsGiven');
+        return Boolean(c.none);
+      }
       const value = row[key];
       if (cond === null) return value === null;
       if (cond instanceof Date) return value instanceof Date && value.getTime() === cond.getTime();

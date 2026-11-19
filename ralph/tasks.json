@@ -544,14 +544,14 @@
       "title": "The outcome question at 21 days (FR-29)",
       "spec": "docs/specs/07-roommate-matching.md#outcome-question",
       "dependsOn": ["T077", "T088"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The send-hour run (switch on or off) asks each active or expired profile once, 21 days after its earliest matched_at, claimed on outcome_asked_at, with the four answers",
         "A tap stores outcome through updateMany where { id, outcome_asked_at not null, outcome null } and only then sends tg_roommate_outcome with outcome and asked=follow_up",
         "Tests: not before day 21, asked once over two runs, each answer, a second tap and a tap on an unasked profile sending nothing"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D68 (21 days)."
     },
     {

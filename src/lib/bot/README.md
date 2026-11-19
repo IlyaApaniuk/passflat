@@ -226,6 +226,20 @@ activated_at)` and at or before the run's time. N = 0 → nothing; a last push
   `tg_roommate_push_opted_out` only when the write lands, and sends the own card
   with "Turn on daily messages" (`rm:push:on`, no event). A stop works with the
   switch off too; `rm:push:on` then replies "matching is paused".
+- **Outcome question** (spec 07 §Outcome question, FR-29; `sendOutcomeQuestions` in
+  `roommate-daily.ts`, the answers in `roommate-matching.ts`): in every send-hour
+  run, switch on or off, each active or expired profile with `outcome_asked_at`
+  null and a reaction matched at least `OUTCOME_QUESTION_DAYS` (21,
+  `../roommate/rules.ts`) ago gets "Did you find someone to rent with?" with
+  "Renting together", "Still talking", "Did not work out", "Don't ask"
+  (`rm:o:renting_together|talking|no_fit|dont_ask`). Claimed on
+  `outcome_asked_at`, so once per profile life (a renewal keeps it); no event for
+  the question. A tap runs `storeOutcome` (`updateMany where { id,
+outcome_asked_at not null, outcome null }`): only the write that lands sends
+  `tg_roommate_outcome` (`outcome`, `asked=follow_up`), removes the buttons and
+  thanks; a second tap or a profile never asked changes and sends nothing. A
+  deleted partner's reactions cascade, so a person whose only match deleted their
+  profile before day 21 is not asked.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -275,10 +289,11 @@ activated_at)` and at or before the run's time. N = 0 → nothing; a last push
   claim, any other error releases it, a 429 releases it and stops the run, at
   most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
   `MESSAGE_JOBS`: the retry of waiting reveals (`retryPendingReveals`, see
-  **Reveal**), the renewal reminder (`sendRenewalReminders`) and, with the switch
+  **Reveal**), the renewal reminder (`sendRenewalReminders`), the outcome
+  question (`sendOutcomeQuestions`, see **Outcome question**) and, with the switch
   on only (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`) and
-  the daily push (`sendDailyPushes`, see **Daily push**); statements and the
-  outcome add theirs in the priority order of the spec. The response holds counts only;
+  the daily push (`sendDailyPushes`, see **Daily push**); statements add theirs in
+  the priority order of the spec. The response holds counts only;
   PostHog is flushed before it.
 - **Matching is open** (spec 06 §Matching is open, FR-19): with the switch on,
   each active profile with `notify_on_open_at` set and `notified_open_at` null
@@ -338,7 +353,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
-| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, Done, steps, push      |
+| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Interested, Done, steps, push, outcome   |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |

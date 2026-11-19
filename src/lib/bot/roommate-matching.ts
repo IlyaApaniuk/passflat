@@ -1,7 +1,7 @@
 import type { RoommateProfile } from '@prisma/client';
 import { InlineKeyboard, type Bot, type Context } from 'grammy';
 
-import { countBand, INTEREST_DAILY_LIMIT } from '@/lib/roommate/rules';
+import { countBand, INTEREST_DAILY_LIMIT, OUTCOMES, type Outcome } from '@/lib/roommate/rules';
 import {
   countRecentInterests,
   findCompatible,
@@ -13,6 +13,7 @@ import {
   pendingRevealPartners,
   setPushOff,
   storeInterest,
+  storeOutcome,
   storeSkip,
   telegramChatIdOf,
 } from '@/lib/roommate/store';
@@ -46,8 +47,9 @@ import type { BotLocale } from './texts';
  * FR-26, FR-28), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`, T093), the username prompt before
  * them (§Usernames), the reveal of a formed pair (§Reveal, `roommate-reveal.ts`) with its next
  * steps (`rm:ns:<choice>`, FR-30), the daily push's toggle (`rm:push:off` / `rm:push:on`,
- * §Daily push, FR-27; the push itself is a cron job in `roommate-daily.ts`), and "matching is
- * paused" while the switch is off (§Switch).
+ * §Daily push, FR-27; the push itself is a cron job in `roommate-daily.ts`), the answers to the
+ * outcome question (`rm:o:<outcome>`, §Outcome question, FR-29; the question is a cron job too),
+ * and "matching is paused" while the switch is off (§Switch).
  * Every card handler reads the switch per tap; the next steps under a reveal already sent keep
  * working with the switch off (reveals already sent stay).
  *
@@ -69,6 +71,7 @@ const INTEREST_TAP = /^rm:i:([^:]+)$/;
 const SKIP_TAP = /^rm:x:([^:]+)$/;
 const NEXT_STEP_TAP = /^rm:ns:(agreement|address|cost)$/;
 const PUSH_TOGGLE = /^rm:push:(off|on)$/;
+const OUTCOME_TAP = new RegExp(`^rm:o:(${OUTCOMES.join('|')})$`);
 
 /**
  * A card of another person's profile (spec 07 §Cards, `renderRoommateCard`, pure): districts (or
@@ -349,6 +352,28 @@ const handlePushToggle = roommateCallback(async (ctx, chat, locale) => {
   await sendOwnCard(ctx, { ...profile, pushOff: off }, locale);
 });
 
+/**
+ * `rm:o:<renting_together|talking|no_fit|dont_ask>` (the answers under the outcome question, spec 07
+ * §Outcome question, FR-29; the question is a cron job in `roommate-daily.ts`): `storeOutcome` on
+ * the chat's profile (conditional on `outcome_asked_at` set and `outcome` null). Only the write
+ * that lands sends `tg_roommate_outcome` with `outcome` and `asked=follow_up`, removes the buttons
+ * and thanks the person; a second tap, an overlapping one, or a tap whose profile was never asked
+ * (deleted and created again since) changes nothing and sends nothing. The switch is not read
+ * (§Switch: the outcome question keeps working); the username is stored like every roommate
+ * handler's.
+ */
+const handleOutcomeTap = roommateCallback(async (ctx, chat, locale) => {
+  const [outcome] = matchGroups(ctx) as [Outcome];
+  const profile = await findRoommateProfile(chat.id);
+  if (!profile) return;
+  await rememberUsername(ctx, profile);
+  if (!(await storeOutcome(profile.id, outcome))) return;
+  track(ctx.chat!.id, 'tg_roommate_outcome', { outcome, asked: 'follow_up' });
+  // The answered question cannot be answered again; a failed edit changes nothing.
+  await ctx.editMessageReplyMarkup().catch(() => {});
+  await ctx.reply(rt(locale, 'reasonThanks'));
+});
+
 /** The reply of each next step under a reveal (FR-30): links carry the bot's UTM, no chat id. */
 function nextStepText(choice: NextStepChoice, locale: BotLocale): string {
   if (choice === 'agreement') {
@@ -388,4 +413,5 @@ export function registerRoommateMatching(bot: Bot): void {
   bot.callbackQuery(USERNAME_DONE, handleUsernameDone);
   bot.callbackQuery(NEXT_STEP_TAP, handleNextStepTap);
   bot.callbackQuery(PUSH_TOGGLE, handlePushToggle);
+  bot.callbackQuery(OUTCOME_TAP, handleOutcomeTap);
 }

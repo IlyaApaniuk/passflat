@@ -134,6 +134,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Stage 2 bot handlers live in `roommate-matching.ts` (`registerRoommateMatching`, called in `bot.ts`); it builds handlers from `roommate-flow.ts` helpers at import, so `bot.test.ts` mocks it too, and flow tests that route its buttons register both (example: `src/lib/bot/roommate-cards.test.ts`, whose Prisma fake also serves `findFirst`, `create` and `roommateReaction.createMany`).
 - A module shared by the cron and the bot handlers (e.g. `roommate-reveal.ts`) imports only types from `roommate-daily.ts`, which imports it for `MESSAGE_JOBS` (no runtime cycle); `roommateLocale` is in `roommate-texts.ts`, and a job reads Telegram through `sender.api`. A handler sends to other chats through `createCronSender(ctx.api, …)`.
 - Every default `runRoommateDaily` run calls `roommateReaction.findMany` (the reveal retry, `dueRevealPairs`): a full-run Prisma fake needs it (an empty one when no pair is matched). A fake for taps plus whole runs with reactions is in `src/lib/bot/roommate-reveal.test.ts`.
+- Every default send-hour `runRoommateDaily` run reads profiles with `reactionsGiven: { some: { matchedAt } }` (the outcome question): a whole-run Prisma fake must apply `some` (or throw), never ignore it, or it asks every profile (example: `src/lib/bot/roommate-outcome.test.ts`).
 - With the switch on, every default `runRoommateDaily` run also sends the daily push to each active profile that has a compatible profile newer than its `coalesce(last_push_at, activated_at)`: a whole-run test whose rows differ in `activatedAt` / `renewedAt` gets pushes too; give the other rows `pushOff: true` or filter by recipient (example: `seedNew` in `src/lib/bot/roommate-push.test.ts`).
 
 ## Log
@@ -2327,3 +2328,59 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     4. `tg_roommate_push_opted_out` goes out only when the tap turned the push off (a repeat tap or a stale button sends none); an expired profile can stop it too (its card stays reachable).
     5. The job calls `findCompatible` once per due profile (as the one-time message does): fine at the expected size; at the spec's 2,000-profile ceiling this is 2,000 queries inside the 45 s budget, and the README's note that the filter must move into SQL applies.
 - Next: the next runnable task from `node scripts/ralph-tasks.mjs next`. T091 (outcome question) adds its job to `MESSAGE_JOBS` before the switch-on-only jobs (spec 06 §Daily cron order); `roommate-push.test.ts` has a fake for whole default runs plus taps (profiles, chats, reactions, reports, `afterRead`), and its default-run tests count only `push_sent` events, so a new job's events do not break them. T092 lists `rm:push:*` among the stage 2 buttons it checks in both switch states.
+
+### 2026-11-19 18:58 · T091 · done
+
+- Done:
+  - `src/lib/roommate/rules.ts`: `OUTCOME_QUESTION_DAYS = 21`, `OUTCOMES` (`renting_together`, `talking`, `no_fit`, `dont_ask`) and `Outcome`.
+  - `src/lib/bot/roommate-daily.ts`: `sendOutcomeQuestions: MessageJob`, in `MESSAGE_JOBS` after `sendRenewalReminders` and before the switch-on-only jobs (runs with the switch on or off). It reads active or expired profiles with `outcomeAskedAt: null`, `reactionsGiven: { some: { matchedAt: { lte: now − 21 days } } }` (both reactions of a pair are matched together, so "earliest matched_at ≥ 21 days old" is "some matched reaction at or before the cutoff") and an unblocked chat, earliest `activatedAt` first, at most `MAX_MESSAGES_PER_RUN`. It goes through `createCronSender`. Claim: `updateMany where { id, status in [active, expired], outcomeAskedAt: null } → now`. Release: back to null. Text `outcomeQuestion`, one button per row `rm:o:<outcome>`. No event.
+  - `src/lib/roommate/store.ts`: `storeOutcome(profileId, outcome)`: `updateMany where { id, outcomeAskedAt: { not: null }, outcome: null }`, true only on `count === 1`.
+  - `src/lib/bot/roommate-matching.ts`: `rm:o:(renting_together|talking|no_fit|dont_ask)` (`OUTCOME_TAP`, built from `OUTCOMES`; `handleOutcomeTap`). It finds the chat's profile, stores the username (`rememberUsername`) and calls `storeOutcome`. Only when that write lands: `tg_roommate_outcome {outcome, asked: 'follow_up'}`, then `editMessageReplyMarkup()` (failure ignored), then `reasonThanks`. Otherwise nothing. The switch is not read.
+  - `src/lib/bot/roommate-texts.ts`: `outcomeQuestion`, `btnOutcomeRenting`, `btnOutcomeTalking`, `btnOutcomeNoFit`, `btnOutcomeDontAsk` (RU, UK, EN).
+  - Docs: `src/lib/bot/README.md` (**Outcome question** bullet, cron job list, file table row), `docs/specs/README.md` FR-29 → Done.
+- Tests: `src/lib/bot/roommate-outcome.test.ts` (new, 30). It runs over an in-memory Prisma fake (relations `none` and `some`, `afterRead`), the cron through `runRoommateDaily` (default jobs, fake clock) and the taps through the routes of `registerRoommateFlow` + `registerRoommateMatching`.
+  - The question, who and when:
+    - A pair matched exactly 21 days ago: both people get the question once, with the RU text and labels, `outcome_asked_at` = the run and no event.
+    - Not before day 21: a match 1 minute short, and the day-20 run; the next day both are asked.
+    - The earliest `matched_at` counts: an old match plus a recent one → asked; a recent match alone → not asked.
+    - Asked once: two runs the same day, the next day, 30 days later, and two overlapping runs.
+    - An expired profile and an unmarked active one past `expires_at` are asked; a renewal keeps an earlier `outcome_asked_at`.
+    - Never asked: a hidden profile, a blocked chat, an answered profile, no match (one-way interest, skip), a partner deleted (cascade).
+    - Switch off (`false`, `''`, `TRUE`): still asked. Outside the send hour: nothing.
+    - UK and EN text and labels.
+    - A 400 releases the claim (no chat id logged) and the next day asks again; a 403 blocks the chat and keeps the claim; a claim taken between the read and the claim → nothing sent.
+  - The answers:
+    - Each of the four answers: stored, one event `{outcome, asked: 'follow_up'}`, buttons removed, thanks.
+    - The exact `updateMany` call.
+    - A second tap with any answer changes nothing, sends no event and no reply; two overlapping taps → one stored, one event.
+    - A profile never asked, or a chat without a profile → nothing.
+    - Switch off, expired or hidden profile, RU / UK / EN → stored and thanked.
+    - The username is stored; no event carries a username or an id.
+    - Unknown `rm:o:*` values reach no handler; the cron's own button answers end to end.
+  - The Prisma fakes in `roommate-open-message.test.ts`, `roommate-push.test.ts` and `roommate-reveal.test.ts` gain `some` on relations. `roommate-renewal.test.ts`'s fake answers `reactionsGiven` (no reactions there). Without these changes every default run threw or asked.
+  - Mutation check: I broke the code four ways (a strict `<` cutoff, the job behind `switchOnOnly`, no `outcome: null` in `storeOutcome`, no `outcomeAskedAt: null` in the claim). 16 tests failed; then I reverted all four.
+  - Not run against the local DB: it is a standard Prisma relation filter, and typecheck accepts it.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 130 files / 2578 tests, build OK). `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: the first wider run failed 110 tests in four older files, because their fakes rejected or ignored `reactionsGiven: { some }`. The fakes are fixed (above).
+- Owner review:
+  - **Draft copy (roommate-texts.ts; PRD 3 §8 has no outcome draft, EN follows FR-29's wording):**
+
+    | Key                 | RU                                          | UK                                          | EN                                   |
+    | ------------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------------ |
+    | `outcomeQuestion`   | «Получилось найти, с кем снимать квартиру?» | «Вдалося знайти, з ким винаймати квартиру?» | "Did you find someone to rent with?" |
+    | `btnOutcomeRenting` | «Снимаем вместе»                            | «Винаймаємо разом»                          | "Renting together"                   |
+    | `btnOutcomeTalking` | «Ещё общаемся»                              | «Ще спілкуємося»                            | "Still talking"                      |
+    | `btnOutcomeNoFit`   | «Не сложилось»                              | «Не склалося»                               | "Did not work out"                   |
+    | `btnOutcomeDontAsk` | «Не спрашивай»                              | «Не питай»                                  | "Don't ask"                          |
+
+    The answer reuses `reasonThanks` («Спасибо, что ответил(а).» / «Дякуємо за відповідь.» / "Thanks for telling us.").
+
+  - **Assumption applied:** `OUTCOME_QUESTION_DAYS = 21` (`src/lib/roommate/rules.ts`, D68), counted from the earliest `matched_at` to the run's time (`lte`, so exactly 21 days asks).
+  - **Agent's readings to confirm:**
+    1. **Deleted partners.** "Earliest `matched_at`" is read from the profile's own reactions. A deleted partner's profile takes the pair's reactions with it (cascade, spec 06 §Delete). So a person whose only match deleted their profile before day 21 is never asked. The partner's own "Found someone here" delete reason still records `renting_together` with `asked=delete`. Asking these people too would need a column such as `first_matched_at`, and PRD 3 has exactly one migration, so this needs your decision.
+    2. **Who is asked.** Hidden profiles and blocked chats are not asked. A banned chat whose profile is still active or expired is asked: the spec names only status.
+    3. **Taps.** A tap stores the answer on the chat's current profile. It also works on a hidden profile, and with the switch off (§Switch: "the outcome question keeps working"). An old question under a re-created profile stores nothing, because the new profile has `outcome_asked_at` null.
+    4. **Replies.** A stored answer removes the buttons and thanks the person with one reply for all four answers. "Don't ask" needs no promise, because the question goes out once anyway. A second tap only answers the callback query: no toast, no message.
+  - No new event (`tg_roommate_outcome` is spec 07 §Events), no tables, no migrations.
+
+- Next: the next runnable task from `node scripts/ralph-tasks.mjs next`. A test fake that serves a whole default `runRoommateDaily` must support `reactionsGiven: { some }` now (the outcome question reads it every send-hour run); `roommate-outcome.test.ts` has such a fake with matched reactions (`match(x, y, at)`, revealed so the reveal retry stays quiet).

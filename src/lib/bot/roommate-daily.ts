@@ -5,9 +5,12 @@ import { activeProfilesWhere } from '@/lib/roommate/counts';
 import {
   DRAFT_LIFE_DAYS,
   GRACE_DAYS,
+  OUTCOMES,
+  OUTCOME_QUESTION_DAYS,
   RENEWAL_REMINDER_DAYS,
   REPORT_LIFE_MONTHS,
   countBand,
+  type Outcome,
 } from '@/lib/roommate/rules';
 import { findCompatible, freshness } from '@/lib/roommate/store';
 import { isMatchingEnabled } from '@/lib/roommate/switch';
@@ -378,6 +381,74 @@ const sendRenewalReminders: MessageJob = async (sender, now) => {
   }
 };
 
+/** The label of each answer of the outcome question, one button a row, in the spec's order. */
+const OUTCOME_LABEL = {
+  renting_together: 'btnOutcomeRenting',
+  talking: 'btnOutcomeTalking',
+  no_fit: 'btnOutcomeNoFit',
+  dont_ask: 'btnOutcomeDontAsk',
+} as const satisfies Record<Outcome, string>;
+
+/**
+ * The outcome question's buttons (`rm:o:<outcome>`), handled in `roommate-matching.ts`, which this
+ * module does not import.
+ */
+function outcomeKeyboard(locale: RoommateLocale): InlineKeyboard {
+  return InlineKeyboard.from(
+    OUTCOMES.map((outcome) => [
+      InlineKeyboard.text(rt(locale, OUTCOME_LABEL[outcome]), `rm:o:${outcome}`),
+    ]),
+  );
+}
+
+/**
+ * The outcome question (spec 07 §Outcome question, FR-29; D68), switch on or off: every active or
+ * expired profile with `outcome_asked_at` null whose earliest `matched_at` is at least
+ * `OUTCOME_QUESTION_DAYS` old (one of its reactions matched at or before that cutoff; both
+ * reactions of a pair are matched together) gets "Did you find someone to rent with?" with the
+ * four answers. Claimed on `outcome_asked_at`, so it is asked once per profile life (a renewal
+ * keeps it); a release clears it so the next day retries. A hidden or deleted profile is not
+ * asked. The earliest activated first. No event: only the answer sends one (`rm:o:<outcome>`).
+ */
+const sendOutcomeQuestions: MessageJob = async (sender, now) => {
+  const matchedBy = new Date(now.getTime() - OUTCOME_QUESTION_DAYS * DAY_MS);
+  const due = await prisma.roommateProfile.findMany({
+    where: {
+      status: { in: ['active', 'expired'] },
+      outcomeAskedAt: null,
+      reactionsGiven: { some: { matchedAt: { lte: matchedBy } } },
+      chat: { blockedAt: null },
+    },
+    select: { id: true, chat: { select: { chatId: true, blockedAt: true, locale: true } } },
+    orderBy: { activatedAt: 'asc' },
+    take: MAX_MESSAGES_PER_RUN,
+  });
+
+  for (const row of due) {
+    if (sender.stopped) return;
+    const locale = roommateLocale(row.chat.locale);
+    await sender.send({
+      chatId: row.chat.chatId,
+      blockedAt: row.chat.blockedAt,
+      claim: async () => {
+        const { count } = await prisma.roommateProfile.updateMany({
+          where: { id: row.id, status: { in: ['active', 'expired'] }, outcomeAskedAt: null },
+          data: { outcomeAskedAt: now },
+        });
+        return count === 1;
+      },
+      release: async () => {
+        await prisma.roommateProfile.updateMany({
+          where: { id: row.id, outcomeAskedAt: now },
+          data: { outcomeAskedAt: null },
+        });
+      },
+      text: rt(locale, 'outcomeQuestion'),
+      options: { reply_markup: outcomeKeyboard(locale) },
+    });
+  }
+};
+
 /** A stage 2 job (spec 07 §Switch): runs only while the matching switch is on, read per run. */
 function switchOnOnly(job: MessageJob): MessageJob {
   return async (sender, now) => {
@@ -529,7 +600,7 @@ const sendDailyPushes: MessageJob = async (sender, now) => {
  * 2. the retry of waiting reveals (`retryPendingReveals`, `roommate-reveal.ts`, spec 07 §Reveal);
  * 3. the retry of unsent hide notices to reporters (spec 07 §Automatic hiding, T095);
  * 4. the renewal reminders (§Renewal, `sendRenewalReminders`);
- * 5. the outcome question (spec 07 FR-29, T091);
+ * 5. the outcome question (spec 07 FR-29, `sendOutcomeQuestions`);
  * 6. switch on only: the one-time message (§Matching is open, `sendMatchingOpenMessages`, T082);
  * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`).
  * The retries and the outcome question run with the switch on or off.
@@ -537,6 +608,7 @@ const sendDailyPushes: MessageJob = async (sender, now) => {
 const MESSAGE_JOBS: readonly MessageJob[] = [
   retryPendingReveals,
   sendRenewalReminders,
+  sendOutcomeQuestions,
   switchOnOnly(sendMatchingOpenMessages),
   switchOnOnly(sendDailyPushes),
 ];

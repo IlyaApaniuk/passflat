@@ -31,6 +31,16 @@ export const RENEWAL_REMINDER_DAYS = 3;
 /** "Interested" taps one profile may store in 24 hours (spec 07 §Interest; Assumption, D68). */
 export const INTEREST_DAILY_LIMIT = 20;
 
+/**
+ * Days after a profile's earliest `matched_at` when the outcome question goes out, once per profile
+ * life (spec 07 §Outcome question, FR-29; Assumption, D68).
+ */
+export const OUTCOME_QUESTION_DAYS = 21;
+
+/** The outcome question's answers, the values of `outcome` and of `tg_roommate_outcome.outcome`. */
+export const OUTCOMES = ['renting_together', 'talking', 'no_fit', 'dont_ask'] as const;
+export type Outcome = (typeof OUTCOMES)[number];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**

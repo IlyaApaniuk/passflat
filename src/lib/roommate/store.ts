@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 import { isCompatible, type CompatibilityProfile } from './compatibility';
 import { activeProfilesWhere } from './counts';
-import { INTAKE_STEPS, type DistrictPick } from './rules';
+import { INTAKE_STEPS, type DistrictPick, type Outcome } from './rules';
 import { computeExpiresAt } from './time';
 
 /**
@@ -236,6 +236,20 @@ export async function setPushOff(profileId: string, off: boolean): Promise<boole
   const { count } = await prisma.roommateProfile.updateMany({
     where: { id: profileId, status: { in: ['active', 'expired'] }, pushOff: !off },
     data: { pushOff: off },
+  });
+  return count === 1;
+}
+
+/**
+ * Stores the answer to the outcome question (spec 07 §Outcome question, FR-29): one conditional
+ * write on a profile that was asked (`outcome_asked_at` set) and has not answered (`outcome`
+ * null). False for a second tap, an overlapping one, or a profile that was never asked; then
+ * nothing changed.
+ */
+export async function storeOutcome(profileId: string, outcome: Outcome): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, outcomeAskedAt: { not: null }, outcome: null },
+    data: { outcome },
   });
   return count === 1;
 }

@@ -37,7 +37,7 @@ const db = vi.hoisted(() => {
   const chatOf = (row: Row) => state.chats.find((chat) => chat.id === row.chatId) ?? {};
   const profileOf = (id: unknown) => state.profiles.find((row) => row.id === id) ?? {};
 
-  /** `relation: { none: {...} }` on a profile: the table and the field that points at it. */
+  /** `relation: { none | some: {...} }` on a profile: the table and the field that points at it. */
   const RELATIONS: Record<string, ['reactions' | 'reports', string]> = {
     reactionsGot: ['reactions', 'toProfileId'],
     reactionsGiven: ['reactions', 'fromProfileId'],
@@ -54,10 +54,15 @@ const db = vi.hoisted(() => {
       if (key === 'fromProfile') return matches(profileOf(row.fromProfileId), cond as Where);
       if (key === 'toProfile') return matches(profileOf(row.toProfileId), cond as Where);
       if (key in RELATIONS) {
-        const { none, ...rest } = cond as { none?: Where };
-        if (!none || Object.keys(rest).length) throw new Error(`only none on ${key}`);
+        // `some` is the outcome question's (`reactionsGiven`), which every default run reads.
+        const { none, some, ...rest } = cond as { none?: Where; some?: Where };
+        const filter = none ?? some;
+        if (!filter || (none && some) || Object.keys(rest).length) {
+          throw new Error(`only none or some on ${key}`);
+        }
         const [table, own] = RELATIONS[key];
-        return !state[table].some((item) => item[own] === row.id && matches(item, none));
+        const found = state[table].some((item) => item[own] === row.id && matches(item, filter));
+        return none ? !found : found;
       }
       const value = row[key] ?? null;
       if (cond === null) return value === null;
