@@ -403,7 +403,7 @@
       "title": "Post-submit comparison and dashboard panel: neutral reference from the contract",
       "spec": "docs/specs/03-building-figures.md#comparisons",
       "dependsOn": ["T018"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "POST /api/cost-reports returns the area reference (tenant group, level, N) instead of the blended district median; the success screen shows the user's own total next to it without comparisonOverpay / comparisonSave / percentHigher / percentLower conclusions",
         "dashboard/page.tsx and cost-reports-panel.tsx use loadAreaReference; overpay/save conclusions are gone",
@@ -411,7 +411,7 @@
         "The remaining consumers of cost-baselines.ts are listed in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
@@ -768,6 +768,22 @@
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
       "notes": ""
+    },
+    {
+      "dependsOn": ["T025"],
+      "acceptance": [
+        "costs.submit.unlockItemPosition no longer promises where the building ranks in its district (position bars need isComparable, which no PRD 1 surface meets); draft copy in all four locales",
+        "costs.submit.shareInviteDesc no longer asks friends to see whether they are overpaying; neutral draft copy in all four locales",
+        "Draft keys listed in the progress entry for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T025: both keys render on the post-submit screen next to the neutral area reference. Copy only, no logic.",
+      "id": "T047",
+      "milestone": "M3",
+      "title": "Post-submit screen: drop the ranking promise and the overpay framing of the share invite",
+      "spec": "docs/specs/03-building-figures.md#comparisons",
+      "status": "todo"
     }
   ]
 }

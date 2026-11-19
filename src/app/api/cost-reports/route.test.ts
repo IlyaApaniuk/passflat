@@ -63,9 +63,14 @@ vi.mock('@/lib/posthog-server', () => ({
 // Cache purging and district polygons are irrelevant to the contract under test.
 vi.mock('@/lib/revalidate-costs', () => ({ revalidateCostSurfaces: vi.fn() }));
 vi.mock('@/lib/geo/district', () => ({ resolveDistrictByPoint: vi.fn(() => null) }));
+// The figure loaders run uncached, straight against the mocked Prisma client.
+vi.mock('next/cache', () => ({
+  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => R) => fn,
+}));
 
 // Imported after the mocks are registered.
 import { POST } from './route';
+import { trackServerEvent } from '@/lib/posthog-server';
 
 function req(body?: unknown): NextRequest {
   return { json: async () => body ?? {}, headers: new Headers() } as unknown as NextRequest;
@@ -362,5 +367,141 @@ describe('POST /api/cost-reports — duplicate-report races', () => {
       error: 'ALREADY_EXISTS',
       reportId: 'r-duplicate',
     });
+  });
+});
+
+// Spec 03 §Comparisons (FR-29): the success screen sets the submitter's own
+// figures beside the contract's area reference, never a blended district median
+// and never an overpay or saving verdict.
+describe('POST /api/cost-reports — post-submit area reference', () => {
+  const districtBuilding = { id: 'b-2', slug: 'pulawska-10', districtId: 'd-1' };
+  const completeBody = {
+    ...validBody,
+    adminFee: '600',
+    electricity: '200',
+    utilitiesComplete: true,
+  };
+  const tenantReport = (total: number) => ({
+    source: 'user',
+    rentalType: 'apartment',
+    rent: total - 800,
+    totalMonthlyAvg: total,
+    utilitiesComplete: true,
+    areaM2: 50,
+  });
+
+  type FindManyArgs = { where?: { building?: { districtId?: string; cityId?: string } } };
+  function serveReports(byArea: { district?: unknown[]; city?: unknown[] }) {
+    h.reportFindMany.mockImplementation(async (args: FindManyArgs) => {
+      if (args?.where?.building?.districtId) return byArea.district ?? [];
+      if (args?.where?.building?.cityId) return byArea.city ?? [];
+      return [];
+    });
+  }
+
+  beforeEach(() => {
+    mockBuildingLookup({ byAddress: [districtBuilding] });
+    h.reportCreate.mockResolvedValue({ id: 'r-1', building: districtBuilding });
+    h.districtFindUnique.mockResolvedValue({ slug: 'mokotow', nameKey: 'Mokotów' });
+  });
+
+  it('returns the district tenant reference with level and N instead of the district median', async () => {
+    serveReports({
+      district: [
+        ...[4000, 4100, 3900, 4200, 3800, 4050].map(tenantReport),
+        // Asking prices stay out of the reference sent to the success screen.
+        { ...tenantReport(9000), source: 'scraped', utilitiesComplete: false },
+      ],
+    });
+
+    const res = await POST(req(completeBody));
+    expect(res.status).toBe(201);
+    const { comparison } = await res.json();
+
+    expect(comparison.reference).toEqual({
+      level: 'district',
+      slug: 'mokotow',
+      name: 'Mokotów',
+      tenant: {
+        key: 'tenant',
+        reportCount: 6,
+        completeTotal: { median: 4025, p25: expect.any(Number), p75: expect.any(Number), n: 6 },
+        rentPerM2: expect.objectContaining({ n: 6 }),
+        completeTotalPerM2: expect.objectContaining({ n: 6 }),
+      },
+    });
+    expect(comparison.own).toEqual({
+      total: 3800,
+      rent: 3000,
+      areaM2: 50,
+      utilitiesComplete: true,
+    });
+    expect(comparison).toMatchObject({ buildingSlug: 'pulawska-10', districtSlug: 'mokotow' });
+    // The blended district median and its derived fields are gone.
+    for (const key of [
+      'districtMedian',
+      'districtReportCount',
+      'districtName',
+      'districtMedianRentPerM2',
+      'districtMedianTotalPerM2',
+      'userTotal',
+      'userRentPerM2',
+      'userTotalPerM2',
+    ]) {
+      expect(comparison).not.toHaveProperty(key);
+    }
+    // The district's reports are read through the contract loader (visible only).
+    expect(h.reportFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ building: { districtId: 'd-1' }, isVisible: true }),
+      }),
+    );
+  });
+
+  it('falls back to the city below MIN_AREA_REPORTS district reports', async () => {
+    serveReports({
+      district: [4000, 4100].map(tenantReport),
+      city: [4000, 4100, 3900].map(tenantReport),
+    });
+
+    const { comparison } = await (await POST(req(completeBody))).json();
+
+    expect(comparison.reference).toMatchObject({
+      level: 'city',
+      slug: 'warsaw',
+      name: 'city.warsaw',
+      tenant: { reportCount: 3, completeTotal: { median: 4000, n: 3 } },
+    });
+    // The share invite still names the building's district.
+    expect(comparison.districtSlug).toBe('mokotow');
+  });
+
+  it('sends no reference without tenant reports in the area', async () => {
+    serveReports({ district: [], city: [] });
+    const { comparison } = await (await POST(req(completeBody))).json();
+    expect(comparison.reference).toBeNull();
+    expect(comparison.own.total).toBe(3800);
+  });
+
+  it('keeps the cost_report_submitted event and its properties unchanged', async () => {
+    serveReports({ district: [4000].map(tenantReport) });
+    vi.mocked(trackServerEvent).mockClear();
+
+    await POST(req(completeBody));
+
+    expect(trackServerEvent).toHaveBeenCalledTimes(1);
+    expect(trackServerEvent).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      'cost_report_submitted',
+      {
+        building_id: 'b-2',
+        city: 'warsaw',
+        source: 'user',
+        was_flagged: false,
+        fill_on_behalf: false,
+        scraped_import: false,
+        anonymous: true,
+      },
+    );
   });
 });

@@ -34,17 +34,3 @@ export function relativeCostColor(pctDiff: number): string {
   // Mid-tone lightness (42%): legible on both light and dark surfaces.
   return hs ? `hsl(${hs.hue}, ${hs.saturation}%, 42%)` : NEUTRAL;
 }
-
-/** Badge-style: a soft same-hue background tint + the matching text colour,
- *  for inline `style={...}` (replaces hard-coded `bg-green-500/10 text-green-600`). */
-export function relativeCostStyle(pctDiff: number): {
-  color: string;
-  backgroundColor: string;
-} {
-  const hs = costHueSat(pctDiff);
-  if (!hs) return { color: NEUTRAL, backgroundColor: 'hsl(220, 9%, 46%, 0.1)' };
-  return {
-    color: `hsl(${hs.hue}, ${hs.saturation}%, 42%)`,
-    backgroundColor: `hsl(${hs.hue}, ${hs.saturation}%, 50%, 0.12)`,
-  };
-}

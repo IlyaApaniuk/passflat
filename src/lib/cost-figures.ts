@@ -244,7 +244,8 @@ export function figureGroupOf(source: string): FigureGroupKey | null {
   return isSourceKind(source) ? SOURCE_GROUP[source] : null;
 }
 
-function isComplete(report: FigureReport): boolean {
+/** A report's total is all-in only when its utilities are established (LEGACY_NULL_IS_COMPLETE). */
+export function isCompleteReport(report: Pick<FigureReport, 'utilitiesComplete'>): boolean {
   if (report.utilitiesComplete === true) return true;
   return report.utilitiesComplete == null && LEGACY_NULL_IS_COMPLETE;
 }
@@ -308,8 +309,8 @@ function summarizeGroup(
 ): FigureGroup | null {
   if (reports.length === 0) return null;
 
-  const complete = reports.filter(isComplete);
-  const notComplete = reports.filter((report) => !isComplete(report));
+  const complete = reports.filter(isCompleteReport);
+  const notComplete = reports.filter((report) => !isCompleteReport(report));
   const one = reports.length <= ONE_OBSERVATION_REPORTS;
 
   const utilities = {} as Record<UtilityKey, UtilityFigure>;

@@ -6,12 +6,12 @@ import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
  * Median + typical p25–p75 band for one cost metric across an area's reports.
  * `null` everywhere when the area has no usable data for that metric.
  */
-export type AreaMetric = { median: number | null; p25: number | null; p75: number | null };
+type AreaMetric = { median: number | null; p25: number | null; p75: number | null };
 
 /**
  * Area-level (district or city) cost statistics across all visible reports.
- * Powers the dashboard "you vs your area" comparison (position bars) and the
- * personal share landing (the Аренда/Расходы split + the typical range).
+ * Powers the personal share landing (the Аренда/Расходы split + the typical
+ * range) and the bot until they move to the figure contract (spec 03).
  */
 export type AreaStats = {
   total: AreaMetric;

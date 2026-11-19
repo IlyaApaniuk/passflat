@@ -36,6 +36,8 @@ import { AddressAutocomplete, type PlaceResult } from '@/components/listings/add
 import { BuildingTagPicker } from '@/components/buildings/building-tag-picker';
 import { MonthYearPicker } from '@/components/costs/month-year-picker';
 import { ShareButton } from '@/components/costs/share-button';
+import { OwnCostsReference } from '@/components/costs/own-costs-reference';
+import type { OwnReportFigures, OwnReportReference } from '@/lib/own-report-reference';
 import type { CityBounds } from '@/lib/listings-data';
 import { FIELD_RANGES } from '@/lib/cost-validation';
 import {
@@ -367,18 +369,14 @@ export function CostSubmitClient({
   // The building the report landed on, so the thank-you screen can ask what
   // else is worth knowing about it.
   const [submittedBuildingId, setSubmittedBuildingId] = useState<string | null>(null);
+  // POST /api/cost-reports: the submitter's own figures and the area reference
+  // (tenant group of the district or the city, spec 03 §Comparisons).
   const [submittedComparison, setSubmittedComparison] = useState<{
-    userTotal: number | null;
     buildingReportCount: number;
     buildingSlug: string | null;
-    districtName: string | null;
     districtSlug: string | null;
-    districtMedian: number | null;
-    districtReportCount: number;
-    userRentPerM2: number | null;
-    userTotalPerM2: number | null;
-    districtMedianRentPerM2: number | null;
-    districtMedianTotalPerM2: number | null;
+    own: OwnReportFigures;
+    reference: OwnReportReference | null;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<SubmitError | null>(null);
@@ -1285,138 +1283,24 @@ export function CostSubmitClient({
                     />
                   </div>
                 )}
-                {submittedComparison && (
-                  <div className="mt-5 space-y-4 text-left">
-                    {/* You vs your district — the personal hook that makes the
-                        result worth sharing ("am I overpaying?"). Neutral framing. */}
-                    {submittedComparison.userTotal != null &&
-                      submittedComparison.districtMedian != null &&
-                      submittedComparison.districtName && (
-                        <div className="rounded-lg border bg-muted/40 p-4">
-                          <p className="text-sm font-semibold">
-                            {t('costs.submit.comparisonHeading')}
-                          </p>
-                          <div className="mt-2 flex items-end justify-between gap-2">
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                {t('costs.submit.yourCosts')}
-                              </p>
-                              <p className="text-lg font-bold text-primary">
-                                ≈ {submittedComparison.userTotal.toLocaleString()} PLN
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
-                                {t('costs.building.districtMedian', {
-                                  district: submittedComparison.districtName,
-                                })}
-                              </p>
-                              <p className="text-lg font-semibold">
-                                ≈ {submittedComparison.districtMedian.toLocaleString()} PLN
-                              </p>
-                            </div>
-                          </div>
-                          {(() => {
-                            const u = submittedComparison.userTotal!;
-                            const m = submittedComparison.districtMedian!;
-                            const delta = Math.round(u - m);
-                            const cls =
-                              delta === 0
-                                ? 'bg-muted text-muted-foreground'
-                                : delta > 0
-                                  ? 'bg-red-500/10 text-red-600'
-                                  : 'bg-green-500/10 text-green-600';
-                            const label =
-                              delta === 0
-                                ? t('costs.building.matchesMedian')
-                                : delta > 0
-                                  ? t('costs.submit.comparisonOverpay', {
-                                      amount: delta.toLocaleString(),
-                                    })
-                                  : t('costs.submit.comparisonSave', {
-                                      amount: Math.abs(delta).toLocaleString(),
-                                    });
-                            return (
-                              <p className="mt-3 text-xs">
-                                <span
-                                  className={`inline-block rounded-full px-2.5 py-1 font-medium ${cls}`}
-                                >
-                                  {label}
-                                </span>
-                                <span className="ml-2 text-muted-foreground">
-                                  ·{' '}
-                                  {t('costs.overview.nReports', {
-                                    count: submittedComparison.districtReportCount,
-                                  })}
-                                </span>
-                              </p>
-                            );
-                          })()}
-
-                          {(submittedComparison.userRentPerM2 != null ||
-                            submittedComparison.userTotalPerM2 != null) && (
-                            <div className="mt-3 space-y-2 border-t pt-3">
-                              <p className="text-xs font-medium text-muted-foreground">
-                                {t('costs.submit.comparisonPerM2Heading')}
-                              </p>
-                              {[
-                                {
-                                  label: t('costs.submit.comparisonRentPerM2'),
-                                  u: submittedComparison.userRentPerM2,
-                                  m: submittedComparison.districtMedianRentPerM2,
-                                },
-                                {
-                                  label: t('costs.submit.comparisonTotalPerM2'),
-                                  u: submittedComparison.userTotalPerM2,
-                                  m: submittedComparison.districtMedianTotalPerM2,
-                                },
-                              ].map((row) => {
-                                if (row.u == null || row.m == null) return null;
-                                const pct =
-                                  row.m > 0 ? Math.round(((row.u - row.m) / row.m) * 100) : 0;
-                                const chipCls =
-                                  pct === 0
-                                    ? 'bg-muted text-muted-foreground'
-                                    : pct > 0
-                                      ? 'bg-red-500/10 text-red-600'
-                                      : 'bg-green-500/10 text-green-600';
-                                const deltaLabel =
-                                  pct === 0
-                                    ? t('costs.building.onPar')
-                                    : pct > 0
-                                      ? t('costs.building.percentHigher', { percent: pct })
-                                      : t('costs.building.percentLower', {
-                                          percent: Math.abs(pct),
-                                        });
-                                return (
-                                  <div
-                                    key={row.label}
-                                    className="flex items-center justify-between gap-3 text-sm"
-                                  >
-                                    <span className="text-muted-foreground">{row.label}</span>
-                                    <span className="flex items-center gap-2">
-                                      <span className="whitespace-nowrap tabular-nums">
-                                        <span className="font-semibold text-primary">
-                                          ≈{row.u.toLocaleString()}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                          {' '}
-                                          / ≈{row.m.toLocaleString()} zł
-                                        </span>
-                                      </span>
-                                      <span
-                                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                                      >
-                                        {deltaLabel}
-                                      </span>
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                {/* The submitter's own figures beside the area's tenant reports,
+                    each with its own N (spec 03 §Comparisons): values side by
+                    side, no overpay, saving or percentage verdict. */}
+                {submittedComparison?.reference && (
+                  <div className="mt-5 rounded-lg border bg-muted/40 p-4 text-left">
+                    <OwnCostsReference
+                      own={submittedComparison.own}
+                      reference={submittedComparison.reference}
+                      // A district's name is its display name; the city is this page's.
+                      areaName={
+                        submittedComparison.reference.level === 'district'
+                          ? submittedComparison.reference.name
+                          : cityName
+                      }
+                      heading={t('costs.submit.comparisonHeading', {
+                        level: submittedComparison.reference.level,
+                      })}
+                    />
                   </div>
                 )}
                 {/* Anonymous submitter: their report is already saved. Hook them
@@ -1488,17 +1372,10 @@ export function CostSubmitClient({
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('costs.submit.shareInviteDesc')}
                     </p>
+                    {/* No `pct` / `amt`: a percentage against one report is never
+                        a comparable statement (FR-29), so the card stays neutral. */}
                     <ShareButton
-                      path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}${
-                        submittedComparison.districtMedian && submittedComparison.userTotal
-                          ? `&pct=${Math.round(
-                              ((submittedComparison.userTotal -
-                                submittedComparison.districtMedian) /
-                                submittedComparison.districtMedian) *
-                                100,
-                            )}&amt=${submittedComparison.userTotal}`
-                          : ''
-                      }`}
+                      path={`/${citySlug}/costs/share?d=${submittedComparison.districtSlug}`}
                       source="submit-comparison"
                       refToken={userId ?? undefined}
                       label={t('costs.submit.shareComparison')}
