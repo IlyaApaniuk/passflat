@@ -417,6 +417,13 @@ function countingReportsWhere(targetProfileId: string) {
 }
 
 /**
+ * What a stored report did (`hideAfterReport`): the `hidden_reason` when this request hid the
+ * target; `already_hidden` when another request had hidden it after this request's check and this
+ * request decided the reports that hide left undecided (`decideLateReports`); null otherwise.
+ */
+export type ReportHide = HiddenReason | 'already_hidden' | null;
+
+/**
  * Automatic hiding after a stored report (spec 07 §Automatic hiding, FR-32, FR-34, D62): the
  * target is hidden when the new report's reason is `under_18` (at once, `hidden_reason=under_18`)
  * or when `HIDE_AT_REPORTERS` reports count (`countingReportsWhere`, `hidden_reason=reports`).
@@ -425,15 +432,18 @@ function countingReportsWhere(targetProfileId: string) {
  * same moment only one request hides. That request, in the same transaction, sets the chat's ban
  * marker `roommate_banned_at` (when null; it stays, D55) and marks the target's reports
  * `decision=hidden`, `automated=true`, `decided_at=now`; reports the owner lifted keep their
- * decision. Returns the reason for that one request, null for every other (not hidden, or hidden
- * by another request); that request then sends the statement of reasons and the reporters'
- * notices (`sendHideMessages`, `src/lib/bot/roommate-hide-messages.ts`).
+ * decision. Returns the reason for that one request; that request then sends the statement of
+ * reasons and the reporters' notices (`sendHideMessages`, `src/lib/bot/roommate-hide-messages.ts`).
+ *
+ * Every other request decides what that hide could not see: a report inserted after the hide's
+ * own decision update (`decideLateReports`). It returns `already_hidden` when it decided any and
+ * then sends the reporters' notices (`sendLateHideNotices`), null when it decided none.
  */
 export async function hideAfterReport(
   target: Pick<RoommateProfile, 'id' | 'chatId'>,
   reason: ReportReason,
   now: Date,
-): Promise<HiddenReason | null> {
+): Promise<ReportHide> {
   const hiddenReason: HiddenReason | null =
     reason === 'under_18'
       ? 'under_18'
@@ -441,9 +451,17 @@ export async function hideAfterReport(
           HIDE_AT_REPORTERS
         ? 'reports'
         : null;
-  if (!hiddenReason) return null;
+  if (hiddenReason && (await hideTarget(target, hiddenReason, now))) return hiddenReason;
+  return (await decideLateReports(target.id, now)) ? 'already_hidden' : null;
+}
 
-  const hid = await prisma.$transaction(async (tx) => {
+/** The hide of `hideAfterReport`: true only for the request whose update changed the row. */
+async function hideTarget(
+  target: Pick<RoommateProfile, 'id' | 'chatId'>,
+  hiddenReason: HiddenReason,
+  now: Date,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
     // `statement_sent_at` and `appealed_at` are cleared so this hide gets its own statement of
     // reasons and its own `/appeal`, also after an owner's unhide of an earlier one (spec 07
     // §Statement of reasons, §Appeals and the owner's review).
@@ -468,7 +486,29 @@ export async function hideAfterReport(
     });
     return true;
   });
-  return hid ? hiddenReason : null;
+}
+
+/**
+ * Reports on a hidden target that its hide left undecided (spec 07 §Automatic hiding, FR-32
+ * criterion 4): a request found the target visible at its check (`findReportableProfile`), and
+ * another request hid it before this request's insert became visible to the hide's decision
+ * update. They are decided as the hide decided the rest, in one update conditional on the
+ * target's `hidden_at` in the same statement, so a visible target's reports stay undecided and
+ * an owner's `lifted` stays lifted. It runs after this request's own insert (so it sees its own
+ * report) and after its own hide attempt, which, when the rule is met, waits on a concurrent hide's
+ * row lock and so sees that hide committed. It also runs when the rule is not met (the hider's
+ * report no longer counts, or a rule that needs more reporters than one hide plus this report).
+ *
+ * True when it decided any. Whoever decides a report sends the target's notices afterwards (the
+ * hiding request, or the request whose update here decided it), so each reporter is told; the
+ * claims on `reporter_notified_at` keep it to once.
+ */
+async function decideLateReports(targetProfileId: string, now: Date): Promise<boolean> {
+  const { count } = await prisma.roommateReport.updateMany({
+    where: { targetProfileId, decision: 'none', targetProfile: { hiddenAt: { not: null } } },
+    data: { decision: 'hidden', automated: true, decidedAt: now },
+  });
+  return count > 0;
 }
 
 /**

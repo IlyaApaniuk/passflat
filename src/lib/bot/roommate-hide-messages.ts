@@ -191,6 +191,20 @@ export async function sendHideMessages(
   await sendHideNotices(sender, now, { targetProfileId });
 }
 
+/**
+ * After a report that another request's hide left undecided and this request decided
+ * (`hideAfterReport` → `already_hidden`, spec 07 §Automatic hiding, FR-32 criterion 4): the notice
+ * to each reporter of `targetProfileId` whose notice is unsent, the reporter of this request
+ * included. No statement: the hiding request sends it, and the send-hour run retries it.
+ */
+export async function sendLateHideNotices(
+  sender: CronSender,
+  targetProfileId: string,
+  now: Date,
+): Promise<void> {
+  await sendHideNotices(sender, now, { targetProfileId });
+}
+
 /** The send-hour retry of unsent statements (spec 06 §Daily cron, first in priority). */
 export const retryStatements: MessageJob = (sender, now) => sendStatements(sender, now, {});
 

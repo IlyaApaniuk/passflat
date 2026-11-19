@@ -47,6 +47,7 @@ const db = vi.hoisted(() => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
       if (key === 'fromProfile') return matches(profileOf(row.fromProfileId), cond as Where);
       if (key === 'toProfile') return matches(profileOf(row.toProfileId), cond as Where);
+      if (key === 'targetProfile') return matches(profileOf(row.targetProfileId), cond as Where);
       if (key in RELATIONS) {
         const { none, some, ...rest } = cond as { none?: Where; some?: Where };
         const filter = none ?? some;
@@ -206,6 +207,10 @@ const db = vi.hoisted(() => {
         /** No report here is decided (nothing is hidden): the hide-notice retry finds none. */
         findMany: vi.fn(async ({ where }: { where: Where }) =>
           state.reports.filter((row) => matches(row, where)),
+        ),
+        /** The late decision after a stored report (`hideAfterReport`): nothing hidden, none. */
+        updateMany: vi.fn(async (args: { where: Where; data: Row }) =>
+          updateMany(state.reports, args),
         ),
         /** One report per reporter and target (the unique pair; `skipDuplicates`). */
         createMany: vi.fn(async ({ data }: { data: Row[] }) => {

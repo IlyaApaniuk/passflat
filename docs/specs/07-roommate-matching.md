@@ -260,6 +260,15 @@ FR-32, FR-34; **Decided** (automatic hiding, D49; the rule, D62; the ban marker 
   report's `reporter_notified_at` (conditional update from null), a non-403 failure releases it,
   and the daily cron retries unsent notices of `decision=hidden` reports whose reporter profile and
   chat still exist (spec 06 §Daily cron).
+- A report stored just after another request hid the target (its check saw the target visible,
+  its insert landed after the hide's decision update; FR-32 criterion 4, T113, agent's reading
+  of "tell every reporter"): every request whose report did not hide runs one more update,
+  conditional on the target's `hidden_at` in the same statement, that decides the target's
+  `decision='none'` reports the same way (`hidden`, `automated=true`, `decided_at`), whatever
+  the counts; lifted reports stay lifted, a visible target's reports stay undecided. The request
+  that decided any replies its receipt and then sends the notices of the target (claimed as
+  above, retried by the daily cron). No second statement and no second event: the statement's
+  facts are the decided reports at the time it is sent.
 - A hidden profile is not counted, not shown and gets no push; it is deleted at `expires_at` +
   14 days with `reason=moderation` (spec 06 §Daily cron); the ban stays. After a hide, `/mate`
   and `mate_*` links give the FR-14 reply (spec 06 §Entry and routing).

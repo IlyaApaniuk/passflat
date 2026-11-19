@@ -51,6 +51,7 @@ const db = vi.hoisted(() => {
       if (key === 'toProfile') return matches(profileOf(row.toProfileId), cond as Where);
       if (key === 'reporterProfile')
         return matches(profileOf(row.reporterProfileId), cond as Where);
+      if (key === 'targetProfile') return matches(profileOf(row.targetProfileId), cond as Where);
       if (key in RELATIONS) {
         const { none, some, ...rest } = cond as { none?: Where; some?: Where };
         const filter = none ?? some;
@@ -428,6 +429,20 @@ const banWrites = () =>
 /** The decision writes of a hide (not the notice claims, which set `reporter_notified_at`). */
 const decisionWrites = () =>
   db.prisma.roommateReport.updateMany.mock.calls.filter(([args]) => 'decision' in args.data);
+/** The hide's own decision write, not the late decision after a report that did not hide. */
+const hideDecisionWrites = () =>
+  decisionWrites().filter(([args]) => args.where.decision !== 'none');
+/** The late decision of a report that did not hide `target` (`hideAfterReport`). */
+const lateDecision = (target: string) => [
+  {
+    where: {
+      targetProfileId: target,
+      decision: 'none',
+      targetProfile: { hiddenAt: { not: null } },
+    },
+    data: { decision: 'hidden', automated: true, decidedAt: NOW },
+  },
+];
 
 type Handler = (ctx: Context) => Promise<void>;
 type Route = [trigger: string | RegExp, handler: Handler];
@@ -617,7 +632,10 @@ describe('the golden cases of spec 07 §Automatic hiding', () => {
     expect(db.prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(row(X)).toMatchObject({ status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports' });
     expect(banWrites()).toHaveLength(1);
-    expect(decisionWrites()).toHaveLength(1);
+    expect(hideDecisionWrites()).toHaveLength(1);
+    // The other request decides what the hide left (nothing here: both were stored before it).
+    expect(decisionWrites()).toHaveLength(2);
+    expect(decisionWrites()).toContainEqual(lateDecision(X));
     expect(reportsOn(X).map((r) => r.decision)).toEqual(['hidden', 'hidden', 'hidden']);
     expect(hideEvents()).toEqual([[X_CHAT, 'tg_roommate_profile_hidden', { reason: 'reports' }]]);
   });
@@ -738,6 +756,8 @@ describe('what a hide writes', () => {
       [{ where: { id: `chat-${X}`, roommateBannedAt: null }, data: { roommateBannedAt: NOW } }],
     ]);
     expect(decisionWrites()).toEqual([
+      // R1's report did not hide: the late decision, conditional on X's hidden_at, decides nothing.
+      lateDecision(X),
       [
         {
           where: { targetProfileId: X, decision: { not: 'lifted' } },
@@ -1219,6 +1239,167 @@ describe('the notice to reporters (spec 07 §Automatic hiding, FR-32 criterion 4
     expect(textsTo(R1)).toEqual([]);
     expect(textsTo(R2)).toEqual([]);
     quiet.mockRestore();
+  });
+});
+
+/**
+ * `who` reports `target` with `reason`, and another request's whole tap (`between`) runs after this
+ * request's check and before its insert: the insert waits until `between` has finished, as when
+ * another request's hide commits in that gap. Returns this request's replies and the `reply` mock
+ * of its context (to order the receipt against the API's sends).
+ */
+async function reportAcrossHide(
+  who: string,
+  reason: string,
+  target: string,
+  between: () => Promise<unknown>,
+) {
+  const insert = db.prisma.roommateReport.createMany.getMockImplementation()!;
+  let reached!: () => void;
+  const atInsert = new Promise<void>((resolve) => (reached = resolve));
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  db.prisma.roommateReport.createMany.mockImplementationOnce(async (args) => {
+    reached();
+    await gate;
+    return insert(args);
+  });
+  const late = report(who, reason, target);
+  await atInsert;
+  const reply = lastReply;
+  // This request has checked the target (visible) and waits at its insert.
+  expect(db.state.profiles.find((p) => p.id === target)!.hiddenAt).toBeNull();
+  await between();
+  release();
+  return { replies: await late, reply };
+}
+
+/** The invocation order of the first API send to the chat of profile `id`. */
+const firstSendAt = (id: string) =>
+  api.sendMessage.mock.invocationCallOrder[
+    api.sendMessage.mock.calls.findIndex(([chatId]) => chatId === tgChatOf(id))
+  ];
+
+describe('a report stored just after another request hid the target (FR-32 criterion 4)', () => {
+  it('"under_18" hides Y between R2\'s check and insert: both reporters are told once, one statement, one hide', async () => {
+    const { replies, reply } = await reportAcrossHide(R2, 'fake', Y, async () => {
+      expect(await report(R1, 'under_18', Y)).toEqual([RECEIPT]);
+    });
+
+    // R2's check found Y visible, so it got the receipt that promises the notice.
+    expect(replies).toEqual([RECEIPT]);
+    expect(row(Y)).toMatchObject({ status: 'hidden', hiddenAt: NOW, hiddenReason: 'under_18' });
+    expect(reportsOn(Y)).toEqual([
+      expect.objectContaining({ reporterProfileId: R1, reason: 'under_18' }),
+      expect.objectContaining({ reporterProfileId: R2, reason: 'fake' }),
+    ]);
+    for (const decided of reportsOn(Y)) {
+      expect(decided).toMatchObject({
+        decision: 'hidden',
+        automated: true,
+        decidedAt: NOW,
+        reporterNotifiedAt: NOW,
+      });
+    }
+    expect(textsTo(R1)).toEqual([rt('ru', 'hideNotice')]);
+    expect(textsTo(R2)).toEqual([rt('ru', 'hideNotice')]);
+    expect(reply.mock.invocationCallOrder[0]).toBeLessThan(firstSendAt(R2));
+    // One statement, sent by the hiding request: its facts are the reports that hide decided.
+    expect(textsTo(Y)).toEqual([statementText('ru', 'under_18', ['under_18'])]);
+    expect(banWrites()).toHaveLength(1);
+    expect(events()).toEqual([
+      [tgChatOf(R1), 'tg_roommate_reported', { reason: 'under_18' }],
+      [Y_CHAT, 'tg_roommate_profile_hidden', { reason: 'under_18' }],
+      [tgChatOf(R2), 'tg_roommate_reported', { reason: 'fake' }],
+    ]);
+
+    await runCron(NEXT_DAY);
+    await runCron(DAY_AFTER);
+    expect(textsTo(R1)).toHaveLength(1);
+    expect(textsTo(R2)).toHaveLength(1);
+    expect(textsTo(Y)).toHaveLength(1);
+  });
+
+  it("the second reporter hides X between R3's check and insert: R1, R2 and R3 are told once, one statement", async () => {
+    await report(R1, 'fake', X);
+    const { replies } = await reportAcrossHide(R3, 'other', X, async () => {
+      expect(await report(R2, 'money', X)).toEqual([RECEIPT]);
+    });
+
+    expect(replies).toEqual([RECEIPT]);
+    expect(row(X)).toMatchObject({ status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports' });
+    expect(reportsOn(X).map((r) => [r.reporterProfileId, r.decision, r.decidedAt])).toEqual([
+      [R1, 'hidden', NOW],
+      [R2, 'hidden', NOW],
+      [R3, 'hidden', NOW],
+    ]);
+    expect(notifiedAt(X)).toEqual([NOW, NOW, NOW]);
+    for (const id of [R1, R2, R3]) expect(textsTo(id)).toEqual([rt('ru', 'hideNotice')]);
+    expect(textsTo(X)).toEqual([statementText('ru', 'reports', ['fake', 'money'])]);
+    expect(hideEvents()).toEqual([[X_CHAT, 'tg_roommate_profile_hidden', { reason: 'reports' }]]);
+    expect(hideDecisionWrites()).toHaveLength(1);
+
+    await runCron(NEXT_DAY);
+    for (const id of [R1, R2, R3, X]) expect(textsTo(id)).toHaveLength(1);
+  });
+
+  it("the late reporter's failed notice (not a 403) is released and sent once by the send-hour run", async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failSendsTo(502, R2);
+    await reportAcrossHide(R2, 'fake', Y, () => report(R1, 'under_18', Y));
+    expect(reportsOn(Y).map((r) => [r.reporterProfileId, r.decision])).toEqual([
+      [R1, 'hidden'],
+      [R2, 'hidden'],
+    ]);
+    expect(notifiedAt(Y)).toEqual([NOW, null]);
+
+    api.sendMessage.mockImplementation(async () => ({}));
+    api.sendMessage.mockClear();
+    await runCron(NEXT_DAY);
+    expect(sent().map(({ chatId, text }) => [chatId, text])).toEqual([
+      [tgChatOf(R2), rt('ru', 'hideNotice')],
+    ]);
+    expect(notifiedAt(Y)).toEqual([NOW, NEXT_DAY]);
+
+    await runCron(DAY_AFTER);
+    expect(sent()).toHaveLength(1);
+    quiet.mockRestore();
+  });
+
+  it("decided also when the rule is not met by the reports left: the hider's profile was deleted in the gap", async () => {
+    await reportAcrossHide(R2, 'fake', Y, async () => {
+      await report(R1, 'under_18', Y);
+      expect(await deleteProfile(R1)).toBe(true);
+    });
+
+    // R1's report no longer counts, so R2's report alone meets no rule; it is decided all the same.
+    expect(reportsOn(Y).map((r) => [r.reporterProfileId, r.decision])).toEqual([
+      [null, 'hidden'],
+      [R2, 'hidden'],
+    ]);
+    expect(textsTo(R2)).toEqual([rt('ru', 'hideNotice')]);
+    expect(hideEvents()).toHaveLength(1);
+  });
+
+  it('a visible target: the late decision decides nothing, and nobody is told', async () => {
+    await report(R1, 'fake', X);
+    await report(R2, 'offensive', Y);
+    expect(decisionWrites()).toEqual([lateDecision(X), lateDecision(Y)]);
+    expect(db.state.reports.map((r) => r.decision)).toEqual(['none', 'none']);
+    expect(api.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("an owner's unhide: the lifted reports stay lifted when a later report does not hide", async () => {
+    await hideXByReports();
+    ownerUnhide(X, NOW);
+    await report(R3, 'other', X);
+
+    expect(row(X)).toMatchObject({ status: 'active', hiddenAt: null });
+    expect(reportsOn(X).map((r) => [r.reporterProfileId, r.decision])).toEqual([
+      [R1, 'lifted'],
+      [R2, 'lifted'],
+      [R3, 'none'],
+    ]);
   });
 });
 

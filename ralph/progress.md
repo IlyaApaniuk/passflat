@@ -148,6 +148,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A new bot event (`track(…, 'tg_…')`) needs a row in a `src/lib/bot/README.md` events table naming every property key it sends; `src/lib/bot/roommate-readme.test.ts` checks it (a new property builder goes into `PROPERTY_BUILDERS` in `src/lib/bot/track-calls.test-support.ts`, the shared `track(` scanner).
 - Readout queries in `docs/analytics/activation-funnels.md` §7+ are checked by `src/lib/bot/roommate-readouts.test.ts`: start each ```sql block with `-- HogQL.`or`-- Read-only SQL.`, alias every SQL table (`FROM roommate_profiles p`), qualify columns as `alias.column`, write `unnest(...) AS d(slug)`without`LATERAL`, and keep the outer HogQL SELECT free of `distinct_id`.
 - `src/lib/bot/roommate-posting-kit.test.ts` parses `docs/marketing/roommate-posts.md` (every `t.me/…?start=` link, the group-key table), `roommate-posting-log.md` (columns, rows) and `bot-profile.md` (BotFather limits): change their headings, table columns or `text` blocks together with that test.
+- Every stored report that does not hide runs `roommateReport.updateMany` with `targetProfile: { hiddenAt: { not: null } }` (`decideLateReports`, `store.ts`): a Prisma fake serving report taps needs `updateMany` and a `targetProfile` key in its `matches`.
+- A race between a request's check and its write is tested by holding that request at the write: `mockImplementationOnce` that awaits a gate, then the real `getMockImplementation()`; run the other request in the gap (example: `reportAcrossHide` in `roommate-hide.test.ts`).
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
 
 ## Log
@@ -3198,3 +3200,51 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The building page's own area-reference fallback (FR-33) shows no one-observation line at all, so it was left as it is.
   - No figure or contract change, no event, no table, no migration.
 - Next: `node scripts/ralph-tasks.mjs next` (now T113; T105, the PRD 3 final check, FR-44, comes after the remaining tasks).
+
+### 2026-11-19 21:48 · T113 · done
+
+- Done:
+  - `src/lib/roommate/store.ts`:
+    - `hideAfterReport` now returns `ReportHide` (`HiddenReason | 'already_hidden' | null`); the hide transaction moved unchanged into `hideTarget`.
+    - New `decideLateReports`: when this request did not hide, one `roommateReport.updateMany` with `where { targetProfileId, decision: 'none', targetProfile: { hiddenAt: { not: null } } }` → `decision=hidden`, `automated=true`, `decided_at`. It runs whatever the counts, so it also covers a hider whose report no longer counts. A visible target's reports stay `none`, and `lifted` stays lifted. It returns `already_hidden` when it decided any.
+  - `src/lib/bot/roommate-hide-messages.ts`: `sendLateHideNotices(sender, targetProfileId, now)` sends the target's unsent notices only. There is no statement: the hiding request sends it, and the cron retries it.
+  - `src/lib/bot/roommate-safety.ts`: `hideIfDue` returns `'hid' | 'already_hidden' | null`. On `already_hidden` the request replies with the receipt, then sends `sendLateHideNotices` through `createCronSender`. No `tg_roommate_profile_hidden` (one hide, one event).
+  - Docs: spec 07 §Automatic hiding has a new bullet (agent's reading, T113); `docs/specs/README.md` has a new row "FR-32 (gap)" → T113, Done; `src/lib/bot/README.md` §Automatic hiding is updated.
+- Tests:
+  - `roommate-hide.test.ts`, new block "a report stored just after another request hid the target" (6 tests). `reportAcrossHide` holds a request at its `createMany` until another whole tap has finished. The tests:
+    - `under_18` by R1 lands between R2's check and insert. Both reports are `hidden`/`automated`/`decided_at`, and each reporter is told once. R2's receipt comes before its notice. Y gets one statement (facts: the one report the hide decided). One ban, one hide event. Two send-hour runs send nothing more.
+    - R2 hides X between R3's check and insert, after R1's earlier report. R1, R2 and R3 are told once, X gets one statement, one hide event.
+    - The late notice fails with 502: the claim is released and the send-hour run sends it once.
+    - The hider's profile is deleted in the gap (the rule is not met by the reports left): the report is decided and told all the same.
+    - A visible target: the late write decides nothing, nobody is told.
+    - After an owner's unhide: the lifted reports stay lifted.
+  - Two existing assertions now account for the extra write: the concurrent golden case (one hide decision write plus the loser's late write) and "what a hide writes" (`lateDecision(X)` first).
+  - The `targetProfile` relation was added to the `matches` of the fakes in `roommate-hide`, `roommate-report` and `roommate-switch` (plus `roommateReport.updateMany` in the switch fake).
+  - `texts.test.ts`: the `reportReceipt` promise backing now names `sendLateHideNotices` (both files) and the store line.
+  - Mutation checks:
+    - late notices disabled → 3 new tests fail (the retry test passes, as the cron still sends);
+    - the late decision dropped → 5 fail.
+    - Both reverted.
+- Checks:
+  - `npx vitest run` of hide, report, switch and texts tests: 202 passed.
+  - Local DB (scratchpad `npx tsx --env-file=.env` script, guard on 127.0.0.1:54322, chats −9113001…, deleted in `finally`, 0 left). Results:
+    - a visible target → `null`, report `none`;
+    - hide → `reports`, then a later insert → `already_hidden` with all three `hidden`, then a repeat → `null`;
+    - a hidden target with one counting report → `already_hidden`;
+    - lifted + new → `lifted` / `hidden`;
+    - 20 concurrent `under_18` + `fake` pairs over the pool → `under_18+null` ×19, `under_18+already_hidden` ×1, 0 undecided reports.
+    - Prisma accepts the relation filter in `updateMany`.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2964 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Agent's reading to confirm (spec 07 §Automatic hiding, new bullet):**
+    - a report stored after the hide gets the hide's decision (`automated=true`, `decided_at` = its own request's time) and its reporter gets the notice;
+    - the statement already sent is not resent, and its facts stay those of the reports decided when it was sent;
+    - a statement still unsent (failed, waiting for the retry) counts the late report too.
+  - No new copy (`hideNotice`, `reportReceipt` from T095), no new event, no table, no migration.
+- Next: `node scripts/ralph-tasks.mjs next` (T105, the PRD 3 final check, FR-44, after any remaining tasks).

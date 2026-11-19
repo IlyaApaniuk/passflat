@@ -918,13 +918,13 @@
         "Tests: two overlapping reports where the second is stored after the first one's hide committed: both reporters are told once, one statement of reasons"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "From T095: hideAfterReport (src/lib/roommate/store.ts) decides only the reports that exist when the hide commits. A report inserted just after it stays decision='none', so retryHideNotices (roommate-hide-messages.ts) never picks it up, although its receipt (reportReceipt) promised the notice. One way: when the conditional hide update finds the target already hidden, decide that target's decision='none' reports in the same transaction and run sendHideNotices for the target. The statement's facts count only decided reports, so its count is unchanged for a statement already sent.",
       "id": "T113",
       "milestone": "M4",
       "title": "A report stored just after another request hid the same target is decided and its reporter told (FR-32 criterion 4)",
       "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

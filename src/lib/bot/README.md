@@ -295,7 +295,11 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   (`activeProfilesWhere`), `/mate` and `mate` links give the FR-14 reply, and the
   daily cron deletes it 14 days after `expires_at` with the ban kept. The hide also
   clears `statement_sent_at`, so a hide after an owner's unhide gets its own
-  statement.
+  statement. A report that did not hide runs one more update (`decideLateReports`):
+  the target's `decision='none'` reports are decided the same way when the target's
+  `hidden_at` is set, so a report stored just after another request's hide is
+  decided, and that request sends the target's notices after its receipt
+  (`sendLateHideNotices`; no second statement, no event).
 - **Statement of reasons and the reporters' notice** (spec 07 §Statement of
   reasons, FR-33, FR-32 criterion 4; `roommate-hide-messages.ts`): the request
   whose report hid the profile replies the receipt first, then sends

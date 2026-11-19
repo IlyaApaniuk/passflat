@@ -72,9 +72,10 @@ const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // The report receipt (spec 07 §Report, FR-31): "I'll tell you when that
   // happens" is the notice to every reporter of a hidden profile (§Automatic
   // hiding, FR-32 criterion 4, DSA Art. 16(6)), sent by the request that hid it
-  // and retried by the send-hour run.
+  // (or, for a report stored just after another request's hide, by the request
+  // that decided it) and retried by the send-hour run.
   reportReceipt:
-    'the hide notice to every reporter of spec 07 §Automatic hiding: sendHideMessages and retryHideNotices, roommate-hide-messages.ts (T095)',
+    'the hide notice to every reporter of spec 07 §Automatic hiding: sendHideMessages, sendLateHideNotices and retryHideNotices, roommate-hide-messages.ts (T095, T113)',
 };
 
 /**
@@ -110,6 +111,7 @@ const REPORT_RECEIPT_PROMISE_BACKING: Record<string, { file: string; holds: stri
     file: 'src/lib/bot/roommate-hide-messages.ts',
     holds: [
       'export async function sendHideMessages(',
+      'export async function sendLateHideNotices(',
       'await sendHideNotices(sender, now, { targetProfileId });',
       "text: rt(roommateLocale(chat.locale), 'hideNotice'),",
       'export const retryHideNotices: MessageJob',
@@ -117,7 +119,11 @@ const REPORT_RECEIPT_PROMISE_BACKING: Record<string, { file: string; holds: stri
   },
   reportReceiptSender: {
     file: 'src/lib/bot/roommate-safety.ts',
-    holds: ['await sendHideMessages('],
+    holds: ['await sendHideMessages(', 'await sendLateHideNotices('],
+  },
+  reportReceiptLateDecision: {
+    file: 'src/lib/roommate/store.ts',
+    holds: ["return (await decideLateReports(target.id, now)) ? 'already_hidden' : null;"],
   },
   reportReceiptRetry: {
     file: 'src/lib/bot/roommate-daily.ts',

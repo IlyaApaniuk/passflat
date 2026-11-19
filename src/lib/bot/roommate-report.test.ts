@@ -54,6 +54,7 @@ const db = vi.hoisted(() => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
       if (key === 'reporterProfile')
         return matches(profileOf(row.reporterProfileId), cond as Where);
+      if (key === 'targetProfile') return matches(profileOf(row.targetProfileId), cond as Where);
       if (key in RELATIONS) {
         const { none, some, ...rest } = cond as { none?: Where; some?: Where };
         const filter = none ?? some;

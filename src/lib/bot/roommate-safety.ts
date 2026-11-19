@@ -16,7 +16,11 @@ import {
 import { track } from './analytics';
 import { createCronSender } from './roommate-daily';
 import { matchGroups, rememberUsername, roommateCallback } from './roommate-flow';
-import { REPORT_REASON_LABEL, sendHideMessages } from './roommate-hide-messages';
+import {
+  REPORT_REASON_LABEL,
+  sendHideMessages,
+  sendLateHideNotices,
+} from './roommate-hide-messages';
 import { roommateLocale, rt } from './roommate-texts';
 import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
@@ -96,7 +100,9 @@ const handleReportTap = roommateCallback(async (ctx, chat, locale) => {
  * of each other's counts, cards and compatibility (`notReportedWith`). When this report hid the
  * target, the statement of reasons and the reporters' notices follow the receipt, so this reporter
  * reads the receipt's rule before the notice that it was applied; through the cron's sender, so a
- * failed send is retried by the send-hour run. A repeat (or the second of two overlapping taps) →
+ * failed send is retried by the send-hour run. When another request hid the target between this
+ * request's check and its insert, this report is decided here and the reporters' notices follow
+ * the receipt the same way (FR-32 criterion 4). A repeat (or the second of two overlapping taps) →
  * "already reported" and nothing else; a target already hidden → the receipt of a hidden profile
  * only, nothing stored and no event; a target deleted since the check → "this profile is no longer
  * available".
@@ -120,10 +126,16 @@ const handleReportReason = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   track(ctx.chat!.id, 'tg_roommate_reported', { reason });
-  const hid = await hideIfDue(found.target, reason, now);
+  const hide = await hideIfDue(found.target, reason, now);
   await ctx.reply(rt(locale, 'reportReceipt'));
-  if (hid) {
+  if (hide === 'hid') {
     await sendHideMessages(
+      createCronSender(ctx.api, { now, startedAt: Date.now() }),
+      found.target.id,
+      now,
+    );
+  } else if (hide === 'already_hidden') {
+    await sendLateHideNotices(
       createCronSender(ctx.api, { now, startedAt: Date.now() }),
       found.target.id,
       now,
@@ -135,20 +147,21 @@ const handleReportReason = roommateCallback(async (ctx, chat, locale) => {
  * §Automatic hiding after a stored report (FR-32, FR-34): `hideAfterReport` hides the target, bans
  * its chat and decides its reports; only the request that hid it sends `tg_roommate_profile_hidden`
  * with the reason, as the hidden person (`tg_<their chatId>`), never naming a reporter, and returns
- * true (that request then sends the hide's messages). From then on the profile is out of every
+ * `hid` (that request then sends the hide's messages). From then on the profile is out of every
  * count, card and push (`activeProfilesWhere`), and `/mate` and `mate` links give the FR-14 reply
- * (`openRoommate`).
+ * (`openRoommate`). `already_hidden`: another request hid the target after this request's check
+ * and this report was decided here, so this request tells the reporters (no event: one hide).
  */
 async function hideIfDue(
   target: RoommateProfile,
   reason: ReportReason,
   now: Date,
-): Promise<boolean> {
-  const hidden = await hideAfterReport(target, reason, now);
-  if (!hidden) return false;
+): Promise<'hid' | 'already_hidden' | null> {
+  const hide = await hideAfterReport(target, reason, now);
+  if (hide === null || hide === 'already_hidden') return hide;
   const hiddenChatId = await telegramChatIdOf(target.chatId);
-  if (hiddenChatId !== null) track(hiddenChatId, 'tg_roommate_profile_hidden', { reason: hidden });
-  return true;
+  if (hiddenChatId !== null) track(hiddenChatId, 'tg_roommate_profile_hidden', { reason: hide });
+  return 'hid';
 }
 
 /**
