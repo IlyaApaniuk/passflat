@@ -2,15 +2,26 @@
  * Bot copy.
  *
  * Deliberately not wired into next-intl: those message files carry ~40
- * namespaces of website UI, and the bot needs a couple of dozen strings in two
- * languages (RU/UK — the diaspora this channel exists for; the site keeps all
- * four locales). Keeping them here means bot copy can change without touching
- * the site's translation surface.
+ * namespaces of website UI, and the bot needs a few dozen strings in its own
+ * languages (RU/UK — the diaspora this channel exists for — and EN, spec 04
+ * §English bot locale; the site keeps all four locales). Keeping them here
+ * means bot copy can change without touching the site's translation surface.
  *
  * House style, from the RU marketing notes: "комуналка" in Cyrillic, and the
- * hidden-cost pain is доплаты по воде/свету, not a lump komunalka.
+ * hidden-cost pain is доплаты по воде/свету, not a lump komunalka. English:
+ * plain words, "you", "utilities" for media / komunalka, and the website's
+ * labels ("tenant reports", "asking prices from listings", "known part of the
+ * costs"); never "market", "verified", "checked" or "actually".
  */
 
+/** The locales this file holds texts for: every key has a value in each (`texts.test.ts`). */
+export type TextLocale = 'ru' | 'uk' | 'en';
+
+/**
+ * The locales a chat is answered in. English texts exist (`TextLocale`), but a
+ * chat reaches them only once this widens to `'en'` with the deposit gate
+ * (spec 04 §English bot locale, T099).
+ */
 export type BotLocale = 'ru' | 'uk';
 
 export function normalizeLocale(languageCode: string | undefined): BotLocale {
@@ -18,65 +29,89 @@ export function normalizeLocale(languageCode: string | undefined): BotLocale {
 }
 
 /**
- * Slavic plural agreement: "1 отчёт", "2 отчёта", "5 отчётов". Both locales
- * share the same rule, so one helper covers them.
+ * The forms of a counted word per locale: Slavic one / few / many ("1 отчёт",
+ * "2 отчёта", "5 отчётов"; RU and UK share the rule), English one / other.
  */
-export function plural(count: number, forms: [string, string, string]): string {
+type PluralForms = {
+  ru: readonly [one: string, few: string, many: string];
+  uk: readonly [one: string, few: string, many: string];
+  en: readonly [one: string, other: string];
+};
+
+/** The form of `forms` that agrees with `count` in `locale`. */
+export function plural<L extends TextLocale>(
+  locale: L,
+  count: number,
+  forms: PluralForms[L],
+): string {
+  if (locale === 'en') {
+    const [one, other] = forms as PluralForms['en'];
+    return count === 1 ? one : other;
+  }
+  const [one, few, many] = forms as PluralForms['ru'];
   const mod100 = Math.abs(count) % 100;
   const mod10 = mod100 % 10;
-  if (mod100 >= 11 && mod100 <= 14) return forms[2];
-  if (mod10 === 1) return forms[0];
-  if (mod10 >= 2 && mod10 <= 4) return forms[1];
-  return forms[2];
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
 }
 
-/** "по 2 отчётам" / "за 2 звітами". */
-const REPORT_FORMS: Record<BotLocale, [string, string, string]> = {
+/** "по 2 отчётам" / "за 2 звітами" / "of 2 reports". */
+const REPORT_FORMS: PluralForms = {
   ru: ['отчёту', 'отчётам', 'отчётам'],
   uk: ['звітом', 'звітами', 'звітами'],
+  en: ['report', 'reports'],
 };
 
-/** "по 2 объявлениям" / "за 2 оголошеннями": the N of asking prices. */
-const LISTING_FORMS: Record<BotLocale, [string, string, string]> = {
+/** "по 2 объявлениям" / "за 2 оголошеннями" / "of 2 listings": the N of asking prices. */
+const LISTING_FORMS: PluralForms = {
   ru: ['объявлению', 'объявлениям', 'объявлениям'],
   uk: ['оголошенням', 'оголошеннями', 'оголошеннями'],
+  en: ['listing', 'listings'],
 };
 
-/** "(2 наблюдения, 100 м)": a neighbour's own N. */
-const OBSERVATION_FORMS: Record<BotLocale, [string, string, string]> = {
+/** "(2 наблюдения, 100 м)" / "(2 observations, 100 m)": a neighbour's own N. */
+const OBSERVATION_FORMS: PluralForms = {
   ru: ['наблюдение', 'наблюдения', 'наблюдений'],
   uk: ['спостереження', 'спостереження', 'спостережень'],
+  en: ['observation', 'observations'],
 };
 
-/** "2 из 3 ответивших", "1 из 21 ответившего"; the UK relative clause does not agree. */
-const ANSWERED_FORMS: Record<BotLocale, [string, string, string]> = {
+/**
+ * "2 из 3 ответивших", "1 из 21 ответившего"; the UK relative clause and the
+ * English "who answered" do not agree.
+ */
+const ANSWERED_FORMS: PluralForms = {
   ru: ['ответившего', 'ответивших', 'ответивших'],
   uk: ['тих, хто відповів', 'тих, хто відповів', 'тих, хто відповів'],
+  en: ['who answered', 'who answered'],
 };
 
-export function reportsWord(locale: BotLocale, count: number): string {
-  return plural(count, REPORT_FORMS[locale]);
+export function reportsWord(locale: TextLocale, count: number): string {
+  return plural(locale, count, REPORT_FORMS[locale]);
 }
 
-export function listingsWord(locale: BotLocale, count: number): string {
-  return plural(count, LISTING_FORMS[locale]);
+export function listingsWord(locale: TextLocale, count: number): string {
+  return plural(locale, count, LISTING_FORMS[locale]);
 }
 
-export function observationsWord(locale: BotLocale, count: number): string {
-  return plural(count, OBSERVATION_FORMS[locale]);
+export function observationsWord(locale: TextLocale, count: number): string {
+  return plural(locale, count, OBSERVATION_FORMS[locale]);
 }
 
-export function answeredWord(locale: BotLocale, count: number): string {
-  return plural(count, ANSWERED_FORMS[locale]);
+export function answeredWord(locale: TextLocale, count: number): string {
+  return plural(locale, count, ANSWERED_FORMS[locale]);
 }
 
-const PEOPLE_FORMS: Record<BotLocale, [string, string, string]> = {
+const PEOPLE_FORMS: PluralForms = {
   ru: ['человек', 'человека', 'человек'],
   uk: ['людина', 'людини', 'людей'],
+  en: ['person', 'people'],
 };
 
-export function peopleWord(locale: BotLocale, count: number): string {
-  return plural(count, PEOPLE_FORMS[locale]);
+export function peopleWord(locale: TextLocale, count: number): string {
+  return plural(locale, count, PEOPLE_FORMS[locale]);
 }
 
 type Vars = Record<string, string>;
@@ -112,6 +147,18 @@ const CAPABILITIES_UK =
   '• /my — збережені інтереси: будинки, райони, міста\n' +
   '• /lang — русский / українська\n' +
   '• /cancel — вийти з питань: про заставу або для анкети';
+
+/** The /lang line names each language in its own words, as the RU and UK lists do. */
+const CAPABILITIES_EN =
+  '<b>What I can do</b>\n' +
+  '• Send an address — costs for the building, or for its district if the building has no data\n' +
+  '• Type a district (<code>Wola</code>, <code>Mokotów</code>) — costs for the district\n' +
+  '• /mate — {mate}\n' +
+  '• /districts — costs in every Warsaw district\n' +
+  '• /deposit — how often deposits come back and how to get yours back\n' +
+  '• /my — saved interests: buildings, districts, cities\n' +
+  '• /lang — English / русский / українська\n' +
+  '• /cancel — leave the questions: about your deposit or for your profile';
 
 const RU = {
   cityName: 'Варшава',
@@ -388,7 +435,145 @@ const UK: Record<Key, string> = {
   langSet: 'Готово. Пиши адресу.',
 };
 
-const DICTS: Record<BotLocale, Record<Key, string>> = { ru: RU, uk: UK };
+/**
+ * English (spec 04 §English bot locale), an agent draft for the owner's review.
+ * Labels follow the website's English building page; the deposit helper itself
+ * stays RU and UK (D63), which `help` says.
+ */
+const EN: Record<Key, string> = {
+  cityName: 'Warsaw',
+
+  start:
+    '👋 This is Passflat — rental costs in Warsaw, as tenants reported them.\n\n' +
+    'We collect what listings leave out: what tenants pay each month, with utilities and extra ' +
+    'charges included, and whether they get their deposit back.\n\n' +
+    CAPABILITIES_EN +
+    '\n\n<b>Send an address</b> and I’ll show the figures for the building or its district.\n' +
+    'For example: <code>Grójecka 45</code>, or just a district: <code>Mokotów</code>',
+  startAfterPayload:
+    '👋 This is Passflat — rental costs in Warsaw, as tenants reported them.\n\n' +
+    CAPABILITIES_EN +
+    '\n\n<b>Send an address</b>, for example <code>Grójecka 45</code>.',
+
+  help:
+    CAPABILITIES_EN +
+    '\n\nNot getting your deposit back? Type “deposit”: the deposit helper goes through the law ' +
+    'and drafts a letter to the landlord (in Russian or Ukrainian for now).\n\n' +
+    'The figures come from tenant reports and from asking prices in listings; each one says how ' +
+    'many observations it is based on. You can add your own report in 3 minutes.',
+
+  capabilityMateOff:
+    'find someone to rent a flat with: fill in a profile and see how many people are looking in each district; matching opens later',
+  capabilityMateOn:
+    'find someone to rent a flat with: people who fit you, and contacts are swapped only when the interest is mutual',
+
+  groupTenant: '👥 <b>Tenant reports: {count}</b>{imported}',
+  groupTenantImported: ' <i>(of which entered by Passflat: {count})</i>',
+  groupAsking: '📰 <b>Asking prices from listings: {count}</b>',
+  oneObservation: '<i>One observation at this address</i>',
+  oneObservationArea: '<i>One observation</i>',
+  characteristicApartment: 'Whole flat',
+  characteristicRoom: 'Room',
+  characteristicRooms: 'rooms: {count}',
+  characteristicArea: 'area ≈ {area} m²',
+  headlineTotal: '💸 All-in a month: <b>{value}</b>{n}',
+  headlineKnownPart: '💸 Known part of the costs: <b>{value}</b>{n}',
+  headlineRent: '💸 Rent: <b>{value}</b>{n}',
+  medianN: ' <i>(median of {count} {word})</i>',
+  singleN: ' <i>(from {count} {word})</i>',
+  detailKnownPart: '   Known part of the costs: {value}{n}',
+  detailRent: '   Rent: {value}{n}',
+  detailExpenses: '   Expenses: {value}{n}',
+  knownPartHint: '   <i>Not all utilities were listed, so the full monthly cost may be higher.</i>',
+  referenceHeaderDistrict:
+    '📊 <b>For reference</b> — figures for the district, not for this building:',
+  referenceHeaderCity: '📊 <b>For reference</b> — figures for the city, not for this building:',
+  referenceDistrictName: '{name} district',
+  referenceTenant: '   {area}, tenant reports{metric}: <b>{value}</b> ({count})',
+  referenceAsking: '   {area}, asking prices from listings{metric}: <b>{value}</b> ({count})',
+  referenceKnownPart: ', known part of the costs',
+  referenceRent: ', rent',
+  figureSourceTenant: 'tenant reports',
+  figureSourceAsking: 'asking prices from listings',
+  neighbourLine: '• {address}, {source}{metric}: {value} <i>({count} {word}, {distance} m)</i>',
+  areaGroupLine: '   {source}{metric}: <b>{value}</b>{n}',
+  areaLineTotal: ', all-in a month',
+  oneObservationN: ' <i>(one observation)</i>',
+
+  areaHeader: '📊 <b>{area}</b> — figures for the district:',
+  cityHeader: '📊 <b>{area}</b> — figures for the city:',
+  areaBand: '   Typical range: {band}',
+  neighboursHeader: '🏘 <b>Nearby buildings with data:</b>',
+  noBuildingData: 'No reports for this building yet.',
+  noHouseNumber: 'Without a building number there are no exact figures to find.',
+  noAreaData: 'No reports for this building, its district or the city yet.',
+  thinDistrict:
+    'Too few reports for <b>{district}</b> to work out a median, so here is Warsaw as a whole.',
+  beFirstPrompt:
+    '👉 <b>Do you live here?</b> Add a report: you’ll be the first for this building, and your neighbours will see the figures.',
+  depositLine: 'Got the deposit back, fully or partly: {gotBack} of {answered} {word} ({area})',
+  cardFooter: '<i>Passflat — rental costs in Warsaw, as tenants reported them</i>',
+
+  addressNotFound:
+    '🤔 Couldn’t find that address in Warsaw.\n\nTry <code>street + number</code>, for example <code>Grójecka 45</code> or <code>Marszałkowska 10</code>.',
+  outsideCity: 'For now I only know Warsaw. Other cities come later.',
+  outsideCityNamed:
+    'For now I only know Warsaw, not {city} yet.\n\nTap the button and I’ll note that you’re waiting for this city. The more people wait for it, the sooner it comes.',
+  btnCityWait: '📌 Waiting for {city}',
+  cityWaitAdded:
+    '✅ Noted that you’re waiting for <b>{city}</b>. There are no automatic launch messages yet.\n\nWaiting for this city so far: {count} {people}.',
+  cityWaitAlready:
+    'Already noted that you’re waiting for <b>{city}</b>. There are no automatic launch messages yet.\n\nWaiting for this city: {count} {people}.',
+  waitlistSuffix: 'waiting for launch',
+  tooManyRequests: 'Too many requests in a row. Wait a minute.',
+  genericError: 'Something went wrong. Try again in a minute.',
+  buildingLinkFailed: '🤔 Couldn’t open this building from the link. Send its address.',
+  intakeStillOpen: 'ℹ️ The deposit questions are still open. To leave them, send /cancel.',
+
+  districtTableHeader: '📊 <b>Warsaw districts: costs a month</b>',
+  districtRow: '• <b>{name}</b>, {source}{metric}: {value} <i>({count})</i>{expenses}',
+  districtTableFooter:
+    '<i>For each district: tenant reports, or asking prices from listings where there are none; in brackets, the number of observations. This is not a ranking: figures from different sources or from few observations can’t be compared directly.</i>\nSend your address and I’ll show the building and the district.',
+  ofWhichExpenses: 'of which expenses {expenses}',
+  noDistrictData: 'Not much district data yet. Send an address and let’s see what there is.',
+  districtRank: '🏷 No. {position} of {total} by price <i>(1 = the cheapest)</i>',
+  districtAskAddress:
+    '👉 Send an address in this district and I’ll show that building and its neighbours.',
+  districtThin: 'Too few reports for <b>{district}</b> to work out a median yet.',
+  districtThinPrompt:
+    '👉 Do you live here? Your report will be one of the first for this district.',
+
+  depositHeader: '🔐 <b>Deposits in Warsaw</b>',
+  depositNoData: 'Not much deposit data yet, but every report adds a figure.',
+  depositAdvice:
+    'What decides the return: a handover protocol with photos at move-in (protokół zdawczo-odbiorczy). Without it, a deposit dispute is one word against another.',
+
+  subscribeBuilding: '📌 Save interest in this building',
+  subscribeDistrict: '📌 Save interest in {district}',
+  subscribedBuilding:
+    '✅ Saved your interest in <b>{name}</b>. There are no automatic notifications about new data yet.\n\nAll saved interests: /my.',
+  subscribedDistrict:
+    '✅ Saved your interest in the <b>{name}</b> district. There are no automatic notifications about new data yet.\n\nAll saved interests: /my.',
+  alreadySubscribed: 'This interest is already saved. /my shows the whole list.',
+  unsubscribed: 'Removed from your saved interests.',
+  mySubsHeader: '📌 <b>Saved interests:</b>',
+  mySubsEmpty:
+    'No saved interests yet.\n\nSend an address or a district and tap “Save interest”: it will appear in this list. There are no automatic notifications yet.',
+  unsubscribeButton: 'Remove',
+
+  btnSubmit: '📝 Add a report',
+  btnBeFirst: '📝 Be the first for this building',
+  btnOpenSite: '🌐 Open on the website',
+  btnDistricts: '📊 Districts',
+  btnShare: '📤 Forward to neighbours',
+  shareHint:
+    'Forward this message to your building or district chat: the more data there is, the more precise the figures get.',
+
+  langPrompt: 'Choose a language / Выбери язык / Обери мову',
+  langSet: 'Done. Send an address.',
+};
+
+const DICTS: Record<TextLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
 
 /** Every text key, so tests can check all copy (for example for removed promises). */
 export const TEXT_KEYS = Object.keys(RU) as TextKey[];
@@ -397,11 +582,12 @@ type MenuCommand = { command: string; description: string };
 
 /**
  * The Telegram command menu, published by `scripts/tg-webhook.ts`: RU as the
- * default menu, UK for `language_code: 'uk'`. Same commands as the capability
+ * default menu, UK for `language_code: 'uk'`; EN is published for `en` and
+ * `pl` with the English bot locale (T099). Same commands as the capability
  * list in `start` and `help`. `/mate` reads the same in both switch states;
  * `/cancel` leaves the deposit questions and the roommate questions.
  */
-export const COMMAND_MENU: Record<BotLocale, readonly MenuCommand[]> = {
+export const COMMAND_MENU: Record<TextLocale, readonly MenuCommand[]> = {
   ru: [
     { command: 'mate', description: 'Найти, с кем снять квартиру' },
     { command: 'districts', description: 'Районы Варшавы по расходам' },
@@ -420,19 +606,20 @@ export const COMMAND_MENU: Record<BotLocale, readonly MenuCommand[]> = {
     { command: 'cancel', description: 'Вийти з питань' },
     { command: 'help', description: 'Що вміє бот' },
   ],
+  en: [
+    { command: 'mate', description: 'Find someone to rent a flat with' },
+    { command: 'districts', description: 'Warsaw districts by costs' },
+    { command: 'deposit', description: 'Deposit: how often it comes back and how to get yours' },
+    { command: 'my', description: 'Saved interests' },
+    { command: 'lang', description: 'Language / Язык / Мова' },
+    { command: 'cancel', description: 'Leave the questions' },
+    { command: 'help', description: 'What the bot can do' },
+  ],
 };
 
-/**
- * True when this file holds the locale's texts. A roommate reply can be in a
- * locale these texts do not have yet (`roommate-texts.ts` has English, spec 04
- * §English bot locale adds it here); a part built from these texts checks first.
- */
-export function hasBotTexts(locale: string): locale is BotLocale {
-  return locale in DICTS;
-}
-
-export function t(locale: BotLocale, key: Key, vars?: Vars): string {
-  const template = DICTS[locale][key] ?? DICTS.ru[key];
+/** A text with `{name}` placeholders filled; no fallback to another locale (every key has each). */
+export function t(locale: TextLocale, key: Key, vars?: Vars): string {
+  const template = DICTS[locale][key];
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => vars[name] ?? match);
 }
@@ -446,7 +633,7 @@ export type CapabilityTextKey = 'start' | 'startAfterPayload' | 'help';
  * greeting, `/help` and the roommate flow agree on the state.
  */
 export function capabilityText(
-  locale: BotLocale,
+  locale: TextLocale,
   key: CapabilityTextKey,
   matchingEnabled: boolean,
 ): string {

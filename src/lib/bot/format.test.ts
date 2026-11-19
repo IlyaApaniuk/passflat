@@ -18,7 +18,11 @@ import {
   webLink,
 } from './format';
 import type { AddressLookup, DistrictRow } from './lookup';
-import { plural, reportsWord, t } from './texts';
+import { plural, reportsWord, t, type BotLocale } from './texts';
+
+/** English texts exist, but no chat is in English before T099 widens `BotLocale`. */
+const EN = 'en' as BotLocale;
+const CYRILLIC = /\p{Script=Cyrillic}/u;
 
 function report(source: string, fields: Partial<FigureReport> = {}): FigureReport {
   return { source, rentalType: 'apartment', utilitiesComplete: true, ...fields };
@@ -184,8 +188,24 @@ describe('plural', () => {
     expect(reportsWord('ru', 3)).toBe('отчётам');
     expect(reportsWord('ru', 11)).toBe('отчётам');
     expect(reportsWord('uk', 2)).toBe('звітами');
-    expect(plural(21, ['a', 'b', 'c'])).toBe('a');
-    expect(plural(112, ['a', 'b', 'c'])).toBe('c');
+    expect(plural('ru', 21, ['a', 'b', 'c'])).toBe('a');
+    expect(plural('uk', 112, ['a', 'b', 'c'])).toBe('c');
+    expect(plural('ru', 23, ['a', 'b', 'c'])).toBe('b');
+    expect(plural('uk', 0, ['a', 'b', 'c'])).toBe('c');
+  });
+
+  it('uses one / other in English', () => {
+    expect([0, 1, 2, 5, 11, 21, 101].map((count) => plural('en', count, ['a', 'b']))).toEqual([
+      'b',
+      'a',
+      'b',
+      'b',
+      'b',
+      'b',
+      'b',
+    ]);
+    expect(reportsWord('en', 1)).toBe('report');
+    expect(reportsWord('en', 21)).toBe('reports');
   });
 });
 
@@ -539,6 +559,25 @@ describe('renderLookup: escaping and locales', () => {
     expect(area).not.toContain('Оставь отчёт');
   });
 
+  it('renders English from the English texts alone', () => {
+    const text = renderLookup(buildingLookup(mixedBuildingReports), EN);
+    expect(text).toContain('👥 <b>Tenant reports: 3</b> <i>(of which entered by Passflat: 1)</i>');
+    expect(text).toContain(`All-in a month: <b>${money(3850)}</b> <i>(median of 2 reports)</i>`);
+    expect(text).toContain('📰 <b>Asking prices from listings: 2</b>');
+    expect(text).toContain('(median of 2 listings)');
+    expect(text).toContain(
+      '📊 <b>For reference</b> — figures for the district, not for this building:',
+    );
+    expect(text).toContain(`Ochota district, tenant reports: <b>${money(4400)}</b> (5)`);
+    expect(text).toContain('Got the deposit back, fully or partly: 30 of 37 who answered (Ochota)');
+    expect(text).not.toMatch(CYRILLIC);
+
+    const area = renderLookup(lookup(), EN);
+    expect(area).toContain('📊 <b>Ochota</b> — figures for the district:');
+    expect(area).toContain('Add a report');
+    expect(area).not.toMatch(CYRILLIC);
+  });
+
   it('no longer calls the figures "real costs" in the footer or the greeting', () => {
     for (const locale of ['ru', 'uk'] as const) {
       for (const key of ['cardFooter', 'start', 'startAfterPayload'] as const) {
@@ -723,6 +762,20 @@ describe('renderDistrictTable (/districts on the single-number rule)', () => {
     expect(text).toContain('• <b>Wola</b>, ціни з оголошень, відома частина витрат');
     expect(text).not.toMatch(/[ыэъё]/);
     expect(text).not.toMatch(/найдешевш|місце|реально/);
+  });
+
+  it('renders English without Cyrillic or a rank', () => {
+    const text = renderDistrictTable(rows, EN);
+    expect(text.split('\n')[0]).toBe('📊 <b>Warsaw districts: costs a month</b>');
+    expect(text).toContain(
+      `• <b>Mokotów</b>, tenant reports: ${money(3900)} <i>(37)</i>, of which expenses ${money(800)}`,
+    );
+    expect(text).toContain(
+      `• <b>Wola</b>, asking prices from listings, known part of the costs: ${money(3200)} <i>(12)</i>`,
+    );
+    expect(text).toContain(`• <b>Wawer</b>, tenant reports, rent: ${money(2800)} <i>(2)</i>`);
+    expect(text).not.toMatch(CYRILLIC);
+    expect(text).not.toMatch(/cheapest|No\. \d/);
   });
 
   it('escapes district names and says so when there is no data', () => {

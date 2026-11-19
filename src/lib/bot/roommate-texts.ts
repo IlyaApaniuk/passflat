@@ -861,10 +861,9 @@ export function rt(locale: RoommateLocale, key: Key, vars?: Vars): string {
 }
 
 /**
- * The `{people}` word of the counts texts: RU/UK plural agreement from
- * `texts.ts`; English templates do not use it.
+ * The `{people}` word of the counts texts: the plural agreement of `texts.ts`
+ * (Slavic for RU/UK, one / other for EN); English templates do not use it.
  */
 export function rtPeople(locale: RoommateLocale, count: number): string {
-  if (locale === 'en') return count === 1 ? 'person' : 'people';
   return peopleWord(locale, count);
 }

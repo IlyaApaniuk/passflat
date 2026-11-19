@@ -19,8 +19,9 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - The husky pre-commit hook runs lint-staged (ESLint fix and Prettier on staged files); if it
   rewrites files, stage them again before committing.
 - Copy changes touch all four files in `src/i18n/messages/` (`pl`, `en`, `ru`, `uk`) with
-  identical key sets. Bot copy is RU and UK in `src/lib/bot/texts.ts` and `deposit-texts.ts`;
-  roommate copy is RU, UK and EN in `roommate-texts.ts` (`rt`), whose keys the «ты» check
+  identical key sets. Bot copy is RU, UK and EN in `src/lib/bot/texts.ts` (a new key needs all
+  three with RU's placeholders, `texts.test.ts`; `t()` has no RU fallback) and RU and UK in
+  `deposit-texts.ts`; roommate copy is RU, UK and EN in `roommate-texts.ts` (`rt`), whose keys the «ты» check
   (`address-form.test.ts`, new placeholders need a `sampleVars` value) and the promise check
   (`texts.test.ts`, `ROOMMATE_PROMISE_EXCEPTIONS`) walk automatically.
 - PostHog is disabled locally (key commented out): test analytics with a mocked client around
@@ -115,6 +116,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `it.each` over a table mixing string and RegExp tuples needs an explicit `it.each<[string, string | RegExp]>`, or typecheck fails in the test.
 - Store functions run against the local DB with `npx tsx --env-file=.env --tsconfig tsconfig.json <scratchpad script>` (guard on `127.0.0.1:54322`, create throwaway rows with negative `chat_id`s, delete them in `finally`); example: T076's FK check.
 - BigInt literals (`1n`) fail typecheck (the TS target is below ES2020); write `BigInt(1)`.
+  The RegExp `s` flag fails it too (below ES2018): match across lines with `[\s\S]*`.
 - Every roommate cron message goes through `createCronSender` (`src/lib/bot/roommate-daily.ts`) as a `MessageJob` in `MESSAGE_JOBS`; test a job with `runRoommateDaily(api, NOW, { jobs: [job], clock: fakeClock() })` (example: `reminderJob` in `roommate-daily.test.ts`).
 - A one-time button with no row to claim (e.g. `rm:dr:*` after a delete) is guarded by `await ctx.editMessageReplyMarkup()` first: a second removal throws "message is not modified", which `roommateCallback` swallows; tests fake it with `messageWithButtons()` in `roommate-delete.test.ts`.
 - `roommate-daily.ts` never imports `roommate-flow.ts` (it would pull the whole conversation into the cron and its tests): cron buttons use the `rm:` strings, and a test that registers the flow checks that each routes to one handler (example: `roommate-renewal.test.ts`).
@@ -2673,3 +2675,130 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     9. **`termsPage.dsa.ranking`** ("no other algorithmic personalization … to order search results") is about listing search and was left as it is; matching has its own ranking item.
   - No new event, constant, table or migration.
 - Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T113, or T098 onwards). The two anchors are now `#roommate-matching` and `#matching`; `matching-sections.test.ts` fails if either moves.
+
+### 2026-11-19 20:20 · T098 · done
+
+- Done:
+  - `src/lib/bot/texts.ts`:
+    - `TextLocale = 'ru' | 'uk' | 'en'` (exported) types `DICTS`, `COMMAND_MENU`, `t`, `capabilityText` and the word helpers. `BotLocale` stays `'ru' | 'uk'`, so no chat reaches English yet (T099).
+    - The `EN` dictionary (every key), `CAPABILITIES_EN`, `COMMAND_MENU.en` (same seven commands).
+    - `plural(locale, count, forms)`: Slavic one / few / many for RU and UK, one / other for EN. The forms tables are typed by `PluralForms` (an EN entry has two forms), and every counted word has English forms.
+    - `t()` no longer falls back to RU, so a missing key shows up in the test, like `rt()`.
+    - `hasBotTexts` is deleted: it was "true when this file holds the locale's texts", and it now holds all three.
+  - `roommate-room-costs.ts`: the `hasBotTexts` gate is gone. An English chat (from T099 on) gets the room cost reference in English, as spec 06's golden case is worded.
+  - `roommate-texts.ts`: `rtPeople` delegates to `peopleWord` (same output).
+  - `roommate-daily.ts`: `matchingOpenText` calls the new `plural` signature.
+  - `src/lib/bot/README.md`: the room-cost note, the file table row and the promises paragraph.
+- Tests:
+  - `texts.test.ts`: `LOCALES` is now `ru` / `uk` / `en`.
+    - The promise check over `texts.ts` runs all three locales, with the English and the RU/UK later-message patterns on top of `REMOVED_PROMISES`.
+    - Every capability check (same list in `start` / `startAfterPayload` / `help`, list ↔ menu, the `/mate` line in both switch states, no date, now also English months, no notification words, now also English ones) runs over `en` through a per-locale `CAPABILITY_WORDING` table.
+    - New "English" block:
+      - a non-empty value in every locale for each key;
+      - the same placeholders as RU in UK and EN;
+      - EN in Latin script apart from the language names;
+      - no "market", "verified", "checked", "actually", "really", "in full" or `%` in EN;
+      - the EN forms of all five counted words and `rtPeople`; RU/UK forms unchanged;
+      - EN `medianN` / `singleN` / `depositLine` rendered.
+    - `COMMAND_MENU`: EN has the RU commands, has the EN descriptions and no Cyrillic outside `/lang`.
+  - `format.test.ts`:
+    - the new `plural` signature, with EN one / other;
+    - a building card, an area card and `/districts` rendered in English (`'en' as BotLocale`): labels, N, the deposit line, no Cyrillic, no rank.
+  - `roommate-room-costs.test.ts`: the "English gets no room lines" test is replaced by the EN golden case (Mokotów) and an EN Warsaw fallback (Wesoła).
+  - Mutation check: one EN value blanked plus one EN placeholder dropped → 2 failures; reverted.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 135 files / 2804 tests, build OK). `next-env.d.ts` restored. Nothing deployed, no migration, no message sent, `bot:webhook` not run.
+- Did not work: the first typecheck failed on a RegExp `s` flag in a test (the TS target is below ES2018); replaced with `[\s\S]*`.
+- Owner review:
+  - **Draft copy, EN (`texts.ts`; agent draft, approve before T099 makes it reachable).** Every key:
+    - `cityName` "Warsaw".
+    - Capability list (in `start`, `startAfterPayload`, `help`): "**What I can do**"
+      - "Send an address — costs for the building, or for its district if the building has no data"
+      - "Type a district (Wola, Mokotów) — costs for the district"
+      - "/mate — {mate}"
+      - "/districts — costs in every Warsaw district"
+      - "/deposit — how often deposits come back and how to get yours back"
+      - "/my — saved interests: buildings, districts, cities"
+      - "/lang — English / русский / українська"
+      - "/cancel — leave the questions: about your deposit or for your profile"
+    - `start`: "👋 This is Passflat — rental costs in Warsaw, as tenants reported them. / We collect what listings leave out: what tenants pay each month, with utilities and extra charges included, and whether they get their deposit back. / (list) / **Send an address** and I’ll show the figures for the building or its district. For example: Grójecka 45, or just a district: Mokotów".
+    - `startAfterPayload`: the greeting line, the list, "**Send an address**, for example Grójecka 45."
+    - `help`: the list, "Not getting your deposit back? Type “deposit”: the deposit helper goes through the law and drafts a letter to the landlord (in Russian or Ukrainian for now). / The figures come from tenant reports and from asking prices in listings; each one says how many observations it is based on. You can add your own report in 3 minutes."
+    - `capabilityMateOff` "find someone to rent a flat with: fill in a profile and see how many people are looking in each district; matching opens later"; `capabilityMateOn` "find someone to rent a flat with: people who fit you, and contacts are swapped only when the interest is mutual".
+    - Card group lines:
+      - `groupTenant` "👥 Tenant reports: {count}{imported}";
+      - `groupTenantImported` " (of which entered by Passflat: {count})";
+      - `groupAsking` "📰 Asking prices from listings: {count}".
+    - One observation and characteristics:
+      - `oneObservation` "One observation at this address"; `oneObservationArea` "One observation";
+      - `characteristicApartment` "Whole flat"; `characteristicRoom` "Room";
+      - `characteristicRooms` "rooms: {count}"; `characteristicArea` "area ≈ {area} m²".
+    - Headlines and N:
+      - `headlineTotal` "💸 All-in a month: {value}{n}"; `headlineKnownPart` "💸 Known part of the costs: {value}{n}"; `headlineRent` "💸 Rent: {value}{n}";
+      - `medianN` " (median of {count} {word})"; `singleN` " (from {count} {word})".
+    - Detail lines:
+      - `detailKnownPart` "Known part of the costs: {value}{n}"; `detailRent` "Rent: {value}{n}"; `detailExpenses` "Expenses: {value}{n}";
+      - `knownPartHint` "Not all utilities were listed, so the full monthly cost may be higher."
+    - Reference block:
+      - `referenceHeaderDistrict` "📊 **For reference** — figures for the district, not for this building:"; `referenceHeaderCity` the same with "for the city";
+      - `referenceDistrictName` "{name} district";
+      - `referenceTenant` "{area}, tenant reports{metric}: {value} ({count})"; `referenceAsking` "{area}, asking prices from listings{metric}: {value} ({count})";
+      - `referenceKnownPart` ", known part of the costs"; `referenceRent` ", rent".
+    - Single-number and area lines:
+      - `figureSourceTenant` "tenant reports"; `figureSourceAsking` "asking prices from listings";
+      - `neighbourLine` "• {address}, {source}{metric}: {value} ({count} {word}, {distance} m)";
+      - `areaGroupLine` "{source}{metric}: {value}{n}"; `areaLineTotal` ", all-in a month"; `oneObservationN` " (one observation)".
+    - Area answers:
+      - `areaHeader` "📊 {area} — figures for the district:"; `cityHeader` "📊 {area} — figures for the city:"; `areaBand` "Typical range: {band}";
+      - `neighboursHeader` "🏘 Nearby buildings with data:";
+      - `noBuildingData` "No reports for this building yet."; `noHouseNumber` "Without a building number there are no exact figures to find."; `noAreaData` "No reports for this building, its district or the city yet.";
+      - `thinDistrict` "Too few reports for {district} to work out a median, so here is Warsaw as a whole.";
+      - `beFirstPrompt` "👉 **Do you live here?** Add a report: you’ll be the first for this building, and your neighbours will see the figures.";
+      - `depositLine` "Got the deposit back, fully or partly: {gotBack} of {answered} {word} ({area})";
+      - `cardFooter` "Passflat — rental costs in Warsaw, as tenants reported them".
+    - Address errors and the city waitlist:
+      - `addressNotFound` "🤔 Couldn’t find that address in Warsaw. / Try street + number, for example Grójecka 45 or Marszałkowska 10.";
+      - `outsideCity` "For now I only know Warsaw. Other cities come later.";
+      - `outsideCityNamed` "For now I only know Warsaw, not {city} yet. / Tap the button and I’ll note that you’re waiting for this city. The more people wait for it, the sooner it comes.";
+      - `btnCityWait` "📌 Waiting for {city}";
+      - `cityWaitAdded` "✅ Noted that you’re waiting for {city}. There are no automatic launch messages yet. / Waiting for this city so far: {count} {people}.";
+      - `cityWaitAlready` "Already noted that you’re waiting for {city}. There are no automatic launch messages yet. / Waiting for this city: {count} {people}.";
+      - `waitlistSuffix` "waiting for launch".
+    - Errors and notices:
+      - `tooManyRequests` "Too many requests in a row. Wait a minute."; `genericError` "Something went wrong. Try again in a minute.";
+      - `buildingLinkFailed` "🤔 Couldn’t open this building from the link. Send its address.";
+      - `intakeStillOpen` "ℹ️ The deposit questions are still open. To leave them, send /cancel." (the roommate EN `depositQuestionsOpen` verbatim).
+    - `/districts`:
+      - `districtTableHeader` "📊 Warsaw districts: costs a month";
+      - `districtRow` "• {name}, {source}{metric}: {value} ({count}){expenses}";
+      - `districtTableFooter` "For each district: tenant reports, or asking prices from listings where there are none; in brackets, the number of observations. This is not a ranking: figures from different sources or from few observations can’t be compared directly. / Send your address and I’ll show the building and the district.";
+      - `ofWhichExpenses` "of which expenses {expenses}"; `noDistrictData` "Not much district data yet. Send an address and let’s see what there is.".
+    - Typed district:
+      - `districtRank` "🏷 No. {position} of {total} by price (1 = the cheapest)";
+      - `districtAskAddress` "👉 Send an address in this district and I’ll show that building and its neighbours.";
+      - `districtThin` "Too few reports for {district} to work out a median yet."; `districtThinPrompt` "👉 Do you live here? Your report will be one of the first for this district.".
+    - `/deposit`:
+      - `depositHeader` "🔐 Deposits in Warsaw"; `depositNoData` "Not much deposit data yet, but every report adds a figure.";
+      - `depositAdvice` "What decides the return: a handover protocol with photos at move-in (protokół zdawczo-odbiorczy). Without it, a deposit dispute is one word against another."
+    - Saved interests:
+      - `subscribeBuilding` "📌 Save interest in this building"; `subscribeDistrict` "📌 Save interest in {district}";
+      - `subscribedBuilding` "✅ Saved your interest in {name}. There are no automatic notifications about new data yet. / All saved interests: /my."; `subscribedDistrict` "✅ Saved your interest in the {name} district. …" (the rest the same);
+      - `alreadySubscribed` "This interest is already saved. /my shows the whole list."; `unsubscribed` "Removed from your saved interests.";
+      - `mySubsHeader` "📌 Saved interests:"; `mySubsEmpty` "No saved interests yet. / Send an address or a district and tap “Save interest”: it will appear in this list. There are no automatic notifications yet.";
+      - `unsubscribeButton` "Remove".
+    - Buttons: `btnSubmit` "📝 Add a report"; `btnBeFirst` "📝 Be the first for this building"; `btnOpenSite` "🌐 Open on the website"; `btnDistricts` "📊 Districts"; `btnShare` "📤 Forward to neighbours".
+    - `shareHint` "Forward this message to your building or district chat: the more data there is, the more precise the figures get."
+    - Language: `langPrompt` "Choose a language / Выбери язык / Обери мову"; `langSet` "Done. Send an address."
+    - Plural forms (EN): "report / reports", "listing / listings", "observation / observations", "who answered" (both), "person / people".
+    - `COMMAND_MENU.en`:
+      - `mate` "Find someone to rent a flat with"; `districts` "Warsaw districts by costs";
+      - `deposit` "Deposit: how often it comes back and how to get yours"; `my` "Saved interests";
+      - `lang` "Language / Язык / Мова"; `cancel` "Leave the questions"; `help` "What the bot can do".
+  - **Agent's readings to confirm:**
+    1. **No claim words in English.** RU `start` says «на самом деле платят» and `beFirstPrompt` «реальные цифры». The EN says "what tenants pay" and "the figures". It follows the website's honesty rule (spec 03: no "actually pay", "real costs"), and a test now enforces it for EN.
+    2. **`help` says the deposit helper is in Russian or Ukrainian for now** (D63). Otherwise an English reader would be promised a letter and then get the gate.
+    3. **Labels follow the website's English building page:** "tenant reports", "asking prices from listings", "known part of the costs", "Expenses", "typical range", "entered by Passflat". "All-in a month" is used for the complete total, as roommate EN `askBudget` and spec 06's golden case say.
+    4. **The /lang line and `langPrompt` keep Russian and Ukrainian in their own words.** T099 makes /lang offer three languages. The RU/UK /lang lines ("русский / українська") are unchanged here.
+    5. **The room cost reference now renders for an English chat**, because `hasBotTexts` is gone. It is unreachable until T099; the EN golden case is under test.
+    6. **`money()` keeps the Polish/Russian grouping** ("1 700 zł" with no-break spaces) in English too. It is unchanged.
+  - No new event, constant, table or migration. `scripts/tg-webhook.ts` is unchanged: it publishes `COMMAND_MENU.en` for `en` and `pl` in T099, and the owner runs `npm run bot:webhook` after that deploy.
+- Next: T099 (the `en` bot locale). Widen `BotLocale` to `TextLocale` (or alias it), `normalizeLocale` (uk → uk, en/pl → en), `/lang` with three buttons, the deposit gate through `depositLocale`, and move `cancelled` / `nothingToCancel` / `remindersOff` into `texts.ts` with EN. Also `roommate-texts.ts` uses `BotLocale`, and tg-webhook publishes `COMMAND_MENU.en` for `en` and `pl`. The `'en' as BotLocale` casts in `format.test.ts` and `roommate-room-costs.test.ts` can then go.

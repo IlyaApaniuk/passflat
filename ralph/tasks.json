@@ -676,7 +676,7 @@
       "title": "English dictionary, plurals and command menu for texts.ts, not yet reachable (FR-38 texts)",
       "spec": "docs/specs/04-telegram-bot.md#english-bot-locale",
       "dependsOn": ["T070"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "texts.ts types its dictionaries by TextLocale = 'ru' | 'uk' | 'en' (BotLocale stays 'ru' | 'uk' in this task) and has an EN value for every key; a test fails on any key without one",
         "plural(locale, count, forms) uses one / other for en; every counted word has English forms; COMMAND_MENU.en exists with the same commands",
@@ -684,7 +684,7 @@
         "Every EN key is listed in the progress entry as draft copy for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D50. Split from the locale switch so the tree compiles at every step: BotLocale widens in T099, together with the deposit gate that the wider type forces."
     },
     {

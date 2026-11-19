@@ -10,7 +10,7 @@ import {
 import { areaGroupLines, escapeHtml, money } from './format';
 import { getCity } from './lookup';
 import { rt } from './roommate-texts';
-import { hasBotTexts, t, type BotLocale } from './texts';
+import { t, type BotLocale } from './texts';
 
 /**
  * The room cost reference under the roommate counts (PRD 3 FR-17, spec 06 §Room cost
@@ -92,14 +92,13 @@ function roomCostsText(areas: readonly RoomCostArea[], locale: BotLocale): strin
 
 /**
  * The room cost reference for a saved profile, or null when it is left out of the counts
- * reply: the chat's locale has no area texts yet (English, until spec 04 §English bot
- * locale), the city is missing, or a loader failed (only the error's message is logged).
+ * reply: the city is missing, or a loader failed (only the error's message is logged).
+ * Every chat locale has the area texts (`texts.ts` has English too).
  */
 export async function roomCostsReply(
   profile: Pick<RoommateProfile, 'districtSlugs' | 'anyDistrict'>,
   locale: BotLocale,
 ): Promise<string | null> {
-  if (!hasBotTexts(locale)) return null;
   try {
     const city = await getCity();
     if (!city) return null;

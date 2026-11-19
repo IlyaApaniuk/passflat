@@ -475,7 +475,8 @@ function matchingOpenText(locale: RoommateLocale, count: number, pushOn: boolean
     const nobody = rt(locale, 'openNobody');
     return pushOn ? `${nobody} ${rt(locale, 'openNobodyDaily')}` : nobody;
   }
-  const one = locale === 'en' ? count === 1 : plural(count, ['one', 'many', 'many']) === 'one';
+  const one =
+    plural(locale, count, locale === 'en' ? ['one', 'more'] : ['one', 'more', 'more']) === 'one';
   return rt(locale, one ? 'openFitsOne' : 'openFitsMany', {
     count: String(count),
     people: rtPeople(locale, count),

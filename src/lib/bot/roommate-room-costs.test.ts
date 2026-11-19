@@ -140,6 +140,25 @@ describe('golden case (PRD 3 §5 example 2)', () => {
     );
   });
 
+  it('in EN, now that texts.ts has English area texts', async () => {
+    expect(await reply(districts('mokotow'), 'en')).toBe(
+      [
+        '📊 <b>For reference: rooms</b>',
+        '<b>Mokotów</b>:',
+        `   tenant reports, all-in a month: <b>${zl('1 700')}</b> <i>(median of 2 reports)</i>`,
+        `   asking prices from listings, known part of the costs: <b>${zl('1 550')}</b> <i>(median of 5 listings)</i>`,
+        `For two people about ${zl('2 430')} each (half of the median flat, 6 tenant reports, Mokotów).`,
+      ].join('\n'),
+    );
+  });
+
+  it('in EN, a district below the minimum says it answers with Warsaw', async () => {
+    const text = await reply(districts('wesola'), 'en');
+    expect(text).toContain('Wesoła has fewer than 5 room reports; Warsaw:');
+    expect(text).toContain('6 tenant reports, Warsaw).');
+    expect(text).not.toMatch(/\p{Script=Cyrillic}/u);
+  });
+
   it('reads the room figures and the flat figures through the contract loaders, filtered by rental type', async () => {
     await reply(districts('mokotow'));
     const wheres = h.costReportFindMany.mock.calls.map(([args]) => args.where);
@@ -380,11 +399,6 @@ describe('when it is left out', () => {
     errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
   afterEach(() => errorLog.mockRestore());
-
-  it('an English chat gets no room lines until the area texts exist in English', async () => {
-    expect(await roomCostsReply(districts('mokotow'), 'en' as BotLocale)).toBeNull();
-    expect(h.costReportFindMany).not.toHaveBeenCalled();
-  });
 
   it('a loader error leaves it out and logs only the message', async () => {
     h.costReportFindMany.mockRejectedValue(new Error('connection refused'));

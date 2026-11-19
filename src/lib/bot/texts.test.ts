@@ -4,17 +4,23 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { dt } from './deposit-texts';
-import { ROOMMATE_TEXT_KEYS, rt, type RoommateLocale } from './roommate-texts';
+import { ROOMMATE_TEXT_KEYS, rt, rtPeople, type RoommateLocale } from './roommate-texts';
 import {
+  answeredWord,
   capabilityText,
   COMMAND_MENU,
+  listingsWord,
+  observationsWord,
+  peopleWord,
+  reportsWord,
   TEXT_KEYS,
   t,
-  type BotLocale,
   type CapabilityTextKey,
+  type TextLocale,
 } from './texts';
 
-const LOCALES: BotLocale[] = ['ru', 'uk'];
+/** Every locale of `texts.ts`; English is not reachable from a chat yet (T099). */
+const LOCALES: TextLocale[] = ['ru', 'uk', 'en'];
 
 /**
  * Promises of a message the bot never sends (spec 04 §Promises and
@@ -120,7 +126,8 @@ const REPORT_RECEIPT_PROMISE_BACKING: Record<string, { file: string; holds: stri
 const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
 
 /** Words that would describe a notification as a feature. */
-const NOT_A_CAPABILITY = /напишу|уведомл|сповіщ|подпис|підпис|слежу|следишь|стежу|стежиш/i;
+const NOT_A_CAPABILITY =
+  /напишу|уведомл|сповіщ|подпис|підпис|слежу|следишь|стежу|стежиш|notif|subscri|alert|follow/i;
 
 /** Both states of the matching switch (spec 07 §Switch). */
 const SWITCH_STATES = [false, true] as const;
@@ -128,9 +135,51 @@ const SWITCH_STATES = [false, true] as const;
 const CAPABILITY_KEYS: CapabilityTextKey[] = ['start', 'startAfterPayload', 'help'];
 
 /** The capability list is the first paragraph of `help`. */
-function capabilities(locale: BotLocale, matchingEnabled: boolean): string {
+function capabilities(locale: TextLocale, matchingEnabled: boolean): string {
   return capabilityText(locale, 'help', matchingEnabled).split('\n\n')[0];
 }
+
+/** Per-locale wording the capability checks look for. */
+const CAPABILITY_WORDING: Record<
+  TextLocale,
+  {
+    address: RegExp;
+    district: RegExp;
+    profile: RegExp;
+    counts: RegExp;
+    opensLater: RegExp;
+    mutual: RegExp;
+    cancel: RegExp;
+  }
+> = {
+  ru: {
+    address: /^• Пришли адрес/,
+    district: /^• Напиши район/,
+    profile: /анкет/,
+    counts: /сколько людей ищут в каждом районе/,
+    opensLater: /подбор откроется позже$/,
+    mutual: /взаимном интересе/,
+    cancel: /о залоге или для анкеты$/,
+  },
+  uk: {
+    address: /^• Надішли адресу/,
+    district: /^• Напиши район/,
+    profile: /анкет/,
+    counts: /скільки людей шукають у кожному районі/,
+    opensLater: /підбір відкриється пізніше$/,
+    mutual: /взаємного інтересу/,
+    cancel: /про заставу або для анкети$/,
+  },
+  en: {
+    address: /^• Send an address/,
+    district: /^• Type a district/,
+    profile: /profile/,
+    counts: /how many people are looking in each district/,
+    opensLater: /matching opens later$/,
+    mutual: /only when the interest is mutual$/,
+    cancel: /about your deposit or for your profile$/,
+  },
+};
 
 function bullets(list: string): string[] {
   return list.split('\n').filter((line) => line.startsWith('• '));
@@ -142,14 +191,16 @@ function bulletCommand(line: string): string | null {
 }
 
 describe('bot texts: no notification promises', () => {
-  it('no RU or UK text in texts.ts promises to write later', () => {
+  it('no RU, UK or EN text in texts.ts promises to write later', () => {
+    const found: string[] = [];
     for (const locale of LOCALES) {
       for (const key of TEXT_KEYS) {
-        for (const phrase of REMOVED_PROMISES) {
-          expect(t(locale, key), `${locale}.${key}`).not.toMatch(phrase);
+        for (const phrase of [...REMOVED_PROMISES, ...LATER_MESSAGE_PROMISES]) {
+          if (phrase.test(t(locale, key))) found.push(`${locale}.${key} ~ ${phrase.source}`);
         }
       }
     }
+    expect(found).toEqual([]);
   });
 
   it('building and district interest is saved, with no automatic notifications', () => {
@@ -166,11 +217,18 @@ describe('bot texts: no notification promises', () => {
     expect(t('uk', 'subscribedDistrict', ru)).toMatch(
       /^✅ Зберіг інтерес до району <b>Mokotów<\/b>/,
     );
+    expect(t('en', 'subscribedBuilding', ru)).toMatch(
+      /^✅ Saved your interest in <b>Mokotów<\/b>\./,
+    );
+    expect(t('en', 'subscribedDistrict', ru)).toMatch(
+      /^✅ Saved your interest in the <b>Mokotów<\/b> district\./,
+    );
     for (const key of ['subscribedBuilding', 'subscribedDistrict', 'mySubsEmpty'] as const) {
       expect(t('ru', key)).toContain('Автоматических уведомлений');
       expect(t('ru', key)).toMatch(/пока нет/);
       expect(t('uk', key)).toContain('Автоматичних сповіщень');
       expect(t('uk', key)).toMatch(/поки немає/);
+      expect(t('en', key)).toMatch(/There are no automatic notifications( about new data)? yet\./);
     }
   });
 
@@ -182,9 +240,16 @@ describe('bot texts: no notification promises', () => {
     expect(t('uk', 'cityWaitAlready', vars)).toMatch(
       /^Уже записав, що ти чекаєш на <b>Kraków<\/b>\./,
     );
+    expect(t('en', 'cityWaitAdded', { ...vars, people: 'people' })).toMatch(
+      /^✅ Noted that you’re waiting for <b>Kraków<\/b>\.[\s\S]*so far: 3 people\.$/,
+    );
+    expect(t('en', 'cityWaitAlready', vars)).toMatch(
+      /^Already noted that you’re waiting for <b>Kraków<\/b>\./,
+    );
     for (const key of ['cityWaitAdded', 'cityWaitAlready'] as const) {
       expect(t('ru', key, vars)).toContain('Автоматических сообщений о запуске пока нет.');
       expect(t('uk', key, vars)).toContain('Автоматичних повідомлень про запуск поки немає.');
+      expect(t('en', key, vars)).toContain('There are no automatic launch messages yet.');
       expect(t('ru', key, vars)).toContain('Этот город');
     }
     expect(t('ru', 'outsideCityNamed', { city: 'Kraków' })).toContain(
@@ -193,9 +258,16 @@ describe('bot texts: no notification promises', () => {
     expect(t('uk', 'outsideCityNamed', { city: 'Kraków' })).toContain(
       'запишу, що ти чекаєш на це місто',
     );
+    expect(t('en', 'outsideCityNamed', { city: 'Kraków' })).toContain(
+      'I’ll note that you’re waiting for this city',
+    );
   });
 
   it('save buttons read as saving interest, not as following', () => {
+    expect(t('en', 'subscribeBuilding')).toBe('📌 Save interest in this building');
+    expect(t('en', 'subscribeDistrict', { district: 'Mokotów' })).toBe(
+      '📌 Save interest in Mokotów',
+    );
     expect(t('ru', 'subscribeBuilding')).toBe('📌 Сохранить интерес к дому');
     expect(t('ru', 'subscribeDistrict', { district: 'Mokotów' })).toBe(
       '📌 Сохранить интерес к району Mokotów',
@@ -206,7 +278,7 @@ describe('bot texts: no notification promises', () => {
     );
     for (const locale of LOCALES) {
       for (const key of ['subscribeBuilding', 'subscribeDistrict', 'btnCityWait'] as const) {
-        expect(t(locale, key)).not.toMatch(/🔔|Следить|Стежити/);
+        expect(t(locale, key)).not.toMatch(/🔔|Следить|Стежити|follow|subscri/i);
       }
     }
   });
@@ -334,8 +406,8 @@ describe('bot texts: one set of real capabilities', () => {
         // The two checks without a command: a typed address and a typed district.
         const checks = lines.filter((line) => bulletCommand(line) === null);
         expect(checks).toHaveLength(2);
-        expect(checks[0]).toMatch(locale === 'ru' ? /^• Пришли адрес/ : /^• Надішли адресу/);
-        expect(checks[1]).toMatch(/^• Напиши район/);
+        expect(checks[0]).toMatch(CAPABILITY_WORDING[locale].address);
+        expect(checks[1]).toMatch(CAPABILITY_WORDING[locale].district);
 
         // Every other line names a menu command, in the menu's order; /help is the list itself.
         const listed = lines.map(bulletCommand).filter((command) => command !== null);
@@ -355,27 +427,22 @@ describe('bot texts: one set of real capabilities', () => {
       expect(t(locale, 'capabilityMateOn')).not.toBe(t(locale, 'capabilityMateOff'));
 
       // Off (stage 1): a profile, the counts per district, matching later.
+      const wording = CAPABILITY_WORDING[locale];
       const off = t(locale, 'capabilityMateOff');
-      expect(off).toMatch(/анкет/);
-      expect(off).toMatch(
-        locale === 'ru'
-          ? /сколько людей ищут в каждом районе/
-          : /скільки людей шукають у кожному районі/,
-      );
-      expect(off).toMatch(
-        locale === 'ru' ? /подбор откроется позже$/ : /підбір відкриється пізніше$/,
-      );
+      expect(off).toMatch(wording.profile);
+      expect(off).toMatch(wording.counts);
+      expect(off).toMatch(wording.opensLater);
 
       // On (stage 2): matching, contacts only on mutual interest; nothing says "later".
       const on = t(locale, 'capabilityMateOn');
-      expect(on).toMatch(locale === 'ru' ? /взаимном интересе/ : /взаємного інтересу/);
-      expect(on).not.toMatch(/позже|пізніше|откроется|відкриється/);
+      expect(on).toMatch(wording.mutual);
+      expect(on).not.toMatch(/позже|пізніше|откроется|відкриється|later|opens/i);
     }
   });
 
   it('no capability text promises a date', () => {
     const MONTHS =
-      /январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр|січ|лют|берез|квіт|травн|червн|липн|серп|верес|жовт|листопад|груд/i;
+      /январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр|січ|лют|берез|квіт|травн|червн|липн|серп|верес|жовт|листопад|груд|january|february|march|april|\bmay\b|june|july|august|september|october|november|december/i;
     for (const locale of LOCALES) {
       for (const key of ['capabilityMateOff', 'capabilityMateOn'] as const) {
         expect(t(locale, key), `${locale}.${key}`).not.toMatch(/\d/);
@@ -402,8 +469,8 @@ describe('bot texts: one set of real capabilities', () => {
 });
 
 describe('COMMAND_MENU', () => {
-  it('has the same commands in RU and UK, with /mate, /cancel and /my as saved interests', () => {
-    const commands = (locale: BotLocale) => COMMAND_MENU[locale].map((item) => item.command);
+  it('has the same commands in RU, UK and EN, with /mate, /cancel and /my as saved interests', () => {
+    const commands = (locale: TextLocale) => COMMAND_MENU[locale].map((item) => item.command);
     expect(commands('ru')).toEqual([
       'mate',
       'districts',
@@ -414,25 +481,26 @@ describe('COMMAND_MENU', () => {
       'help',
     ]);
     expect(commands('uk')).toEqual(commands('ru'));
+    expect(commands('en')).toEqual(commands('ru'));
 
-    const item = (locale: BotLocale, command: string) =>
+    const item = (locale: TextLocale, command: string) =>
       COMMAND_MENU[locale].find((entry) => entry.command === command)?.description;
     expect(item('ru', 'my')).toBe('Сохранённые интересы');
     expect(item('uk', 'my')).toBe('Збережені інтереси');
+    expect(item('en', 'my')).toBe('Saved interests');
     expect(item('ru', 'mate')).toBe('Найти, с кем снять квартиру');
     expect(item('uk', 'mate')).toBe('Знайти, з ким зняти квартиру');
+    expect(item('en', 'mate')).toBe('Find someone to rent a flat with');
   });
 
   it('describes /cancel for the deposit and the roommate questions alike', () => {
     for (const locale of LOCALES) {
       const cancel = COMMAND_MENU[locale].find((entry) => entry.command === 'cancel');
-      expect(cancel?.description).not.toMatch(/залог|застав/i);
+      expect(cancel?.description).not.toMatch(/залог|застав|deposit/i);
       const line = bullets(capabilities(locale, false)).find((entry) =>
         entry.startsWith('• /cancel — '),
       );
-      expect(line).toMatch(
-        locale === 'ru' ? /о залоге или для анкеты$/ : /про заставу або для анкети$/,
-      );
+      expect(line).toMatch(CAPABILITY_WORDING[locale].cancel);
     }
     expect(COMMAND_MENU.ru.find((entry) => entry.command === 'cancel')?.description).toBe(
       'Выйти из вопросов',
@@ -440,9 +508,12 @@ describe('COMMAND_MENU', () => {
     expect(COMMAND_MENU.uk.find((entry) => entry.command === 'cancel')?.description).toBe(
       'Вийти з питань',
     );
+    expect(COMMAND_MENU.en.find((entry) => entry.command === 'cancel')?.description).toBe(
+      'Leave the questions',
+    );
   });
 
-  it('fits the Telegram limits and is translated for UK', () => {
+  it('fits the Telegram limits and is translated for UK and EN', () => {
     for (const locale of LOCALES) {
       for (const item of COMMAND_MENU[locale]) {
         expect(item.command).toMatch(/^[a-z0-9_]{1,32}$/);
@@ -454,5 +525,126 @@ describe('COMMAND_MENU', () => {
     for (const item of uk) {
       expect(item.description).not.toMatch(/[ыэъё]/i);
     }
+    for (const item of COMMAND_MENU.en) {
+      expect(withoutLanguageNames(item.description), item.command).not.toMatch(CYRILLIC);
+    }
+  });
+});
+
+/** Cyrillic letters: an English text has none outside the language names. */
+const CYRILLIC = /\p{Script=Cyrillic}/u;
+
+/**
+ * Russian and Ukrainian named in their own words (the /lang line, the language
+ * prompt and the menu's /lang entry) are the only Cyrillic an English text may hold.
+ */
+function withoutLanguageNames(text: string): string {
+  return text.replace(/русский|українська|Выбери язык|Обери мову|Язык|Мова/g, '');
+}
+
+function placeholders(text: string): string[] {
+  return [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
+}
+
+describe('bot texts: English (spec 04 §English bot locale)', () => {
+  it('has a non-empty ru, uk and en value for every key', () => {
+    expect(TEXT_KEYS.length).toBeGreaterThan(0);
+    const missing: string[] = [];
+    for (const key of TEXT_KEYS) {
+      for (const locale of LOCALES) {
+        const value: unknown = t(locale, key);
+        if (typeof value !== 'string' || value.trim() === '') missing.push(`${locale}.${key}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('uses the same placeholders in every locale', () => {
+    for (const key of TEXT_KEYS) {
+      const ru = placeholders(t('ru', key));
+      for (const locale of LOCALES) {
+        expect(placeholders(t(locale, key)), `${locale}.${key}`).toEqual(ru);
+      }
+    }
+  });
+
+  it('writes English in Latin script, apart from the language names', () => {
+    for (const key of TEXT_KEYS) {
+      expect(withoutLanguageNames(t('en', key)), `en.${key}`).not.toMatch(CYRILLIC);
+    }
+    for (const enabled of SWITCH_STATES) {
+      for (const key of CAPABILITY_KEYS) {
+        expect(withoutLanguageNames(capabilityText('en', key, enabled)), key).not.toMatch(CYRILLIC);
+      }
+    }
+  });
+
+  it('says no "market", "verified", "checked", "actually" or percentage in English', () => {
+    for (const key of TEXT_KEYS) {
+      expect(t('en', key), `en.${key}`).not.toMatch(
+        /market|verified|checked|actually|really|in full|%/i,
+      );
+    }
+  });
+
+  it('gives every counted word one / other forms in English', () => {
+    const words = { reportsWord, listingsWord, observationsWord, answeredWord, peopleWord };
+    const forms = Object.fromEntries(
+      Object.entries(words).map(([name, word]) => [
+        name,
+        [1, 2, 5, 11, 21].map((n) => word('en', n)),
+      ]),
+    );
+    expect(forms).toEqual({
+      reportsWord: ['report', 'reports', 'reports', 'reports', 'reports'],
+      listingsWord: ['listing', 'listings', 'listings', 'listings', 'listings'],
+      observationsWord: [
+        'observation',
+        'observations',
+        'observations',
+        'observations',
+        'observations',
+      ],
+      answeredWord: Array(5).fill('who answered'),
+      peopleWord: ['person', 'people', 'people', 'people', 'people'],
+    });
+    expect([1, 2, 21].map((count) => rtPeople('en', count))).toEqual([
+      'person',
+      'people',
+      'people',
+    ]);
+  });
+
+  it('keeps the RU and UK forms as they were', () => {
+    expect([1, 2, 5, 21].map((count) => peopleWord('ru', count))).toEqual([
+      'человек',
+      'человека',
+      'человек',
+      'человек',
+    ]);
+    expect([1, 3, 5].map((count) => observationsWord('uk', count))).toEqual([
+      'спостереження',
+      'спостереження',
+      'спостережень',
+    ]);
+    expect(answeredWord('ru', 21)).toBe('ответившего');
+    expect(listingsWord('uk', 11)).toBe('оголошеннями');
+  });
+
+  it('reads the English headline N as "median of N reports" and "from 1 listing"', () => {
+    expect(t('en', 'medianN', { count: '2', word: reportsWord('en', 2) })).toBe(
+      ' <i>(median of 2 reports)</i>',
+    );
+    expect(t('en', 'singleN', { count: '1', word: listingsWord('en', 1) })).toBe(
+      ' <i>(from 1 listing)</i>',
+    );
+    expect(
+      t('en', 'depositLine', {
+        gotBack: '2',
+        answered: '3',
+        word: answeredWord('en', 3),
+        area: 'Ochota',
+      }),
+    ).toBe('Got the deposit back, fully or partly: 2 of 3 who answered (Ochota)');
   });
 });

@@ -323,8 +323,8 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   reports, "no room figures" when the city has none. Then D61's "for two people
   about X each" from the tenant all-in median of whole flats (its own level, N ≥ 2,
   half rounded half up to 10 zł; never a known part or asking prices). A loader
-  error leaves only this part out; an English chat gets none until `texts.ts` has
-  English (`hasBotTexts`).
+  error leaves only this part out. An English chat gets it in English (the area
+  texts of `texts.ts`), once chats can be English (T099).
 - **Compatibility** (spec 07 §Compatibility, FR-24; no handler uses it yet):
   `isCompatible(a, b)` (`../roommate/compatibility.ts`, pure, symmetric) needs a
   shared district (or "any" on either side), budget bands at most 1 apart, move-in
@@ -421,7 +421,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `lookup.ts`                                      | Data: building → district → city fallback, neighbours, deposits    |
 | `geocode.ts`, `districts.ts`                     | Server geocoding of typed addresses; district-name matching        |
 | `format.ts`                                      | Message rendering, links to the website with UTM                   |
-| `texts.ts`                                       | RU/UK copy, capability list, command menu, Slavic plural agreement |
+| `texts.ts`                                       | RU/UK/EN copy, capability list, command menu, plural agreement     |
 | `store.ts`                                       | `TelegramChat` / `TelegramSubscription` persistence                |
 | `analytics.ts`, `check-events.ts`                | `track` (`tg_<chatId>`); check-event properties                    |
 | `deposit-flow.ts`                                | Deposit conversation, reminders (`sendDueFollowUps`), `/cancel`    |
@@ -684,7 +684,11 @@ opens later"; on, "people who fit you, contacts only on mutual interest". No lin
 names a date. `/cancel` in the list and the menu covers the deposit and the
 roommate questions. `texts.test.ts` fails if a text in `texts.ts` promises to
 write later, if a listed command is missing from the menu (or a menu command
-from the list), or if the roommate line does not name `/mate`.
+from the list), or if the roommate line does not name `/mate`, in RU, UK and EN.
+It also fails on a key without an EN value or with other placeholders than RU.
+EN (`TextLocale`) exists before any chat can be English: `BotLocale` stays
+`'ru' | 'uk'` until T099. `plural(locale, count, forms)` takes Slavic one / few /
+many for RU and UK and one / other for EN.
 
 ## Events
 
