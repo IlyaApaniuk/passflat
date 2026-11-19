@@ -868,14 +868,14 @@
         "T112",
         "T113"
       ],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "npm run verify passes; node scripts/ralph-tasks.mjs summary shows no other PRD 3 task left to do except the blocked owner questions (T107 – T110, or whichever the owner has not answered yet)",
         "The PRD 3 requirement map in docs/specs/README.md maps every FR-1 – FR-44 to a done task or a blocked task with its question",
         "The progress entry is the owner handoff of spec 05 §PRD 3 final check, separating built, tested and not deployed"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "No PRD 3 task changes a page flow covered by e2e/, so npm run test:e2e is not in the checks."
     },
     {

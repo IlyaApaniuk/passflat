@@ -3248,3 +3248,108 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - a statement still unsent (failed, waiting for the retry) counts the late report too.
   - No new copy (`hideNotice`, `reportReceipt` from T095), no new event, no table, no migration.
 - Next: `node scripts/ralph-tasks.mjs next` (T105, the PRD 3 final check, FR-44, after any remaining tasks).
+
+### 2026-11-19 21:54 · T105 · done
+
+- Done:
+  - `docs/specs/README.md` §Requirement map (PRD 3): the rows still marked Planned whose tasks are all done are now Done (FR-2, FR-3, FR-4 – FR-6, FR-7/FR-8, FR-9, FR-10/FR-11, FR-14, FR-44, FR-16 gap). Every FR-1 – FR-44 row is Done. The four Blocked rows stay; the intro now has the final-check line and names each blocked task's question.
+  - Checked, no change needed:
+    - `ralph-tasks.mjs summary`: every PRD 3 task is done except T105 (this one) and the blocked T107 – T110.
+    - Every promise exception in `texts.test.ts` names code that exists (T082, T083, T090, T095, T113).
+    - The bot README "Production status" / "Going live" and `docs/architecture.md` say built, not launched, the PRD 3 migration not applied, and the switch unset.
+  - No code, copy, event, table or migration changed.
+- Checks:
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2964 tests;
+    - build OK (182 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run: the task's notes say no PRD 3 task changes a page flow covered by `e2e/`.
+  - Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review: **the PRD 3 handoff (FR-44).**
+  - **Status:**
+    - _Built_: FR-1 – FR-44 and the four gap tasks (T106, T111 – T113) on `chore/agent-harness`.
+    - _Tested_: the Vitest suite, plus local-DB scratch runs for the raw statements (T076, T088, T113). Nothing ran against production.
+    - _Not deployed_: nothing of PRD 3 (or PRD 1) is in production. Per D67, PRD 1 deploys first (its handoff is the T059 entry), then PRD 3 in one deploy with the switch off.
+  - **Deploy steps (owner):**
+    1. **Migrations, each with your explicit approval (D18, D29).** First the four bot migrations, in order: `20260831120000_add_telegram_bot`, `20261004120000_telegram_subscription_label`, `20261005120000_deposit_cases`, `20261005140000_deposit_contract`. Then PRD 3's only migration, `20261119122602_roommate_matching`. It must be in before the deploy runs: `touchChat` reads `telegram_chats.roommate_banned_at`, and `roommate-daily` returns 500 without the tables.
+    2. **RLS by hand (D9)** on `roommate_profiles`, `roommate_reactions`, `roommate_reports`. Also on `telegram_chats`, `telegram_subscriptions` and `deposit_cases`, if not done with PRD 1.
+    3. **`ROOMMATE_MATCHING_ENABLED` stays unset for the deploy (D49).** Turning matching on later: set it to exactly `true` in Vercel, then redeploy. Record the moment in `docs/marketing/roommate-posting-log.md` and as a PostHog annotation; it is the `{switch_at}` of the E15 queries (spec 07 §Switch). From 2027-01-04 the daily go check of `docs/analytics/activation-funnels.md` §7.4 decides when (D58).
+    4. **Crons in `vercel.json`:** two `/api/cron/roommate-daily` entries, `0 8 * * *` and `0 9 * * *` (UTC). The route sends only in the 10:00 Europe/Warsaw hour (D68), so one entry fits summer time and one winter time. After the deploy, check that the Vercel dashboard lists both. `POST /api/cron/roommate-close` is manual only (FR-20, D64): curl with `CRON_SECRET` and `{"confirm":true}` (T083 entry), repeat while `remaining` > 0, and only with the switch off.
+    5. **Bot env and webhook:** set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `GEOCODING_API_SERVER_KEY` and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`; the deposit contract step needs `ANTHROPIC_API_KEY` (bot README "Going live"). Then run `npm run bot:webhook -- https://passflat.com`. It publishes the RU (default), UK, EN and `pl` (= EN) command menus with `/mate` first, and subscribes to `my_chat_member` (T106).
+    6. **BotFather:** set the description and about text from `docs/marketing/bot-profile.md` (RU as the default; UK / EN optional per language).
+    7. **Before the first posting slot:** fill the group-key table in `docs/marketing/roommate-posts.md` and replace the `<bot>` placeholder.
+  - **Open questions, each holding one blocked task** (`docs/product/prd/prd-3-decision-review.md`; answer with `/ralph-answer`):
+    - **Q-15 → T110:** which persons qualify for the E15 match rate. (a) active at the switch or created after it; (b) as decided. Proposal (a). The readout reports both rates already.
+    - **Q-16 → T109:** how the person hears the appeal decision (DSA Art. 20). (a) a manual route that sends it; (b) e-mail only, and `appealReceived` says so. Proposal (a).
+    - **Q-17 → T107:** whether the per-person split leaves out studios. (a) only flats with 2+ rooms; (b) keep D61 as built; (c) drop the line. Proposal (a).
+    - **Q-18 → T108:** the opt-in's closing promise for profiles that expire first. (a) reword to "while your profile is active"; (b) a chat-level opt-in (second migration); (c) keep. Proposal (a).
+    - **Not decided either (no task):**
+      - E14: a stop rule holding while every go rule holds (T103, `activation-funnels.md` §7.3).
+      - E15: a 14-day match rate between 15 % and 30 %, and ≥ 10 pairs with fewer than 3 outcome persons (T104, §8.3).
+      - The outcome question never reaches a person whose only match deleted before day 21 (T091 reading 1; fixing it needs a column).
+  - **Draft copy for review, by when it must be approved (D56; none of it reviewed by a lawyer, D69):**
+    - **Approve before the deploy:**
+      - _The privacy section (stage 1 launches only once you approved it):_ `privacy.roommateMatching.*` (`title`, `intro`, `fields`, `gender`, `channel`, `recipients`, `lifetime`, `deletion`, `drafts`, `reports`, `ban`, `analytics`). The redrafted `privacy.automated.description`, `privacy.transfers.processors`. The new `privacy.dataSharing.item3`, `privacy.dataSharing.processors.telegram`, `privacy.retention.roommate`. Then set `privacy.lastUpdated` (T097).
+      - _Website, four locales:_
+        - `listings.roommateRoles.findFlatmate`; `listings.findFlatmate.*` (`title`, `count`, `languages`, `button` from PRD §8; agent drafts `how`, `first`, `topLabel`, `topItem`) (T085);
+        - `listings.roomMoney.*`: `title`, `figuresLead`, `oneObservation`, `checklistTitle`, `checklistSee`, `checklistReservation`, `checklistIncludes`, `checklistProtocol`, `checklistAddress`, `linksTitle`, `linkOlx`, `linkOtodom`, `linkFacebook` (T086);
+        - `costs.building.figures.oneObservationArea` (T112).
+      - _Bot stage 1, `roommate-texts.ts` RU / UK / EN (T068 unless named):_
+        - entry: `btnStart`, `intro`, `banned`, `btnDeleteMyProfile`, `depositQuestionsOpen`, `roommateQuestionsOpen`, `cancelledDraft`, `cancelledEdit`, `cancelledEditPicked` (T075), `stepDone`, `tapButton`;
+        - intake: `askDistricts`, `btnAnyDistrict`, `btnDone`, `btnPicked`, `districtLimit`, `districtsEmpty`, `tapDistrict`, `askBudget`, `bandUpTo`, `bandRange`, `bandFrom`, `tapBand`, `askMonth`, `monthPassed`, `askLanguages`, `langPl`, `langEn`, `langRu`, `langUk`, `languagesEmpty`, `askGender`, `btnWoman`, `btnMan`, `btnSkip`, `askPrefers`, `btnPrefersAnyone`, `btnPrefersWomen`, `btnPrefersMen`, `askAbout`, `aboutTooLong`, `aboutRefused`, `foundLink`, `foundEmail`, `foundHandle`, `foundPhone`, `foundIban`, `askSmoking`, `smokingNo`, `smokingOutside`, `smokingFine`, `askPets`, `petsNo`, `petsHave`, `petsFine`, `askAdult`, `btnAdultYes`, `btnAdultNo`, `underAge`;
+        - own card: `cardHeader`, `cardDistricts`, `cardAnyDistrict`, `cardBudget`, `cardMonth`, `cardLanguages`, `cardGender`, `cardGenderNone`, `cardPrefers`, `cardAbout`, `cardSmoking`, `cardPets`, `cardPrivateNote`, `cardHiddenUntilOpen`, `cardOptInOn`, `cardOptInOff`, `cardPushOn`, `cardPushOff`, `cardExpires`, `cardExpired`, `btnEdit`, `btnDelete`, `btnCounts`, `btnShowPeople`, `btnOptIn`, `btnOptOut`, `btnPushOn`, `btnPushOff`, `btnRenew`;
+        - edit: `editPrompt`, `editDistricts`, `editBudget`, `editMonth`, `editLanguages`, `editPreferences`, `editAbout`, `editRules`, `btnBack`, `editSaved`;
+        - delete: `deleteConfirm`, `btnDeleteConfirm`, `btnKeep`, `kept`, `deleted`, `deleteReasonPrompt`, `reasonFoundHere`, `reasonFoundElsewhere`, `reasonOther`, `reasonThanks`, `alreadyDeleted`;
+        - renewal: `renewalReminder`, `renewed`, `renewMonthFirst`, `renewRefused`;
+        - counts and room reference: `countsLead`, `countsItem`, `countsItemPeople`, `countsItemNobody`, `countsAnyItem`, `countsAnyItemNobody`, `countsTotal`, `countsAnyLead`, `countsTop`, `countsNobodyElse`, `countsOpensLater`, `countsUnavailable`, `roomHeader`, `roomAreaLead`, `roomFallback`, `roomFallbackMany`, `roomNoFigures`, `roomSplit`;
+        - opt-in and closing: `optInConfirm`, `optInAlready` (T084), `optInClosing`, `closingMessage` (T083, PRD §8 verbatim).
+      - _Bot, `texts.ts`:_
+        - RU / UK: `capabilityMateOff`, `capabilityMateOn`, the `/cancel` line of `start` / `startAfterPayload` / `help`, `COMMAND_MENU.mate`, `COMMAND_MENU.cancel` (T070); `areaGroupLine`, `areaLineTotal`, `oneObservationN` (T080); `langPrompt` and the `/lang` line with English (T099);
+        - the whole EN dictionary and `COMMAND_MENU.en` (T098, every key in that entry);
+        - `depositGate` and EN `cancelled`, `remindersOff`, `nothingToCancel`, `btnStartFlow` (T099).
+      - _Marketing (agent drafts, T102):_ `docs/marketing/roommate-posts.md`, `roommate-posting-log.md`, `bot-profile.md`.
+    - **Approve before the switch:**
+      - _Terms (D56):_ `termsPage.matching.*` (`title`, `intro`, `adults`, `content`, `money`, `reports`, `hiding`, `ranking`, `statement`, `redress`), and the renumbered `contact.title`, `forceMajeure.title`, `changes.title`; then set `termsPage.lastUpdated`. The section is visible from the deploy: approve it with the privacy section, or keep it out of the deploy (T097).
+      - _Safety lines:_ `revealMatch`, `revealSafety` (T089, PRD §8 verbatim) and `introMatching` (T092).
+      - _Statement of reasons and notices:_ `statementRestriction`, `statementFacts`, `statementGroundReports`, `statementGroundUnder18`, `statementRedress`, `hideNotice` (T095).
+      - _Report and appeal:_ `btnReport` (T087), `reportAsk`, `btnReportMoney`, `btnReportFake`, `btnReportOffensive`, `btnReportUnder18`, `btnReportOther`, `reportReceipt`, `reportReceiptHidden`, `reportAlready` (T093), `appealReceived`, `appealAlready`, `appealByEmail`, `appealNothing` (T096).
+      - _The rest of stage 2 (sent only with the switch on):_
+        - `openFitsOne`, `openFitsMany`, `openNobody`, `openNobodyDaily`, `btnShow` (T082);
+        - `matchingPaused`, `browseCreateFirst`, `browseRenew`, `usernamePromptBrowse`, `browseCardHeader`, `browseAbout`, `btnInterested`, `btnCardSkip`, `browseNoneLeft`, `browseUnavailable` (T087);
+        - `interestLimit`, `interestAlready` (T088);
+        - `usernamePromptReveal`, `btnNextAgreement`, `btnNextAddress`, `btnNextCost`, `nextStepAgreement`, `nextStepAddress`, `nextStepCost` (T089);
+        - `pushNewOne`, `pushNewMany` (T090);
+        - `outcomeQuestion`, `btnOutcomeRenting`, `btnOutcomeTalking`, `btnOutcomeNoFit`, `btnOutcomeDontAsk` (T091).
+    - The texts and the agent's readings for each key are in the entries named.
+  - **Assumption constants (D68 unless named), one place each:**
+    - `src/lib/bot/start-payload.ts`: `ROOMMATE_ENTRY_SOURCE`, `MATE_LINK` (detail `[a-z0-9]{1,24}`), `MATE_LINK_SOURCES`.
+    - `src/lib/roommate/time.ts`: `ROOMMATE_SEND_HOUR = 10`, `MOVE_IN_OPTION_COUNT = 4`.
+    - `src/lib/roommate/rules.ts`:
+      - `BUDGET_BANDS` (≤ 1,199 / 1,200 – 1,599 / 1,600 – 1,999 / 2,000 – 2,499 / ≥ 2,500 zł);
+      - `MAX_DISTRICTS = 3`, `RENEWAL_REMINDER_DAYS = 3`, `INTEREST_DAILY_LIMIT = 20`, `OUTCOME_QUESTION_DAYS = 21`, `REPORT_REASONS` (five);
+      - `MIN_TYPED_AMOUNT = 100` (agent);
+      - Decided, same block: `PROFILE_LIFE_DAYS = 30`, `GRACE_DAYS = 14`, `DRAFT_LIFE_DAYS = 7`, `REPORT_LIFE_MONTHS = 6` (D55), `HIDE_AT_REPORTERS = 2` (D62).
+    - `src/lib/roommate/compatibility.ts`: `BUDGET_BAND_TOLERANCE = 1`, `MOVE_IN_MONTH_TOLERANCE = 1`.
+    - `src/lib/roommate/counts.ts`: `TOP_DISTRICTS_FOR_ANY = 3`, `TOP_DISTRICTS_ON_WEBSITE = 5`.
+    - `src/lib/roommate/website-counts.ts`: `FLATMATE_COUNTS_REVALIDATE_SECONDS = 3600`.
+    - `src/lib/roommate/text-filter.ts`: `ABOUT_MAX_LENGTH = 280`.
+    - `src/lib/bot/roommate-daily.ts` (spec 06): `MAX_MESSAGES_PER_RUN = 1000`, `SEND_BUDGET_MS = 45_000`, `MESSAGES_PER_SECOND = 25`, `OPEN_STEP_LIFE_HOURS = 24`; `maxDuration = 60` on both cron routes.
+    - `src/lib/bot/roommate-reveal.ts`: `NEXT_STEPS`, `DUE_PAIRS_PER_RUN = 500`.
+    - `src/components/listings/room-money-block.tsx`: `CHECKLIST`, `ROOM_SEARCH_LINKS`.
+    - `src/lib/bot/texts.ts`: `CLIENT_LANGUAGE_LOCALES` (`pl` → English).
+    - The query shapes of the E14 / E15 readouts (T103, T104) and the posting-kit format (T102).
+  - **Lawyer questions kept for later (D69; nothing in PRD 3 waits for them):**
+    - from the decision review, row 16: the legal basis per field (Art. 6(1)(b) or consent); whether house rules touch Art. 9; whether a women-only or men-only preference is lawful in private housing (D51); whether the bot button plus e-mail meets DSA Art. 16, and the Art. 17 template and the Art. 14 terms; the privacy update and whether a DPIA is needed (UODO list); the opt-out daily push; telling the old roommate e-mail rows (D66);
+    - added by the build (T097): whether Telegram is a processor or an independent controller; whether `privacy.transfers.description` ("safeguards for every transfer") still holds for Telegram; the ban marker, which has no end date while the chat row exists.
+  - **Watch after the deploy:**
+    - the first real hide: the first interactive `$transaction`, through the Supabase pooler (T094);
+    - Prisma error messages in `bot.catch` logs can quote query arguments (T069 reading 6).
+  - **Remains unverified:**
+    - the bot in production (token, webhook, menus, BotFather texts, a real `/mate` intake, the cron at 10:00 Warsaw);
+    - PostHog Live Events after the deploy (bot roommate events, web `intent=find_flatmate`, `telegram_bot_opened` `source=roommate`);
+    - the mobile layout by eye (the find-a-flatmate and room money blocks, `/terms`, `/privacy`);
+    - the migration on the production database;
+    - stage 2 with real people: the switch has never been on outside tests.
+- Next: the owner answers Q-15 – Q-18 (`/ralph-answer`), which unblocks T107 – T110. Otherwise PRD 3 is complete, and the owner deploys PRD 1, then PRD 3, with the steps above.

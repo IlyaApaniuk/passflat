@@ -80,20 +80,26 @@ architect gap review found 26 gaps: 22 are folded into the specs and tasks (one 
 and 4 need the owner (Q-15 – Q-18 in `../product/prd/prd-3-decision-review.md`), held by the
 blocked tasks T107 – T110 at the end of the table; the rest of each requirement is built as
 decided. FR-24 is built in M2 (T081) because the one-time message of FR-19 counts compatible
-people.
+people. Final check (T105, 2026-11-19): every PRD 3 task except the four blocked ones is done;
+every FR-1 – FR-44 row is Done. Built and tested on `chore/agent-harness`, not deployed; the
+owner's handoff is the T105 entry of `ralph/progress.md`. Each blocked row waits for one owner
+question: Q-17 (T107) whether the per-person split leaves out studios; Q-18 (T108) whether the
+opt-in's closing promise is reworded for profiles that expire first; Q-16 (T109) how the person
+hears the appeal decision (DSA Art. 20); Q-15 (T110) which persons qualify for the E15 match
+rate.
 
 | FR           | Requirement                                            | Spec                                                                                                                               | Tasks                  | Status  |
 | ------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------- |
 | FR-1         | Roommate tables in one migration                       | [06 §Data model](06-roommate-profiles.md#data-model)                                                                               | T062                   | Done    |
-| FR-2         | `mate` deep links carry a source                       | [04 §Start payloads](04-telegram-bot.md#start-payloads), [06 §Entry](06-roommate-profiles.md#entry-and-routing)                    | T063, T069             | Planned |
-| FR-3         | Roommate entry inside the bot, capability list, menu   | [06 §Entry](06-roommate-profiles.md#entry-and-routing), [06 §Capability](06-roommate-profiles.md#capability-text-and-command-menu) | T069, T070             | Planned |
-| FR-4 – FR-6  | Districts, budget, move-in month steps                 | [06 §Intake steps](06-roommate-profiles.md#intake-steps), [06 §Warsaw calendar](06-roommate-profiles.md#warsaw-calendar)           | T065, T066, T071       | Planned |
-| FR-7, FR-8   | Languages, own gender and "live with"                  | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T072                   | Planned |
-| FR-9         | Adult confirmation                                     | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T074                   | Planned |
-| FR-10, FR-11 | Short text with the contact filter, house rules        | [06 §Text filter](06-roommate-profiles.md#text-filter)                                                                             | T067, T073             | Planned |
+| FR-2         | `mate` deep links carry a source                       | [04 §Start payloads](04-telegram-bot.md#start-payloads), [06 §Entry](06-roommate-profiles.md#entry-and-routing)                    | T063, T069             | Done    |
+| FR-3         | Roommate entry inside the bot, capability list, menu   | [06 §Entry](06-roommate-profiles.md#entry-and-routing), [06 §Capability](06-roommate-profiles.md#capability-text-and-command-menu) | T069, T070             | Done    |
+| FR-4 – FR-6  | Districts, budget, move-in month steps                 | [06 §Intake steps](06-roommate-profiles.md#intake-steps), [06 §Warsaw calendar](06-roommate-profiles.md#warsaw-calendar)           | T065, T066, T071       | Done    |
+| FR-7, FR-8   | Languages, own gender and "live with"                  | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T072                   | Done    |
+| FR-9         | Adult confirmation                                     | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T074                   | Done    |
+| FR-10, FR-11 | Short text with the contact filter, house rules        | [06 §Text filter](06-roommate-profiles.md#text-filter)                                                                             | T067, T073             | Done    |
 | FR-12        | Save, own card, edit, draft lifetime                   | [06 §Save and the own card](06-roommate-profiles.md#save-and-the-own-card)                                                         | T068, T074, T075, T077 | Done    |
 | FR-13        | Delete at once                                         | [06 §Delete](06-roommate-profiles.md#delete)                                                                                       | T076                   | Done    |
-| FR-14        | One profile per chat; banned chats                     | [06 §Entry](06-roommate-profiles.md#entry-and-routing)                                                                             | T069                   | Planned |
+| FR-14        | One profile per chat; banned chats                     | [06 §Entry](06-roommate-profiles.md#entry-and-routing)                                                                             | T069                   | Done    |
 | FR-15        | Expiry, renewal reminder, deletion after expiry        | [06 §Daily cron](06-roommate-profiles.md#daily-cron), [06 §Renewal](06-roommate-profiles.md#renewal)                               | T065, T077, T078       | Done    |
 | FR-16        | Honest counts per district                             | [06 §Counts](06-roommate-profiles.md#counts)                                                                                       | T079                   | Done    |
 | FR-17        | Room cost reference and the per-person split           | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T080                   | Done    |
@@ -123,8 +129,8 @@ people.
 | FR-41        | Posting kit and posting log                            | [05 §Posting kit](05-measurement-docs.md#posting-kit)                                                                              | T102                   | Done    |
 | FR-42        | Stage 1 readout (E14)                                  | [05 §Stage 1 readout](05-measurement-docs.md#stage-1-readout)                                                                      | T103                   | Done    |
 | FR-43        | Stage 2 readout (E15)                                  | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T104                   | Done    |
-| FR-44        | Final check and handoff                                | [05 §PRD 3 final check](05-measurement-docs.md#prd-3-final-check)                                                                  | T105                   | Planned |
-| FR-16 (gap)  | Chats marked blocked from `my_chat_member` updates     | [06 §Blocked chats](06-roommate-profiles.md#blocked-chats)                                                                         | T106                   | Planned |
+| FR-44        | Final check and handoff                                | [05 §PRD 3 final check](05-measurement-docs.md#prd-3-final-check)                                                                  | T105                   | Done    |
+| FR-16 (gap)  | Chats marked blocked from `my_chat_member` updates     | [06 §Blocked chats](06-roommate-profiles.md#blocked-chats)                                                                         | T106                   | Done    |
 | FR-12 (gap)  | Save after the move-in month passed in the draft       | [06 §Save and the own card](06-roommate-profiles.md#save-and-the-own-card)                                                         | T111                   | Done    |
 | FR-24 (gap)  | Checker area: one observation names the area (PRD 1)   | [03 §Checker](03-building-figures.md#checker)                                                                                      | T112                   | Done    |
 | FR-32 (gap)  | A report stored just after a hide is decided and told  | [07 §Automatic hiding](07-roommate-matching.md#automatic-hiding)                                                                   | T113                   | Done    |
