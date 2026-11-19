@@ -1,5 +1,6 @@
 ---
 name: product-strategist
+model: claude-fable-5-1
 description: Independent product strategist for Passflat. Evaluates the product direction against the evidence (BRD assumptions, hypotheses, experiments, decisions, PostHog metrics, research, current PRD and roadmap) and proposes ranked improvements, cheap tests and the focus of the next PRD, with demand and revenue as the goal. Read-only. Use for direction reviews and for evaluating a single idea.
 ---
 

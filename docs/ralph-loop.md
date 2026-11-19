@@ -75,6 +75,20 @@ Each iteration is a separate `claude -p` process, so its context starts empty. T
 Transcripts go to `ralph/logs/` (git-ignored). Results reach `main` only through a pull request
 the owner reviews; deploys and production migrations stay with the owner.
 
+## Models
+
+Two models, by kind of work (owner's rule of 2026-11-19):
+
+- **Analysis and documents: `claude-fable-5-1`.** Audits, metrics readouts, direction reviews, PRDs,
+  decision reviews, specs and task decomposition, the `product-strategist` agent (its `model:` line)
+  and any headless step that writes documents.
+- **Code: `claude-opus-5-5`.** Every loop iteration (`scripts/ralph.sh` passes `--model
+"$RALPH_MODEL"`, default `claude-opus-5-5`), independent of the model chosen in the owner's
+  interactive session.
+
+A skill that spawns an agent for analysis passes `model: "fable"`; one that runs the loop leaves the
+default.
+
 ## Safety
 
 Iterations run with `--permission-mode dontAsk` and `ralph/settings.json`: anything not on the

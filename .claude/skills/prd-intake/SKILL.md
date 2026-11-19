@@ -87,7 +87,8 @@ ralph/archive/<prd-slug>-tasks.json` and start a new file with `version`, `prd` 
    files, update the requirement map and "Current PRD" in `docs/specs/README.md`. English only.
    Mark every value Decided, Assumption or Open. Cite BRD assumptions as "BRD A<n>" and
    decisions as "D<n>".
-3. Architect gap review, before any task is written: spawn a fresh `Plan` agent with the Agent
+3. Architect gap review, before any task is written: spawn a fresh `Plan` agent (`model: "fable"`,
+   analysis work per `docs/ralph-loop.md` "Models") with the Agent
    tool. Give it the PRD path, the decision review, the list of new or changed spec files and the
    code areas they touch, and ask it to list what the specs miss: user flows without an end
    state, states and edge cases (empty, error, partial data, one report, retry, concurrent use,

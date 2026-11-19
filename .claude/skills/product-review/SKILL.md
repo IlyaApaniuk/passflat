@@ -10,7 +10,8 @@ Reply to the owner in Russian; the report file is in English.
 
 1. Make sure the evidence is fresh: if the newest `docs/product/reviews/*-metrics.md` is older
    than seven days and the PostHog tools are available, run the `metrics-review` skill first.
-2. Spawn the `product-strategist` agent with the Agent tool. Give it today's date, the focus from
+2. Spawn the `product-strategist` agent with the Agent tool (it runs on Fable, see its `model:`
+   line and `docs/ralph-loop.md` "Models"). Give it today's date, the focus from
    `$ARGUMENTS` (empty means a full direction review; an idea means "evaluate this idea") and the
    path of the newest metrics readout. Do not pass your own conclusions: its value is an
    unanchored view.

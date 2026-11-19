@@ -22,7 +22,8 @@ or legal review.
 
 - `docs/architecture.md`: stack, data model, boundaries, analytics, local setup.
 - `docs/development-workflow.md`: checks, the gate and task handoff.
-- `docs/specs/` and the spec section of the task; `docs/ralph-loop.md` for the build loop.
+- `docs/specs/` and the spec section of the task; `docs/ralph-loop.md` for the build loop and the
+  model split (analysis and documents on Fable, loop code on Opus).
 - `docs/product/README.md`: how product documents relate; `docs/product/decisions.md`: the
   latest decision wins over older notes.
 - Cost figures: `src/lib/cost-figures.ts`, `cost-figures-query.ts`, `cost-aggregates.ts`,
