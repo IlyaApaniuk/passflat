@@ -446,14 +446,14 @@
       "title": "Per-person split without studios, if the owner says so (Q-17, D61)",
       "spec": "docs/specs/06-roommate-profiles.md#room-cost-reference",
       "dependsOn": ["T080"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "The per-person line uses the apartment set the owner chose, through one filter in the line's function, with its own N and level, and the golden case updated",
         "The figure contract's loaders gain the filter only if the answer needs it, with a consistency test against the checker"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-17 (prd-3-decision-review.md, architect gaps). D61 builds 'for two people about X each' from the tenant all-in median of whole apartments, studios included; halving a studio's median can overstate what two people sharing can expect, and the loaders have no rooms filter today. T080 builds the line exactly as D61 says. Options: (a) only apartments with 2 or more rooms (a rooms filter in the loader; fewer reports, so the line appears less often); (b) keep D61 as built; (c) drop the line. Proposal: (a). An honesty rule for displayed figures, so the owner decides."
+      "notes": "Blocked: Q-17 (prd-3-decision-review.md, architect gaps). D61 builds 'for two people about X each' from the tenant all-in median of whole apartments, studios included; halving a studio's median can overstate what two people sharing can expect, and the loaders have no rooms filter today. T080 builds the line exactly as D61 says. Options: (a) only apartments with 2 or more rooms (a rooms filter in the loader; fewer reports, so the line appears less often); (b) keep D61 as built; (c) drop the line. Proposal: (a). An honesty rule for displayed figures, so the owner decides.\nOwner answer: Owner (D71, Q-17 (a)): the per-person split uses only apartments with 2 or more rooms, through a rooms filter in the figure contract loader; supersedes D61 for the apartment set."
     },
     {
       "id": "T108",
@@ -461,14 +461,14 @@
       "title": "The opt-in's closing promise for profiles that expire first (Q-18, D64)",
       "spec": "docs/specs/06-roommate-profiles.md#opt-in",
       "dependsOn": ["T084"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "The opt-in confirmation and the closing route follow the owner's answer in ru, uk and en; the promise check still names the backing code",
         "No new column and no second migration (if the answer needs one, block again with that finding)"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-18 (prd-3-decision-review.md, architect gaps). D64's sentence 'If matching does not open, we'll tell you and delete your profile' is built as worded (T084), but a profile that expires and is deleted 14 days later (D55) before the owner runs the closing route gets no closing message, so the promise is not kept for it. Options: (a) reword to 'If matching does not open while your profile is active, we'll tell you and delete it' (copy only); (b) keep a chat-level opt-in after deletion (a new column, so a second migration, and longer retention); (c) keep as is. Proposal: (a)."
+      "notes": "Blocked: Q-18 (prd-3-decision-review.md, architect gaps). D64's sentence 'If matching does not open, we'll tell you and delete your profile' is built as worded (T084), but a profile that expires and is deleted 14 days later (D55) before the owner runs the closing route gets no closing message, so the promise is not kept for it. Options: (a) reword to 'If matching does not open while your profile is active, we'll tell you and delete it' (copy only); (b) keep a chat-level opt-in after deletion (a new column, so a second migration, and longer retention); (c) keep as is. Proposal: (a).\nOwner answer: Owner (D72, Q-18 (a)): reword the opt-in promise to \"If matching does not open while your profile is active, we will tell you and delete it\" (RU ty, UK ty, EN); copy only, amends D64."
     },
     {
       "id": "T087",
@@ -661,14 +661,14 @@
       "title": "Telling the person the appeal decision (Q-16, DSA Art. 20)",
       "spec": "docs/specs/07-roommate-matching.md#appeals-and-the-owners-review",
       "dependsOn": ["T096"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Built as the owner answers: either a manual POST /api/cron/roommate-appeal (cron secret, { profileId, decision: 'lifted' | 'upheld', confirm: true }) that applies the decision (lifted: unhide, unban, reports lifted) and sends one fixed message in the chat's locale, never scheduled; or only the README and terms say the decision comes by e-mail",
         "Tests: 401, 400 without confirm, each decision, one message, a repeat sending nothing"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-16 (prd-3-decision-review.md, architect gaps). DSA Art. 20 requires telling the complainant the decision on an appeal; the bot is the only channel to a person who appealed with /appeal, and the README SQL of T096 unhides silently. A route that sends a message is a new outward message and legal text (D56 drafts, owner approves). Options: (a) the manual route above, the owner triggers it per decision; (b) the owner answers appeals only by e-mail, and the /appeal acknowledgement says so. Proposal: (a).\nFrom T096: handleAppeal and recordAppeal (roommate-safety.ts, store.ts); the acknowledgement appealReceived (roommate-texts.ts) says a person reviews it and names contact@passflat.com, nothing about how the decision is told: option (b) changes that text. The README Owner review steps 2 – 3 are the unhide and unban such a route would apply (lifted reports also get automated=false, decided_at=now; expired_at set when the profile goes back to expired); appealed_at is kept by the unhide and cleared by the next hide."
+      "notes": "Blocked: Q-16 (prd-3-decision-review.md, architect gaps). DSA Art. 20 requires telling the complainant the decision on an appeal; the bot is the only channel to a person who appealed with /appeal, and the README SQL of T096 unhides silently. A route that sends a message is a new outward message and legal text (D56 drafts, owner approves). Options: (a) the manual route above, the owner triggers it per decision; (b) the owner answers appeals only by e-mail, and the /appeal acknowledgement says so. Proposal: (a).\nFrom T096: handleAppeal and recordAppeal (roommate-safety.ts, store.ts); the acknowledgement appealReceived (roommate-texts.ts) says a person reviews it and names contact@passflat.com, nothing about how the decision is told: option (b) changes that text. The README Owner review steps 2 – 3 are the unhide and unban such a route would apply (lifted reports also get automated=false, decided_at=now; expired_at set when the profile goes back to expired); appealed_at is kept by the unhide and cleared by the next hide.\nOwner answer: Owner (D73, Q-16 (a)): build the manual owner-triggered POST /api/cron/roommate-appeal that applies lifted or upheld and sends one fixed message; texts are agent drafts for owner approval (D56); time counts in the D65 weekly review."
     },
     {
       "id": "T098",
@@ -805,14 +805,14 @@
       "title": "E15 qualifying persons: apply the owner's answer to Q-15",
       "spec": "docs/specs/05-measurement-docs.md#stage-2-readout",
       "dependsOn": ["T104"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "docs/analytics/activation-funnels.md, docs/product/experiments.md (E15) and the stage 2 readout use the qualifying definition the owner chose, with a worked example",
         "No other rule of D52 or D60 changes"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: Q-15 (prd-3-decision-review.md, architect gaps). E15 counts as qualifying every person whose profile was created or renewed at least 14 days before the readout and not deleted before the switch. Stage 1 profiles created before about 2026-12-08 expire before a 2027-01-07 switch: they are never shown, never matched and get no 'matching is open' message, yet they sit in the denominator and pull the match rate toward the 15 % stop line (D60). Proposal: (a) qualifying = profile active at the switch or created after it, and at least 14 days old at the readout (tg_roommate_profile_expired, added for this, tells them apart); (b) keep the definition as decided. The readout already reports both rates; only the rule's choice waits."
+      "notes": "Blocked: Q-15 (prd-3-decision-review.md, architect gaps). E15 counts as qualifying every person whose profile was created or renewed at least 14 days before the readout and not deleted before the switch. Stage 1 profiles created before about 2026-12-08 expire before a 2027-01-07 switch: they are never shown, never matched and get no 'matching is open' message, yet they sit in the denominator and pull the match rate toward the 15 % stop line (D60). Proposal: (a) qualifying = profile active at the switch or created after it, and at least 14 days old at the readout (tg_roommate_profile_expired, added for this, tells them apart); (b) keep the definition as decided. The readout already reports both rates; only the rule's choice waits.\nOwner answer: Owner (D74, Q-15 (a)): E15 qualifying persons = profile active at the switch or created after it, and at least 14 days old at the readout; the readout still reports both rates."
     },
     {
       "id": "T105",

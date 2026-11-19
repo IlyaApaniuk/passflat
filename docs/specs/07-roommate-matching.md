@@ -296,7 +296,7 @@ FR-33; **Decided** (automatic, D49); text **agent draft** approved by the owner 
 ## Appeals and the owner's review
 
 FR-35; **Decided** (up to 10 minutes a week inside the 30-minute cap; the police on a threat,
-D65); **Assumption** (the commands).
+D65; telling the appeal decision through a manual route, D73); **Assumption** (the commands).
 
 - `/appeal`: a hidden profile with `appealed_at` null → set it and reply with a fixed
   acknowledgement that names contact@passflat.com and promises no time; a second `/appeal` →
@@ -313,11 +313,27 @@ D65); **Assumption** (the commands).
 - `COMMAND_MENU` does not list `/appeal` (it is named in the statement only).
 - Tests: the four `/appeal` cases.
 - **Telling the person the appeal decision** (DSA Art. 20; the bot is the only channel to them):
-  **Open** (PRD 3 Q-16, raised by the architect review). Proposal: a manual route
-  `POST /api/cron/roommate-appeal` (cron secret, body `{ profileId, decision: 'lifted' | 'upheld',
-confirm: true }`) that applies the decision and sends one fixed message in the chat's locale; or
-  the owner answers by e-mail only. Held by its own blocked task; nothing here is built before the
-  answer.
+  **Decided** (D73, the owner's answer to PRD 3 Q-16, 2026-11-19): a manual, owner-triggered
+  route `POST /api/cron/roommate-appeal`, guarded by `requireCronAuth`, never scheduled and not in
+  `vercel.json`, with the JSON body
+  `{ "profileId": "…", "decision": "lifted" | "upheld", "confirm": true }` (T109).
+  - Without the secret → 401; without `confirm: true`, or with an unknown decision → 400 and
+    nothing changes. An unknown profile, or one that is not hidden, changes and sends nothing.
+  - `lifted` applies the README's owner review steps in one go: the unhide (status back to
+    `active` when `expires_at` is in the future, else `expired` with `expired_at` set; `hidden_at`,
+    `hidden_reason` null; that target's reports `decision='lifted'`, `automated=false`,
+    `decided_at=now`; `appealed_at` kept), clears the chat's ban, then sends "profile restored".
+    `upheld` changes nothing and sends "the hide stays, and here is why", naming the hide's reason
+    as the statement of reasons does.
+  - One fixed message in the chat's locale (RU «ты», UK «ти», EN), new keys in
+    `roommate-texts.ts`; both texts are agent drafts for the owner's approval (D56), listed for
+    review in the task's progress entry. The send is claimed so a repeat call sends nothing
+    (**Assumption**: the claim reuses an existing field; if it needs a new column, and so a second
+    migration, block again with that finding). A 403 marks the chat blocked; the response is
+    counts only, never a chat id or text.
+  - The bot README's owner review names the route as the way to decide an appeal and says the
+    owner's time counts in the 10 minutes a week of D65.
+  - Tests: 401, 400 without confirm, each decision, one message, a repeat sending nothing.
 
 ## Terms and privacy drafts
 

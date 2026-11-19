@@ -192,15 +192,17 @@ A section "Roommate stage 1 (E14)" in `docs/analytics/activation-funnels.md`:
 
 ## Stage 2 readout
 
-PRD 3 FR-43; **Decided** (thresholds, D52; the stop rule and persons, D60); **Assumption** (query
-shape).
+PRD 3 FR-43; **Decided** (thresholds, D52; the stop rule and persons, D60; qualifying persons,
+D74); **Assumption** (query shape).
 
 A section "Roommate stage 2 (E15)" in `docs/analytics/activation-funnels.md`:
 
-1. HogQL for the match rate as E15 defines it (persons with `tg_roommate_profile_created` or
-   `tg_roommate_profile_renewed` at least 14 days before the readout and no
-   `tg_roommate_profile_deleted` before the switch → the share with at least one
-   `tg_roommate_matched` between the switch and the readout); pairs (`tg_roommate_matched` with
+1. HogQL for the match rate over qualifying persons (**Decided**, D74, the owner's answer to
+   PRD 3 Q-15, 2026-11-19: persons whose profile was active at `{switch_at}` or created after it,
+   and is at least 14 days old at the readout → the share with at least one `tg_roommate_matched`
+   between the switch and the readout; `tg_roommate_profile_expired` and
+   `tg_roommate_profile_deleted` before `{switch_at}` tell the profiles that were not active
+   apart; the stop rule of D60 reads this rate); pairs (`tg_roommate_matched` with
    `role=completer`); outcome persons (`renting_together` or `talking`); browsing persons
    (`tg_roommate_cards_viewed` after the switch); the push reading for H12 (persons with
    `tg_roommate_push_sent` → same-day `tg_roommate_cards_viewed`; persons with
@@ -208,10 +210,12 @@ A section "Roommate stage 2 (E15)" in `docs/analytics/activation-funnels.md`:
    Every query takes the switch moment as a parameter `{switch_at}` (the owner records it in the
    posting log and as a PostHog annotation, spec 07 §Switch). Outcome persons count only persons
    who also have `tg_roommate_matched`. The H12 push reading uses `tg_roommate_cards_viewed` with
-   `via=push`. Alongside the decided match rate, report (without a rule) the same rate over
-   persons whose profile was active at `{switch_at}` (no `tg_roommate_profile_expired` or
-   `tg_roommate_profile_deleted` before it); which one the stop rule uses is **Open** (PRD 3
-   Q-15).
+   `via=push`. Alongside it, report (without a rule) the rate under E15's earlier definition
+   (persons with `tg_roommate_profile_created` or `tg_roommate_profile_renewed` at least 14 days
+   before the readout and no `tg_roommate_profile_deleted` before the switch), so both rates stay
+   in the readout (T110 rewrites `docs/analytics/activation-funnels.md` and E15 in
+   `docs/product/experiments.md` to this, with a worked example; no other rule of D52 or D60
+   changes).
 2. A28: `has_username` on `tg_roommate_profile_created` (persons with and without a username at
    save), and `tg_roommate_username_prompted` → `tg_roommate_username_set` by `context`. Read-only
    SQL: a cross-check of mutual pairs among existing rows; pairs waiting on a username (matched,

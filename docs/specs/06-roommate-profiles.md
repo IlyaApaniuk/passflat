@@ -481,7 +481,7 @@ gender or "live with", D51); **Assumption** (the counting rules, D68).
 ## Room cost reference
 
 FR-17; **Decided** (room figures from the figure contract, groups apart with their N, D23; the
-per-person split, D61).
+per-person split, D61; apartments with 2 or more rooms only, D71).
 
 - For each district the person chose (or Warsaw for "any"):
   `loadAreaReference({ districtId, cityId, rentalType: 'room' })` from
@@ -499,36 +499,47 @@ per-person split, D61).
   its headline is an all-in total (not a known part) with N ≥ 2; X = the median ÷ 2 rounded half up
   to 10 zł (`roundHalfUpTo10`: 2,425 → 2,430; 2,424 → 2,420). Never from the asking group or a
   known part; the apartment area has its own level and says so. No percentage, no "cheaper",
-  never "market". Built as D61 says (all whole apartments, studios included); whether studios
-  should be left out of the split is **Open** (PRD 3 Q-17, raised by the architect review: halving
-  a studio's median can overstate what two people can share), held by its own blocked task; the
-  line's rendering sits in one function so the answer changes one filter.
+  never "market". **Decided** (D71, the owner's answer to PRD 3 Q-17, 2026-11-19): the split is
+  computed only from apartments with 2 or more rooms, so studios are left out (halving a studio's
+  median can overstate what two people can share). The figure contract's area loader gains a
+  rooms filter (`CostReport.rooms` ≥ 2; agent's reading: a report without a room count is left
+  out), the split's call passes it, and the level, N and "one observation" are those of the
+  filtered set; the room lines and every other caller of the loader are unchanged. Fewer reports
+  qualify, so the line appears less often. A consistency test (pattern of
+  `checker-consistency.test.ts`) shows the filtered loader and the split give the same median and
+  N over one fixture, and the checker's unfiltered area summary is unchanged. Built first as
+  D61 said (all whole apartments, T080); the line's rendering sits in one function, so the answer
+  changes one filter (T107).
 - Golden case (PRD 3 §5 example 2): Mokotów room reports R1 `user` 1,600 complete, R2 `import`
   1,800 complete, R3 – R7 `scraped` 1,400 / 1,500 / 1,550 / 1,700 / 2,000 known part → "tenant
   reports: 1,700 zł a month all-in (2 reports); asking prices in listings: 1,550 zł, known part of
   the costs (5 listings)"; Mokotów tenant apartment totals 4,200 / 4,600 / 4,800 / 4,900 / 5,100 /
   5,400 → "for two people about 2,430 zł each (half of the median flat, 6 tenant reports,
-  Mokotów)".
+  Mokotów)" under D61. Under D71 the same totals carry rooms 1 / 2 / 2 / 3 / 2 / 3: the studio
+  (4,200) is left out, the median of 4,600 / 4,800 / 4,900 / 5,100 / 5,400 is 4,900 → "for two
+  people about 2,450 zł each (half of the median flat, 5 tenant reports, Mokotów)".
 - Consistency test (pattern of `checker-consistency.test.ts`): the same fixture through the
   checker's area summary and this reply gives the same median and N per group.
 
 ## Opt-in
 
-FR-18; **Decided** (D49; the closing sentence, D64).
+FR-18; **Decided** (D49; the closing sentence, D64 as reworded by D72).
 
 - Under the counts reply while the switch is off: "Message me when matching opens"
   (`rm:c:optin`). The first tap sets `notify_on_open_at` and sends `tg_roommate_browse_opted_in`
   with `already=false`; a repeat tap replies "already on" and sends it with `already=true`. The
-  reply: "I'll message you once when matching opens." and "If matching does not open, we'll tell
-  you and delete your profile." (PRD 3 §8, RU/UK/EN).
+  reply: "I'll message you once when matching opens." and "If matching does not open while your
+  profile is active, we'll tell you and delete it." (D72; PRD 3 §8, RU «ты», UK «ти», EN).
 - The card shows the opt-in and lets the person switch it off (`rm:c:optout` clears
   `notify_on_open_at`).
 - With the switch on the button is not shown (people browse at once).
 - The profile expires before matching opens → no message (§Matching is open sends to active
   profiles only); the opt-in reply says the message comes while the profile is active (PRD 3
-  FR-18 edge case). The closing sentence is built exactly as D64 words it; that a profile which
-  expires and is deleted before the closing route gets no closing message is **Open** (PRD 3
-  Q-18, raised by the architect review), held by its own blocked task.
+  FR-18 edge case). A profile that expires and is deleted before the closing route gets no
+  closing message; **Decided** (D72, the owner's answer to PRD 3 Q-18, 2026-11-19): the closing
+  sentence is reworded to "If matching does not open while your profile is active, we'll tell you
+  and delete it" in RU, UK and EN, copy only: no new column, no second migration, and the closing
+  route is unchanged (T108; built first as D64 worded it, T084).
 - `texts.test.ts` (or `roommate-texts.test.ts`): the notification-promise check runs over the
   roommate texts too; the two sentences are allowed only for their two keys, and the test names
   the key with its backing code: the one-time message → `sendMatchingOpenMessages`

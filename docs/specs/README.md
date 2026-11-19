@@ -82,11 +82,12 @@ blocked tasks T107 – T110 at the end of the table; the rest of each requiremen
 decided. FR-24 is built in M2 (T081) because the one-time message of FR-19 counts compatible
 people. Final check (T105, 2026-11-19): every PRD 3 task except the four blocked ones is done;
 every FR-1 – FR-44 row is Done. Built and tested on `chore/agent-harness`, not deployed; the
-owner's handoff is the T105 entry of `ralph/progress.md`. Each blocked row waits for one owner
-question: Q-17 (T107) whether the per-person split leaves out studios; Q-18 (T108) whether the
-opt-in's closing promise is reworded for profiles that expire first; Q-16 (T109) how the person
-hears the appeal decision (DSA Art. 20); Q-15 (T110) which persons qualify for the E15 match
-rate.
+owner's handoff is the T105 entry of `ralph/progress.md`. The owner answered the four questions
+on 2026-11-19 (D71 – D74) and the rows are Planned: Q-17 (T107) the per-person split uses
+apartments with 2 or more rooms only (D71); Q-18 (T108) the opt-in's closing promise is reworded
+to an active profile (D72); Q-16 (T109) a manual route tells the person the appeal decision in
+the bot (D73); Q-15 (T110) qualifying persons for the E15 match rate are those active at the
+switch or created after it, at least 14 days old at the readout (D74).
 
 | FR           | Requirement                                            | Spec                                                                                                                               | Tasks                  | Status  |
 | ------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------- |
@@ -134,10 +135,10 @@ rate.
 | FR-12 (gap)  | Save after the move-in month passed in the draft       | [06 §Save and the own card](06-roommate-profiles.md#save-and-the-own-card)                                                         | T111                   | Done    |
 | FR-24 (gap)  | Checker area: one observation names the area (PRD 1)   | [03 §Checker](03-building-figures.md#checker)                                                                                      | T112                   | Done    |
 | FR-32 (gap)  | A report stored just after a hide is decided and told  | [07 §Automatic hiding](07-roommate-matching.md#automatic-hiding)                                                                   | T113                   | Done    |
-| FR-17 (Q-17) | Per-person split without studios, if the owner says so | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T107                   | Blocked |
-| FR-18 (Q-18) | The closing promise for profiles that expire first     | [06 §Opt-in](06-roommate-profiles.md#opt-in)                                                                                       | T108                   | Blocked |
-| FR-35 (Q-16) | Telling the person the appeal decision (DSA Art. 20)   | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T109                   | Blocked |
-| FR-43 (Q-15) | E15 qualifying persons                                 | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T110                   | Blocked |
+| FR-17 (Q-17) | Per-person split without studios, as the owner decided | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T107                   | Planned |
+| FR-18 (Q-18) | The closing promise for profiles that expire first     | [06 §Opt-in](06-roommate-profiles.md#opt-in)                                                                                       | T108                   | Planned |
+| FR-35 (Q-16) | Telling the person the appeal decision (DSA Art. 20)   | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T109                   | Planned |
+| FR-43 (Q-15) | E15 qualifying persons                                 | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T110                   | Planned |
 
 ## Requirement map (PRD 1, done)
 
