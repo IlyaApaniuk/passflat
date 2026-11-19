@@ -1091,9 +1091,10 @@ Parameters (replace them as text before you run a query; Europe/Warsaw, the end 
 
 | Number                       | What it counts                                                                                                                                                              | From                    |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Qualifying persons           | persons with `tg_roommate_profile_created` or `tg_roommate_profile_renewed` ≥ 14 days before `{readout_at}` and no `tg_roommate_profile_deleted` before `{switch_at}` (E15) | PostHog, query G        |
+| Qualifying persons           | persons whose profile was active at `{switch_at}`, or was created after it and is ≥ 14 days old at `{readout_at}` (E15, D74; "active" as query G reads it, §8.1)            | PostHog, query G        |
 | Match rate                   | qualifying persons with ≥ 1 `tg_roommate_matched` (either role) from `{switch_at}` to `{readout_at}` ÷ qualifying persons                                                   | PostHog, query G        |
-| Match rate, active at switch | the same over qualifying persons with no `tg_roommate_profile_expired` or `tg_roommate_profile_deleted` before `{switch_at}`; reported without a rule (Q-15)                | PostHog, query G        |
+| Earlier E15 persons          | persons with `tg_roommate_profile_created` or `tg_roommate_profile_renewed` ≥ 14 days before `{readout_at}` and no `tg_roommate_profile_deleted` before `{switch_at}` (E15) | PostHog, query G        |
+| Match rate, earlier E15 rule | the same over earlier E15 persons; reported without a rule (D74)                                                                                                            | PostHog, query G        |
 | Pairs                        | `tg_roommate_matched` events with `role = 'completer'` in the window: one per pair                                                                                          | PostHog, query G        |
 | Outcome persons              | persons with `tg_roommate_matched` in the window and a `tg_roommate_outcome` of `renting_together` or `talking` in it                                                       | PostHog, query G        |
 | Browsing persons             | persons with ≥ 1 `tg_roommate_cards_viewed` in the window                                                                                                                   | PostHog, query G        |
@@ -1110,14 +1111,16 @@ Each query groups by person first, so it counts persons (and pairs as events), n
 returns counts only, never a `distinct_id`.
 
 ```sql
--- HogQL. Query G, E15 (1): qualifying persons, both match rates, pairs, outcome persons and
--- browsing persons, and the "no data" check. One row. Replace {switch_at} and {readout_at}.
+-- HogQL. Query G, E15 (1): qualifying persons (D74) and the persons of E15's earlier
+-- definition with their match rates, pairs, outcome persons and browsing persons, and the
+-- "no data" check. One row. Replace {switch_at} and {readout_at}.
 SELECT
     sum(events_in_window) AS roommate_events_in_window,
-    countIf(qualifying) AS qualifying_persons,
-    countIf(qualifying AND matched) AS qualifying_with_match,
-    countIf(qualifying AND active_at_switch) AS qualifying_active_at_switch,
-    countIf(qualifying AND active_at_switch AND matched) AS active_at_switch_with_match,
+    countIf(active_at_switch OR created_after_switch) AS qualifying_persons,
+    countIf((active_at_switch OR created_after_switch) AND matched) AS qualifying_with_match,
+    countIf(active_at_switch) AS qualifying_active_at_switch,
+    countIf(earlier_qualifying) AS earlier_qualifying_persons,
+    countIf(earlier_qualifying AND matched) AS earlier_qualifying_with_match,
     countIf(matched) AS matched_persons,
     sum(completer_events) AS pairs,
     countIf(matched AND good_outcome) AS outcome_persons,
@@ -1127,12 +1130,20 @@ FROM (
         distinct_id,
         countIf(timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
             AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) AS events_in_window,
+        (argMaxIf(event, timestamp, event IN ('tg_roommate_profile_created',
+                'tg_roommate_profile_renewed', 'tg_roommate_profile_expired',
+                'tg_roommate_profile_deleted')
+            AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw'))
+            IN ('tg_roommate_profile_created', 'tg_roommate_profile_renewed')) AS active_at_switch,
+        (countIf(event = 'tg_roommate_profile_created'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw') - INTERVAL 14 DAY) > 0)
+            AS created_after_switch,
         (countIf(event IN ('tg_roommate_profile_created', 'tg_roommate_profile_renewed')
             AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw') - INTERVAL 14 DAY) > 0
             AND countIf(event = 'tg_roommate_profile_deleted'
-                AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw')) = 0) AS qualifying,
-        (countIf(event IN ('tg_roommate_profile_expired', 'tg_roommate_profile_deleted')
-            AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw')) = 0) AS active_at_switch,
+                AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw')) = 0)
+            AS earlier_qualifying,
         (countIf(event = 'tg_roommate_matched'
             AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
             AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) > 0) AS matched,
@@ -1230,15 +1241,35 @@ FROM (
 
 Read them with these facts:
 
-- **Match rate** = `qualifying_with_match` ÷ `qualifying_persons`; **active at switch** =
-  `active_at_switch_with_match` ÷ `qualifying_active_at_switch`. At the 14-day readout "≥ 14 days
-  before the readout" is "before the switch". The rules (§8.3) read the first; whether they should
-  read the second is **Open** (PRD 3 Q-15, blocked task T110), so both are reported.
-- E15's definitions are applied as written, per person: a person who deleted a profile before the
-  switch and created a new one is not qualifying; a person whose profile expired and was renewed
-  before the switch is left out of "active at switch" although it was active then. A profile hidden
-  by moderation before the switch stays in both (a hide sends `tg_roommate_profile_hidden`, not an
-  expiry or a delete). Name such cases in the readout when they change a result.
+- **Match rate** = `qualifying_with_match` ÷ `qualifying_persons`, over the qualifying persons of
+  D74 (the owner's answer to PRD 3 Q-15, 2026-11-19); the rules (§8.3) read it. **Earlier E15
+  rule** = `earlier_qualifying_with_match` ÷ `earlier_qualifying_persons`, over E15's definition
+  before D74; it is reported next to the first, without a rule, so the readout shows what D74
+  changed.
+- **Qualifying (D74)**, per person: the profile was active at `{switch_at}` (`active_at_switch`),
+  or was created after it at least 14 days before `{readout_at}` (`created_after_switch`). "Active
+  at the switch" is read from the events: the person's last `tg_roommate_profile_created`,
+  `tg_roommate_profile_renewed`, `tg_roommate_profile_expired` or `tg_roommate_profile_deleted`
+  before `{switch_at}` is a create or a renewal. Both readouts end at least 14 days after
+  `{switch_at}`, so a profile active at the switch is at least 14 days old at the readout. At the
+  14-day readout `{readout_at}` − 14 days is `{switch_at}`, so no profile created after the switch
+  is old enough: `qualifying_persons` = `qualifying_active_at_switch`. The "created after it" part
+  counts only at the final readout, where no rule reads the match rate.
+- Cases, per person (name them in the readout when they change a result):
+  - a profile that expired before the switch and was not renewed by then is not qualifying under
+    D74 (it was never shown); the earlier rule counts it until its grace-period delete;
+  - a profile that expired and was renewed before the switch, and a person who deleted a profile
+    and created a new one before the switch, are active at the switch; the earlier rule leaves the
+    second out (a delete before the switch);
+  - a profile that expired before the switch and was renewed after it was neither active at the
+    switch nor created after it, so it is not qualifying (agent's reading of "created after it");
+  - a person whose profile was active at the switch stays qualifying after a later delete, as a
+    pair who deleted their profiles after matching still counts;
+  - a profile hidden by moderation before the switch counts as active (a hide sends
+    `tg_roommate_profile_hidden`, not an expiry or a delete, and a lifted hide sends nothing);
+  - the daily cron marks an expiry at its next run (08:00 and 09:00 UTC), so a profile whose
+    `expires_at` passed after the last run before `{switch_at}` has no
+    `tg_roommate_profile_expired` yet and counts as active: at most one day's expiries.
 - `tg_roommate_matched` fires once per person of a new pair: `role = 'completer'` for the tap that
   formed it, `role = 'waiting'` under the other person's chat (§1). So `pairs` counts each pair once,
   and `matched_persons` is about twice `pairs`.
@@ -1310,8 +1341,9 @@ How to read the cross-check:
 
 ### 8.3 Rules
 
-The thresholds (D52 and D60, **Assumptions** set by the owner). The match-rate rules read the E15
-match rate; the active-at-switch rate is reported next to it without a rule (Q-15 open, §8.1).
+The thresholds (D52 and D60, **Assumptions** set by the owner). The match-rate rules read the
+match rate over the qualifying persons of D74; the earlier E15 rule's rate is reported next to it
+without a rule (§8.1).
 
 - **At switch + 14 days, continue** if the match rate is ≥ 30 %.
 - **At switch + 14 days, stop** (D60) if fewer than 15 % of qualifying persons have a match, or if
@@ -1327,8 +1359,8 @@ match rate; the active-at-switch rate is reported next to it without a rule (Q-1
 
 ### 8.4 Worked examples
 
-The E15 examples (`docs/product/experiments.md`, "E15, stop rule (D60)"): switch 2027-01-08,
-readout 2027-01-22.
+The E15 examples (`docs/product/experiments.md`, "E15, qualifying persons (D74)" and "E15, stop
+rule (D60)"): switch 2027-01-08, readout 2027-01-22.
 
 | Case             | Numbers                                        | Rule                              | Result                                 |
 | ---------------- | ---------------------------------------------- | --------------------------------- | -------------------------------------- |
@@ -1338,6 +1370,25 @@ readout 2027-01-22.
 | Too few to read  | 9 qualifying, 4 with a match                   | fewer than 10 qualifying          | counts only: "the rule cannot be read" |
 
 In the first case the pair rule waits for about 2027-03-31: 5 pairs so far is not yet "below 10".
+
+Who qualifies (D74), with the switch at 2027-01-08 10:30 and the readout at 2027-01-22 10:30.
+Every profile below lives 30 days (`PROFILE_LIFE_DAYS`; its move-in month ends later), and the
+daily cron deletes an expired one 14 days after its expiry (`GRACE_DAYS`):
+
+| Person | Profile events                                             | D74                                               | Earlier E15 rule               |
+| ------ | ---------------------------------------------------------- | ------------------------------------------------- | ------------------------------ |
+| A      | created 2026-11-20, expired 2026-12-20, deleted 2027-01-03 | no: deleted before the switch                     | no: deleted before the switch  |
+| B      | created 2026-12-01, expired 2026-12-31, deleted 2027-01-14 | no: expired at the switch, never shown            | yes                            |
+| C      | created 2026-12-01, renewed 2026-12-29                     | yes: active at the switch                         | yes                            |
+| D      | created 2026-12-20 (expires 2027-01-19, in the window)     | yes: active at the switch                         | yes                            |
+| E      | created 2026-11-25, deleted 2026-12-15, created 2026-12-28 | yes: active at the switch                         | no: deleted before the switch  |
+| F      | created 2027-01-10                                         | no: under 14 days old (at the final readout: yes) | no (at the final readout: yes) |
+
+D74 counts C, D and E; the earlier E15 rule counts B, C and D. Over a whole readout: 30 earlier
+E15 persons, 7 of them like B, and 1 more person like E give 30 − 7 + 1 = 24 qualifying persons.
+Say 8 persons matched, all among the 23 persons both rules count (the 7 were never shown, and E
+did not match): the match rate is 8 ÷ 24 = 33 % and the 14-day rule holds (the first row above);
+the earlier E15 rule's rate is 8 ÷ 30 = 26.7 %, between 15 % and 30 %, where no rule holds.
 
 ### 8.5 No data, the PostHog project and the season
 

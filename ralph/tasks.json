@@ -805,13 +805,13 @@
       "title": "E15 qualifying persons: apply the owner's answer to Q-15",
       "spec": "docs/specs/05-measurement-docs.md#stage-2-readout",
       "dependsOn": ["T104"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "docs/analytics/activation-funnels.md, docs/product/experiments.md (E15) and the stage 2 readout use the qualifying definition the owner chose, with a worked example",
         "No other rule of D52 or D60 changes"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-15 (prd-3-decision-review.md, architect gaps). E15 counts as qualifying every person whose profile was created or renewed at least 14 days before the readout and not deleted before the switch. Stage 1 profiles created before about 2026-12-08 expire before a 2027-01-07 switch: they are never shown, never matched and get no 'matching is open' message, yet they sit in the denominator and pull the match rate toward the 15 % stop line (D60). Proposal: (a) qualifying = profile active at the switch or created after it, and at least 14 days old at the readout (tg_roommate_profile_expired, added for this, tells them apart); (b) keep the definition as decided. The readout already reports both rates; only the rule's choice waits.\nOwner answer: Owner (D74, Q-15 (a)): E15 qualifying persons = profile active at the switch or created after it, and at least 14 days old at the readout; the readout still reports both rates."
     },
     {

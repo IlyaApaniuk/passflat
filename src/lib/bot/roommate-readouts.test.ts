@@ -7,8 +7,11 @@ import { activeProfilesWhere } from '@/lib/roommate/counts';
 import {
   BUDGET_BANDS,
   DRAFT_LIFE_DAYS,
+  GRACE_DAYS,
   OUTCOMES,
   OUTCOME_QUESTION_DAYS,
+  PROFILE_LIFE_DAYS,
+  RENEWAL_REMINDER_DAYS,
 } from '@/lib/roommate/rules';
 
 import { trackCalls } from './track-calls.test-support';
@@ -311,6 +314,39 @@ const STAGE_2_SQL = STAGE_2_BLOCKS.filter((block) => block.kind === 'sql');
 /** `toDateTime('{switch_at}', ...)` / `{readout_at}` as the HogQL writes them. */
 const AT = (name: 'switch_at' | 'readout_at') => `toDateTime\\('\\{${name}\\}', 'Europe/Warsaw'\\)`;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A Europe/Warsaw winter (CET) wall-clock moment, as the worked examples write it. */
+const warsawWinter = (date: string, time = '00:00') => Date.parse(`${date}T${time}:00+01:00`);
+
+type LifecycleEvent = { kind: string; at: number };
+
+/**
+ * D74 as query G reads it, per person: the last create, renewal, expiry or delete before the
+ * switch is a create or a renewal, or a create falls between the switch and 14 days before the
+ * readout.
+ */
+function qualifiesD74(events: LifecycleEvent[], switchAt: number, readoutAt: number): boolean {
+  const before = events.filter((event) => event.at < switchAt).sort((a, b) => a.at - b.at);
+  const last = before[before.length - 1]?.kind;
+  const createdAfter = events.some(
+    (event) =>
+      event.kind === 'created' && event.at >= switchAt && event.at < readoutAt - 14 * DAY_MS,
+  );
+  return last === 'created' || last === 'renewed' || createdAfter;
+}
+
+/** E15's earlier definition, as query G's `earlier_qualifying` reads it. */
+function qualifiesEarlier(events: LifecycleEvent[], switchAt: number, readoutAt: number): boolean {
+  return (
+    events.some(
+      (event) =>
+        (event.kind === 'created' || event.kind === 'renewed') &&
+        event.at < readoutAt - 14 * DAY_MS,
+    ) && !events.some((event) => event.kind === 'deleted' && event.at < switchAt)
+  );
+}
+
 describe('the roommate stage 2 readout (activation-funnels.md)', () => {
   it('has the parts of spec 05 §Stage 2 readout', () => {
     for (const part of [
@@ -325,7 +361,10 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
     const text = STAGE_2.replace(/\s+/g, ' ');
     expect(text).toContain('"Switch on at:"');
     expect(text).toContain('**No data, not 0.**');
-    expect(text).toContain('**Open** (PRD 3 Q-15');
+    expect(text).not.toContain('**Open**');
+    expect(text).toContain(
+      "D74 (the owner's answer to PRD 3 Q-15, 2026-11-19); the rules (§8.3) read it",
+    );
     expect(text).toContain(
       `${OUTCOME_QUESTION_DAYS} days after the match (\`OUTCOME_QUESTION_DAYS\`)`,
     );
@@ -371,16 +410,38 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
     expect(checked).toBeGreaterThanOrEqual(20);
   });
 
-  it('counts qualifying persons, both match rates, pairs, outcome and browsing persons (query G)', () => {
+  it('counts qualifying persons (D74), the earlier E15 persons, pairs, outcome and browsing persons (query G)', () => {
     const g = queryBlock(STAGE_2_HOGQL, 'G');
-    const qualifying = new RegExp(
-      `event IN \\('tg_roommate_profile_created', 'tg_roommate_profile_renewed'\\)\\s+AND timestamp < ${AT('readout_at')} - INTERVAL 14 DAY\\) > 0\\s+AND countIf\\(event = 'tg_roommate_profile_deleted'\\s+AND timestamp < ${AT('switch_at')}\\) = 0\\) AS qualifying\\b`,
-    );
-    expect(g).toMatch(qualifying);
+    // D74: active at the switch = the last create, renewal, expiry or delete before it is a create
+    // or a renewal; or created after the switch and at least 14 days before the readout.
     const activeAtSwitch = new RegExp(
-      `event IN \\('tg_roommate_profile_expired', 'tg_roommate_profile_deleted'\\)\\s+AND timestamp < ${AT('switch_at')}\\) = 0\\) AS active_at_switch\\b`,
+      `\\(argMaxIf\\(event, timestamp, event IN \\('tg_roommate_profile_created',\\s+'tg_roommate_profile_renewed', 'tg_roommate_profile_expired',\\s+'tg_roommate_profile_deleted'\\)\\s+AND timestamp < ${AT('switch_at')}\\)\\s+IN \\('tg_roommate_profile_created', 'tg_roommate_profile_renewed'\\)\\) AS active_at_switch\\b`,
     );
     expect(g).toMatch(activeAtSwitch);
+    const createdAfterSwitch = new RegExp(
+      `\\(countIf\\(event = 'tg_roommate_profile_created'\\s+AND timestamp >= ${AT('switch_at')}\\s+AND timestamp < ${AT('readout_at')} - INTERVAL 14 DAY\\) > 0\\)\\s+AS created_after_switch\\b`,
+    );
+    expect(g).toMatch(createdAfterSwitch);
+    // E15's earlier definition, reported without a rule (spec 05 §Stage 2 readout).
+    const earlier = new RegExp(
+      `event IN \\('tg_roommate_profile_created', 'tg_roommate_profile_renewed'\\)\\s+AND timestamp < ${AT('readout_at')} - INTERVAL 14 DAY\\) > 0\\s+AND countIf\\(event = 'tg_roommate_profile_deleted'\\s+AND timestamp < ${AT('switch_at')}\\) = 0\\)\\s+AS earlier_qualifying\\b`,
+    );
+    expect(g).toMatch(earlier);
+    for (const column of [
+      'countIf(active_at_switch OR created_after_switch) AS qualifying_persons',
+      'countIf((active_at_switch OR created_after_switch) AND matched) AS qualifying_with_match',
+      'countIf(active_at_switch) AS qualifying_active_at_switch',
+      'countIf(earlier_qualifying) AS earlier_qualifying_persons',
+      'countIf(earlier_qualifying AND matched) AS earlier_qualifying_with_match',
+    ]) {
+      expect(g).toContain(column);
+    }
+    expect(withoutComments(g)).not.toMatch(/\bAS qualifying\b/);
+    // The prose reads the rates from these columns.
+    const text = STAGE_2.replace(/\s+/g, ' ');
+    expect(text).toContain('`qualifying_with_match` ÷ `qualifying_persons`');
+    expect(text).toContain('`earlier_qualifying_with_match` ÷ `earlier_qualifying_persons`');
+    expect(text).toContain('`qualifying_persons` = `qualifying_active_at_switch`');
     const inWindow = (event: string) =>
       new RegExp(
         `event = '${event}'(?:(?!countIf)[\\s\\S])*?AND timestamp >= ${AT('switch_at')}\\s+AND timestamp < ${AT('readout_at')}\\)`,
@@ -392,10 +453,6 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
     ]) {
       expect(g).toMatch(inWindow(event));
     }
-    expect(g).toContain('countIf(qualifying AND matched) AS qualifying_with_match');
-    expect(g).toContain(
-      'countIf(qualifying AND active_at_switch AND matched) AS active_at_switch_with_match',
-    );
     expect(g).toContain('countIf(matched AND good_outcome) AS outcome_persons');
     expect(g).toContain('countIf(browsing) AS browsing_persons');
 
@@ -491,6 +548,70 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
     expect(text).toContain('5 pairs so far');
     expect(text).toContain('22 browsing persons, no `completer` event');
     expect(text).toContain('"the rule cannot be read"');
+  });
+
+  it('applies D74 and the earlier E15 rule in the worked example, with the profile life and grace', () => {
+    const text = STAGE_2.replace(/\s+/g, ' ');
+    expect(text).toContain(
+      'with the switch at 2027-01-08 10:30 and the readout at 2027-01-22 10:30',
+    );
+    const switchAt = warsawWinter('2027-01-08', '10:30');
+    const readoutAt = warsawWinter('2027-01-22', '10:30');
+    const finalAt = Date.parse('2027-04-01T00:00:00+02:00'); // `2027-04-01 00:00:00`, Warsaw summer time
+    // At the 14-day readout nobody created after the switch is 14 days old yet.
+    expect(readoutAt - 14 * DAY_MS).toBe(switchAt);
+
+    const rows = [...STAGE_2.matchAll(/^\| ([A-F]) +\| (.+?) +\| (.+?) +\| (.+?) +\|$/gm)];
+    expect(rows.map((row) => row[1])).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    const verdict = (cell: string) => /^(yes|no)\b/.exec(cell)?.[1];
+    const atFinal = (cell: string) =>
+      cell.includes('(at the final readout: yes)') ? 'yes' : verdict(cell);
+    const word = (qualifies: boolean) => (qualifies ? 'yes' : 'no');
+    const counted = { d74: [] as string[], earlier: [] as string[] };
+
+    for (const [, person, eventsCell, d74Cell, earlierCell] of rows) {
+      const events = [
+        ...eventsCell.matchAll(/\b(created|renewed|expired|deleted) (\d{4}-\d{2}-\d{2})/g),
+      ].map(([, kind, date]) => ({ kind, at: warsawWinter(date) }));
+      expect(events.length, person).toBeGreaterThan(0);
+
+      // The dates follow PROFILE_LIFE_DAYS, the renewal window and GRACE_DAYS.
+      let life = NaN;
+      let expiredAt = NaN;
+      for (const event of events) {
+        const days = (from: number) => (event.at - from) / DAY_MS;
+        if (event.kind === 'renewed') {
+          expect(PROFILE_LIFE_DAYS - days(life), person).toBeLessThanOrEqual(RENEWAL_REMINDER_DAYS);
+        }
+        if (event.kind === 'created' || event.kind === 'renewed') life = event.at;
+        if (event.kind === 'expired') {
+          expect(days(life), person).toBe(PROFILE_LIFE_DAYS);
+          expiredAt = event.at;
+        }
+        if (event.kind === 'deleted' && !Number.isNaN(expiredAt)) {
+          expect(days(expiredAt), person).toBe(GRACE_DAYS);
+        }
+      }
+      const expires = /\(expires (\d{4}-\d{2}-\d{2})/.exec(eventsCell)?.[1];
+      if (expires) expect((warsawWinter(expires) - life) / DAY_MS, person).toBe(PROFILE_LIFE_DAYS);
+
+      expect(verdict(d74Cell), person).toBe(word(qualifiesD74(events, switchAt, readoutAt)));
+      expect(verdict(earlierCell), person).toBe(
+        word(qualifiesEarlier(events, switchAt, readoutAt)),
+      );
+      expect(atFinal(d74Cell), person).toBe(word(qualifiesD74(events, switchAt, finalAt)));
+      expect(atFinal(earlierCell), person).toBe(word(qualifiesEarlier(events, switchAt, finalAt)));
+      if (verdict(d74Cell) === 'yes') counted.d74.push(person);
+      if (verdict(earlierCell) === 'yes') counted.earlier.push(person);
+    }
+    expect(counted).toEqual({ d74: ['C', 'D', 'E'], earlier: ['B', 'C', 'D'] });
+    expect(text).toContain('D74 counts C, D and E; the earlier E15 rule counts B, C and D.');
+
+    expect(text).toContain('30 − 7 + 1 = 24 qualifying persons');
+    expect(30 - 7 + 1).toBe(24);
+    expect(text).toContain('the match rate is 8 ÷ 24 = 33 % and the 14-day rule holds');
+    expect(text).toContain("the earlier E15 rule's rate is 8 ÷ 30 = 26.7 %, between 15 % and 30 %");
+    expect(((8 / 30) * 100).toFixed(1)).toBe('26.7');
   });
 });
 

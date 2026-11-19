@@ -120,7 +120,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Every roommate cron message goes through `createCronSender` (`src/lib/bot/roommate-daily.ts`) as a `MessageJob` in `MESSAGE_JOBS`; test a job with `runRoommateDaily(api, NOW, { jobs: [job], clock: fakeClock() })` (example: `reminderJob` in `roommate-daily.test.ts`).
 - A one-time button with no row to claim (e.g. `rm:dr:*` after a delete) is guarded by `await ctx.editMessageReplyMarkup()` first: a second removal throws "message is not modified", which `roommateCallback` swallows; tests fake it with `messageWithButtons()` in `roommate-delete.test.ts`.
 - `roommate-daily.ts` never imports `roommate-flow.ts` (it would pull the whole conversation into the cron and its tests): cron buttons use the `rm:` strings, and a test that registers the flow checks that each routes to one handler (example: `roommate-renewal.test.ts`).
-- Prettier re-pads a whole Markdown table when one cell grows past its column width: keep an edited cell within the existing width, or the diff touches every row.
+- Prettier re-pads a whole Markdown table when one cell grows past its column width, and also when the widest cell shrinks: keep an edited cell within the existing width (the widest one at exactly its old length, measured with `[...s].length`), or the diff touches every row.
 - "I'm 18+" (`rm:a:yes`) replies with the card and then the counts (`loadRoommateCounts` → `roommateProfile.findMany` with `expiresAt: { gt }` and the `chat` relation): a test Prisma fake without `findMany` gets "counts unavailable" as the last reply; `roommate-counts.test.ts` has a fake that applies that `where`.
 - "Active" roommate profiles (spec 06 §Counts) are `activeProfilesWhere(now)` in `src/lib/roommate/counts.ts`; every visibility query (counts, `findCompatible`, cards) spreads it instead of restating the filter. Compatibility is `isCompatible` (`compatibility.ts`); candidates are `findCompatible` (`store.ts`).
 - A switch-on-only cron job goes into `MESSAGE_JOBS` as `switchOnOnly(job)` (`roommate-daily.ts`); a whole default run over profiles, chats, reactions and reports (housekeeping, reminder, `findCompatible`) has a ready Prisma fake in `src/lib/bot/roommate-open-message.test.ts`.
@@ -3495,3 +3495,57 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Lawyer question to add to the D69 list:** DSA Art. 20(5) asks to name out-of-court dispute settlement (Art. 21). The upheld redress names only UKE and court, as the statement of reasons and the terms do. Also: whether Art. 19 (micro and small enterprises) exempts Passflat from Art. 20 at all.
   - No new table, migration or event. The new route needs `CRON_SECRET`, which already exists.
 - Next: `node scripts/ralph-tasks.mjs next` (T110).
+
+### 2026-11-19 22:36 · T110 · done
+
+- Done:
+  - `docs/analytics/activation-funnels.md` §8, the E15 qualifying persons of D74 (Q-15 (a)):
+    - Number table: "Qualifying persons" is D74's. "Earlier E15 persons" and "Match rate, earlier E15 rule" keep the old definition, reported without a rule. The "active at switch" row is gone. Column widths are kept.
+    - Query G:
+      - `active_at_switch`: the person's last `tg_roommate_profile_created` / `_renewed` / `_expired` / `_deleted` before `{switch_at}` is a create or a renewal (`argMaxIf(event, timestamp, …) IN (…)`). This replaces the old "no expiry or delete before the switch", so a renewal or a re-created profile before the switch now counts.
+      - `created_after_switch`: a create in `[{switch_at}, {readout_at} − 14 days)`.
+      - `earlier_qualifying`: the old definition.
+      - Outer columns: `qualifying_persons` / `qualifying_with_match` (= `active_at_switch OR created_after_switch`), `qualifying_active_at_switch`, `earlier_qualifying_persons` / `earlier_qualifying_with_match`. The `active_at_switch_with_match` column is dropped.
+    - Reading notes:
+      - Both readouts end ≥ 14 days after the switch, so a profile active at the switch is ≥ 14 days old.
+      - At the 14-day readout `qualifying_persons` = `qualifying_active_at_switch`. The "created after it" part counts only at the final readout, where no rule reads the match rate.
+      - The cases: expired at the switch; renewed or re-created before it; renewed after it; deleted after it; hidden; a cron expiry not yet marked.
+    - §8.3: the rules read D74's rate.
+    - §8.4: a new worked example.
+      - Per person: A – F with dates from `PROFILE_LIFE_DAYS` / `GRACE_DAYS` / the renewal window. D74 counts C, D, E; the earlier rule counts B, C, D.
+      - Over a readout: 30 earlier persons − 7 expired at the switch + 1 re-created = 24 qualifying; 8 ÷ 24 = 33 % holds, against 8 ÷ 30 = 26.7 % (no rule).
+  - `docs/product/experiments.md`:
+    - E15 row metric (1) uses D74 (the cell is kept at its old width).
+    - A new note "E15, qualifying persons (D74)" with the worked example. The stop-rule note points to it.
+  - `docs/specs/README.md`: FR-43 (Q-15) row → Done, and the intro's Q-15 line. Prettier re-padded the whole map, whitespace only: the last "Planned" was the Status column's widest cell.
+  - Left alone, as T108 did: the PRD 3 text (FR-43 and Q-15 still quote the old definition; `decisions.md` D74 supersedes it) and spec 05, which already holds D74.
+  - No other rule of D52 or D60 changed: the thresholds, the browsing rule, the < 10 "cannot be read", the 2027-03-31 rules and outcomes as persons are as before.
+- Tests (`src/lib/bot/roommate-readouts.test.ts`, 25 tests, +1):
+  - Query G:
+    - regexes for `active_at_switch` (the four lifecycle events, last before the switch), `created_after_switch` and `earlier_qualifying`;
+    - the five outer columns, and no leftover `AS qualifying`;
+    - the prose names the columns the rates read.
+  - The "Open (PRD 3 Q-15" check is replaced by "no **Open**" plus the D74 sentence.
+  - New worked-example test:
+    - it parses the A – F table and checks each date against `PROFILE_LIFE_DAYS`, `RENEWAL_REMINDER_DAYS` and `GRACE_DAYS`;
+    - it evaluates D74 and the earlier rule per person at the 14-day readout and at the final readout (`2027-04-01 00:00` CEST), against the table's yes / no;
+    - it checks `{readout_at}` − 14 days = `{switch_at}` and the arithmetic (24, 33 %, 26.7 %).
+  - Mutation checks, both reverted: B's D74 cell flipped to "yes" → the test fails; B's delete date moved by one day → "expected 15 to be 14".
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-readouts.test.ts`: 25 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 142 files / 3031 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. Nothing deployed, no query run against PostHog or the database, no migration, no message sent.
+- Did not work: a cell that is shorter than the old widest cell re-pads a Markdown table too, not only a longer one. I restored the old widths with a scratchpad padding script, and gave the experiments cell exactly the old length.
+- Owner review:
+  - **Agent's readings of D74 (the query shape is an Assumption, spec 05):**
+    - "Active at the switch" is read from the events, as spec 05 names them (`_expired` / `_deleted` tell them apart). A renewal or a new create before the switch makes the person active again. A hidden profile counts as active: a hide sends `tg_roommate_profile_hidden`, and a lifted hide sends nothing.
+    - "Created after it" is taken literally: a profile that expired before the switch and was renewed after it does not qualify. It cannot change the 14-day readout, the only one whose rule reads the match rate.
+    - A person active at the switch who deletes later stays qualifying.
+    - A profile whose `expires_at` passed after the last cron run before the switch has no expiry event yet and counts as active: at most one day's expiries.
+  - The query is unrun. Check that HogQL accepts `argMaxIf(event, timestamp, …) IN (…)` on the first readout. Query I already uses `argMaxIf`.
+  - No copy, event, table, migration or constant changed.
+- Next: `node scripts/ralph-tasks.mjs next`. T107 – T110 are all done, so PRD 3 has no task left. The owner's handoff is T105's entry plus the Owner review lines of T107 – T110.
