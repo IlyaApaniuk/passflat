@@ -33,6 +33,7 @@ import {
   breakdownRows,
   buildingFiguresFallback,
   characteristicMessages,
+  comparisonRows,
   FIGURE_GROUP_N_KEY,
   FIGURE_GROUP_TITLE_KEY,
   groupDateMessages,
@@ -51,6 +52,7 @@ import {
   type BreakdownKey,
   type BreakdownRow,
   type BreakdownState,
+  type ComparisonKey,
   type FigureMessage,
   type GroupFigureRow,
 } from '@/lib/building-figures-view';
@@ -63,8 +65,6 @@ import {
   ArrowLeft,
   Building2,
   MapPin,
-  TrendingUp,
-  TrendingDown,
   Lock,
   Zap,
   Flame,
@@ -72,7 +72,6 @@ import {
   Droplets,
   Home,
   Shield,
-  Equal,
   CalendarClock,
   RefreshCw,
   Ruler,
@@ -83,7 +82,6 @@ import {
   MessageSquarePlus,
   type LucideIcon,
 } from 'lucide-react';
-import { relativeCostStyle } from '@/lib/cost-color';
 
 const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
 
@@ -384,24 +382,6 @@ function TenantTagsCard({
   );
 }
 
-interface StatRange {
-  median: number;
-  p25: number;
-  p75: number;
-}
-
-interface Baseline {
-  median: number;
-  p25: number;
-  p75: number;
-  count: number;
-  rent: StatRange | null;
-  expenses: StatRange | null;
-  rentPerM2: StatRange | null;
-  totalPerM2: StatRange | null;
-  percentile: number | null;
-}
-
 interface BuildingCostsClientProps {
   building: {
     id: string;
@@ -416,9 +396,10 @@ interface BuildingCostsClientProps {
   /** The figure contract's summary of the building's visible reports (tenant and asking groups). */
   figures: FigureSummary;
   /**
-   * The district or city figures shown when the building has no visible report
-   * (FR-33), with the area's display name; null when the building has reports
-   * or the city has none either.
+   * The district or city the building is set against (the contract's
+   * `loadAreaReference` rule), with the area's display name: the labelled
+   * figures when the building has no visible report (FR-33) and the area side
+   * of the comparison (FR-29); null when the city has no report either.
    */
   areaReference: (Pick<AreaReference, 'level' | 'summary'> & { areaName: string }) | null;
   /** The nuisances block, rendered on the server; only for a building without reports. */
@@ -426,15 +407,6 @@ interface BuildingCostsClientProps {
   /** The items the page keeps computing, over the tenant group only; null without one. */
   tenantDetails: TenantDetails | null;
   lastUpdated: string | null;
-  comparison: {
-    thisBuilding: number | null;
-    thisBuildingRent: number | null;
-    thisBuildingRentPerM2: number | null;
-    thisBuildingTotalPerM2: number | null;
-    thisBuildingExpenses: number | null;
-    district: Baseline | null;
-    city: Baseline | null;
-  };
   citySlug: string;
   /** Published tenant tags, or null when nothing clears the publishing rules. */
   tenantTags: TenantTagsSummary | null;
@@ -460,7 +432,6 @@ export function BuildingCostsClient({
   nuisancesCard,
   tenantDetails,
   lastUpdated,
-  comparison,
   citySlug,
   tenantTags,
   initialLocationScore,
@@ -619,47 +590,19 @@ export function BuildingCostsClient({
     </div>
   );
 
-  const renderDeltaBadge = (pct: number) => {
-    if (pct === 0)
-      return (
-        <Badge className="gap-1 bg-muted text-muted-foreground">
-          <Equal className="h-3 w-3" />
-          {t('costs.building.matchesMedian')}
-        </Badge>
-      );
-    if (pct < 0)
-      return (
-        <Badge className="gap-1" style={relativeCostStyle(pct)}>
-          <TrendingDown className="h-3 w-3" />
-          {t('costs.building.percentLower', { percent: Math.abs(pct) })}
-        </Badge>
-      );
-    return (
-      <Badge className="gap-1" style={relativeCostStyle(pct)}>
-        <TrendingUp className="h-3 w-3" />
-        {t('costs.building.percentHigher', { percent: pct })}
-      </Badge>
-    );
-  };
-
-  // A single median baseline card (district or city) with a p25–p75 range,
-  // a directional delta badge and the sample size it is based on.
-  const renderBaseline = (label: string, baseline: Baseline) => {
-    const building = comparison.thisBuilding!;
-    const pct = Math.round(((building - baseline.median) / baseline.median) * 100);
-    return (
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          {renderDeltaBadge(pct)}
-        </div>
-        <p className="mt-2 text-xl font-semibold">≈ {baseline.median.toLocaleString()} PLN</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t('costs.building.baselineSampleSize', { count: baseline.count })}
-        </p>
-      </div>
-    );
-  };
+  // The comparison (FR-29): this building's tenant reports next to the area
+  // reference's, metric by metric, each side with its own N and no conclusion.
+  const comparison = comparisonRows(figures, areaReference);
+  const perM2 = (key: ComparisonKey) => key === 'completeTotalPerM2' || key === 'rentPerM2';
+  const comparisonUnit = (key: ComparisonKey) => (perM2(key) ? t('costs.building.perM2') : 'PLN');
+  const formatComparisonValue = (key: ComparisonKey, value: number) =>
+    `${(perM2(key) ? Math.round(value) : value).toLocaleString()} ${comparisonUnit(key)}`;
+  const renderComparisonSide = (key: ComparisonKey, figure: MetricFigure) => (
+    <div>
+      <p className="text-lg font-semibold">≈ {formatComparisonValue(key, figure.median!)}</p>
+      <p className="text-xs text-muted-foreground">{metricN('tenant', figure.n)}</p>
+    </div>
+  );
 
   // The breakdown, one section per group. Winter/summer and periodic charges are
   // the page's own items and exist for the tenant group only.
@@ -1185,157 +1128,68 @@ export function BuildingCostsClient({
                 </Card>
               </motion.div>
 
-              {(comparison.district || comparison.city) && comparison.thisBuilding != null ? (
+              {comparison.length > 0 && areaReference && areaReference.summary.groups.tenant ? (
                 <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
                   <Card>
                     <CardHeader>
                       <CardTitle>{t('costs.building.comparison')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="mb-5 rounded-xl border border-primary/15 bg-primary/5 px-4 py-5 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          {t('costs.building.thisBuilding')}
+                      {/* Side by side, each side labelled with its group and N;
+                          no "cheaper / pricier" conclusion (FR-29). */}
+                      <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                        <p>
+                          {t('costs.building.thisBuilding')} · {groupTitle('tenant')}
                         </p>
-                        <p className="text-3xl font-bold text-primary">
-                          ≈ {comparison.thisBuilding.toLocaleString()} PLN
+                        <p>
+                          {renderMessage(
+                            referenceGroupLabel(
+                              areaReference.level,
+                              areaReference.summary.groups.tenant,
+                              areaReference.areaName,
+                            ),
+                          )}
                         </p>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {comparison.district &&
-                          renderBaseline(
-                            t('costs.building.districtMedian', { district: building.district }),
-                            comparison.district,
-                          )}
-                        {comparison.city &&
-                          renderBaseline(t('costs.building.cityMedian'), comparison.city)}
+                      <div className="mt-2 divide-y">
+                        {comparison.map((row) => (
+                          <div key={row.key} className="py-3">
+                            <p className="text-sm font-medium">{t(row.labelKey)}</p>
+                            <div className="mt-1 grid grid-cols-2 gap-3">
+                              {renderComparisonSide(row.key, row.building)}
+                              {renderComparisonSide(row.key, row.area)}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
-                      {/* Where this building sits within the district's typical
-                          range, per metric — leans on the denser district sample.
-                          Hidden until the district has enough reports for the
-                          percentile position to mean something. */}
-                      {comparison.district &&
-                      comparison.district.count >= TRUST_THRESHOLDS.reliableMin ? (
+                      {/* A position bar only where `isComparable` allows it: the
+                          same group, the same single rental type and N ≥ 5 on
+                          both sides. The page loads every rental type, so none
+                          is drawn in PRD 1. */}
+                      {comparison.some((row) => row.comparable) && (
                         <GatedSection show={showDetails} submitHref={submitHref}>
-                          {(() => {
-                            const d = comparison.district!;
-                            const unit = t('costs.building.perM2');
-                            const bars = [
-                              comparison.thisBuildingRent != null && d.rent
-                                ? {
-                                    key: 'rent',
-                                    label: t('costs.building.rent'),
-                                    value: comparison.thisBuildingRent,
-                                    range: d.rent,
-                                    unit: 'PLN',
-                                  }
-                                : null,
-                              comparison.thisBuildingExpenses != null && d.expenses
-                                ? {
-                                    key: 'expenses',
-                                    label: t('costs.building.expenses'),
-                                    value: comparison.thisBuildingExpenses,
-                                    range: d.expenses,
-                                    unit: 'PLN',
-                                  }
-                                : null,
-                              comparison.thisBuildingTotalPerM2 && d.totalPerM2
-                                ? {
-                                    key: 'total-m2',
-                                    label: t('costs.building.totalPerM2Compare'),
-                                    value: comparison.thisBuildingTotalPerM2,
-                                    range: d.totalPerM2,
-                                    unit,
-                                  }
-                                : null,
-                              comparison.thisBuildingRentPerM2 && d.rentPerM2
-                                ? {
-                                    key: 'rent-m2',
-                                    label: t('costs.building.rentPerM2Compare'),
-                                    value: comparison.thisBuildingRentPerM2,
-                                    range: d.rentPerM2,
-                                    unit,
-                                  }
-                                : null,
-                            ].filter(Boolean) as Array<{
-                              key: string;
-                              label: string;
-                              value: number;
-                              range: StatRange;
-                              unit: string;
-                            }>;
-                            if (bars.length === 0) return null;
-                            return (
-                              <div className="mt-4 space-y-6 border-t pt-4">
-                                {/* Legend */}
-                                <div className="space-y-1.5">
-                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                                    <span className="flex items-center gap-1.5">
-                                      <span className="h-2 w-4 rounded-sm bg-muted-foreground/20" />
-                                      {t('costs.building.legendBand')}
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                      <span className="h-3 w-px bg-muted-foreground/60" />
-                                      {t('costs.building.legendMedian')}
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                      <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-foreground" />
-                                      {t('costs.building.legendBuilding')}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-muted-foreground">
-                                    {building.district} ·{' '}
-                                    {t('costs.overview.nReports', {
-                                      count: comparison.district!.count,
-                                    })}
-                                  </p>
-                                </div>
-                                {bars.map((bar) => (
+                          <div className="mt-4 space-y-6 border-t pt-4">
+                            {comparison
+                              .filter((row) => row.comparable)
+                              .map((row) =>
+                                row.area.median != null &&
+                                row.area.p25 != null &&
+                                row.area.p75 != null ? (
                                   <DistrictPositionBar
-                                    key={bar.key}
-                                    label={bar.label}
-                                    value={bar.value}
-                                    median={bar.range.median}
-                                    p25={bar.range.p25}
-                                    p75={bar.range.p75}
-                                    unit={bar.unit}
+                                    key={row.key}
+                                    label={t(row.labelKey)}
+                                    value={row.building.median!}
+                                    median={row.area.median}
+                                    p25={row.area.p25}
+                                    p75={row.area.p75}
+                                    unit={comparisonUnit(row.key)}
                                   />
-                                ))}
-                              </div>
-                            );
-                          })()}
-                          {comparison.district?.percentile != null && (
-                            <p className="mt-3 text-sm text-muted-foreground">
-                              {comparison.district.percentile >= 50
-                                ? t('costs.building.cheaperThanPct', {
-                                    percent: comparison.district.percentile,
-                                    district: building.district,
-                                  })
-                                : t('costs.building.pricierThanPct', {
-                                    percent: 100 - comparison.district.percentile,
-                                    district: building.district,
-                                  })}
-                            </p>
-                          )}
+                                ) : null,
+                              )}
+                          </div>
                         </GatedSection>
-                      ) : (
-                        // District too thin for position bars (< reliableMin
-                        // reports): nudge to fill the district + invite neighbors
-                        // instead of silently hiding the comparison.
-                        <div className="mt-4">
-                          <ContributePrompt
-                            icon={BarChart3}
-                            title={t('costs.building.emptyDistrictTitle')}
-                            desc={t('costs.building.emptyDistrictDesc')}
-                            submitHref={submitHref}
-                            source="building_district_thin"
-                          />
-                        </div>
                       )}
-
-                      <p className="mt-4 text-xs text-muted-foreground">
-                        {t('costs.building.comparisonCaption')}
-                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>

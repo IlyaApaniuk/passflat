@@ -157,6 +157,11 @@ export const AREA_STEP_M2 = 5;
 /** `tenancy.to` of a group with a current tenant. */
 export const TENANCY_ONGOING = 'now';
 
+// --- Comparability (Assumption: spec 03 §Comparisons; CLAUDE.md gates percentages at N ≥ 5) ---
+
+/** Each side of a percentage, a position bar or a percentile needs at least this many values. */
+export const MIN_COMPARABLE_N = 5;
+
 type DatePrecision = 'year' | 'month' | 'day';
 const DATE_PRECISION_LENGTH: Record<DatePrecision, number> = { year: 4, month: 7, day: 10 };
 
@@ -443,6 +448,33 @@ export function areaReferenceLevel(
   if (district && district.reportCount >= MIN_AREA_REPORTS) return 'district';
   if (city && city.reportCount > 0) return 'city';
   return null;
+}
+
+/** One side of a comparison: the group a figure comes from, its rental-type filter and its N. */
+export interface ComparisonSide {
+  group: FigureGroupKey;
+  rentalType: RentalTypeFilter;
+  /** The usable values of the compared metric (`MetricFigure.n`). */
+  n: number;
+}
+
+/**
+ * Whether two figures may be set against each other with a comparative
+ * statement: a percentage, a position bar or a percentile (FR-29). Only when
+ * both come from the same group, both are restricted to the same single rental
+ * type (`all` mixes rooms and flats) and both rest on at least
+ * MIN_COMPARABLE_N values. Otherwise the figures are shown side by side with
+ * their labels and N, and no conclusion is drawn. Never an overpay or saving
+ * verdict, comparable or not.
+ */
+export function isComparable(a: ComparisonSide, b: ComparisonSide): boolean {
+  return (
+    a.group === b.group &&
+    a.rentalType !== 'all' &&
+    a.rentalType === b.rentalType &&
+    a.n >= MIN_COMPARABLE_N &&
+    b.n >= MIN_COMPARABLE_N
+  );
 }
 
 /** The headline metric: complete total when it has values, else the known part, else rent. */

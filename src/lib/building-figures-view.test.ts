@@ -13,6 +13,7 @@ import {
   buildingFiguresFallback,
   characteristicMessages,
   comparableTenantGroup,
+  comparisonRows,
   FIGURE_GROUP_N_KEY,
   FIGURE_GROUP_RECORDED_KEY,
   FIGURE_GROUP_TITLE_KEY,
@@ -638,6 +639,104 @@ describe('sampleSizeBadge (FR-31)', () => {
   });
 });
 
+describe('comparisonRows (FR-29)', () => {
+  const district = (reports: FigureReport[], rentalType: 'all' | 'apartment' = 'all') => ({
+    summary: summarizeFigures(reports, { level: 'district', rentalType }),
+  });
+  const tenantReports = (count: number, fields: Partial<FigureReport> = {}) =>
+    Array.from({ length: count }, (_, i) =>
+      complete('user', {
+        rentalType: 'apartment',
+        rent: 3000 + i * 100,
+        totalMonthlyAvg: 3800 + i * 100,
+        ...fields,
+      }),
+    );
+  const mokotow = district([
+    ...tenantReports(6),
+    incomplete('scraped', { rentalType: 'apartment', rent: 3500, totalMonthlyAvg: 4100 }),
+  ]);
+
+  it('sets the tenant group beside the area tenant group, each with its own N', () => {
+    const rows = comparisonRows(mixedBuilding, mokotow);
+    expect(rows.map((row) => row.key)).toEqual(['completeTotal', 'rent', 'expenses']);
+    const [total, rent, expenses] = rows;
+    expect(total.building).toMatchObject({ median: 3850, n: 2 });
+    expect(total.area).toMatchObject({ median: 4050, n: 6 });
+    expect(rent.building).toMatchObject({ median: 3200, n: 3 });
+    expect(rent.area.n).toBe(6);
+    expect(expenses.building).toMatchObject({ median: 750, n: 2 });
+    expect(total.labelKey).toBe(GROUP_FIGURE_LABEL_KEY.completeTotal);
+  });
+
+  it('draws no comparative statement while both sides load every rental type', () => {
+    expect(mixedBuilding.rentalType).toBe('all');
+    const big = summarizeFigures(tenantReports(8), building);
+    const rows = comparisonRows(big, mokotow);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => !row.comparable)).toBe(true);
+  });
+
+  it('allows a position bar only for one rental type with N ≥ 5 on both sides', () => {
+    const apartment = { level: 'building', rentalType: 'apartment' } as const;
+    const area = district(tenantReports(6), 'apartment');
+    const five = comparisonRows(summarizeFigures(tenantReports(5), apartment), area);
+    expect(five.find((row) => row.key === 'completeTotal')?.comparable).toBe(true);
+    const four = comparisonRows(summarizeFigures(tenantReports(4), apartment), area);
+    expect(four.find((row) => row.key === 'completeTotal')?.comparable).toBe(false);
+  });
+
+  it('compares the same metric only, never a known part', () => {
+    const unknownUtilities = summarizeFigures(
+      [
+        incomplete('user', { rent: 2800, totalMonthlyAvg: 3100 }),
+        incomplete('user', { rent: 2900, totalMonthlyAvg: 3300 }),
+      ],
+      building,
+    );
+    expect(comparisonRows(unknownUtilities, mokotow).map((row) => row.key)).toEqual(['rent']);
+  });
+
+  it('lists nothing for one observation, without a reference or without area tenant reports', () => {
+    const one = summarizeFigures(
+      [complete('user', { rent: 3200, totalMonthlyAvg: 4000 })],
+      building,
+    );
+    expect(comparisonRows(one, mokotow)).toEqual([]);
+    expect(comparisonRows(mixedBuilding, null)).toEqual([]);
+    const askingOnly = district([
+      incomplete('scraped', { rent: 3500, totalMonthlyAvg: 4100 }),
+      incomplete('scraped', { rent: 3300, totalMonthlyAvg: 3900 }),
+    ]);
+    expect(comparisonRows(mixedBuilding, askingOnly)).toEqual([]);
+  });
+
+  it.each(LOCALES)('labels both sides with no cheaper / pricier verdict in %s', (locale) => {
+    const t = translator(locale);
+    const tenant = mokotow.summary.groups.tenant!;
+    const texts = [
+      t('costs.building.comparison'),
+      t('costs.building.thisBuilding'),
+      t(FIGURE_GROUP_TITLE_KEY.tenant),
+      t(FIGURE_GROUP_N_KEY.tenant, { count: 6 }),
+      ...render(locale, [
+        referenceGroupLabel('district', tenant, 'Mokotów'),
+        referenceGroupLabel('city', tenant, 'Warszawa'),
+      ]),
+      ...comparisonRows(
+        summarizeFigures(tenantReports(3, { areaM2: 50 }), building),
+        district(tenantReports(6, { areaM2: 60 })),
+      ).map((row) => t(row.labelKey)),
+    ];
+    expect(texts).toContain(t('costs.building.rentPerM2Compare'));
+    for (const text of texts) {
+      expect(text).not.toMatch(
+        /cheap|pricier|overpa|sav(e|ing)|lower|higher|tańsz|drożs|przepła|oszczęd|niższ|wyższ|дешев|дорож|переплат|эконом|ниже|выше|економ|нижч|вищ/i,
+      );
+    }
+  });
+});
+
 describe('message keys', () => {
   const keys = [
     ...Object.values(FIGURE_GROUP_TITLE_KEY),
@@ -683,6 +782,10 @@ describe('message keys', () => {
     'costs.trust.earlyData',
     'costs.building.whiteSpotTitle',
     'costs.building.whiteSpotDesc',
+    'costs.building.comparison',
+    'costs.building.thisBuilding',
+    'costs.building.rentPerM2Compare',
+    'costs.building.perM2',
   ];
 
   it.each(LOCALES)('exist as strings in %s.json (client namespace costs)', (locale) => {

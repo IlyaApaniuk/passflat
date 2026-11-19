@@ -352,7 +352,7 @@
       "title": "Building page: remove overpay and cheaper/pricier verdicts from the comparison",
       "spec": "docs/specs/03-building-figures.md#comparisons",
       "dependsOn": ["T021"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The comparison section, cheaperThanPercentile and district-position-bar.tsx show no 'cheaper / pricier / overpay / save' conclusion",
         "Side-by-side reference values with group label and N remain; a percentage, position bar or percentile only when both sides are the same group, the same single rental type and both N >= 5 (so none on this page in PRD 1)",
@@ -360,7 +360,7 @@
         "Unused message keys are left in place and listed in the progress entry (no key removal in this task)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

@@ -1,17 +1,15 @@
 import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
-import { unstable_cache } from 'next/cache';
 import { getLocale, getTranslations, setRequestLocale } from 'next-intl/server';
 import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd, buildingPlaceJsonLd } from '@/lib/json-ld';
 import { formatAddressDisplay } from '@/lib/address';
-import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
+import { median } from '@/lib/cost-stats';
 import { loadAreaReference, loadBuildingFigures } from '@/lib/cost-figures-query';
-import type { AreaReference } from '@/lib/cost-figures';
+import type { AreaReference, FigureSummary } from '@/lib/cost-figures';
 import { buildingTenantDetails } from '@/lib/building-tenant-details';
-import { comparableTenantGroup } from '@/lib/building-figures-view';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
 import { findNuisances, type NuisanceResult } from '@/lib/nuisances';
@@ -120,127 +118,6 @@ const getBuilding = cache(async (citySlug: string, slug: string) => {
 });
 
 // ---------------------------------------------------------------------------
-// unstable_cache: baseline distributions (revalidate every 10 min)
-// ---------------------------------------------------------------------------
-
-const DISTRIBUTION_LIMIT = 5000;
-
-// Median + the typical p25–p75 band, for the district position bars.
-type StatRange = { median: number; p25: number; p75: number };
-
-const toRange = (values: Array<number | null | undefined>): StatRange | null => {
-  const s = computeStats(values);
-  return s ? { median: s.median, p25: s.p25, p75: s.p75 } : null;
-};
-
-type CachedDistrictBaseline = {
-  median: number;
-  p25: number;
-  p75: number;
-  count: number;
-  rent: StatRange | null;
-  expenses: StatRange | null;
-  rentPerM2: StatRange | null;
-  totalPerM2: StatRange | null;
-  totals: number[];
-};
-
-type CachedCityBaseline = {
-  median: number;
-  p25: number;
-  p75: number;
-  count: number;
-  totals: number[];
-};
-
-const getDistrictBaseline = unstable_cache(
-  async (districtId: string): Promise<CachedDistrictBaseline | null> => {
-    const reports = await prisma.costReport.findMany({
-      where: {
-        building: { districtId },
-        isVisible: true,
-        totalMonthlyAvg: { not: null },
-      },
-      select: { totalMonthlyAvg: true, rent: true, areaM2: true },
-      take: DISTRIBUTION_LIMIT,
-    });
-
-    const totals = reports
-      .map((r) => (r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg)))
-      .filter((v): v is number => v != null && Number.isFinite(v));
-
-    const stats = computeStats(totals);
-    if (!stats) return null;
-
-    return {
-      median: stats.median,
-      p25: stats.p25,
-      p75: stats.p75,
-      count: stats.count,
-      rent: toRange(reports.map((r) => (r.rent == null ? null : Number(r.rent)))),
-      expenses: toRange(
-        reports.map((r) => {
-          const total = r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg);
-          const rentVal = r.rent == null ? null : Number(r.rent);
-          if (total == null || rentVal == null) return null;
-          return Math.max(0, total - rentVal);
-        }),
-      ),
-      rentPerM2: toRange(
-        perAreaValues(
-          reports.map((r) => ({
-            value: r.rent == null ? null : Number(r.rent),
-            areaM2: r.areaM2 == null ? null : Number(r.areaM2),
-          })),
-        ),
-      ),
-      totalPerM2: toRange(
-        perAreaValues(
-          reports.map((r) => ({
-            value: r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg),
-            areaM2: r.areaM2 == null ? null : Number(r.areaM2),
-          })),
-        ),
-      ),
-      totals,
-    };
-  },
-  ['building-district-baseline'],
-  { revalidate: 300, tags: ['costs'] },
-);
-
-const getCityBaseline = unstable_cache(
-  async (cityId: string): Promise<CachedCityBaseline | null> => {
-    const reports = await prisma.costReport.findMany({
-      where: {
-        building: { cityId },
-        isVisible: true,
-        totalMonthlyAvg: { not: null },
-      },
-      select: { totalMonthlyAvg: true },
-      take: DISTRIBUTION_LIMIT,
-    });
-
-    const totals = reports
-      .map((r) => (r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg)))
-      .filter((v): v is number => v != null && Number.isFinite(v));
-
-    const stats = computeStats(totals);
-    if (!stats) return null;
-
-    return {
-      median: stats.median,
-      p25: stats.p25,
-      p75: stats.p75,
-      count: stats.count,
-      totals,
-    };
-  },
-  ['building-city-baseline'],
-  { revalidate: 300, tags: ['costs'] },
-);
-
-// ---------------------------------------------------------------------------
 
 /** Nuisances around the building, from the local POI table; none without coordinates. */
 async function findBuildingNuisances(
@@ -252,24 +129,6 @@ async function findBuildingNuisances(
   if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return [];
   return findNuisances(citySlug, origin);
 }
-
-function cheaperThanPercentile(values: number[], buildingMedian: number | null): number | null {
-  if (buildingMedian == null || values.length === 0) return null;
-  const pricier = values.filter((v) => v > buildingMedian).length;
-  return Math.round((pricier / values.length) * 100);
-}
-
-type Baseline = {
-  median: number;
-  p25: number;
-  p75: number;
-  count: number;
-  rent: StatRange | null;
-  expenses: StatRange | null;
-  rentPerM2: StatRange | null;
-  totalPerM2: StatRange | null;
-  percentile: number | null;
-};
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -366,26 +225,21 @@ export default async function BuildingCostsPage({ params }: PageProps) {
 
   const reports = building.costReports;
 
-  // Parallel: the building's figures (the shared contract, tenant and asking
-  // groups apart) and the district + city baselines of the comparison. No auth
-  // read — the page is fully public; the detail gate is resolved on the client.
-  const [figures, cachedDistrict, cachedCity] = await Promise.all([
+  // Parallel: the building's figures and its area reference (district, else
+  // city), both from the shared contract with tenant and asking groups apart.
+  // The reference stands in, explicitly labelled, when the building has no
+  // visible report (FR-33), and is the area side of the comparison (FR-29). No
+  // auth read — the page is fully public; the detail gate is resolved on the client.
+  const [figures, areaReference]: [FigureSummary, AreaReference | null] = await Promise.all([
     loadBuildingFigures(building.id),
-    building.districtId ? getDistrictBaseline(building.districtId) : Promise.resolve(null),
-    getCityBaseline(building.cityId),
+    loadAreaReference({ districtId: building.districtId, cityId: building.cityId }),
   ]);
   const tenant = figures.groups.tenant;
 
-  // No visible report (FR-33): the district or the city stands in as an
-  // explicitly labelled reference, and the location facts that need no report
-  // (nuisances next to the location score) are read for this case only.
-  const [areaReference, nuisances]: [AreaReference | null, NuisanceResult[]] =
-    figures.reportCount === 0
-      ? await Promise.all([
-          loadAreaReference({ districtId: building.districtId, cityId: building.cityId }),
-          findBuildingNuisances(citySlug, building),
-        ])
-      : [null, []];
+  // The location facts that need no report (nuisances next to the location
+  // score) are read only for a building without reports.
+  const nuisances: NuisanceResult[] =
+    figures.reportCount === 0 ? await findBuildingNuisances(citySlug, building) : [];
   const nuisancesCard =
     nuisances.length > 0 ? (
       <NuisancesCard
@@ -415,40 +269,6 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     // Null → the invitation renders instead of a card with no chips.
     return summarizeTagVotes(building.tags);
   })();
-
-  // The building side of the comparison is the tenant group (never a blend of
-  // tenant reports and asking prices), and never one observation (FR-24); the
-  // comparison itself is reworked by spec 03 §Comparisons.
-  const compared = comparableTenantGroup(figures);
-  const buildingMedianTotal = compared?.completeTotal.median ?? null;
-
-  const districtBaseline: Baseline | null = cachedDistrict
-    ? {
-        median: cachedDistrict.median,
-        p25: cachedDistrict.p25,
-        p75: cachedDistrict.p75,
-        count: cachedDistrict.count,
-        rent: cachedDistrict.rent,
-        expenses: cachedDistrict.expenses,
-        rentPerM2: cachedDistrict.rentPerM2,
-        totalPerM2: cachedDistrict.totalPerM2,
-        percentile: cheaperThanPercentile(cachedDistrict.totals, buildingMedianTotal),
-      }
-    : null;
-
-  const cityBaseline: Baseline | null = cachedCity
-    ? {
-        median: cachedCity.median,
-        p25: cachedCity.p25,
-        p75: cachedCity.p75,
-        count: cachedCity.count,
-        rent: null,
-        expenses: null,
-        rentPerM2: null,
-        totalPerM2: null,
-        percentile: cheaperThanPercentile(cachedCity.totals, buildingMedianTotal),
-      }
-    : null;
 
   // Freshness = the most recent confirmation across reports. A re-submit bumps
   // confirmedAt (even with no value change), so re-confirming clears the
@@ -535,15 +355,6 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         nuisancesCard={nuisancesCard}
         tenantDetails={tenantDetails}
         lastUpdated={lastUpdated}
-        comparison={{
-          thisBuilding: buildingMedianTotal,
-          thisBuildingRent: compared?.rent.median ?? null,
-          thisBuildingRentPerM2: compared?.rentPerM2.median ?? null,
-          thisBuildingTotalPerM2: compared?.completeTotalPerM2.median ?? null,
-          thisBuildingExpenses: compared?.expenses.median ?? null,
-          district: districtBaseline,
-          city: cityBaseline,
-        }}
         citySlug={citySlug}
         tenantTags={tenantTags}
         initialLocationScore={initialLocationScore}

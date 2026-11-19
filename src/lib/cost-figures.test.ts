@@ -3,12 +3,15 @@ import { describe, expect, it } from 'vitest';
 import {
   answerProperties,
   areaReferenceLevel,
+  isComparable,
   LEGACY_NULL_IS_COMPLETE,
   MIN_AREA_REPORTS,
+  MIN_COMPARABLE_N,
   MIN_DEPOSIT_ANSWERS,
   summarizeDepositReturns,
   summarizeFigures,
   TENANCY_ONGOING,
+  type ComparisonSide,
   type FigureReport,
   type FigureSummary,
 } from './cost-figures';
@@ -396,6 +399,51 @@ describe('areaReferenceLevel', () => {
 
     expect(level('all')).toBe('district');
     expect(level('apartment')).toBe('city');
+  });
+});
+
+describe('isComparable (FR-29)', () => {
+  const side = (fields: Partial<ComparisonSide> = {}): ComparisonSide => ({
+    group: 'tenant',
+    rentalType: 'apartment',
+    n: MIN_COMPARABLE_N,
+    ...fields,
+  });
+
+  it('gates every comparative statement at N ≥ 5 on both sides', () => {
+    expect(MIN_COMPARABLE_N).toBe(5);
+  });
+
+  it('compares one group of one rental type with N 5 on both sides', () => {
+    expect(isComparable(side(), side())).toBe(true);
+    expect(isComparable(side({ rentalType: 'room', n: 40 }), side({ rentalType: 'room' }))).toBe(
+      true,
+    );
+  });
+
+  it('never compares mixed rental types', () => {
+    expect(
+      isComparable(side({ rentalType: 'all', n: 40 }), side({ rentalType: 'all', n: 40 })),
+    ).toBe(false);
+    expect(isComparable(side({ rentalType: 'apartment' }), side({ rentalType: 'room' }))).toBe(
+      false,
+    );
+    expect(isComparable(side({ rentalType: 'apartment' }), side({ rentalType: 'all' }))).toBe(
+      false,
+    );
+  });
+
+  it('needs N 5 on each side: 4 vs 5 is not comparable', () => {
+    expect(isComparable(side({ n: 4 }), side({ n: 5 }))).toBe(false);
+    expect(isComparable(side({ n: 5 }), side({ n: 4 }))).toBe(false);
+    expect(isComparable(side({ n: 5 }), side({ n: 5 }))).toBe(true);
+  });
+
+  it('never sets tenant reports against asking prices', () => {
+    expect(isComparable(side({ group: 'tenant', n: 40 }), side({ group: 'asking', n: 40 }))).toBe(
+      false,
+    );
+    expect(isComparable(side({ group: 'asking' }), side({ group: 'asking' }))).toBe(true);
   });
 });
 

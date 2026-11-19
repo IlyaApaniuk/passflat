@@ -3,6 +3,7 @@
 // these return and never merges the tenant and the asking group into one number.
 
 import {
+  isComparable,
   TENANCY_ONGOING,
   type AreaReference,
   type FigureGroup,
@@ -235,6 +236,67 @@ export function groupFigureRows(group: FigureGroup): {
     rows: rows.filter((row) => row !== headline),
     knownPart: rows.some((row) => row.key === 'knownPartTotal'),
   };
+}
+
+export type ComparisonKey =
+  | 'completeTotal'
+  | 'rent'
+  | 'expenses'
+  | 'completeTotalPerM2'
+  | 'rentPerM2';
+
+export interface ComparisonRow {
+  key: ComparisonKey;
+  labelKey: string;
+  /** This building's tenant group. */
+  building: MetricFigure;
+  /** The area reference's tenant group (district or city). */
+  area: MetricFigure;
+  /** `isComparable`: a position bar may be shown. Never true on a surface loading `all`. */
+  comparable: boolean;
+}
+
+/** The same metric on both sides only; a known part is never set against anything. */
+const COMPARISON_ORDER: ComparisonKey[] = [
+  'completeTotal',
+  'rent',
+  'expenses',
+  'completeTotalPerM2',
+  'rentPerM2',
+];
+const COMPARISON_LABEL_KEY: Record<ComparisonKey, string> = {
+  completeTotal: GROUP_FIGURE_LABEL_KEY.completeTotal,
+  rent: GROUP_FIGURE_LABEL_KEY.rent,
+  expenses: GROUP_FIGURE_LABEL_KEY.expenses,
+  completeTotalPerM2: GROUP_FIGURE_LABEL_KEY.completeTotalPerM2,
+  rentPerM2: 'costs.building.rentPerM2Compare',
+};
+
+/**
+ * The comparison section (FR-29): this building's tenant group next to the
+ * area reference's tenant group, metric by metric, each side with its own N.
+ * Only metrics both sides have are listed; none for one observation, without a
+ * reference or without tenant reports in the area. A row is `comparable` only
+ * by `isComparable`, so the page states no "cheaper / pricier" conclusion.
+ */
+export function comparisonRows(
+  building: Pick<FigureSummary, 'groups' | 'rentalType'>,
+  reference: { summary: Pick<FigureSummary, 'groups' | 'rentalType'> } | null,
+): ComparisonRow[] {
+  const ours = comparableTenantGroup(building);
+  const area = reference?.summary;
+  const theirs = area?.groups.tenant ?? null;
+  if (!ours || !area || !theirs) return [];
+  return COMPARISON_ORDER.filter((key) => usable(ours[key]) && usable(theirs[key])).map((key) => ({
+    key,
+    labelKey: COMPARISON_LABEL_KEY[key],
+    building: ours[key],
+    area: theirs[key],
+    comparable: isComparable(
+      { group: ours.key, rentalType: building.rentalType, n: ours[key].n },
+      { group: theirs.key, rentalType: area.rentalType, n: theirs[key].n },
+    ),
+  }));
 }
 
 /** The known characteristics of a one-observation group: rental type, rooms, area. */
