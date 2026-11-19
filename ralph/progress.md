@@ -35,6 +35,10 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
   under `src/app/[locale]/` and `[city]/`: a new route directory must be added to
   `STATIC_TOP_LEVEL_ROUTES` / `STATIC_CITY_ROUTES` (and mapped) or the test fails.
 - `npm run verify 2>&1 | tail` hides the exit code; redirect to a scratchpad log and echo `$?`.
+- Every client PostHog event already gets `page_type`, `locale`, `city`, `listing_type` and
+  `entry_page_type` from the `before_send` hook (`src/lib/analytics/page-context.ts`); a capture
+  call adds only its own properties (an own property overrides the hook's value).
+- posthog-js internals are readable in `node_modules/posthog-js/lib/src/*.js` (unminified).
 
 ## Log
 
@@ -69,3 +73,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing. The type `PageType` is kept module-private so knip reports no new unused export; export it when T005 (`withPageContext`) needs it.
 - Owner review: Assumption applied — the whole value mapping lives in `src/lib/analytics/page-context.ts`; `blog` is a `page_type` value (Assumption, Q-12) covering `/blog` and `/blog/<slug>` (including the static `/blog/warsaw-rent-prices`). No copy, tables or migrations.
 - Next: the `before_send` merge (`withPageContext` + `entry_page_type`) in the same module, per spec 01 §Attaching; it can call `getPageContext` directly.
+
+### 2026-11-19 01:00 · T005 · done
+
+- Done: `src/lib/analytics/page-context.ts` adds the pure `withPageContext(event, pathname, entry)` → `{ event, entry }` and `createPageContextHook(getPathname)` (a `BeforeSendFn` that keeps the session entry in a closure). Every event except `$snapshot` gets `getPageContext(pathname)` plus `entry_page_type` spread under its own properties (own property wins; the input event is not mutated; `null` passes through). `posthog-provider.tsx` passes `before_send: createPageContextHook(() => window.location.pathname)` to `posthog.init`; nothing else in the provider changed (persistence, consent upgrade, `register_once` for ref/utm untouched; init still skipped without `NEXT_PUBLIC_POSTHOG_KEY`). Entry choice: option 1 — posthog-js 1.374.3 adds `$session_entry_pathname` to every event (`lib/src/session-props.js` `getSessionProps`, called from `calculateEventProperties` before `before_send`; it is the URL at which the `$session_id` started, kept in the SDK's own persistence). Only an event without it falls back to option 2 (first event per `$session_id` in memory). `docs/architecture.md` §5 states where context is attached and the two limitations. 11 new tests in `page-context.test.ts`.
+- Checks: `npx vitest run src/lib/analytics/page-context.test.ts` passed (48/48). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only, Vitest 31 files / 362 tests, build OK). `npm run test:e2e` passed (2/2). `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: Assumption applied — the mechanism (SDK `before_send`, entry from `$session_entry_pathname` with the in-memory first-event fallback) lives in `src/lib/analytics/page-context.ts`; `$snapshot` (session recordings) is passed through untouched. No copy, tables or migrations. After deploy: check in PostHog Live Events that events carry `page_type`, `locale`, `city`, `entry_page_type`.
+- Next: the next `todo` task of M1; events need no own `page_type`/`locale`/`city` now, the hook adds them.

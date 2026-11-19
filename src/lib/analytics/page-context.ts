@@ -1,3 +1,5 @@
+import type { BeforeSendFn, CaptureResult } from 'posthog-js';
+
 import { routing, type Locale } from '@/i18n/routing';
 import type { ListingType } from '@/lib/listings-data';
 
@@ -141,4 +143,80 @@ export function getPageContext(pathname: string): PageContext {
     return { ...staticRouteContext(first, rest), locale, city: null };
   }
   return { ...cityRouteContext(rest), locale, city: first };
+}
+
+// Attaching the context to every client event
+// (docs/specs/01-analytics-context.md#attaching-context-to-every-event).
+
+/**
+ * The SDK's own per-session entry pathname. posthog-js 1.374 (`SessionPropsManager`)
+ * stores the URL at which each `$session_id` started in its persistence and adds
+ * it to every event, so it survives a consented reload without new storage.
+ */
+const SDK_SESSION_ENTRY_PATHNAME = '$session_entry_pathname';
+
+/** Session-recording payloads are not analytics events and are sent as the SDK built them. */
+const PASS_THROUGH_EVENTS: ReadonlySet<string> = new Set(['$snapshot']);
+
+/**
+ * The entry page type last seen for a session, kept in module memory by the hook.
+ * It is the fallback for an event without the SDK entry pathname: the pathname of
+ * the first event the hook sees for that `$session_id`.
+ */
+interface SessionEntry {
+  sessionId: string | undefined;
+  entryPageType: PageType;
+}
+
+interface PageContextResult {
+  event: CaptureResult | null;
+  entry: SessionEntry | null;
+}
+
+/**
+ * Adds `getPageContext(pathname)` and `entry_page_type` to an event, under its
+ * own properties (an event's own property wins). `pathname` is the page at send
+ * time; `entry` is the state returned for the previous event.
+ */
+export function withPageContext(
+  event: CaptureResult | null,
+  pathname: string,
+  entry: SessionEntry | null,
+): PageContextResult {
+  if (!event || PASS_THROUGH_EVENTS.has(event.event)) return { event, entry };
+
+  const rawSessionId = event.properties.$session_id;
+  const sessionId = typeof rawSessionId === 'string' ? rawSessionId : undefined;
+  const sdkEntryPathname = event.properties[SDK_SESSION_ENTRY_PATHNAME];
+
+  let nextEntry: SessionEntry;
+  if (typeof sdkEntryPathname === 'string') {
+    nextEntry = { sessionId, entryPageType: getPageContext(sdkEntryPathname).page_type };
+  } else if (entry && entry.sessionId === sessionId) {
+    nextEntry = entry;
+  } else {
+    nextEntry = { sessionId, entryPageType: getPageContext(pathname).page_type };
+  }
+
+  return {
+    event: {
+      ...event,
+      properties: {
+        ...getPageContext(pathname),
+        entry_page_type: nextEntry.entryPageType,
+        ...event.properties,
+      },
+    },
+    entry: nextEntry,
+  };
+}
+
+/** The `before_send` hook for `posthog.init`; it holds the session entry in memory. */
+export function createPageContextHook(getPathname: () => string): BeforeSendFn {
+  let entry: SessionEntry | null = null;
+  return (event) => {
+    const result = withPageContext(event, getPathname(), entry);
+    entry = result.entry;
+    return result.event;
+  };
 }

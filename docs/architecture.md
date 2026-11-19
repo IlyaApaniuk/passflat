@@ -156,6 +156,8 @@ How each source is counted:
   - On `accepted` (the localStorage key `passflat-cookie-consent`), `PersistenceUpgrade` calls `set_config({ persistence: 'localStorage+cookie' })` and keeps the same identity. A decline stays in memory mode.
   - Session recording requires consent plus the flag `session-recording-sample`. Surveys are off until consent.
   - `$pageview` is captured manually and registers `ref` / `utm_*` once.
+  - Page context is attached in the `before_send` option of `posthog.init` (`createPageContextHook` / `withPageContext` in `src/lib/analytics/page-context.ts`). At send time every event except `$snapshot` gets `page_type`, `locale`, `city` (and `listing_type` on listing pages) from `getPageContext(window.location.pathname)`, plus `entry_page_type`. They go under the event's own properties, so a property the event sends itself wins. `entry_page_type` maps the SDK's `$session_entry_pathname`, which posthog-js keeps per `$session_id` in its own persistence. An event without that property falls back to the pathname of the first event the hook saw for its `$session_id`, kept in module memory. Nothing new is stored.
+  - Limitations: in memory mode (no consent) a full page load starts a new person and session, so the entry is lost on reload. In consented mode the memory fallback restarts the entry on reload; the SDK property survives a reload.
   - Feature-flag keys live in `src/lib/feature-flags.ts`.
 - **Server** (`src/lib/posthog-server.ts`):
   - Exports `trackServerEvent`, `identifyUser`, `isServerFeatureFlagEnabled` (fails closed), `captureServerException` and `flushPostHog`. The client uses `flushAt: 1`, and routes that must not lose events call `flushPostHog()`.

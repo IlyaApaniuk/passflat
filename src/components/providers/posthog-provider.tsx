@@ -6,6 +6,7 @@ import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { MotionConfig } from 'framer-motion';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import { createPageContextHook } from '@/lib/analytics/page-context';
 import {
   ANONYMOUS_PERSISTENCE,
   CONSENTED_PERSISTENCE,
@@ -153,6 +154,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       // server-side would silently break the no-storage promise, so they stay off
       // until consent. `PersistenceUpgrade` turns them back on when it arrives.
       disable_surveys: persistence === ANONYMOUS_PERSISTENCE,
+      // Adds page_type, locale, city, listing_type and entry_page_type to every
+      // event at send time, under the event's own properties. It stores nothing.
+      before_send: createPageContextHook(() => window.location.pathname),
       bootstrap: {
         featureFlags: {
           [FEATURE_FLAGS.PROMOTED_LISTINGS_ENABLED]: false,

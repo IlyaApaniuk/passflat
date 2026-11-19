@@ -61,7 +61,7 @@
       "title": "Attach page context and entry_page_type to every client event in before_send",
       "spec": "docs/specs/01-analytics-context.md#attaching-context-to-every-event",
       "dependsOn": ["T004"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "posthog.init gets a before_send hook that merges getPageContext(window.location.pathname) into every event; the event's own properties win",
         "entry_page_type follows the spec's order of preference (SDK per-session initial pathname if posthog-js 1.374 exposes one, otherwise the first event of any kind per $session_id kept in module memory); the choice is named in the progress entry",
@@ -70,7 +70,7 @@
         "docs/architecture.md §5 states where context is attached and the two limitations (memory mode loses it on reload; entry restarts on a consented reload when the SDK has no initial-pathname property)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The provider renders on every page, so the e2e smoke run checks the home page still loads."
     },
     {
