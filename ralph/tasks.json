@@ -756,7 +756,11 @@
         "T039",
         "T041",
         "T044",
-        "T045"
+        "T045",
+        "T047",
+        "T048",
+        "T049",
+        "T050"
       ],
       "status": "todo",
       "acceptance": [
@@ -766,8 +770,8 @@
         "The progress entry lists all draft copy keys (website and bot), the Assumption constants, the blocked tasks with their questions, that no table or migration was added, the owner step npm run bot:webhook for the new command menu, and what remains unverified (mobile flows by eye, Live Events after deploy, the bot in production)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "Failed: T047-T050 (runnable PRD 1 tasks added after T046) were still todo, so 'every non-blocked PRD 1 task done' could not pass; added them to dependsOn so the loop runs them first. verify and test:e2e pass at 050ae06."
     },
     {
       "dependsOn": ["T025"],

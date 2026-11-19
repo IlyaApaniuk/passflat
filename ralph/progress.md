@@ -76,6 +76,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Conditional writes (claims, races) are tested over an in-memory Prisma fake whose `findMany` returns copies and whose `updateMany` applies its `where`; overlapping runs are `Promise.all` of two calls (example: `src/lib/bot/deposit-flow.test.ts`).
 - Never `console.error` a `GrammyError` object: its `payload` holds `chat_id`. Log `error.message`.
 - The shell is zsh: quote globs in flags (`--include='*.ts'`), or the command fails with "no matches found".
+- A task added with `ralph-tasks.mjs add` must also go into the PRD's final-check task's `dependsOn` (edit `ralph/tasks.json`): `next` picks the first runnable task in file order, so a final check runs before later-added tasks otherwise.
 
 ## Log
 
@@ -952,3 +953,16 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Facts stated, not changed: without `TELEGRAM_WEBHOOK_SECRET` the webhook accepts every update; the district card's and `/deposit`'s form buttons carry no `source=tgbot` (already noted in T039).
   - No copy, assumptions, tables or migrations.
 - Next: T049 / T050 update the README lines that name them (district card, contract-reading flush) when they ship; then the M5 final check.
+
+### 2026-11-19 05:31 · T046 · failed
+
+- Done: nothing in the code or docs. `ralph/tasks.json`: T046's `dependsOn` now also lists T047, T048, T049 and T050, so `next` runs them first (`summary` now says `next T047`).
+- Checks: `npm run test:e2e` passed (2/2) and `npm run verify` exit 0 (lint, typecheck, knip, Vitest 71 files / 916 tests, build OK) at `050ae06`. `next-env.d.ts` restored.
+- Did not work: acceptance 1 cannot pass. `summary` shows four runnable, non-blocked PRD 1 tasks still `todo`: T047 (post-submit copy), T048 (share page copy), T049 (bot typed-district card on the contract) and T050 (PostHog flush in the deposit background task). Earlier iterations added them with `add` but not to T046's `dependsOn`, and `next` took T046 first because it comes earlier in the file. No partial edits were left in the tree: T047–T050 may touch the same docs (requirement map, bot README), and a stashed partial T046 could then fail to pop.
+- Owner review: nothing new. The six blocked tasks are unchanged: T002 (Q-1), T028 (Q-2), T029 (Q-4), T030 (Q-3), T042 (Q-5), T043 (Q-6).
+- Next: run T047–T050, then T046 again from a clean tree. All three doc edits are still to do: the requirement map in `docs/specs/README.md`, the CLAUDE.md "Cost data honesty" paragraph, and the handoff entry. Where the handoff items are in this log (T000–T045; add whatever T047–T050 record):
+  - Website draft copy: T013, T015, T016, T019, T020, T021, T024, T025, T026, T035 (`checker.costs.telegramCta`).
+  - Bot draft copy: T033, T034, T035, T037 (with `COMMAND_MENU`), T040 (`remindersOff` in `deposit-texts.ts`).
+  - Assumption constants: T004, T005, T009, T010, T017 (Q-3 block in `cost-figures.ts`), T022 (`MIN_COMPARABLE_N`), T031/T038 (`ENTRY_SOURCE`). T044 set one in its doc only (the Telegram address funnel window).
+  - Owner actions: T037 (`npm run bot:webhook -- https://passflat.com`), T041 (send the scenario list to a lawyer), T044 (run the queries once, fill in the deploy date), T045 (confirm the bot's production status).
+  - No entry added a table or a migration.
