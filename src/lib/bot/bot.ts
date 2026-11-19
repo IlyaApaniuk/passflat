@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, type Context } from 'grammy';
+import { Bot, InlineKeyboard, type CommandContext, type Context } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
 import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
@@ -38,6 +38,7 @@ import {
   setChatLocale,
   touchChat,
 } from './store';
+import { parseStartPayload } from './start-payload';
 import { normalizeLocale, peopleWord, t, type BotLocale } from './texts';
 
 /**
@@ -192,6 +193,45 @@ async function replyDistrict(ctx: Context, locale: BotLocale, slug: string) {
   );
 }
 
+/** `/start [payload]`; exported so tests can call it with a fake context. */
+export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
+  const chatId = ctx.chat.id;
+  const payload = commandPayload(ctx);
+  const start = parseStartPayload(payload);
+  const chat = await touchChat({
+    chatId,
+    locale: normalizeLocale(ctx.from?.language_code),
+    startPayload: payload || null,
+  });
+  const locale = chat.locale as BotLocale;
+
+  track(chatId, 'tg_bot_started', { payload: payload || null, is_new: chat.isNew });
+
+  // "?start=dep" — shared in chats under "they won't return my deposit".
+  if (start.kind === 'deposit') {
+    await startDepositFlow(ctx, chat.id, locale);
+    return;
+  }
+
+  // Building links ("b_<uuid>", the website CTA) and "web_*" still get the
+  // generic reply below; the building is not opened from the link yet.
+  if (start.kind === 'district') {
+    const district = await getDistrictBySlug(start.slug);
+    if (district) {
+      await addSubscription(chatId, { districtSlug: district.slug, citySlug: district.citySlug });
+      await ctx.reply(t(locale, 'subscribedDistrict', { name: district.name }), {
+        parse_mode: 'HTML',
+      });
+      return;
+    }
+  }
+
+  await ctx.reply(t(locale, start.kind === 'none' ? 'start' : 'startAfterPayload'), {
+    parse_mode: 'HTML',
+    link_preview_options: { is_disabled: true },
+  });
+}
+
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
 
@@ -204,43 +244,7 @@ export function createBot(token: string): Bot {
     await next();
   });
 
-  bot.command('start', async (ctx) => {
-    const chatId = ctx.chat.id;
-    const payload = commandPayload(ctx);
-    const chat = await touchChat({
-      chatId,
-      locale: normalizeLocale(ctx.from?.language_code),
-      startPayload: payload || null,
-    });
-    const locale = chat.locale as BotLocale;
-
-    track(chatId, 'tg_bot_started', { payload: payload || null, is_new: chat.isNew });
-
-    // "?start=dep" — shared in chats under "they won't return my deposit".
-    if (payload === 'dep') {
-      await startDepositFlow(ctx, chat.id, locale);
-      return;
-    }
-
-    // A deep link can carry a building the user already looked at on the site
-    // ("b_<uuid>"), so honour it instead of asking for an address they just typed.
-    if (payload.startsWith('d_')) {
-      const districtSlug = payload.slice(2);
-      const district = await getDistrictBySlug(districtSlug);
-      if (district) {
-        await addSubscription(chatId, { districtSlug: district.slug, citySlug: district.citySlug });
-        await ctx.reply(t(locale, 'subscribedDistrict', { name: district.name }), {
-          parse_mode: 'HTML',
-        });
-        return;
-      }
-    }
-
-    await ctx.reply(t(locale, payload ? 'startAfterPayload' : 'start'), {
-      parse_mode: 'HTML',
-      link_preview_options: { is_disabled: true },
-    });
-  });
+  bot.command('start', handleStart);
 
   bot.command('help', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat.id });

@@ -498,14 +498,14 @@
       "title": "Add the bot's start-payload parser and entry_source constant",
       "spec": "docs/specs/04-telegram-bot.md#start-payloads",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/bot/start-payload.ts exports parseStartPayload and the entry_source constant (typed_address, typed_district, link_building, link_district)",
         "A table-driven test covers every row of the spec table, including a 65-character payload, a payload with a space, b_ with a non-UUID and uppercase UUIDs",
         "bot.ts /start uses the parser for dep, d_ and the fallback with unchanged behaviour (b_ wiring comes in T035); tg_bot_started keeps payload and is_new"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

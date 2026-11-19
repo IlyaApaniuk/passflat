@@ -65,6 +65,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - An async server page renders in Vitest: mock `next-intl/server`'s `getTranslations` with `createTranslator`, `await` the default export and `renderToStaticMarkup` it; call `generateMetadata` directly (example: `src/app/[locale]/[city]/costs/share/page.test.ts`).
 - Shell redirects into the repo (`git show HEAD:<file> > src/...`) are denied; redirecting a log to the scratchpad works. To compare with the HEAD version of a module, write a copy with the Write tool, run a scratch test, then delete both with `node -e`.
 - `CostsMap` renders in Vitest with `react-map-gl` mocked (`Popup`/`Source` render children) and `react`'s `useState` mocked so `useState(null)` returns the open popup; `NEXT_PUBLIC_MAPBOX_TOKEN` is set in `vi.hoisted` (example: `src/components/map/CostsMap.test.ts`).
+- Bot handlers are tested by exporting the handler body from `bot.ts` and calling it with a fake `{ chat, from, message: { text }, reply }` cast to `CommandContext<Context>`; mock `./store`, `./analytics`, `./deposit-flow`, `./lookup` and `@/lib/cost-baselines` with every named import `bot.ts` uses (example: `src/lib/bot/bot.test.ts`). Top-level `await` fails typecheck in tests; import statically, `vi.mock` is hoisted.
 
 ## Log
 
@@ -438,3 +439,22 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - (4) The figures stay the D4 blend (user + import + scraped), restricted to the type, with the existing labels ("≈", "median monthly total"); no new copy.
   - No copy, assumptions, tables or migrations. Analytics unchanged. After deploy, the renamed cache key means the first request per city/search recomputes `getBuildingsData`.
 - Next: the next `todo` task of M3 (T047 post-submit copy, T048 share page copy, or later tasks).
+
+### 2026-11-19 03:49 · T031 · done
+
+- Done:
+  - New pure `src/lib/bot/start-payload.ts`: `parseStartPayload(raw)` returns the `StartPayload` union of spec 04 (`none`, `deposit`, `building` with `buildingId`, `invalid_building`, `district` with `slug`, `web` with `source`, `unknown`). It also exports `ENTRY_SOURCE` (`typedAddress`, `typedDistrict`, `linkBuilding`, `linkDistrict` → `typed_address`, `typed_district`, `link_building`, `link_district`).
+  - Rule order: empty → `none`. Then the Telegram shape (≤ 64 chars of `[A-Za-z0-9_-]`) applies first, so a 65-character `b_…` is `unknown`, not `invalid_building`. Then `dep` (exact), `b_` + 8-4-4-4-12 hex in any case (the id is lowercased), `d_` + `[a-z0-9-]{1,48}`, and `web_` + a non-empty source.
+  - `src/lib/bot/bot.ts`: the `/start` body is now the exported `handleStart(ctx: CommandContext<Context>)`, and `bot.command('start', handleStart)` calls it. It branches on the parsed kind: `deposit` starts the deposit flow, a `district` with a known slug subscribes as before, and the fallback is `start` for `none` and `startAfterPayload` otherwise. `b_` and `web_*` still get `startAfterPayload` (T035 wires `b_`).
+  - `touchChat` still gets the raw payload as `startPayload` (first-touch), and `tg_bot_started` still sends `{ payload: raw || null, is_new }`.
+- Tests:
+  - New `start-payload.test.ts` (37). Every spec row, with edges: `DEP`, `dep_threads`, lower, upper and mixed-case UUIDs, the nil UUID, `b_` empty, non-UUID, no hyphens, trailing char, non-hex, numeric. Also `d_` at 48 and 49 chars, empty, uppercase, underscore; `web_` empty and compound; 64 vs 65 chars (also for `b_`); a space, non-ASCII, a slash, whitespace-only; `thr_med`. Plus the four `ENTRY_SOURCE` values.
+  - New `bot.test.ts` (10). It calls `handleStart` with a fake context and mocks `./store`, `./analytics`, `./deposit-flow`, `./lookup` and `@/lib/cost-baselines`. Cases: plain `/start` (`start`, `startPayload: null`, `payload: null`); `dep` (deposit flow, no reply); known `d_` (subscription + `subscribedDistrict`); unknown `d_` (looked up, `startAfterPayload`); malformed `d_Mokotow` (no lookup). `b_<uuid>`, `b_123`, `web_checker`, `thr_med` and `dep now` all get `startAfterPayload` with no lookup or subscription. An uppercase-UUID payload is stored and tracked raw, with `is_new: false` and the UK reply.
+- Checks: `npx vitest run` on the two new files passed (47/47). `npm run verify` exit 0 three times. The first run failed typecheck (top-level `await import` in the test) and was fixed with a static import. The second showed a new knip warning for the unused `EntrySource` type, which I removed. Final run: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 62 files / 756 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started and no Telegram API was called. Behaviour is proven only with the fake context.
+- Owner review:
+  - Assumption applied: the `entry_source` values in `ENTRY_SOURCE` (`src/lib/bot/start-payload.ts`), as written in spec 04.
+  - Interpretation to confirm: "RFC 4122 shape" means 8-4-4-4-12 hex digits, without checking the version or variant nibble. That is what a Postgres `uuid` column accepts, so any shaped id is safe to query, and a future v7 id also passes.
+  - Behaviour change, invisible in practice: `d_<slug>` reaches the database only when the slug matches `[a-z0-9-]{1,48}`. All district slugs do, so a non-matching slug could never have been found.
+  - No copy, tables or migrations. Analytics unchanged.
+- Next: T035 (open the building from `b_`) once T033 is done, and T036 (stop `d_` from subscribing; it depends only on T031). Both extend `handleStart` and `bot.test.ts`.
