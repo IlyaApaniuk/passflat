@@ -227,8 +227,24 @@ export async function clearEditStep(profileId: string, step: string): Promise<bo
   return count === 1;
 }
 
-/** The instant a profile last came up: `coalesce(renewed_at, activated_at)`. */
-function freshness(profile: Pick<RoommateProfile, 'renewedAt' | 'activatedAt'>): number {
+/**
+ * Switches the daily push (spec 07 §Daily push, FR-27) off (`rm:push:off`) or back on
+ * (`rm:push:on`) on a saved (active or expired) profile. One conditional write on `push_off`
+ * holding the other value: false means it already was so (a repeat tap) and nothing changed.
+ */
+export async function setPushOff(profileId: string, off: boolean): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: { in: ['active', 'expired'] }, pushOff: !off },
+    data: { pushOff: off },
+  });
+  return count === 1;
+}
+
+/**
+ * The instant (ms) a profile last came up: `coalesce(renewed_at, activated_at)`, the order of the
+ * cards and what the daily push counts as new.
+ */
+export function freshness(profile: Pick<RoommateProfile, 'renewedAt' | 'activatedAt'>): number {
   return (profile.renewedAt ?? profile.activatedAt)?.getTime() ?? 0;
 }
 

@@ -528,14 +528,14 @@
       "title": "Daily 'N new people fit' push and its opt-out (FR-27)",
       "spec": "docs/specs/07-roommate-matching.md#daily-push",
       "dependsOn": ["T077", "T081", "T082"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "sendDailyPushes(api, now) runs in the send-hour run with the switch on, counts new compatible profiles since coalesce(last_push_at, activated_at), sends nothing at N = 0, claims on last_push_at and sends tg_roommate_push_sent with count_band",
         "rm:push:off sets push_off and sends tg_roommate_push_opted_out; rm:push:on switches it back from the card",
         "The golden case of spec 07 §Daily push is a test, plus N = 0, claim once over two runs, switch off, a hidden and an expired profile"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D68 (10:00 Warsaw)."
     },
     {

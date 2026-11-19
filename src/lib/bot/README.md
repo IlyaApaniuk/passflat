@@ -97,7 +97,7 @@ the migrations are missing (`docs/architecture.md` §9).
   buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while
   expired, `showsRenew`), Edit, Delete, then "How many are looking?" and the
   opt-in toggle (switch off) or "Show people" (`rm:show:c`, see **Cards**) and
-  the daily-message toggle (switch on; its handler comes with the daily push).
+  the daily-message toggle (switch on; see **Daily push**).
 - **Edit from the own card** (spec 06 §Save and the own card, Edit): Edit
   (`rm:c:edit`) sends a field picker (`rm:e:<field>` for `EDIT_FIELDS`, then Back
   `rm:e:back`, which closes an open edit step and sends the card). A field opens
@@ -211,6 +211,21 @@ the migrations are missing (`docs/architecture.md` §9).
   original (`documentLink`, `/documents/…`), the address prompt, or the Warsaw
   costs page (`webLink`); links carry `utm_source=telegram`, `utm_medium=bot`,
   `utm_campaign=roommate` and no chat id. The next steps work with the switch off.
+- **Daily push** (spec 07 §Daily push, FR-27; `sendDailyPushes` in
+  `roommate-daily.ts`, the toggle in `roommate-matching.ts`): in the send-hour run
+  with the switch on, each active profile with `push_off` false gets "<N> new
+  people fit you" with "Show" (`rm:show:p`) and "Stop daily messages"
+  (`rm:push:off`), where N counts the `findCompatible` profiles whose
+  `coalesce(renewed_at, activated_at)` lies after `coalesce(last_push_at,
+activated_at)` and at or before the run's time. N = 0 → nothing; a last push
+  (or the one-time message) the same Warsaw day → nothing, so a doubled
+  invocation writes once. Claimed on `last_push_at` as read (the claim re-checks
+  the push is on), a release restores it; each delivered push sends
+  `tg_roommate_push_sent` with `count_band`. `rm:push:off` (`setPushOff`,
+  conditional on the old value) sets `push_off`, sends
+  `tg_roommate_push_opted_out` only when the write lands, and sends the own card
+  with "Turn on daily messages" (`rm:push:on`, no event). A stop works with the
+  switch off too; `rm:push:on` then replies "matching is paused".
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -261,8 +276,9 @@ the migrations are missing (`docs/architecture.md` §9).
   most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
   `MESSAGE_JOBS`: the retry of waiting reveals (`retryPendingReveals`, see
   **Reveal**), the renewal reminder (`sendRenewalReminders`) and, with the switch
-  on only (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`);
-  statements, outcome and the push add theirs in the priority order of the spec. The response holds counts only;
+  on only (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`) and
+  the daily push (`sendDailyPushes`, see **Daily push**); statements and the
+  outcome add theirs in the priority order of the spec. The response holds counts only;
   PostHog is flushed before it.
 - **Matching is open** (spec 06 §Matching is open, FR-19): with the switch on,
   each active profile with `notify_on_open_at` set and `notified_open_at` null
@@ -322,9 +338,9 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
-| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, Done, next steps       |
+| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, Done, steps, push      |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
-| `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
+| `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |

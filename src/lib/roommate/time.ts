@@ -172,6 +172,13 @@ export function isRoommateSendHour(now: Date): boolean {
   return warsawParts(now).hour === ROOMMATE_SEND_HOUR;
 }
 
+/** True when both instants fall on the same Warsaw calendar day. */
+export function isSameWarsawDay(a: Date, b: Date): boolean {
+  const pa = warsawParts(a);
+  const pb = warsawParts(b);
+  return pa.year === pb.year && pa.month === pb.month && pa.day === pb.day;
+}
+
 const monthNameFormats = {
   ru: new Intl.DateTimeFormat('ru', { month: 'long', timeZone: WARSAW_TIME_ZONE }),
   uk: new Intl.DateTimeFormat('uk', { month: 'long', timeZone: WARSAW_TIME_ZONE }),

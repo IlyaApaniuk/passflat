@@ -52,7 +52,7 @@ const LATER_MESSAGE_PROMISES = [
  */
 const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // Sent only with the switch on and the push on (`matchingOpenText`); the
-  // switch stays off until T090 builds the push.
+  // send-hour run's daily push writes when someone new fits.
   openNobodyDaily: 'the daily push of spec 07 FR-27: sendDailyPushes, roommate-daily.ts (T090)',
   // The opt-in reply's first sentence (spec 06 §Opt-in, FR-18): the send-hour
   // run writes once to every active opted-in profile when the switch is on.
@@ -75,6 +75,18 @@ const OPT_IN_PROMISE_BACKING: Record<string, { file: string; holds: string[] }> 
   optInClosing: {
     file: 'src/app/api/cron/roommate-close/route.ts',
     holds: ['export async function POST', 'await runRoommateClose('],
+  },
+};
+
+/** The daily push sentence of the one-time message and the code that backs it (T090). */
+const DAILY_PUSH_PROMISE_BACKING: Record<string, { file: string; holds: string[] }> = {
+  openNobodyDaily: {
+    file: 'src/lib/bot/roommate-daily.ts',
+    holds: [
+      'const sendDailyPushes: MessageJob',
+      'switchOnOnly(sendDailyPushes)',
+      'matchingOpenText(locale, count, !profile.pushOff)',
+    ],
   },
 };
 
@@ -198,7 +210,7 @@ describe('bot texts: no notification promises', () => {
     }
   });
 
-  it('allows exactly the three named promises, the opt-in two each with its backing code', () => {
+  it('allows exactly the three named promises, each with its backing code', () => {
     expect(Object.keys(ROOMMATE_PROMISE_EXCEPTIONS).sort()).toEqual([
       'openNobodyDaily',
       'optInClosing',
@@ -206,7 +218,11 @@ describe('bot texts: no notification promises', () => {
     ]);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInConfirm).toMatch(/\bsendMatchingOpenMessages\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInClosing).toMatch(/\/api\/cron\/roommate-close\b/);
-    for (const [key, { file, holds }] of Object.entries(OPT_IN_PROMISE_BACKING)) {
+    expect(ROOMMATE_PROMISE_EXCEPTIONS.openNobodyDaily).toMatch(/\bsendDailyPushes\b/);
+    for (const [key, { file, holds }] of Object.entries({
+      ...OPT_IN_PROMISE_BACKING,
+      ...DAILY_PUSH_PROMISE_BACKING,
+    })) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
       for (const code of holds) expect(source, `${key}: ${file}`).toContain(code);
     }

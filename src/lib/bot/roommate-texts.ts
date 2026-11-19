@@ -25,7 +25,8 @@ import { peopleWord } from './texts';
  * "matching is paused" of §Switch). The card reuses the own card's field labels.
  * "Interested" (§Interest) adds the daily limit and "already answered". The
  * reveal (§Reveal) adds the match line, the safety lines (PRD 3 §8 verbatim), the
- * reveal's username prompt and the three next steps.
+ * reveal's username prompt and the three next steps. The daily push (§Daily push)
+ * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages".
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -286,6 +287,10 @@ const RU = {
   nextStepAddress:
     '<b>Пришли адрес</b>, например <code>Grójecka 45</code> — покажу расходы по дому или по его району.',
   nextStepCost: 'Расходы на аренду в Варшаве по домам и районам: <a href="{url}">passflat.com</a>',
+
+  // --- the daily push (spec 07 §Daily push, FR-27): PRD 3 §8 verbatim; the EN verb agrees with N ---
+  pushNewOne: 'Новых подходящих людей: {count}.',
+  pushNewMany: 'Новых подходящих людей: {count}.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -496,6 +501,8 @@ const UK: Record<Key, string> = {
     '<b>Надішли адресу</b>, наприклад <code>Grójecka 45</code> — покажу витрати по будинку або по його району.',
   nextStepCost:
     'Витрати на оренду у Варшаві по будинках і районах: <a href="{url}">passflat.com</a>',
+  pushNewOne: 'Нових людей, які тобі підходять: {count}.',
+  pushNewMany: 'Нових людей, які тобі підходять: {count}.',
 };
 
 const EN: Record<Key, string> = {
@@ -705,6 +712,8 @@ const EN: Record<Key, string> = {
   nextStepAddress:
     "<b>Send an address</b>, for example <code>Grójecka 45</code>, and I'll show the costs for the building or its district.",
   nextStepCost: 'Rental costs in Warsaw by building and district: <a href="{url}">passflat.com</a>',
+  pushNewOne: '{count} new person fits you.',
+  pushNewMany: '{count} new people fit you.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

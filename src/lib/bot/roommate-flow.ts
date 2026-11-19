@@ -636,7 +636,7 @@ export function pushStateLine(profile: Pick<RoommateProfile, 'pushOff'>, locale:
   return rt(locale, profile.pushOff ? 'cardPushOff' : 'cardPushOn');
 }
 
-/** The daily-message toggle (`rm:push:off` / `rm:push:on`, spec 07 §Daily push, T090). */
+/** The daily-message toggle (`rm:push:off` / `rm:push:on`, spec 07 §Daily push, `roommate-matching.ts`). */
 export function pushToggleButton(profile: Pick<RoommateProfile, 'pushOff'>, locale: BotLocale) {
   return profile.pushOff
     ? InlineKeyboard.text(rt(locale, 'btnPushOn'), 'rm:push:on')
@@ -648,7 +648,7 @@ export function pushToggleButton(profile: Pick<RoommateProfile, 'pushOff'>, loca
  * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
  * Delete; with the switch off "How many are looking?" and the opt-in toggle
  * (`rm:c:optin` / `rm:c:optout`), with it on "Show people" (`rm:show:c`, spec 07
- * §Cards) and the daily-message toggle (spec 07 §Daily push, T090).
+ * §Cards) and the daily-message toggle (spec 07 §Daily push).
  */
 function ownCardKeyboard(
   profile: RoommateProfile,
@@ -686,7 +686,7 @@ function ownCardKeyboard(
  * the save and whenever a saved (active or expired) profile is opened. The
  * switch is read at reply time, so the card and the menu never disagree.
  */
-async function sendOwnCard(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
+export async function sendOwnCard(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
   const matchingEnabled = isMatchingEnabled();
   const districts = profile.districtSlugs.length > 0 ? await cityDistricts() : [];
   await ctx.reply(ownCardText(profile, districts, locale, matchingEnabled), {
@@ -1340,7 +1340,7 @@ function editPickerKeyboard(locale: BotLocale): InlineKeyboard {
  * (an old card of a profile deleted and started again) "this step is done" with
  * its current step; then null.
  */
-async function savedProfileFor(
+export async function savedProfileFor(
   ctx: Context,
   chatDbId: string,
   locale: BotLocale,

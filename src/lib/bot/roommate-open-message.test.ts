@@ -487,7 +487,7 @@ describe('the one-time message: tg_roommate_open_notified', () => {
 
 describe('the one-time message: N is the number findCompatible gives', () => {
   it('counts only visible, compatible profiles the viewer has not reacted to or reported', async () => {
-    seedViewer();
+    const viewer = seedViewer();
     seed('fit-1');
     seed('fit-2', { renewedAt: new Date(NOW.getTime() - DAY) });
     // An interest from the other side does not hide it (only a skip does).
@@ -525,9 +525,12 @@ describe('the one-time message: N is the number findCompatible gives', () => {
 
     await run(api);
 
-    expect(sent(sendMessage).map((message) => message.text)).toEqual([
-      'Подбор открыт. Сейчас тебе подходят 3 человека.',
-    ]);
+    // The others get the daily push (fit-2 renewed after they came up); the viewer only this.
+    expect(
+      sent(sendMessage)
+        .filter((message) => message.tgId === viewer.tgId)
+        .map((message) => message.text),
+    ).toEqual(['Подбор открыт. Сейчас тебе подходят 3 человека.']);
   });
 });
 
@@ -655,7 +658,12 @@ describe('the one-time message: claim once, release on failure', () => {
 
     await run(failing.api);
 
-    expect(failing.sendMessage).toHaveBeenCalledTimes(1);
+    // The one-time message did not arrive, so the daily push of the same run may go: it counts
+    // fit-1 (newer than the earlier push), fails too and restores last_push_at as well.
+    expect(sent(failing.sendMessage).map((message) => message.text)).toEqual([
+      'Подбор открыт. Сейчас тебе подходит 1 человек.',
+      'Новых подходящих людей: 1.',
+    ]);
     expect(stored('viewer').notifiedOpenAt).toBeNull();
     expect(stored('viewer').lastPushAt).toEqual(earlierPush);
     expect(openEvents()).toEqual([]);
@@ -663,6 +671,7 @@ describe('the one-time message: claim once, release on failure', () => {
 
     const { api, sendMessage } = fakeApi();
     await run(api, NEXT_DAY);
+    // The one-time message only: it sets last_push_at, so no push the same day.
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(stored('viewer').notifiedOpenAt).toEqual(NEXT_DAY);
     expect(openEvents()).toHaveLength(1);

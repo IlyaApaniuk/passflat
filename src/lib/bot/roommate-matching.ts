@@ -11,6 +11,7 @@ import {
   loadMatchedPair,
   loadRoommateEntry,
   pendingRevealPartners,
+  setPushOff,
   storeInterest,
   storeSkip,
   telegramChatIdOf,
@@ -29,6 +30,8 @@ import {
   pushToggleButton,
   rememberUsername,
   roommateCallback,
+  savedProfileFor,
+  sendOwnCard,
   type District,
 } from './roommate-flow';
 import { NEXT_STEPS, USERNAME_DONE, revealPair, type NextStepChoice } from './roommate-reveal';
@@ -42,7 +45,9 @@ import type { BotLocale } from './texts';
  * (§Cards, FR-25), one at a time with "Interested" (`rm:i:<id>`, §Interest and mutual match,
  * FR-26, FR-28), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`, T093), the username prompt before
  * them (§Usernames), the reveal of a formed pair (§Reveal, `roommate-reveal.ts`) with its next
- * steps (`rm:ns:<choice>`, FR-30), and "matching is paused" while the switch is off (§Switch).
+ * steps (`rm:ns:<choice>`, FR-30), the daily push's toggle (`rm:push:off` / `rm:push:on`,
+ * §Daily push, FR-27; the push itself is a cron job in `roommate-daily.ts`), and "matching is
+ * paused" while the switch is off (§Switch).
  * Every card handler reads the switch per tap; the next steps under a reveal already sent keep
  * working with the switch off (reveals already sent stay).
  *
@@ -63,6 +68,7 @@ const SHOW_TAP = /^rm:show(?::([conp]))?$/;
 const INTEREST_TAP = /^rm:i:([^:]+)$/;
 const SKIP_TAP = /^rm:x:([^:]+)$/;
 const NEXT_STEP_TAP = /^rm:ns:(agreement|address|cost)$/;
+const PUSH_TOGGLE = /^rm:push:(off|on)$/;
 
 /**
  * A card of another person's profile (spec 07 §Cards, `renderRoommateCard`, pure): districts (or
@@ -320,6 +326,29 @@ const handleUsernameDone = roommateCallback(async (ctx, chat, locale) => {
   if (!messaged) await showNextCard(ctx, viewer, locale, now);
 });
 
+/**
+ * `rm:push:off` ("Stop daily messages", under the daily push and on the own card) and
+ * `rm:push:on` (the own card of a profile with the push off), spec 07 §Daily push, FR-27: one
+ * conditional write on `push_off` (`setPushOff`), then the own card again, which shows the new
+ * state and the button that switches it back. The write that turns the push off sends
+ * `tg_roommate_push_opted_out` (no properties); a repeat tap changes nothing and sends nothing;
+ * turning it back on sends no event. A stop is honoured with the switch off too (no push goes out
+ * then, but none starts again when the switch comes back on); turning the push on is a stage 2
+ * button and gets "matching is paused" with the switch off (§Switch), nothing stored.
+ */
+const handlePushToggle = roommateCallback(async (ctx, chat, locale) => {
+  const [state] = matchGroups(ctx);
+  const off = state === 'off';
+  if (!off && !isMatchingEnabled()) {
+    await ctx.reply(rt(locale, 'matchingPaused'));
+    return;
+  }
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+  if ((await setPushOff(profile.id, off)) && off) track(ctx.chat!.id, 'tg_roommate_push_opted_out');
+  await sendOwnCard(ctx, { ...profile, pushOff: off }, locale);
+});
+
 /** The reply of each next step under a reveal (FR-30): links carry the bot's UTM, no chat id. */
 function nextStepText(choice: NextStepChoice, locale: BotLocale): string {
   if (choice === 'agreement') {
@@ -358,4 +387,5 @@ export function registerRoommateMatching(bot: Bot): void {
   bot.callbackQuery(SKIP_TAP, handleSkipTap);
   bot.callbackQuery(USERNAME_DONE, handleUsernameDone);
   bot.callbackQuery(NEXT_STEP_TAP, handleNextStepTap);
+  bot.callbackQuery(PUSH_TOGGLE, handlePushToggle);
 }

@@ -9,9 +9,9 @@ import {
   REPORT_LIFE_MONTHS,
   countBand,
 } from '@/lib/roommate/rules';
-import { findCompatible } from '@/lib/roommate/store';
+import { findCompatible, freshness } from '@/lib/roommate/store';
 import { isMatchingEnabled } from '@/lib/roommate/switch';
-import { formatWarsawDate, isRoommateSendHour } from '@/lib/roommate/time';
+import { formatWarsawDate, isRoommateSendHour, isSameWarsawDay } from '@/lib/roommate/time';
 
 import { track } from './analytics';
 import { retryPendingReveals } from './roommate-reveal';
@@ -457,6 +457,71 @@ const sendMatchingOpenMessages: MessageJob = async (sender, now) => {
   }
 };
 
+/** "<N> new people fit you" (PRD 3 §8 "Daily push"); RU / UK read the same for every N. */
+function dailyPushText(locale: RoommateLocale, count: number): string {
+  return rt(locale, count === 1 ? 'pushNewOne' : 'pushNewMany', { count: String(count) });
+}
+
+/**
+ * The daily push (spec 07 §Daily push, FR-27, D49, D68), switch on only: every active profile (the
+ * counts' definition, so never hidden, expired, blocked or banned) with `push_off` false gets
+ * "<N> new people fit you" with "Show" (`rm:show:p`, spec 07 §Cards) and "Stop daily messages"
+ * (`rm:push:off`), where N counts the profiles of `findCompatible` (so none it has reacted to)
+ * that came up (`coalesce(renewed_at, activated_at)`) after `coalesce(last_push_at,
+ * activated_at)` of this profile and at or before `now`, the instant the claim writes, so the
+ * next push counts from where this one stopped. N = 0 → no message and nothing written. A
+ * profile whose last push (or the one-time message, which sets `last_push_at`) went out the same
+ * Warsaw day gets none, so a cron invoked twice in the send hour writes once a day. Claimed on
+ * `last_push_at` as read (the claim also checks the push is still on); a release restores it.
+ * Each delivered push sends `tg_roommate_push_sent` with `count_band` only.
+ */
+const sendDailyPushes: MessageJob = async (sender, now) => {
+  const due = await prisma.roommateProfile.findMany({
+    where: { ...activeProfilesWhere(now), pushOff: false },
+    include: { chat: { select: { chatId: true, blockedAt: true, locale: true } } },
+    orderBy: { activatedAt: 'asc' },
+  });
+
+  for (const { chat, ...profile } of due) {
+    if (sender.stopped) return;
+    const { lastPushAt } = profile;
+    if (lastPushAt && isSameWarsawDay(lastPushAt, now)) continue;
+    const since = (lastPushAt ?? profile.activatedAt)?.getTime() ?? 0;
+    const count = (await findCompatible(profile, now)).filter((candidate) => {
+      const cameUp = freshness(candidate);
+      return cameUp > since && cameUp <= now.getTime();
+    }).length;
+    if (count === 0) continue;
+    const locale = roommateLocale(chat.locale);
+    await sender.send({
+      chatId: chat.chatId,
+      blockedAt: chat.blockedAt,
+      claim: async () => {
+        const claimed = await prisma.roommateProfile.updateMany({
+          where: { id: profile.id, status: 'active', pushOff: false, lastPushAt },
+          data: { lastPushAt: now },
+        });
+        return claimed.count === 1;
+      },
+      release: async () => {
+        await prisma.roommateProfile.updateMany({
+          where: { id: profile.id, lastPushAt: now },
+          data: { lastPushAt },
+        });
+      },
+      text: dailyPushText(locale, count),
+      options: {
+        reply_markup: InlineKeyboard.from([
+          [InlineKeyboard.text(rt(locale, 'btnShow'), 'rm:show:p')],
+          [InlineKeyboard.text(rt(locale, 'btnPushOff'), 'rm:push:off')],
+        ]),
+      },
+      onSent: () =>
+        track(Number(chat.chatId), 'tg_roommate_push_sent', { count_band: countBand(count) }),
+    });
+  }
+};
+
 /**
  * The send-hour jobs in the priority order of spec 06 §Daily cron step 2, so the important ones go
  * first when the cap or the time budget runs out. Each later task adds its job at its place:
@@ -466,13 +531,14 @@ const sendMatchingOpenMessages: MessageJob = async (sender, now) => {
  * 4. the renewal reminders (§Renewal, `sendRenewalReminders`);
  * 5. the outcome question (spec 07 FR-29, T091);
  * 6. switch on only: the one-time message (§Matching is open, `sendMatchingOpenMessages`, T082);
- * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`, T090).
+ * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`).
  * The retries and the outcome question run with the switch on or off.
  */
 const MESSAGE_JOBS: readonly MessageJob[] = [
   retryPendingReveals,
   sendRenewalReminders,
   switchOnOnly(sendMatchingOpenMessages),
+  switchOnOnly(sendDailyPushes),
 ];
 
 export type RoommateDailyResult = {
