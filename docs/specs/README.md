@@ -120,7 +120,7 @@ tasks waited for answers Q-1 – Q-6, which the owner gave on 2026-11-19 (rows b
 | — (Q-15)             | No e-mail-keyed waitlist events; no typed text in bot address events     | [02](02-roommate-and-waitlist.md#waitlist-server-events), [04](04-telegram-bot.md#typed-text-in-bot-events) | T057                          | Done    |
 | — (Q-16)             | City-launch e-mail links to the costs page; claim before send            | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T058                          | Done    |
 | — (Q-17)             | City-launch e-mail copy matches the costs-page link                      | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T060                          | Blocked |
-| — (D42)              | The bot addresses the user with «ты» / «ти» everywhere                   | [04 §Address form «ты»](04-telegram-bot.md#address-form-ты)                                                 | T061                          | Planned |
+| — (D42)              | The bot addresses the user with «ты» / «ти» everywhere                   | [04 §Address form «ты»](04-telegram-bot.md#address-form-ты)                                                 | T061                          | Done    |
 | FR-49                | Final check after the owner's answers                                    | [05](05-measurement-docs.md#final-check-after-the-owners-answers)                                           | T059                          | Planned |
 
 ## Related references

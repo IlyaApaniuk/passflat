@@ -92,6 +92,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Area pages (`/[city]`, `/[city]/[district]`) and landing components render end-to-end in Vitest over one Prisma mock with `Footer` and `ShareButton` mocked to `null` (example: `src/lib/area-figures-consistency.test.ts`).
 - A cost OG card or meta description with a number goes through `figureOgCard` / `buildingMetaDescription` (`src/lib/single-number-metadata.ts`); `getCostOgImage` requires `figureLabel`. To look at an `/api/og` card, a temporary e2e spec can write the PNG to the scratchpad (then Read it and delete the spec).
 - A neighbour or any per-building pin reads `neighbourFigure` + `NEIGHBOUR_REPORT_SELECT` (`location-checker.ts`); pin text and colours come from `figurePinLabel` / `figurePinColors` (`map-style.ts`) and the legend from `figure-map-legend.tsx`. No blended median helper exists any more (`cost-baselines.ts` is deleted).
+- Bot copy addresses the user with «ты» / «ти» (D42); `src/lib/bot/address-form.test.ts` walks every RU/UK text for formal pronouns and plural imperatives. A noun it catches (like «сайте») goes into its `NOT_IMPERATIVES` with a reason. New deposit keys are covered via `DEPOSIT_TEXT_KEYS`.
+- A RegExp with the `g` flag keeps `lastIndex` between `toMatch` / `test` calls; keep shared patterns without `g` and build a `g` copy for `matchAll`.
 - `toLocaleString('pl-PL')` does not group four-digit numbers ("4000", but "12 000" with a no-break space): match with `\s?`; rendered HTML keeps `&amp;`, so assert on text without `&`.
 
 ## Log
@@ -1552,4 +1554,19 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Q-17 (blocks T060 and so T059):** what the city-launch e-mail body and button should say now that the button opens `/<city>/costs`, or whether the agent may draft the four locales for review. Until then, do not trigger `POST /api/cron/city-launch` in production.
   - **Behaviour to know:** a crash between the claim and the send loses that e-mail (accepted, D33). A row claimed by an overlapping run is counted in neither `sent` nor `failed`, so two overlapping responses add up to one send.
   - No tables, migrations, copy or events.
+- Next: the owner answers Q-17 (`ralph-answer` T060); then T060, then T059 (final check of PRD 1).
+
+### 2026-11-19 11:33 · T061 · done
+
+- Done:
+  - `src/lib/bot/deposit-texts.ts` (RU and UK): `generalRuleContractFailed`, `generalRuleNotLease` (the approved sentences the spec calls `contractFailed` / `contractNotLease`; the `contractFailed` / `contractNotLease` keys themselves had no «вы»), `lawyerAck` and the `letterHowTo` line now read as the drafts of spec 04 §Address form «ты»; the comments that said «вы» / «ви» is kept verbatim cite D42. New export `DEPOSIT_TEXT_KEYS` (test-only consumer, like `TEXT_KEYS`). A read of every other RU/UK string of `texts.ts` and `deposit-texts.ts` found no other «вы» / «ви» or plural-polite verb; «мы» / «ми» (Passflat speaking) and inclusive «Разберёмся» / «Розберемося» stay.
+  - Docs: `docs/legal-review/deposit-scenarios.md` (header note, the §2a register paragraph now quotes the new RU sentences, the `generalRule*` / `lawyerAck` rows say informal "you" (D42), `letterHowTo` rendering; Prettier re-padded that table), `docs/specs/04-telegram-bot.md` (§Deposit helper scope quotes and register line, §Lawyer interest quotes), `docs/specs/README.md` (T061 → Done).
+- Tests: `src/lib/bot/address-form.test.ts` (new, 8): walks every RU and UK key of both text objects (each template as written and filled with sample values, no placeholder left), the command menu and the five plural helpers at 1/2/5/11/21; fails on whole-word «вы», «вас», «вам», «вами», «ваш…» (UK «ви», «вас», «вам», «вами», «ваш…»), any case, Unicode lookarounds (`\p{L}`, apostrophe as a letter); a second check fails on plural-polite imperatives (RU `-ите|-йте|-ьте(сь)`, UK `-іть|-йте|-ьте(ся|сь)`); a self-test of both patterns; the switched texts pinned. Pronoun allowlist `FORMAL_ALLOWED` is empty; the imperative check has one word exception, RU «сайте» (`btnOpenSite` «Открыть на сайте», a noun). Proven to fail by temporarily putting «обратитесь … Вашего» back into `lawyerAck` (both checks failed, reverted). `deposit-general-rule.test.ts` and `deposit-lawyer.test.ts` assert the new wording.
+- Checks: targeted Vitest (4 files, 79 tests) passed. `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 89 files / 1189 tests, build OK). `next-env.d.ts` restored. Nothing deployed; the bot was not started.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (D42 switch, review before deploy with the other drafts, D29):** `deposit-texts.ts` RU+UK `generalRuleContractFailed`, `generalRuleNotLease`, `lawyerAck`, `letterHowTo` (only the «где шла переписка с хозяином» / «де йшло листування з власником» line). Meaning unchanged; the Polish letter and `deposit.ts` untouched.
+  - **Bot copy outside the two files (not changed):** `src/lib/bot/bot.ts:522` the `/lang` buttons «Русский» / «Українська» (no address form). No other user-facing Cyrillic in `src/lib/bot/*.ts` (the rest is district aliases, transliteration tables, date words, the deposit keyword regex and comments) or in `scripts/tg-webhook.ts` (it publishes `COMMAND_MENU`).
+  - Not changed (outside scope): `docs/product/prd/prd-1-decision-review.md` Q-5 / Q-6 keep the original «вы» drafts as history.
+  - No tables, migrations or events.
 - Next: the owner answers Q-17 (`ralph-answer` T060); then T060, then T059 (final check of PRD 1).

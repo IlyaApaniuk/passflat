@@ -1002,13 +1002,13 @@
         "docs/legal-review/deposit-scenarios.md and spec 04 §Deposit helper scope and §Lawyer interest quote the new texts; the deposit-texts.ts comments about the kept «вы» / «ви» cite D42; bot copy found outside the two files is listed in the progress entry, not changed; the changed keys are listed in the progress entry as draft copy for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner decision D42, 2026-11-19 (day run). Depends on every PRD 1 task that edited texts.ts or deposit-texts.ts (git log: T033, T034, T035, T037, T040, T042, T043, T049, T054).",
       "id": "T061",
       "milestone": "M6",
       "title": "Bot texts address the user with «ты» (UK «ти») everywhere",
       "spec": "docs/specs/04-telegram-bot.md#address-form-ты",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": [

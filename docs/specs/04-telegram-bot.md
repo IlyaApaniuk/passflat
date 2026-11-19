@@ -194,16 +194,16 @@ The Polish lawyer review (BRD A14) is still needed before the deposit flow is pr
     может быть законно» and their UK forms) and no ✅ / ⚠️ strength mark; the statutory deadline
     line and the factual explanation stay;
   - for (1) and (2) adds the approved sentence right after the contract message.
-- **Approved RU (verbatim), contract not read:** «Договор прочитать не удалось, поэтому ниже —
-  общее правило закона, а не вывод по вашему договору. Срок в вашем договоре может быть
-  другим.»
+- **Approved RU (D26, address form switched to «ты» by D42), contract not read:** «Договор
+  прочитать не удалось, поэтому ниже — общее правило закона, а не вывод по твоему договору. Срок
+  в твоём договоре может быть другим.»
 - **Not a lease (RU, the approved sentence with its first clause adapted; draft):** «Это не похоже
-  на договор аренды, поэтому ниже — общее правило закона, а не вывод по вашему договору. Срок в
-  вашем договоре может быть другим.»
+  на договор аренды, поэтому ниже — общее правило закона, а не вывод по твоему договору. Срок в
+  твоём договоре может быть другим.»
 - **UK drafts:** «Договір прочитати не вдалося, тому нижче — загальне правило закону, а не
-  висновок щодо вашого договору. Строк у вашому договорі може бути іншим.» and «Це не схоже на
-  договір оренди, тому нижче — загальне правило закону, а не висновок щодо вашого договору.
-  Строк у вашому договорі може бути іншим.»
+  висновок щодо твого договору. Строк у твоєму договорі може бути іншим.» and «Це не схоже на
+  договір оренди, тому нижче — загальне правило закону, а не висновок щодо твого договору.
+  Строк у твоєму договорі може бути іншим.»
 - **Disputed sums (approved RU, verbatim):** «Если сумма спорная, лучше показать документы
   юристу или в бесплатный пункт помощи (nieodpłatna pomoc prawna).» UK draft: «Якщо сума
   спірна, краще показати документи юристу або в безоплатний пункт допомоги (nieodpłatna pomoc
@@ -214,9 +214,9 @@ The Polish lawyer review (BRD A14) is still needed before the deposit flow is pr
   більше, ніж була застава, — такий випадок бот не розбирає.», followed by the disputed-sums
   line. The case is not recorded as outcome `full` (**Assumption**: status as today, outcome
   left empty). A returned amount equal to the deposit keeps `nothingOwed` as today.
-- **Register:** the approved RU sentences use «вы» while the rest of the flow uses «ты». They
-  are kept verbatim; the UK drafts follow the approved RU. The progress entry names this for the
-  owner. Superseded by D42 (2026-11-19): §Address form «ты» (T061) switches them to «ты».
+- **Register:** the approved RU sentences used «вы» while the rest of the flow uses «ты»; D42
+  (2026-11-19, §Address form «ты», T061) switched them to «ты», and the UK drafts to «ти». The
+  sentences above are the switched texts.
 - `docs/legal-review/deposit-scenarios.md` is updated to the new texts in the same task.
 - Tests: one per state (contract failed, not a lease, reason `other`, returned above the
   deposit, returned equal to the deposit) asserting the header, the absence of every strength
@@ -240,10 +240,10 @@ Q-8). `lawyerAck` today promises «напишу сюда первым»; that pr
 
 - `btnWantLawyer` RU: «⚖️ Хочу помощь юриста (сервиса пока нет — отметим интерес)»; UK draft:
   «⚖️ Хочу допомогу юриста (сервісу поки немає — відзначимо інтерес)».
-- `lawyerAck` RU: «Записал ваш интерес. Юридической помощи через Passflat пока нет, и мы не
-  обещаем, что напишем об этом. Если срок важен, обратитесь к юристу напрямую.» UK draft:
-  «Записав ваш інтерес. Юридичної допомоги через Passflat поки немає, і ми не обіцяємо, що
-  напишемо про це. Якщо строк важливий, зверніться до юриста напряму.»
+- `lawyerAck` RU (address form switched to «ты» by D42): «Записал твой интерес. Юридической
+  помощи через Passflat пока нет, и мы не обещаем, что напишем об этом. Если срок важен, обратись
+  к юристу напрямую.» UK draft: «Записав твій інтерес. Юридичної допомоги через Passflat поки
+  немає, і ми не обіцяємо, що напишемо про це. Якщо строк важливий, звернися до юриста напряму.»
 - `tg_lawyer_interest` is unchanged and stays separate from any outcome event; it is the only
   money-interest signal of PRD 2 (D34). A test covers the confirmation text in RU and UK and that
   it promises no reply, date or consultation.
