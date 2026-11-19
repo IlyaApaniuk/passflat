@@ -196,7 +196,7 @@
       "title": "Add the two-role selector to the roommate page",
       "spec": "docs/specs/02-roommate-and-waitlist.md#role-selector",
       "dependsOn": ["T010"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "On /[city]/roommate only, two equal choices sit in the header stack directly above the roommate bridge: Szukam pokoju / Ищу комнату and Mam wolny pokój / Есть свободная комната (EN and UK drafts in a new listings.roommateRoles group in all four files)",
         "Find: sets intent find_room, scrolls the list container to the top and collapses the choices into a chip that reopens them; Offer: navigates to /create-listing?type=roommate with the locale-aware Link",
@@ -205,7 +205,7 @@
         "At 360 px both choices fit on one line without horizontal scroll and are at least 44 px high (checked in the code's classes and named in the progress entry); the namespace shipped to the client is checked and named"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Draft copy keys go into the progress entry for the owner (Q-8)."
     },
     {

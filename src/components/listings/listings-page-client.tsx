@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useDeferredValue, Suspense } from 'react';
+import { useState, useMemo, useCallback, useDeferredValue, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
@@ -14,6 +14,7 @@ import {
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
+import { RoommateRoleSelector } from '@/components/listings/roommate-role-selector';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 
@@ -40,6 +41,7 @@ import { Link } from '@/i18n/navigation';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import { filterListings } from '@/lib/listings-filter';
+import { INITIAL_ROOMMATE_ROLE_STATE } from '@/lib/roommate-roles';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'area-desc';
@@ -83,6 +85,9 @@ function ListingsPageInner({
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filterSection, setFilterSection] = useState<string | undefined>(undefined);
+  // Roommate role choice (spec 02 §Role selector): client state only, never stored.
+  const [roleState, setRoleState] = useState(INITIAL_ROOMMATE_ROLE_STATE);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const activeFilterCount = Object.values(filters).filter(
     (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
@@ -258,6 +263,19 @@ function ListingsPageInner({
             />
           </motion.div>
 
+          {/* Roommate only (spec 02 §Role selector): two equal role choices,
+              directly above the bridge. Choosing is never required; the list
+              below stays rendered. */}
+          {listingType === 'roommate' && (
+            <div className="border-b bg-card px-4 py-2">
+              <RoommateRoleSelector
+                state={roleState}
+                onStateChange={setRoleState}
+                onFindRoom={() => listRef.current?.scrollTo({ top: 0 })}
+              />
+            </div>
+          )}
+
           {/* Roommate search is where organic clicks actually land ("szukam
               współlokatora warszawa"), and it is a frozen part of the product —
               one line is what carries that visit into the cost data instead of
@@ -293,6 +311,7 @@ function ListingsPageInner({
           <div className="flex min-h-0 flex-1">
             <AnimatePresence mode="wait">
               <motion.div
+                ref={listRef}
                 key={showMap ? 'list-compact' : 'list-full'}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -309,6 +328,7 @@ function ListingsPageInner({
                     selectedDistrict={selectedDistrict}
                     districtSlug={selectedDistrictSlug}
                     isLoggedIn={isLoggedIn}
+                    intent={listingType === 'roommate' ? roleState.intent : undefined}
                   />
                 ) : (
                   <ListingGrid

@@ -383,6 +383,12 @@
     "roommateMetaDescription": "Ogłoszenia współlokatorów — {city}: pokoje we wspólnych mieszkaniach, bez pośredników. Zanim się wprowadzisz, sprawdź realne koszty budynku: czynsz, opłaty i kaucję.",
     "roommateCostsBridge": "Zanim się wprowadzisz — sprawdź realne koszty budynku: czynsz, opłaty, kaucja.",
     "roommateCostsBridgeCta": "Sprawdź adres",
+    "roommateRoles": {
+      "find": "Szukam pokoju",
+      "offer": "Mam wolny pokój",
+      "findChosen": "Szukam pokoju",
+      "change": "zmień"
+    },
     "titleSublet": "Tymczasowy podnajem",
     "listingsInCity": "<b>{count}</b> {count, plural, one {oferta} few {oferty} many {ofert} other {ofert}}",
     "filters": {
