@@ -264,7 +264,7 @@
       "title": "Add the pure figure contract with golden tests",
       "spec": "docs/specs/03-building-figures.md#the-contract",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/cost-figures.ts (no Prisma import) exports the spec types, summarizeFigures(reports, { level, rentalType }), summarizeDepositReturns(reports), answerProperties(summary, reference) (spec 01 §Answer quality), MIN_AREA_REPORTS = 5, MIN_DEPOSIT_ANSWERS = 3 and the Q-3 constants (LEGACY_NULL_IS_COMPLETE = false and the others), each in one place",
         "src/lib/cost-figures.test.ts implements golden examples 1-11 of the spec exactly, plus answerProperties for a building answer, a district reference and no data",
@@ -272,7 +272,7 @@
         "src/lib/bot/lookup.ts imports MIN_AREA_REPORTS from the new module (no second constant)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Every Q-3 default is an Assumption: name them in the progress entry."
     },
     {

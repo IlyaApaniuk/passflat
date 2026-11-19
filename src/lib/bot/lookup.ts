@@ -1,5 +1,6 @@
 import { normalizeAddress } from '@/lib/address';
 import { getCityCostStats, getDistrictCostStats, type AreaStats } from '@/lib/cost-baselines';
+import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import {
   aggregateLocationCheckerCosts,
@@ -60,9 +61,6 @@ export interface AddressLookup {
   /** True when Google matched a street but not a specific house number. */
   imprecise: boolean;
 }
-
-/** Below this, a district median says more about the sample than the district. */
-export const MIN_AREA_REPORTS = 5;
 
 const NEIGHBOUR_RADIUS_M = 1500;
 const NEIGHBOUR_LIMIT = 3;

@@ -46,7 +46,7 @@ in code is `warsaw`. The checker and review pages work only for `LOCATION_CHECKE
 
 **Telegram bot** (`src/lib/bot/README.md`). Supported locales are RU/UK only, and `TelegramChat.locale` defaults to `ru`.
 
-- Address lookup: a building-level answer, with a district fallback, and a city fallback below `MIN_AREA_REPORTS` (`lookup.ts`).
+- Address lookup: a building-level answer, with a district fallback, and a city fallback below `MIN_AREA_REPORTS` (`lookup.ts`; the constant lives in `src/lib/cost-figures.ts`).
 - District names are matched before geocoding (`districts.ts`).
 - Building and district subscriptions are stored, but nothing sends them yet: no notifier exists.
 - City waitlist for addresses outside Warsaw (`targetKey = "c:<slug>"`).
@@ -100,6 +100,7 @@ How each source is counted:
 
 - The cost medians (`cost-aggregates.ts`, `cost-baselines.ts`, building page baselines) filter on `isVisible` only, so all three sources count. Blending them is the owner's decision (`CLAUDE.md`).
 - The checker labels results `tenant`, `mixed` or `scraped` (`location-checker.ts:323-336`).
+- The shared figure contract (`src/lib/cost-figures.ts`, pure; spec 03) splits reports into a `tenant` group (`user` + `import`) and an `asking` group (`scraped`) with per-metric N, untrimmed medians and the `MIN_AREA_REPORTS` / `MIN_DEPOSIT_ANSWERS` gates. Surfaces move to it task by task; until then the medians above stay as they are.
 - The global hourly flood guard counts `source = 'user'` only.
 - When an account is hard-deleted, its reports move to `DELETED_AUTHOR_ID` with identifiers stripped (`cron/cleanup-accounts`).
 

@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard, type Context } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
+import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
 
 import { track } from './analytics';
 import {
@@ -28,7 +29,6 @@ import {
   getDistrictBySlug,
   getDistrictTable,
   lookupAddress,
-  MIN_AREA_REPORTS,
   type AddressLookup,
 } from './lookup';
 import {
