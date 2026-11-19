@@ -183,7 +183,9 @@ describe('openRoommate: what opens, in the order of spec 06', () => {
       const { ctx, reply } = fakeCtx();
       await openRoommate(ctx, CHAT, 'ru', { source: 'fb', detail: 'grp' });
 
-      expect(texts(reply)).toEqual([rt('ru', 'cardHeader')]);
+      expect(texts(reply)).toHaveLength(1);
+      expect(texts(reply)[0].startsWith(`${rt('ru', 'cardHeader')}\n\n`)).toBe(true);
+      expect(callbackRows(keyboard(reply))).toContainEqual(['rm:c:edit', 'rm:c:del']);
       expect(mocks.track).not.toHaveBeenCalled();
       expect(db.roommateProfile.create).not.toHaveBeenCalled();
       expect(mocks.hasOpenIntake).not.toHaveBeenCalled();

@@ -19,6 +19,7 @@ import {
   SMOKING,
   bandForAmount,
   countBand,
+  graceEnd,
   isBudgetBand,
   isDistrictPickComplete,
   isGender,
@@ -32,11 +33,40 @@ import {
   profileEditedProperties,
   reduceDistrictPick,
   setLanguage,
+  showsRenew,
   type DistrictPick,
 } from './rules';
 
 const NBSP = String.fromCharCode(0xa0);
 const NARROW_NBSP = String.fromCharCode(0x202f);
+
+describe('showsRenew (the own card Renew button, spec 06 §Save and the own card)', () => {
+  const NOW = new Date('2026-12-05T10:00:00Z');
+  const DAY = 24 * 60 * 60 * 1000;
+  const expiringIn = (days: number) => new Date(NOW.getTime() + days * DAY);
+
+  it('is hidden 4 days before expiry and shown at 3 and 0 days (RENEWAL_REMINDER_DAYS = 3)', () => {
+    expect(showsRenew({ status: 'active', expiresAt: expiringIn(4) }, NOW)).toBe(false);
+    expect(showsRenew({ status: 'active', expiresAt: expiringIn(3) }, NOW)).toBe(true);
+    expect(showsRenew({ status: 'active', expiresAt: expiringIn(0) }, NOW)).toBe(true);
+  });
+
+  it('turns on exactly at expires_at − 3 days', () => {
+    const justOutside = new Date(expiringIn(3).getTime() + 1000);
+    expect(showsRenew({ status: 'active', expiresAt: justOutside }, NOW)).toBe(false);
+  });
+
+  it('is shown while expired and never for a draft or a hidden profile', () => {
+    expect(showsRenew({ status: 'expired', expiresAt: expiringIn(-2) }, NOW)).toBe(true);
+    expect(showsRenew({ status: 'hidden', expiresAt: expiringIn(1) }, NOW)).toBe(false);
+    expect(showsRenew({ status: 'draft', expiresAt: null }, NOW)).toBe(false);
+    expect(showsRenew({ status: 'active', expiresAt: null }, NOW)).toBe(false);
+  });
+
+  it('graceEnd is GRACE_DAYS after the expiry', () => {
+    expect(graceEnd(NOW).getTime() - NOW.getTime()).toBe(GRACE_DAYS * DAY);
+  });
+});
 
 describe('retention and limit constants', () => {
   it('holds every number of spec 06 §Retention and the interest limit of spec 07', () => {

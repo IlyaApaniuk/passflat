@@ -15,6 +15,7 @@ import {
   PETS,
   SMOKING,
   bandForAmount,
+  graceEnd,
   isBudgetBand,
   isDistrictPickComplete,
   isGender,
@@ -24,8 +25,10 @@ import {
   isSmoking,
   languageOfLocale,
   nextIntakeStep,
+  profileCreatedProperties,
   reduceDistrictPick,
   setLanguage,
+  showsRenew,
   type BudgetBand,
   type DistrictPick,
 } from '@/lib/roommate/rules';
@@ -37,11 +40,13 @@ import {
   findRoommateProfile,
   isStepOpen,
   loadRoommateEntry,
+  saveProfile,
   setDistrictPick,
   setLanguages,
   setRoommateUsername,
   type StepAnswer,
 } from '@/lib/roommate/store';
+import { isMatchingEnabled } from '@/lib/roommate/switch';
 import {
   ABOUT_MAX_LENGTH,
   checkAboutText,
@@ -49,6 +54,7 @@ import {
 } from '@/lib/roommate/text-filter';
 import {
   formatMoveInMonth,
+  formatWarsawDate,
   isMoveInMonthPast,
   monthKey,
   moveInMonthOptions,
@@ -66,11 +72,11 @@ import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
 
 /**
- * The roommate conversation in the bot (spec 06): the entry and its routing and
- * the intake steps districts, budget, move-in month, languages, own gender,
- * "live with", the short text, smoking and pets for now; the 18+ step and the
- * save, the own card, edit, delete, renew, the counts reply and the opt-in are
- * added here by their tasks.
+ * The roommate conversation in the bot (spec 06): the entry and its routing, the
+ * nine intake steps (districts, budget, move-in month, languages, own gender,
+ * "live with", the short text, smoking and pets, 18+), the save and the own
+ * card; edit, delete, renew, the counts reply and the opt-in (the handlers of
+ * the card's buttons) are added here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -324,6 +330,15 @@ async function sendPetsStep(ctx: Context, locale: BotLocale): Promise<void> {
   await ctx.reply(rt(locale, 'askPets'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
+/** Step 9 (FR-9): "I'm 18+" saves (`rm:a:yes`), "I'm under 18" deletes the draft (`rm:a:no`). */
+async function sendAdultStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from([
+    [InlineKeyboard.text(rt(locale, 'btnAdultYes'), 'rm:a:yes')],
+    [InlineKeyboard.text(rt(locale, 'btnAdultNo'), 'rm:a:no')],
+  ]);
+  await ctx.reply(rt(locale, 'askAdult'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
 /** The question of the profile's open step, sent again (a draft reopened, a stale answer). */
 async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocale): Promise<void> {
   switch (profile.step) {
@@ -354,8 +369,11 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
     case 'pets':
       await sendPetsStep(ctx, locale);
       return;
+    case 'adult':
+      await sendAdultStep(ctx, locale);
+      return;
     default:
-      // The 18+ step (T074) and the edit steps (T075) add their questions here.
+      // The edit steps (T075) and the renewal month (T078) add their questions here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -408,12 +426,147 @@ async function moveOn(
   await sendStep(ctx, { ...profile, ...answer, step: to }, locale);
 }
 
+const GENDER_LABEL = { woman: 'btnWoman', man: 'btnMan' } as const;
+const PREFERS_LABEL = {
+  anyone: 'btnPrefersAnyone',
+  women: 'btnPrefersWomen',
+  men: 'btnPrefersMen',
+} as const;
+
+/** The copy key a stored value maps to, or null for no value (or one outside the map). */
+function labelKey<M extends Record<string, string>>(
+  map: M,
+  value: string | null,
+): M[keyof M] | null {
+  return value !== null && Object.hasOwn(map, value) ? map[value as keyof M] : null;
+}
+
 /**
- * The own card (spec 06 §Save and the own card), shown only to its owner. T074
- * renders every chosen field, the hide date and the card's buttons.
+ * The own card's text (spec 06 §Save and the own card): every field the person
+ * chose (a skipped optional field has no line; own gender and "live with" are
+ * shown here and nowhere else), the hide date in Warsaw time, and the opt-in
+ * state with the switch off or the daily-message state with it on.
  */
-async function sendOwnCard(ctx: Context, _profile: RoommateProfile, locale: BotLocale) {
-  await ctx.reply(rt(locale, 'cardHeader'), { parse_mode: 'HTML' });
+function ownCardText(
+  profile: RoommateProfile,
+  districts: District[],
+  locale: BotLocale,
+  matchingEnabled: boolean,
+): string {
+  const names = new Map(districts.map((district) => [district.slug, district.nameKey]));
+  const fields = [
+    profile.anyDistrict
+      ? rt(locale, 'cardAnyDistrict')
+      : rt(locale, 'cardDistricts', {
+          districts: profile.districtSlugs
+            .map((slug) => escapeHtml(names.get(slug) ?? slug))
+            .join(', '),
+        }),
+  ];
+  if (profile.budgetBand && isBudgetBand(profile.budgetBand)) {
+    fields.push(rt(locale, 'cardBudget', { band: budgetBandLabel(profile.budgetBand, locale) }));
+  }
+  if (profile.moveInMonth) {
+    fields.push(rt(locale, 'cardMonth', { month: formatMoveInMonth(profile.moveInMonth, locale) }));
+  }
+  const languages = profile.languages.filter(isLanguage);
+  if (languages.length > 0) {
+    fields.push(
+      rt(locale, 'cardLanguages', {
+        languages: languages.map((code) => rt(locale, LANGUAGE_LABEL[code])).join(', '),
+      }),
+    );
+  }
+  fields.push(
+    rt(locale, 'cardGender', {
+      value: rt(locale, labelKey(GENDER_LABEL, profile.gender) ?? 'cardGenderNone'),
+    }),
+    rt(locale, 'cardPrefers', {
+      value: rt(locale, labelKey(PREFERS_LABEL, profile.prefers) ?? 'btnPrefersAnyone'),
+    }),
+  );
+  if (profile.about) fields.push(rt(locale, 'cardAbout', { about: escapeHtml(profile.about) }));
+  const smoking = labelKey(SMOKING_LABEL, profile.smoking);
+  if (smoking) fields.push(rt(locale, 'cardSmoking', { value: rt(locale, smoking) }));
+  const pets = labelKey(PETS_LABEL, profile.pets);
+  if (pets) fields.push(rt(locale, 'cardPets', { value: rt(locale, pets) }));
+
+  const state: string[] = [];
+  if (profile.status === 'expired' && profile.expiresAt) {
+    state.push(
+      rt(locale, 'cardExpired', {
+        date: formatWarsawDate(profile.expiresAt, locale),
+        deleteDate: formatWarsawDate(graceEnd(profile.expiredAt ?? profile.expiresAt), locale),
+      }),
+    );
+  } else if (profile.expiresAt) {
+    state.push(rt(locale, 'cardExpires', { date: formatWarsawDate(profile.expiresAt, locale) }));
+  }
+  if (matchingEnabled) {
+    state.push(rt(locale, profile.pushOff ? 'cardPushOff' : 'cardPushOn'));
+  } else {
+    state.push(rt(locale, profile.notifyOnOpenAt ? 'cardOptInOn' : 'cardOptInOff'));
+    state.push(rt(locale, 'cardHiddenUntilOpen'));
+  }
+  state.push(rt(locale, 'cardPrivateNote'));
+
+  return [rt(locale, 'cardHeader'), fields.join('\n'), state.join('\n')].join('\n\n');
+}
+
+/**
+ * The own card's buttons (spec 06 §Save and the own card): Renew only within
+ * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
+ * Delete; with the switch off "How many are looking?" and the opt-in toggle,
+ * with it on "Show people" and the daily-message toggle (spec 07). Their
+ * handlers come with their tasks (edit, delete, renew, counts, opt-in, stage 2).
+ */
+function ownCardKeyboard(
+  profile: RoommateProfile,
+  locale: BotLocale,
+  now: Date,
+  matchingEnabled: boolean,
+): InlineKeyboard {
+  const rows = [];
+  if (showsRenew(profile, now))
+    rows.push([InlineKeyboard.text(rt(locale, 'btnRenew'), 'rm:c:renew')]);
+  rows.push([
+    InlineKeyboard.text(rt(locale, 'btnEdit'), 'rm:c:edit'),
+    InlineKeyboard.text(rt(locale, 'btnDelete'), DELETE_CALLBACK),
+  ]);
+  if (matchingEnabled) {
+    rows.push(
+      [InlineKeyboard.text(rt(locale, 'btnShowPeople'), 'rm:show')],
+      [
+        profile.pushOff
+          ? InlineKeyboard.text(rt(locale, 'btnPushOn'), 'rm:push:on')
+          : InlineKeyboard.text(rt(locale, 'btnPushOff'), 'rm:push:off'),
+      ],
+    );
+  } else {
+    rows.push(
+      [InlineKeyboard.text(rt(locale, 'btnCounts'), 'rm:c:counts')],
+      [
+        profile.notifyOnOpenAt
+          ? InlineKeyboard.text(rt(locale, 'btnOptOut'), 'rm:c:optout')
+          : InlineKeyboard.text(rt(locale, 'btnOptIn'), 'rm:c:optin'),
+      ],
+    );
+  }
+  return InlineKeyboard.from(rows);
+}
+
+/**
+ * The own card (spec 06 §Save and the own card), shown only to its owner: after
+ * the save and whenever a saved (active or expired) profile is opened. The
+ * switch is read at reply time, so the card and the menu never disagree.
+ */
+async function sendOwnCard(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
+  const matchingEnabled = isMatchingEnabled();
+  const districts = profile.districtSlugs.length > 0 ? await cityDistricts() : [];
+  await ctx.reply(ownCardText(profile, districts, locale, matchingEnabled), {
+    parse_mode: 'HTML',
+    reply_markup: ownCardKeyboard(profile, locale, new Date(), matchingEnabled),
+  });
 }
 
 /**
@@ -793,6 +946,52 @@ const handlePetsTap = roommateCallback(async (ctx, chat, locale) => {
   await moveOn(ctx, profile, locale, { pets: value === 'skip' ? null : value });
 });
 
+// ---------------------------------------------------------------------------------------------
+// Step 9 and the save (FR-9, FR-12; spec 06 §Save and the own card)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * `rm:a:yes`: saves the draft through the conditional write of `saveProfile`.
+ * Only the tap whose write lands sends `tg_roommate_profile_created` and the own
+ * card, so a double tap gives one active row and one event; the other tap gets
+ * "this step is done". The counts reply after the card comes with T079.
+ */
+const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'adult');
+  if (!profile) return;
+  // The month step always stores one before the intake reaches this step.
+  if (!profile.moveInMonth) throw new Error('roommate draft at the 18+ step without a month');
+
+  const now = new Date();
+  const result = await saveProfile(profile.id, profile.moveInMonth, now);
+  if (!result.saved) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  const saved: RoommateProfile = {
+    ...profile,
+    status: 'active',
+    step: null,
+    activatedAt: now,
+    expiresAt: result.expiresAt,
+    adultConfirmedAt: now,
+    tgUsername: ctx.from?.username ?? null,
+  };
+  track(ctx.chat!.id, 'tg_roommate_profile_created', profileCreatedProperties(saved, now));
+  await sendOwnCard(ctx, saved, locale);
+});
+
+/** `rm:a:no`: deletes the draft at once and says that matching is for adults and nothing was saved. */
+const handleAdultNo = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'adult');
+  if (!profile) return;
+  if (!(await deleteDraft(profile.id))) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  await ctx.reply(rt(locale, 'underAge'));
+});
+
 /**
  * Typed text while a roommate step is open, asked before anything else reads the
  * text: `used` when the open step took it (it never reaches the deposit flow, the
@@ -870,4 +1069,6 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:t:skip', handleAboutSkip);
   bot.callbackQuery(SMOKING_TAP, handleSmokingTap);
   bot.callbackQuery(PETS_TAP, handlePetsTap);
+  bot.callbackQuery('rm:a:yes', handleAdultYes);
+  bot.callbackQuery('rm:a:no', handleAdultNo);
 }

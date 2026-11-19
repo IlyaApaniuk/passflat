@@ -31,6 +31,27 @@ export const RENEWAL_REMINDER_DAYS = 3;
 /** "Interested" taps one profile may store in 24 hours (spec 07 §Interest; Assumption, D68). */
 export const INTEREST_DAILY_LIMIT = 20;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The own card's Renew button (spec 06 §Save and the own card): shown while the profile is expired
+ * (it is deleted after its grace period) or within `RENEWAL_REMINDER_DAYS` of `expires_at`; never
+ * for a draft or a hidden profile.
+ */
+export function showsRenew(
+  profile: Pick<RoommateProfile, 'status' | 'expiresAt'>,
+  now: Date,
+): boolean {
+  if (profile.status === 'expired') return true;
+  if (profile.status !== 'active' || !profile.expiresAt) return false;
+  return profile.expiresAt.getTime() - now.getTime() <= RENEWAL_REMINDER_DAYS * DAY_MS;
+}
+
+/** When an expired profile is deleted: `GRACE_DAYS` after it expired (spec 06 §Retention). */
+export function graceEnd(expiredAt: Date): Date {
+  return new Date(expiredAt.getTime() + GRACE_DAYS * DAY_MS);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Value sets of the intake (spec 06 §Intake steps, §Entry and routing callback data)
 // ---------------------------------------------------------------------------------------------

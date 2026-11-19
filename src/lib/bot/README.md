@@ -68,7 +68,7 @@ the migrations are missing (`docs/architecture.md` §9).
   leaves the roommate questions" line.
   Every roommate handler stores the Telegram username on the profile when it
   changed.
-- **Roommate intake, steps 1 – 8** (spec 06 §Intake steps): districts
+- **Roommate intake, steps 1 – 9** (spec 06 §Intake steps): districts
   (`rm:d:<slug>:<1|0>` carries the target state and edits the keyboard in place,
   up to 3 or `rm:d:any`, then `rm:d:done`), budget per person (`rm:b:<b1..b5>` or
   a typed amount through `bandForAmount`), move-in month (four
@@ -80,12 +80,24 @@ the migrations are missing (`docs/architecture.md` §9).
   characters is refused with a reply naming what was found and the step stays
   open; blank text or `rm:t:skip` stores null), smoking
   (`rm:s:<no|outside|fine|skip>`) and pets (`rm:pt:<no|have|fine|skip>`), skip
-  storing null; gender, "live with" and the short text are never put into an
-  event. A button
+  storing null, then 18+ (`rm:a:<yes|no>`); gender, "live with" and the short
+  text are never put into an event. A button
   whose step has moved on gets "this step is done" and the current step; a step
   advances only through `advanceStep` (`updateMany where { id, step }`), so a
   double tap or a redelivered update moves it once. The intake order is
   `INTAKE_STEPS` in `../roommate/rules.ts`.
+- **Save and the own card** (spec 06 §Save and the own card): "I'm 18+" saves
+  through `saveProfile` (`updateMany where { id, status: 'draft' }`: active,
+  `activated_at`, `adult_confirmed_at`, `expires_at` from `computeExpiresAt`), and
+  only the tap whose write lands sends `tg_roommate_profile_created`
+  (`profileCreatedProperties`) and the own card; "I'm under 18" deletes the draft
+  at once and says nothing was saved. The own card, shown only to its owner,
+  lists every chosen field (own gender and "live with" only here), the hide date
+  in Warsaw time and, by the switch, the opt-in or the daily-message state; its
+  buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while
+  expired, `showsRenew`), Edit, Delete, then "How many are looking?" and the
+  opt-in toggle (switch off) or "Show people" and the daily-message toggle
+  (switch on). The handlers of the card's buttons come with their tasks.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the

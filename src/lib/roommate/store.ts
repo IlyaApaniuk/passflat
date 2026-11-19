@@ -3,6 +3,7 @@ import { Prisma, type RoommateProfile } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 import { INTAKE_STEPS, type DistrictPick } from './rules';
+import { computeExpiresAt } from './time';
 
 /**
  * Prisma access for roommate profiles (spec 06 §Module layout; server only).
@@ -139,6 +140,31 @@ export async function setLanguages(
     data: { languages: [...languages] },
   });
   return count === 1;
+}
+
+/**
+ * Saves a finished draft (spec 06 §Save): active, no open step, activated and
+ * 18+ confirmed at `now`, hiding at `computeExpiresAt(now, moveInMonth)`. One
+ * conditional write on `status = 'draft'`: true for exactly one of two
+ * overlapping taps on "I'm 18+", so only that one sends the event and the card.
+ */
+export async function saveProfile(
+  profileId: string,
+  moveInMonth: Date,
+  now: Date,
+): Promise<{ saved: true; expiresAt: Date } | { saved: false }> {
+  const expiresAt = computeExpiresAt(now, moveInMonth);
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: 'draft' },
+    data: {
+      status: 'active',
+      step: null,
+      activatedAt: now,
+      expiresAt,
+      adultConfirmedAt: now,
+    },
+  });
+  return count === 1 ? { saved: true, expiresAt } : { saved: false };
 }
 
 /**

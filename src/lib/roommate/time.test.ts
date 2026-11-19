@@ -6,6 +6,7 @@ import {
   computeExpiresAt,
   endOfWarsawMonth,
   formatMoveInMonth,
+  formatWarsawDate,
   isMoveInMonthPast,
   isRoommateSendHour,
   monthKey,
@@ -284,6 +285,26 @@ describe('independent of the process time zone', () => {
       expect(isRoommateSendHour(at('2027-04-01T08:15:00Z'))).toBe(true);
       expect(monthOffset(month('2027-02'), at('2026-12-05T10:00:00Z'))).toBe(2);
       expect(formatMoveInMonth(month('2026-12'), 'ru')).toBe('декабрь 2026');
+      expect(formatWarsawDate(at('2026-12-31T23:30:00Z'), 'ru')).toBe('1 января 2027');
     },
   );
+});
+
+describe('formatWarsawDate (the own card hide date)', () => {
+  it('writes day, month and year in each locale, with no "г." / "р." suffix', () => {
+    expect(formatWarsawDate(at('2027-01-02T08:00:00Z'), 'ru')).toBe('2 января 2027');
+    expect(formatWarsawDate(at('2027-01-02T08:00:00Z'), 'uk')).toBe('2 січня 2027');
+    expect(formatWarsawDate(at('2027-01-02T08:00:00Z'), 'en')).toBe('2 January 2027');
+  });
+
+  it('reads the Warsaw calendar day: a month end hides on its last day', () => {
+    const end = endOfWarsawMonth(month('2026-12'));
+    expect(formatWarsawDate(end, 'ru')).toBe('31 декабря 2026');
+    expect(formatWarsawDate(at('2027-03-31T21:59:59Z'), 'uk')).toBe('31 березня 2027');
+  });
+
+  it('turns the day at Warsaw midnight, not UTC midnight', () => {
+    expect(formatWarsawDate(at('2026-12-31T22:59:59Z'), 'en')).toBe('31 December 2026');
+    expect(formatWarsawDate(at('2026-12-31T23:00:00Z'), 'en')).toBe('1 January 2027');
+  });
 });

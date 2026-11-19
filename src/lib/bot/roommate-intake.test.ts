@@ -3,9 +3,10 @@ import { GrammyError, type Bot, type CommandContext, type Context } from 'grammy
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Intake steps 1 – 8 (spec 06 §Intake steps: districts, budget, move-in month, languages, own
- * gender, "live with", the short text, smoking and pets) with the callback data of §Entry and
- * routing and the "Stale and repeated taps" rule. Taps go through
+ * Intake steps 1 – 9 (spec 06 §Intake steps: districts, budget, move-in month, languages, own
+ * gender, "live with", the short text, smoking and pets, 18+) and the save of §Save and the own
+ * card, with the callback data of §Entry and routing and the "Stale and repeated taps" rule. Taps
+ * go through
  * the handlers `registerRoommateFlow` registers, so the callback data is routed as in the bot.
  * Profiles live in an in-memory Prisma fake whose `updateMany` applies its `where`, so the
  * conditional step writes behave as in the database. Nothing reaches Telegram or a database.
@@ -43,7 +44,11 @@ const db = vi.hoisted(() => {
           return { count: hits.length };
         },
       ),
-      deleteMany: vi.fn(),
+      deleteMany: vi.fn(async ({ where }: { where: Record<string, unknown> }) => {
+        const hits = rows.filter((row) => matches(row, where));
+        for (const hit of hits) rows.splice(rows.indexOf(hit), 1);
+        return { count: hits.length };
+      }),
     },
   };
 });
@@ -264,6 +269,8 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 8', () => {
     ['rm:s:skip', SMOKING_TAP],
     ['rm:pt:have', PETS_TAP],
     ['rm:pt:skip', PETS_TAP],
+    ['rm:a:yes', 'rm:a:yes'],
+    ['rm:a:no', 'rm:a:no'],
   ])('%s reaches exactly one handler', (callbackData, trigger) => {
     const routes = routesFor(callbackData);
     expect(routes).toHaveLength(1);
@@ -326,6 +333,18 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 8', () => {
       ...replyKeyboard(pets.reply).flat(),
     ];
     expect(buttons).toHaveLength(1 + 4 + 4);
+    for (const button of buttons) {
+      expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
+      expect(routesFor(button.callback_data!)).toHaveLength(1);
+    }
+  });
+
+  it('every button of step 9 fits the 64-byte limit and is routed', async () => {
+    seed({ step: 'pets' });
+    const adult = await tap('rm:pt:no');
+
+    const buttons = replyKeyboard(adult.reply).flat();
+    expect(buttons).toHaveLength(2);
     for (const button of buttons) {
       expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
       expect(routesFor(button.callback_data!)).toHaveLength(1);
@@ -1313,8 +1332,248 @@ describe('step 8: smoking and pets (FR-11)', () => {
   });
 });
 
-describe('steps 1 – 8 in one run', () => {
-  it('/mate through pets leaves one draft at the 18+ step', async () => {
+describe('step 9: 18+ and the save (FR-9, FR-12)', () => {
+  /** A draft that answered steps 1 – 8, at the 18+ step. */
+  const READY = {
+    step: 'adult',
+    districtSlugs: ['wola', 'mokotow'],
+    budgetBand: 'b3',
+    moveInMonth: new Date('2027-02-01T00:00:00.000Z'),
+    languages: ['en', 'ru'],
+    gender: 'woman',
+    prefers: 'women',
+    about: 'Мне 25, есть 2 кота',
+    smoking: 'outside',
+    pets: null,
+  } satisfies Partial<RoommateProfile>;
+
+  /** NOW + 30 days: February ends later (spec 06 §Retention). */
+  const EXPIRES = '2027-01-04T10:00:00.000Z';
+
+  const created = () =>
+    mocks.track.mock.calls.filter(([, event]) => event === 'tg_roommate_profile_created');
+
+  it('asks for the 18+ confirmation after pets, "I\'m 18+" above "I\'m under 18"', async () => {
+    seed({ step: 'pets' });
+    const { reply } = await tap('rm:pt:fine');
+
+    expect(texts(reply)).toEqual([rt('ru', 'askAdult')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([['Мне 18+'], ['Мне меньше 18']]);
+    expect(data(replyKeyboard(reply))).toEqual([['rm:a:yes'], ['rm:a:no']]);
+  });
+
+  it('writes the 18+ step in the chat locale', async () => {
+    mocks.touchChat.mockResolvedValue({ ...CHAT, locale: 'uk' });
+    seed({ step: 'pets' });
+    const { reply } = await tap('rm:pt:skip');
+
+    expect(texts(reply)).toEqual([rt('uk', 'askAdult')]);
+    expect(labels(replyKeyboard(reply))).toEqual([['Мені 18+'], ['Мені менше 18']]);
+  });
+
+  it('"I\'m 18+" saves the draft with the conditional update of §Save', async () => {
+    seed(READY);
+    await tap('rm:a:yes');
+
+    expect(db.roommateProfile.updateMany).toHaveBeenCalledWith({
+      where: { id: 'profile-1', status: 'draft' },
+      data: {
+        status: 'active',
+        step: null,
+        activatedAt: NOW,
+        expiresAt: new Date(EXPIRES),
+        adultConfirmedAt: NOW,
+      },
+    });
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({ ...READY, status: 'active', step: null });
+    expect(row().activatedAt?.toISOString()).toBe(NOW.toISOString());
+    expect(row().adultConfirmedAt?.toISOString()).toBe(NOW.toISOString());
+    expect(row().expiresAt?.toISOString()).toBe(EXPIRES);
+  });
+
+  it('hides at the end of the move-in month when it comes before 30 days', async () => {
+    seed({ ...READY, moveInMonth: new Date('2026-12-01T00:00:00.000Z') });
+    await tap('rm:a:yes');
+    expect(row().expiresAt?.toISOString()).toBe('2026-12-31T22:59:59.000Z');
+  });
+
+  it('sends one tg_roommate_profile_created with exactly the properties of §Events', async () => {
+    seed(READY);
+    await tap('rm:a:yes');
+
+    expect(mocks.track).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_roommate_profile_created', {
+      district_count: 2,
+      any_district: false,
+      budget_band: 'b3',
+      move_in_offset_months: 2,
+      language_count: 2,
+      has_text: true,
+      rule_count: 1,
+      entry_source: 'tg',
+      has_username: true,
+    });
+    // No gender, "live with", text, username or district slug reaches analytics (D51).
+    expect(JSON.stringify(mocks.track.mock.calls)).not.toMatch(
+      /woman|women|кота|anna|wola|mokotow|outside/,
+    );
+  });
+
+  it('sends the minimal profile\'s properties for "any", no text and no rules', async () => {
+    seed({
+      step: 'adult',
+      anyDistrict: true,
+      budgetBand: 'b1',
+      moveInMonth: new Date('2026-12-01T00:00:00.000Z'),
+      languages: ['ru'],
+      entrySource: 'bot_menu',
+    });
+    await tap('rm:a:yes');
+
+    expect(created()).toEqual([
+      [
+        CHAT_ID,
+        'tg_roommate_profile_created',
+        {
+          district_count: 0,
+          any_district: true,
+          budget_band: 'b1',
+          move_in_offset_months: 0,
+          language_count: 1,
+          has_text: false,
+          rule_count: 0,
+          entry_source: 'bot_menu',
+          has_username: true,
+        },
+      ],
+    ]);
+  });
+
+  it('has_username is the username at the save, which is stored too', async () => {
+    seed(READY);
+    await tap('rm:a:yes', fakeCtx({ username: null }));
+
+    expect(created()[0][2]).toMatchObject({ has_username: false });
+    expect(row().tgUsername).toBeNull();
+  });
+
+  it('ends with the own card of the saved profile', async () => {
+    seed(READY);
+    const { reply } = await tap('rm:a:yes');
+
+    expect(texts(reply)).toHaveLength(1);
+    const card = texts(reply)[0] as string;
+    expect(card.startsWith(`${rt('ru', 'cardHeader')}\n\n`)).toBe(true);
+    expect(card).toContain('Районы: Wola, Mokotów');
+    expect(card).toContain('Пол: Женщина');
+    expect(card).toContain('Анкета скроется 4 января 2027.');
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(data(replyKeyboard(reply))).toEqual([
+      ['rm:c:edit', 'rm:c:del'],
+      ['rm:c:counts'],
+      ['rm:c:optin'],
+    ]);
+  });
+
+  it('a double tap on "I\'m 18+" gives one active row, one event and one card', async () => {
+    seed(READY);
+    const first = fakeCtx();
+    const second = fakeCtx();
+    await Promise.all([tap('rm:a:yes', first), tap('rm:a:yes', second)]);
+
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({ status: 'active', step: null });
+    expect(created()).toHaveLength(1);
+    const replies = [...texts(first.reply), ...texts(second.reply)] as string[];
+    expect(replies).toHaveLength(2);
+    expect(replies.filter((text) => text.startsWith(rt('ru', 'cardHeader')))).toHaveLength(1);
+    expect(replies).toContain(rt('ru', 'stepDone'));
+  });
+
+  it('a second tap after the save says the step is done and sends nothing else', async () => {
+    seed(READY);
+    await tap('rm:a:yes');
+    const again = await tap('rm:a:yes');
+
+    expect(texts(again.reply)).toEqual([rt('ru', 'stepDone')]);
+    expect(created()).toHaveLength(1);
+    expect(row().activatedAt?.toISOString()).toBe(NOW.toISOString());
+  });
+
+  it('an "I\'m 18+" button while the draft is still at pets saves nothing', async () => {
+    seed({ ...READY, step: 'pets' });
+    const { reply } = await tap('rm:a:yes');
+
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askPets')]);
+    expect(row()).toMatchObject({ status: 'draft', step: 'pets', activatedAt: null });
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('"I\'m under 18" deletes the draft at once and says nothing was saved', async () => {
+    seed(READY);
+    const { reply, answerCallbackQuery } = await tap('rm:a:no');
+
+    expect(db.roommateProfile.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'profile-1', status: 'draft' },
+    });
+    expect(db.rows).toHaveLength(0);
+    expect(texts(reply)).toEqual([rt('ru', 'underAge')]);
+    expect(rt('ru', 'underAge')).toContain('ничего не сохранили');
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('says it in the chat locale', async () => {
+    mocks.touchChat.mockResolvedValue({ ...CHAT, locale: 'uk' });
+    seed(READY);
+    const { reply } = await tap('rm:a:no');
+    expect(texts(reply)).toEqual([rt('uk', 'underAge')]);
+  });
+
+  it('a second "I\'m under 18" tap after the delete changes nothing', async () => {
+    seed(READY);
+    await tap('rm:a:no');
+    const again = await tap('rm:a:no');
+
+    expect(texts(again.reply)).toEqual([rt('ru', 'stepDone')]);
+    expect(db.rows).toHaveLength(0);
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('"I\'m under 18" after the save leaves the saved profile as it is', async () => {
+    seed(READY);
+    await tap('rm:a:yes');
+    const late = await tap('rm:a:no');
+
+    expect(texts(late.reply)).toEqual([rt('ru', 'stepDone')]);
+    expect(row()).toMatchObject({ status: 'active' });
+  });
+
+  it('after "I\'m under 18" nothing is kept: /mate starts a new draft', async () => {
+    seed(READY);
+    await tap('rm:a:no');
+    const start = fakeCtx();
+    await handleMate(start.ctx as CommandContext<Context>);
+
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({ status: 'draft', step: 'districts', districtSlugs: [] });
+    expect(mocks.track.mock.calls.map(([, event]) => event)).toEqual(['tg_roommate_flow_started']);
+  });
+
+  it('typed text at the 18+ step passes on and the step stays open', async () => {
+    seed(READY);
+    const { ctx, reply } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'мне 25')).toBe('passed');
+    expect(row()).toMatchObject({ status: 'draft', step: 'adult' });
+    expect(reply).not.toHaveBeenCalled();
+  });
+});
+
+describe('steps 1 – 9 in one run', () => {
+  it('/mate through pets leaves one draft at the 18+ step, "I\'m 18+" makes it one active row', async () => {
     const start = fakeCtx();
     await handleMate(start.ctx as CommandContext<Context>);
     expect(texts(start.reply)[1]).toBe(askDistricts());
@@ -1356,8 +1615,17 @@ describe('steps 1 – 8 in one run', () => {
     // The intake steps send no event; only the start of the flow does (spec 06 §Events), and
     // nothing about gender, "live with" or the short text reaches analytics (D51).
     expect(mocks.track.mock.calls.map(([, event]) => event)).toEqual(['tg_roommate_flow_started']);
+
+    const saved = await tap('rm:a:yes');
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({ status: 'active', step: null, budgetBand: 'b3' });
+    expect(texts(saved.reply)[0]).toMatch(/^🏠 <b>Твоя анкета<\/b>/);
+    expect(mocks.track.mock.calls.map(([, event]) => event)).toEqual([
+      'tg_roommate_flow_started',
+      'tg_roommate_profile_created',
+    ]);
     expect(JSON.stringify(mocks.track.mock.calls)).not.toMatch(
-      /gender|prefers|wom[ae]n|\bm[ae]n\b|anna|кота|smoking|outside/,
+      /gender|prefers|wom[ae]n|\bm[ae]n\b|anna|кота|smoking|outside|wola|mokotow/,
     );
   });
 });

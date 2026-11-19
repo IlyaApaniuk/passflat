@@ -158,3 +158,28 @@ export function formatMoveInMonth(month: Date, locale: 'ru' | 'uk' | 'en'): stri
   const name = monthNameFormats[locale].format(month);
   return `${name} ${warsawParts(month).year}`;
 }
+
+const DATE_OPTIONS = {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: WARSAW_TIME_ZONE,
+} as const;
+
+const dateFormats = {
+  ru: new Intl.DateTimeFormat('ru', DATE_OPTIONS),
+  uk: new Intl.DateTimeFormat('uk', DATE_OPTIONS),
+  en: new Intl.DateTimeFormat('en', DATE_OPTIONS),
+};
+
+/**
+ * The Warsaw calendar day of an instant, "2 января 2027" / "2 січня 2027" / "2 January 2027"
+ * (the own card's hide date, spec 06 §Save and the own card). Built from the parts, because the
+ * whole RU and UK forms end in "г." / "р.", which doubles the full stop of a sentence.
+ */
+export function formatWarsawDate(instant: Date, locale: 'ru' | 'uk' | 'en'): string {
+  const parts = Object.fromEntries(
+    dateFormats[locale].formatToParts(instant).map((part) => [part.type, part.value]),
+  );
+  return `${parts.day} ${parts.month} ${parts.year}`;
+}

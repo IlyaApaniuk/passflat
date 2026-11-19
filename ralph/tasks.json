@@ -228,14 +228,14 @@
       "title": "18+ confirmation, save and the own card (FR-9, FR-12)",
       "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
       "dependsOn": ["T064", "T073"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Step 9 of spec 06: 'I'm 18+' saves with the conditional update of §Save (a double tap gives one row and one tg_roommate_profile_created); 'I'm under 18' deletes the draft at once and says nothing was saved",
         "The own card shows every chosen field (own gender and live with only here), the hide date and the buttons of §Save and the own card for the switch off and on (the stage 2 buttons are only rendered, their handlers come later)",
         "Tests: one save on a double tap, the event's properties, the under-18 path, the card for a full and a minimal profile, and the Renew button at 4, 3 and 0 days before expiry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The counts reply after save comes with T079; until then save ends with the card."
     },
     {
@@ -863,7 +863,8 @@
         "T102",
         "T103",
         "T104",
-        "T106"
+        "T106",
+        "T111"
       ],
       "status": "todo",
       "acceptance": [
@@ -874,6 +875,22 @@
       "checks": ["npm run verify"],
       "attempts": 0,
       "notes": "No PRD 3 task changes a page flow covered by e2e/, so npm run test:e2e is not in the checks."
+    },
+    {
+      "dependsOn": ["T074"],
+      "acceptance": [
+        "A tap on the 18+ confirmation when isMoveInMonthPast(move_in_month, now) (a draft started at the end of a month and finished after it, inside the 7-day draft life) does not save a profile whose expires_at is already in the past: it replies monthPassed, asks the move-in month again with the current months, and saves (spec 06 §Save, one tg_roommate_profile_created) once a current month is picked, without asking the later steps again",
+        "Without this, saveProfile stores expires_at = the end of the passed month, so the new profile is not counted, the card shows a past hide date and the daily cron marks it expired at once (found in T074)",
+        "Tests: a draft at adult with last month saves nothing and asks the month; the month tap then saves once; a double tap still gives one row and one event"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found by T074. Agent clarification needed in spec 06 §Save (the renewal has the same rule: a past month runs the move-in step first, spec 06 §Renewal). If the owner prefers a different behaviour, block with the question.",
+      "id": "T111",
+      "milestone": "M1",
+      "title": "Save with a move-in month that passed while the draft was open (FR-6, FR-12 gap)",
+      "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
+      "status": "todo"
     }
   ]
 }
