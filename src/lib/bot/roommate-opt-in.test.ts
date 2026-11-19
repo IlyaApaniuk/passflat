@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * The opt-in "message me once when matching opens" (PRD 3 FR-18, spec 06 §Opt-in): the button
  * under the counts reply while the switch is off, the first and the repeat tap with
- * `tg_roommate_browse_opted_in`, the reply (the one message, the FR-18 edge case and the D64
- * closing sentence) in RU, UK and EN, and the card's state and switch-off. Taps go through the
+ * `tg_roommate_browse_opted_in`, the reply (the one message, the FR-18 edge case and the closing
+ * sentence, D64 as reworded by D72) in RU, UK and EN, and the card's state and switch-off. Taps go through the
  * handlers `registerRoommateFlow` registers, over an in-memory Prisma fake whose `updateMany`
  * applies its `where`. Nothing reaches Telegram or a database.
  */
@@ -219,25 +219,42 @@ const optInEvents = () =>
 
 /** The reply of a first tap, PRD 3 §8 "Opt-in" with the FR-18 edge case, in each locale. */
 const CONFIRMATION: Record<BotLocale, string> = {
-  ru: 'Напишу один раз, когда подбор откроется. Если анкета скроется раньше, этого сообщения не будет. Если подбор не откроется, напишу об этом и удалю анкету.',
-  uk: 'Напишу один раз, коли підбір відкриється. Якщо анкета сховається раніше, цього повідомлення не буде. Якщо підбір не відкриється, напишу про це й видалю анкету.',
-  en: "I'll message you once when matching opens. If your profile hides before then, this message won't come. If matching does not open, we'll tell you and delete your profile.",
+  ru: 'Напишу один раз, когда подбор откроется. Если анкета скроется раньше, этого сообщения не будет. Если подбор не откроется, пока твоя анкета активна, напишу об этом и удалю её.',
+  uk: 'Напишу один раз, коли підбір відкриється. Якщо анкета сховається раніше, цього повідомлення не буде. Якщо підбір не відкриється, поки твоя анкета активна, напишу про це й видалю її.',
+  en: "I'll message you once when matching opens. If your profile hides before then, this message won't come. If matching does not open while your profile is active, we'll tell you and delete it.",
 };
 
-/** PRD 3 §8 "Opt-in" verbatim: the first sentence and the D64 closing sentence. */
+/**
+ * PRD 3 §8 "Opt-in" verbatim (the first sentence) and the closing sentence as D72 rewords D64
+ * (PRD 3 Q-18 (a)): the promise holds only while the profile is active.
+ */
 const PRD_SENTENCES: Record<BotLocale, [first: string, closing: string]> = {
   ru: [
     'Напишу один раз, когда подбор откроется.',
-    'Если подбор не откроется, напишу об этом и удалю анкету.',
+    'Если подбор не откроется, пока твоя анкета активна, напишу об этом и удалю её.',
   ],
   uk: [
     'Напишу один раз, коли підбір відкриється.',
-    'Якщо підбір не відкриється, напишу про це й видалю анкету.',
+    'Якщо підбір не відкриється, поки твоя анкета активна, напишу про це й видалю її.',
   ],
   en: [
     "I'll message you once when matching opens.",
-    "If matching does not open, we'll tell you and delete your profile.",
+    "If matching does not open while your profile is active, we'll tell you and delete it.",
   ],
+};
+
+/** The D64 wording that D72 replaced: a promise to every opted-in person, active or not. */
+const D64_CLOSING: Record<BotLocale, string> = {
+  ru: 'Если подбор не откроется, напишу об этом и удалю анкету.',
+  uk: 'Якщо підбір не відкриється, напишу про це й видалю анкету.',
+  en: "If matching does not open, we'll tell you and delete your profile.",
+};
+
+/** The words that limit the closing promise to an active profile (D72), per locale. */
+const WHILE_ACTIVE: Record<BotLocale, string> = {
+  ru: 'пока твоя анкета активна',
+  uk: 'поки твоя анкета активна',
+  en: 'while your profile is active',
 };
 
 const BUTTON: Record<BotLocale, string> = {
@@ -367,7 +384,7 @@ describe('the first tap', () => {
   });
 
   it.each(LOCALES)(
-    'says the one message, the edge case and the D64 closing sentence in %s',
+    'says the one message, the edge case and the D72 closing sentence in %s',
     async (locale) => {
       seed({});
       const { replies } = await tap('rm:c:optin', locale);
@@ -377,6 +394,18 @@ describe('the first tap', () => {
       expect(replies[0].text.startsWith(first)).toBe(true);
       expect(replies[0].text.endsWith(closing)).toBe(true);
       expect(replies[0].text).toBe(`${rt(locale, 'optInConfirm')} ${rt(locale, 'optInClosing')}`);
+    },
+  );
+
+  it.each(LOCALES)(
+    'limits the closing promise to an active profile, not the D64 wording, in %s (D72)',
+    async (locale) => {
+      seed({});
+      const { replies } = await tap('rm:c:optin', locale);
+
+      expect(rt(locale, 'optInClosing')).toContain(WHILE_ACTIVE[locale]);
+      expect(replies[0].text).toContain(WHILE_ACTIVE[locale]);
+      expect(replies[0].text).not.toContain(D64_CLOSING[locale]);
     },
   );
 

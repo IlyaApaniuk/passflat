@@ -163,7 +163,8 @@ so each fails while its migrations are missing (`docs/architecture.md` §9).
   a repeat tap `already=true` and "Already on." first. The card shows the opt-in
   as on only while the message waits (`waitsForOpenMessage`). The reply is `optInConfirm` (the one
   message, which comes only while the profile is active) and `optInClosing`
-  (D64); both are the promise check's exceptions, backed by
+  (D64 as reworded by D72: "If matching does not open while your profile is
+  active, we'll tell you and delete it"); both are the promise check's exceptions, backed by
   `sendMatchingOpenMessages` and the closing route. The card shows the state and
   "Don't message me when matching opens" (`rm:c:optout`, `optOutOfOpenMessage`
   clears it and sends the card again; no event). An old opt-in button with the
@@ -431,7 +432,9 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
   403 and the 429 rules apply; a failed send is not retried, the row is gone).
   Reports are deleted only when no profile row is left; ban markers stay. A run
   cut short answers `remaining` > 0: call it again until it is 0. It backs the
-  opt-in's closing sentence (`optInClosing`, the promise check's exception).
+  opt-in's closing sentence (`optInClosing`, the promise check's exception),
+  which D72 limits to an active profile: a profile already deleted after its
+  grace period (D55) has no row and gets no closing message.
 - **Renewal** (spec 06 §Renewal, FR-15): from the first send-hour run at or after
   `expires_at` − 3 days, each active profile with `renewal_reminded_at` null gets
   one reminder naming its hide date, with Renew (`rm:c:renew`) and Delete

@@ -242,10 +242,11 @@ const RU = {
 
   // --- the closing route (spec 06 §Closing route, FR-20, D64) ---
   /**
-   * The opt-in's closing sentence (D64, PRD 3 §8 verbatim), which the opt-in reply ends with;
-   * backed by `POST /api/cron/roommate-close` (`runRoommateClose`).
+   * The opt-in's closing sentence (D64 as reworded by D72), which the opt-in reply ends with;
+   * backed by `POST /api/cron/roommate-close` (`runRoommateClose`). Limited to an active profile:
+   * one that expires and is deleted before the owner runs the route gets no closing message.
    */
-  optInClosing: 'Если подбор не откроется, напишу об этом и удалю анкету.',
+  optInClosing: 'Если подбор не откроется, пока твоя анкета активна, напишу об этом и удалю её.',
   /** Sent by the closing route after the profile is deleted (PRD 3 §8 verbatim). */
   closingMessage:
     'Подбор так и не откроется. Твоя анкета уже удалена. Спасибо, что попробовал(а) Passflat.',
@@ -520,7 +521,7 @@ const UK: Record<Key, string> = {
     'Напишу один раз, коли підбір відкриється. Якщо анкета сховається раніше, цього повідомлення не буде.',
   optInAlready: 'Уже ввімкнено.',
 
-  optInClosing: 'Якщо підбір не відкриється, напишу про це й видалю анкету.',
+  optInClosing: 'Якщо підбір не відкриється, поки твоя анкета активна, напишу про це й видалю її.',
   closingMessage:
     'Підбір так і не відкриється. Твою анкету вже видалено. Дякуємо, що спробував(-ла) Passflat.',
 
@@ -769,7 +770,8 @@ const EN: Record<Key, string> = {
     "I'll message you once when matching opens. If your profile hides before then, this message won't come.",
   optInAlready: 'Already on.',
 
-  optInClosing: "If matching does not open, we'll tell you and delete your profile.",
+  optInClosing:
+    "If matching does not open while your profile is active, we'll tell you and delete it.",
   closingMessage:
     'Matching will not open after all. Your profile is deleted now. Thanks for trying Passflat.',
 

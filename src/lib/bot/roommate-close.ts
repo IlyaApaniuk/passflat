@@ -9,8 +9,10 @@ import { roommateLocale, rt } from './roommate-texts';
 /**
  * The manual closing run (spec 06 §Closing route, FR-20, D64): when the owner decides that
  * matching will not open, `POST /api/cron/roommate-close` (owner-triggered, never scheduled)
- * delegates here. It backs the opt-in's closing sentence (`optInClosing`): every profile gets one
- * message and is deleted.
+ * delegates here. It backs the opt-in's closing sentence (`optInClosing`, D72: promised while the
+ * profile is active): every profile row left gets one message and is deleted. A profile that
+ * expired and was deleted before the run (D55) has no row and gets nothing, which the sentence
+ * allows.
  *
  * Drafts are deleted silently. Every other profile (active, expired, hidden) is deleted first, by
  * its id (the claim: only the run whose delete lands goes on), then one

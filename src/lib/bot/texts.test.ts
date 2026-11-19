@@ -65,8 +65,9 @@ const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // The opt-in reply's first sentence (spec 06 §Opt-in, FR-18): the send-hour
   // run writes once to every active opted-in profile when the switch is on.
   optInConfirm: 'the one-time message of FR-19: sendMatchingOpenMessages, roommate-daily.ts (T082)',
-  // D64: the opt-in's closing sentence. The owner's manual route writes
-  // `closingMessage` to every profile and deletes it (spec 06 §Closing route).
+  // The opt-in's closing sentence (D64 as reworded by D72: only while the
+  // profile is active). The owner's manual route writes `closingMessage` to
+  // every profile row left and deletes it (spec 06 §Closing route).
   optInClosing:
     'the closing route of FR-20: POST /api/cron/roommate-close, runRoommateClose, roommate-close.ts (T083)',
   // The report receipt (spec 07 §Report, FR-31): "I'll tell you when that
@@ -358,7 +359,7 @@ describe('bot texts: no notification promises', () => {
       'Напишу один раз, коли підбір відкриється.',
       'Повідомимо, коли зʼявляться люди.',
       "I'll message you once when matching opens.",
-      "If matching does not open, we'll tell you and delete your profile.",
+      "If matching does not open while your profile is active, we'll tell you and delete it.",
       'We will notify you.',
     ];
     for (const text of promises) {

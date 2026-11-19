@@ -3386,3 +3386,34 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Decided constant: `SPLIT_MIN_ROOMS = 2` in `src/lib/roommate/room-costs.ts`.
   - No copy change, no event, no table, no migration.
 - Next: `node scripts/ralph-tasks.mjs next` (T108 – T110, unblocked by D72 – D74).
+
+### 2026-11-19 22:12 · T108 · done
+
+- Done:
+  - `src/lib/bot/roommate-texts.ts`: `optInClosing` reworded per D72 (Q-18 (a)), RU / UK / EN:
+    - RU «Если подбор не откроется, пока твоя анкета активна, напишу об этом и удалю её.»
+    - UK «Якщо підбір не відкриється, поки твоя анкета активна, напишу про це й видалю її.»
+    - EN "If matching does not open while your profile is active, we'll tell you and delete it."
+    - `optInConfirm`, `optInAlready` and `closingMessage` are unchanged; the reply is still `optInConfirm` + `optInClosing` (`optInReply`, `roommate-flow.ts`).
+  - The closing route is unchanged (spec 06 §Opt-in: copy only). Its doc comment (`roommate-close.ts`) now says a profile already deleted after its grace period has no row and gets nothing, which the sentence allows.
+  - Comments naming D64 → "D64 as reworded by D72": `roommate-flow.ts` (`optInReply`), `texts.test.ts` (`ROOMMATE_PROMISE_EXCEPTIONS.optInClosing`; its backing code, `POST` + `await runRoommateClose(` in the route, is unchanged and still checked).
+  - Docs: `src/lib/bot/README.md` §Opt-in and §Closing route; `docs/specs/README.md` FR-18 (Q-18) row → Done, and the intro's Q-18 line. Spec 06 §Opt-in already held D72 (unblock commit). The PRD 3 text (§FR-18, §8) still quotes D64; `decisions.md` D72 supersedes it, so it was left alone.
+- Tests:
+  - `roommate-opt-in.test.ts`: `CONFIRMATION` and `PRD_SENTENCES` hold the D72 wording.
+  - New `it.each` over RU / UK / EN: `optInClosing` and the tapped reply contain the "while your profile is active" words (`WHILE_ACTIVE`), and the reply no longer contains the D64 sentence (`D64_CLOSING`).
+  - `texts.test.ts`: the regex sample list uses the new EN sentence (it still matches `we'll tell`).
+  - The «ты» check (`address-form.test.ts`) and the promise check pass over the new text.
+  - Mutation check: with the RU D64 wording back, 7 opt-in tests fail; reverted.
+- Checks:
+  - `npx vitest run` of opt-in, texts, address-form, switch, close and migration tests: 192 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2976 tests;
+    - build OK (182 pages).
+  - `next-env.d.ts` restored. Nothing deployed, no migration (none added: `migration.test.ts` passes), no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy to approve before the deploy (replaces the T083 `optInClosing` in the T105 handoff list):** `optInClosing` RU / UK / EN as above. The RU / UK say «твоя анкета» («ты» / «ти», D42) and «её» / «її» for "it". The EN keeps D72's "we'll" while `optInConfirm` says "I'll", as worded.
+  - No new column, no second migration, no event, no table.
+- Next: `node scripts/ralph-tasks.mjs next` (T109, T110).

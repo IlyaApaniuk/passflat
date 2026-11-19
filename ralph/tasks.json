@@ -461,13 +461,13 @@
       "title": "The opt-in's closing promise for profiles that expire first (Q-18, D64)",
       "spec": "docs/specs/06-roommate-profiles.md#opt-in",
       "dependsOn": ["T084"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The opt-in confirmation and the closing route follow the owner's answer in ru, uk and en; the promise check still names the backing code",
         "No new column and no second migration (if the answer needs one, block again with that finding)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-18 (prd-3-decision-review.md, architect gaps). D64's sentence 'If matching does not open, we'll tell you and delete your profile' is built as worded (T084), but a profile that expires and is deleted 14 days later (D55) before the owner runs the closing route gets no closing message, so the promise is not kept for it. Options: (a) reword to 'If matching does not open while your profile is active, we'll tell you and delete it' (copy only); (b) keep a chat-level opt-in after deletion (a new column, so a second migration, and longer retention); (c) keep as is. Proposal: (a).\nOwner answer: Owner (D72, Q-18 (a)): reword the opt-in promise to \"If matching does not open while your profile is active, we will tell you and delete it\" (RU ty, UK ty, EN); copy only, amends D64."
     },
     {

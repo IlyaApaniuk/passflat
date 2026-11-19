@@ -1421,7 +1421,8 @@ const handleCountsTap = roommateCallback(async (ctx, chat, locale) => {
 /**
  * The opt-in reply (PRD 3 §8 "Opt-in"): the one message when matching opens, which comes only
  * while the profile is active (FR-18 edge case: `sendMatchingOpenMessages` writes to active
- * profiles only), then the D64 closing sentence; a repeat tap says "already on" first.
+ * profiles only), then the closing sentence (D64 as reworded by D72: while the profile is active);
+ * a repeat tap says "already on" first.
  */
 function optInReply(locale: BotLocale, already: boolean): string {
   const sentences = [rt(locale, 'optInConfirm'), rt(locale, 'optInClosing')];
