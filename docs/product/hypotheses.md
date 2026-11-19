@@ -218,8 +218,9 @@ because the deposit tests they served are stopped (D44).
 
 - **Why:** messaging users can act on was what took off at SpareRoom; double opt-in keeps
   contact safe and free (research 2026-11-19).
-- **Runs only if E14 passes** (D49); the switch is turned on around 2027-01-07 for February
-  move-ins.
+- **Runs from the PRD 3 deploy** (D75, evening of 2026-11-19): the switch is on from day 0, so
+  E14 and E15 run together. Before that it was to run only if E14 passed, with the switch turned
+  on around 2027-01-07 for February move-ins (D49, D58).
 
 ### H16. Stage 3: paid speed (2026-11-19)
 

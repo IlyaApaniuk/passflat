@@ -34,9 +34,11 @@ recorded (2026-10-05), and unknown since then until the owner confirms:
 
 PRD 3 (roommate matching, the English locale) is built and tested on
 `chore/agent-harness`, not deployed: its migration
-`20261119122602_roommate_matching` is not applied to production, RLS is not
-on for its three tables, and `ROOMMATE_MATCHING_ENABLED` stays unset for the
-deploy (D49), so matching stage 2 is off.
+`20261119122602_roommate_matching` is not applied to production and RLS is not
+on for its three tables. The owner sets `ROOMMATE_MATCHING_ENABLED=true` at the
+deploy (D75, evening of 2026-11-19), so matching stage 2 is live from day 0.
+The production bot is a separate bot from the dev bot `@passflatdev_bot` (D76);
+its username is not chosen yet.
 
 What the code does in that state: without `TELEGRAM_BOT_TOKEN` the webhook
 route answers 503, and the follow-ups cron and the roommate cron send nothing;
@@ -552,10 +554,12 @@ The deposit flow's contract step also needs `ANTHROPIC_API_KEY`.
 
 Roommate matching stage 2 (cards, interest, reveals, daily push) runs only
 while `ROOMMATE_MATCHING_ENABLED` is exactly `true` (`isMatchingEnabled()` in
-`../roommate/switch.ts`, read per call; any other value or unset is off).
-Vercel applies a changed variable only to a new deployment, so turning the
-switch on or off is: set the variable, then redeploy (owner step). Record the
-moment in the posting log and as a PostHog annotation (spec 07 §Switch).
+`../roommate/switch.ts`, read per call; any other value or unset is off). The
+variable is set to `true` at the PRD 3 deploy (D75), so the deploy moment is
+the switch moment: record it in the posting log and as a PostHog annotation
+(spec 07 §Switch, `{switch_at}` of the E15 queries). Vercel applies a changed
+variable only to a new deployment, so turning the switch off or on later is:
+set the variable, then redeploy (owner step).
 With it off, `/mate` shows the stage 1 intro and card, and every stage 2 button
 (`rm:show*`, `rm:i:*`, `rm:x:*`, `rm:u:done`, `rm:push:on`) replies "matching is
 paused". Turning it off again keeps stored reactions and sent reveals; the next

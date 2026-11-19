@@ -1,11 +1,14 @@
 # PRD 3: Roommate matching — a structured waiting list, mutual matching and an English bot
 
-- **Version:** 0.2, 2026-11-19
-- **Status:** In progress, 2026-11-19: 49 tasks (T062 – T110) in `ralph/tasks.json`, 4 of them
-  blocked on Q-15 – Q-18 (T107 – T110); specs `docs/specs/06`, `07` and the PRD 3 sections of
-  `02`, `04`, `05`. Evaluated the
-  same day (`prd-3-decision-review.md`: ready with assumptions, 14 decisions), all answered by
-  the owner on 2026-11-19 (D54 – D70).
+- **Version:** 0.3, 2026-11-19
+- **Status:** Done, 2026-11-19 (built and tested on `chore/agent-harness`; not deployed). 52
+  tasks (T062 – T113) in `ralph/tasks.json`, all done, including the four that waited for
+  Q-15 – Q-18 (T107 – T110, D71 – D74); specs `docs/specs/06`, `07` and the PRD 3 sections of
+  `02`, `04`, `05`. Evaluated the same day (`prd-3-decision-review.md`: ready with assumptions,
+  14 decisions), all answered by the owner on 2026-11-19 (D54 – D70). The owner's handoff is the
+  T105 entry of `ralph/progress.md`, with the evening note in its Learnings: the matching switch
+  is **on from the deploy** (D75), the production bot is a separate bot (D76) and its profile is
+  set by a script (D77, milestone M7 in `ralph/tasks.json`).
 - **Serves:** H13 through H14 (stage 1, E14) and H15 (stage 2, E15); H12 through the daily push
   (E15 reading); H10 through the roommate page entry (E11). H16 (paid speed) is not built here.
 - **BRD assumptions:** A4, A5, A6, A18 (Contradicted, acted on), A21 (Contradicted, acted on),
@@ -50,8 +53,9 @@ minutes come from the posting log (FR-41).
 - **Stage 1, readout 2027-01-18.** Stop if fewer than 15 profiles, fewer than 1 profile per
   owner-hour of posting, or more than 30 minutes a week of manual handling. Go if at least 30
   profiles, at least 20 active, and at least 3 districts with at least 3 active profiles each.
-  Between the two: stage 1 is extended once to 2027-02-28 with the same rules and the switch off
-  — **Decided** (D59).
+  Between the two: stage 1 is extended once to 2027-02-28 with the same rules — **Decided**
+  (D59; its "switch off" described a switch that had not gone on yet; since D75 the switch is on
+  from the deploy and the extension leaves it on).
 - **Stage 2.** Within 14 days of the switch, at least 30 % of profiles older than 14 days have
   at least one mutual match; by about 2027-03-31, at least 10 mutual pairs and at least 3
   "renting together" or "talking" outcomes. Stop rule — **Decided** (D60): matching stops if,
@@ -62,11 +66,17 @@ minutes come from the posting log (FR-41).
 - **The bot itself.** D14's kill rule no longer applies: E5 is reported at day 30, and the bot's
   fate is decided by the stage 1 readout and the 2027-01-20 decision — **Decided** (D57).
 
-**Dates.** Day 0 of stage 1 is the deploy of this PRD with the switch off (target about
-2026-12-01, D67); the owner posts from that day (D46, D53). The switch for stage 2 serves
-February move-ins (D49): from 2027-01-04 the owner runs the readout query (FR-42) daily and turns
-the switch on at the first day on or after 2027-01-07 when all three go numbers hold; otherwise
-the switch waits for the 2027-01-18 readout and the 2027-01-20 decision (D58).
+**Dates.** Day 0 of both stages is the deploy of this PRD (target about 2026-12-01, D67); the
+owner posts from that day (D46, D53). **Decided** (D75, evening of 2026-11-19): the switch is on
+from the deploy, `ROOMMATE_MATCHING_ENABLED=true` set in Vercel at the deploy, so stage 2 is live
+from day 0; the owner's reason: without matching nobody has a reason to come, and while the pool
+is thin the bot answers honestly that nobody fits yet (FR-19, FR-25) and pushes when someone does
+(FR-27). This supersedes the earlier plan (the switch around 2027-01-07 for February move-ins,
+D49, after a daily go check from 2027-01-04, D58). The stage 1 numbers are still read on
+2027-01-18 and decide on 2027-01-20 whether the test continues (D52, D59); E15's window of switch
+
+- 14 days starts at the deploy, and its qualifying persons (D74) are those active at or after the
+  deploy.
 
 **Owner time — Decided** (D46): two 30-minute slots a day, about 7 hours a week, under the
 posting rules of D53; no personal help (D39). Manual handling is measured, and above 30 minutes a
@@ -598,8 +608,10 @@ Depends on: FR-17 (the rule); PRD 1 FR-16 · Open questions: none
 ```text
 FR-23. One switch for matching
 Milestone: M3 · Priority: Must · Status: Decided (one config switch, turned on by the owner,
-  D49)
-Who and when: the owner sets `ROOMMATE_MATCHING_ENABLED=true` in Vercel (owner step)
+  D49; on from the deploy, D75)
+Who and when: the owner sets `ROOMMATE_MATCHING_ENABLED=true` in Vercel at the PRD 3 deploy
+  (owner step, D75). The switch exists as built and is on from day 0; "off" is the paused state
+  the owner can return to (criterion 3), not the launch state
 Result: off (unset or any other value): no browse button, cards, reveal or daily push; the
   capability text says matching opens later. On: the opt-in button is replaced by "Show people",
   the one-time message (FR-19) and the daily push (FR-27) run
@@ -612,7 +624,11 @@ Acceptance criteria:
   4. `.env.example` documents it with an empty placeholder.
 Edge cases: a button from the "on" period tapped after it is off → "matching is paused"
 Data: none · Analytics: none · Screen: none · Copy: drafts in §8
-Depends on: none · Open questions: none (when it goes on: D58)
+Depends on: none · Open questions: none (it goes on at the deploy, D75; the daily go check of
+  D58 no longer decides it). Note (D75): the opt-in button (FR-18) is never shown with the switch
+  on, and the one-time message (FR-19) goes only to profiles that opted in during a switch-off
+  period, so at a deploy with the switch on nobody receives it; the closing route (FR-20) stays
+  for the case that the owner stops matching
 ```
 
 ```text
@@ -1349,18 +1365,20 @@ now. Thanks for trying Passflat." RU «Подбор так и не открое�
 2. Deploy PRD 1 with the bot (D29) and move PostHog to the EU project (D30).
 3. Approve and apply the one PRD 3 migration after the four bot migrations (D18).
 4. Switch RLS on for `roommate_profiles`, `roommate_reactions`, `roommate_reports` (D9).
-5. Deploy PRD 3 with `ROOMMATE_MATCHING_ENABLED` unset; run `npm run bot:webhook` so the RU, UK
-   and EN command menus are published; update the BotFather description and about text.
+5. Deploy PRD 3 with `ROOMMATE_MATCHING_ENABLED=true` (D75) and the production bot's token
+   (a separate bot from the dev bot, D76); run `npm run bot:webhook` so the RU, UK and EN
+   command menus are published, and `npm run bot:profile` for the name, descriptions and photo
+   (D77; milestone M7 in `ralph/tasks.json` builds it).
 6. Review the copy: bot RU/UK/EN, web four locales, privacy and terms drafts. Approve the
    privacy section before the deploy (stage 1 launches only then); approve the moderation terms,
    the statement of reasons and the safety lines before the switch (D56).
 7. Post links two slots a day under D53 and keep the posting log (FR-41).
 8. Review hidden profiles and appeals for up to 10 minutes a week, logged as manual minutes;
    inform the police if a report suggests a threat (DSA Art. 18) (D65).
-9. From 2027-01-04, run the FR-42 query daily; on the first day on or after 2027-01-07 when all
-   three go numbers hold, set `ROOMMATE_MATCHING_ENABLED=true`; otherwise decide on 2027-01-20
-   from the readout (D58). Between stop and go, extend stage 1 once to 2027-02-28 (D59).
-10. If matching is not opened: run the FR-20 route once (D64).
+9. Matching is on from step 5 (D75). On 2027-01-18 run the FR-42 readout (stage 1) and, at
+   deploy + 14 days, the FR-43 readout (stage 2); decide on 2027-01-20 from them (D43, D52,
+   D60). Between stop and go, extend stage 1 once to 2027-02-28 (D59).
+10. If you stop matching: set the switch off, then run the FR-20 route once (D64, D72).
 11. Keep the lawyer questions of the decision review for when a lawyer is possible (D39, D51,
     D69).
 
@@ -1400,7 +1418,8 @@ for the owner from the gap review"), each held by a blocked task while the rest 
 ## 13. Size
 
 Estimated at about 35 tasks; decomposed into 49 (T062 – T110): M1 18, M2 10, M3 6, M4 6, M5 3,
-M6 6, of which 4 are blocked on Q-15 – Q-18. The difference: pure rule modules split from the flows (time, rules, text filter, texts,
+M6 6, of which 4 were blocked on Q-15 – Q-18 until the owner answered; the build added three gap
+tasks (T111 – T113), 52 in all, every one done on 2026-11-19. The difference: pure rule modules split from the flows (time, rules, text filter, texts,
 switch), the intake split into four tasks, and separate tasks for the capability list, edit, the
 closing route and the switch states. No scope cut (D70): the "cut first" list (FR-20, FR-30,
 FR-11, FR-22, then FR-28 and FR-10) is not applied.
@@ -1431,3 +1450,9 @@ FR-11, FR-22, then FR-28 and FR-10) is not applied.
   profile's life, the one-time message replaces that day's push, the next-step buttons are
   callbacks so they can be counted, and Polish Telegram clients get the English command menu.
   The requirement text is otherwise unchanged.
+- **0.3, 2026-11-19 (evening).** Status Done: every task is done, built and tested on
+  `chore/agent-harness`, not deployed. The owner's evening decisions applied by Claude: the
+  matching switch is on from the deploy (D75; §1 Dates, FR-23, §11 steps 5, 9 and 10), the
+  production bot is a separate bot whose username is still Open (D76; §11 step 5), and the bot
+  profile is set by a script (D77; §11 step 5). No requirement text changes; the four Open
+  questions of the gap review are answered (D71 – D74) and their tasks done.

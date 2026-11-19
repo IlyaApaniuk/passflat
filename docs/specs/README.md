@@ -4,20 +4,35 @@ These specs describe what the loop builds. They grow with every PRD: a new PRD c
 specs and adds new ones. Loop iterations read only these specs and the code; product documents
 in `docs/product/` explain why, the specs say what.
 
-**Current PRD:** PRD 3, "Roommate matching — a structured waiting list, mutual matching and an
-English bot" (`../product/prd/prd-3-roommate-matching.md`, version 0.2), decomposed on
-2026-11-19 after the owner answered every question of its decision review
-(`../product/prd/prd-3-decision-review.md`; D54 – D70). Requirements FR-1 – FR-44; all 44 are
-built (D70). Specs 06 and 07 are new; specs 02, 04 and 05 carry PRD 3 sections. Tasks start at
-T062 in `../../ralph/tasks.json`; the requirement map is below.
+**Current PRD:** none in progress. Next in `../../ralph/tasks.json` is milestone **M7 "Owner
+tooling"** (no PRD; D76, D77, evening of 2026-11-19): the bot avatar, the `npm run bot:profile`
+script that sets the bot's name, descriptions and photo through the Bot API, one place for the
+production bot's username, and a task blocked on the owner's username choice (the map is below).
+After M7 comes PRD 4, not written yet (`../product/roadmap.md`).
 
-**Previous PRDs:** PRD 1, "Activation measurement and the Telegram bot"
-(`../product/prd/prd-1-activation-and-bot.md`), is Done (2026-11-19: built and tested on
-`chore/agent-harness`, not deployed); its 60 tasks are archived in
+**Previous PRDs:** PRD 3, "Roommate matching — a structured waiting list, mutual matching and an
+English bot" (`../product/prd/prd-3-roommate-matching.md`, version 0.3), is Done (2026-11-19:
+built and tested on `chore/agent-harness`, not deployed; 52 tasks T062 – T113, all done; the
+matching switch is on from the deploy, D75). Specs 06 and 07 are its new specs; 02, 04 and 05
+carry its sections; its requirement map is kept below. PRD 1, "Activation measurement and the
+Telegram bot" (`../product/prd/prd-1-activation-and-bot.md`), is Done (2026-11-19: built and
+tested on `chore/agent-harness`, not deployed); its 60 tasks are archived in
 `../../ralph/archive/prd-1-activation-and-bot-tasks.json` and its map is kept below. Harness
 tasks of milestone M0 are archived in `../../ralph/archive/harness-tasks.json`. PRD 2
 (`../product/prd/prd-2-deposit-sprint.md`) is On hold since 2026-11-19 (D39) and is not
 decomposed; the specs keep their "PRD 2 later adds" notes as history.
+
+## Owner tooling map (M7, no PRD)
+
+Status as in the PRD maps. Source: D76 and D77 (`../product/decisions.md`); the tasks hold the
+acceptance criteria, since no spec file exists for owner tooling. Checks never call Telegram.
+
+| Work                                                             | Reference                                                                                                  | Task | Status  |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- | ------- |
+| Bot avatar `public/bot-avatar.png`, 512 × 512 from the logo      | D77                                                                                                        | T114 | Planned |
+| Bot profile texts module and `npm run bot:profile` (`--dry-run`) | D77; `src/lib/bot/README.md` "Going live"; `../development-workflow.md` "Commands with additional effects" | T115 | Planned |
+| One place for the production bot's username; `<bot>` placeholder | D76; `../marketing/roommate-posts.md` "How to use a template"                                              | T116 | Planned |
+| Set the production bot username (owner question)                 | D76 (Open)                                                                                                 | T117 | Blocked |
 
 ## How iterations work
 
@@ -72,10 +87,12 @@ Draft copy is allowed where a spec says so; list such keys in the progress entry
 | [06-roommate-profiles.md](06-roommate-profiles.md)         | Roommate data, intake, own card, expiry, daily cron, counts, room reference, opt-in, closing      | —             | M1, M2 (FR-1, FR-3 – FR-20)   |
 | [07-roommate-matching.md](07-roommate-matching.md)         | Switch, compatibility, cards, reveal, push, outcome, report, hiding, appeals, legal drafts        | —             | M3, M4 (FR-23 – FR-36)        |
 
-## Requirement map (PRD 3)
+## Requirement map (PRD 3, done)
 
 Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
-Planned (task todo). Decomposed on 2026-11-19 after the owner's answers (D54 – D70). The
+Planned (task todo). PRD 3 is Done on 2026-11-19: every row below is Done, built and tested on
+`chore/agent-harness`, not deployed; the matching switch goes on at the deploy (D75). The
+tasks stay in `../../ralph/tasks.json` next to M7. Decomposed on 2026-11-19 after the owner's answers (D54 – D70). The
 architect gap review found 26 gaps: 22 are folded into the specs and tasks (one new task, T106),
 and 4 need the owner (Q-15 – Q-18 in `../product/prd/prd-3-decision-review.md`), held by the
 blocked tasks T107 – T110 at the end of the table; the rest of each requirement is built as

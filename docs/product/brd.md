@@ -149,8 +149,8 @@ The roommate ladder (`thesis.md`, D52; thresholds are **Assumptions** the owner 
 - **Stage 1, readout 2027-01-18.** Stop below 15 profiles, below 1 profile per owner-hour of
   posting, or above 30 minutes a week of manual handling. Go at ≥ 30 profiles, ≥ 20 active and
   ≥ 3 districts with ≥ 3 active profiles each (E14). In between: extend once to 2027-02-28 with
-  the switch off (D59). The switch goes on at the first day on or after 2027-01-07 when the go
-  numbers hold, checked daily from 2027-01-04 (D58).
+  the same rules (D59). The switch is on from the PRD 3 deploy (D75, evening of 2026-11-19; it
+  was to go on at the first day on or after 2027-01-07 when the go numbers held, D58).
 - **Stage 2.** Within 14 days of the switch, ≥ 30 % of profiles older than 14 days have ≥ 1
   mutual match; by about 2027-03-31, ≥ 10 mutual pairs and ≥ 3 "renting together" or "talking"
   outcomes (E15). Stop below 15 % at switch + 14 days, with no pair among ≥ 20 browsing persons,
@@ -245,12 +245,12 @@ Numbers are never reused. Status: Confirmed, Partly, Testing, Untested, Contradi
 
 One PRD is one stage. It is closed when all of its tasks are closed.
 
-| PRD   | What                                                                                                                                                                 | Status                                                                                          |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| PRD 1 | Activation measurement and the Telegram bot: separate funnels, roommate fixes, honest building figures, bot handoff and promises (`prd/prd-1-activation-and-bot.md`) | Built (60 tasks done, 2026-11-19); the owner's deploy launches the bot (D29)                    |
-| PRD 3 | Roommate matching, stages 1 and 2, plus the English bot locale (`prd/prd-3-roommate-matching.md`)                                                                    | Draft, evaluated 2026-11-19; the owner reviews it before decomposition; build in December (D49) |
-| PRD 2 | Deposit sprint (`prd/prd-2-deposit-sprint.md`)                                                                                                                       | On hold, 2026-11-19 (D39)                                                                       |
-| Later | Stage 3 money (paid speed), a Polish bot locale (after stage 1, D50), deposit money layer, second city                                                               | Hypotheses                                                                                      |
+| PRD   | What                                                                                                                                                                 | Status                                                                                         |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| PRD 1 | Activation measurement and the Telegram bot: separate funnels, roommate fixes, honest building figures, bot handoff and promises (`prd/prd-1-activation-and-bot.md`) | Built (60 tasks done, 2026-11-19); the owner's deploy launches the bot (D29)                   |
+| PRD 3 | Roommate matching, stages 1 and 2, plus the English bot locale (`prd/prd-3-roommate-matching.md`)                                                                    | Done (52 tasks, 2026-11-19; built and tested, not deployed); deployed with the switch on (D75) |
+| PRD 2 | Deposit sprint (`prd/prd-2-deposit-sprint.md`)                                                                                                                       | On hold, 2026-11-19 (D39)                                                                      |
+| Later | Stage 3 money (paid speed), a Polish bot locale (after stage 1, D50), deposit money layer, second city                                                               | Hypotheses                                                                                     |
 
 ## 12. Main risks
 

@@ -2,8 +2,9 @@
   "version": 1,
   "prd": {
     "title": "PRD 3: Roommate matching — a structured waiting list, mutual matching and an English bot",
-    "version": "0.2",
-    "date": "2026-11-19"
+    "version": "0.3",
+    "date": "2026-11-19",
+    "note": "PRD 3 is Done (2026-11-19). Milestone M7 'Owner tooling' has no PRD: D76 and D77 in docs/product/decisions.md."
   },
   "tasks": [
     {
@@ -925,6 +926,75 @@
       "title": "A report stored just after another request hid the same target is decided and its reporter told (FR-32 criterion 4)",
       "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
       "status": "done"
+    },
+    {
+      "id": "T114",
+      "milestone": "M7",
+      "title": "Bot avatar: public/bot-avatar.png, a 512 x 512 square made from the logo (D77)",
+      "spec": "src/lib/bot/README.md#going-live",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "public/bot-avatar.png exists and is committed: a 512 x 512 PNG made from public/logo.png (1536 x 1024: the rounded-square gradient mark centred on a white background) with the mark centred and the logo's background colour kept (no transparency, no new colour); made with the system `sips` tool in a one-off command, for example `sips -c 1024 1024 public/logo.png --out public/bot-avatar.png` (centre crop to the square) then `sips -z 512 512 public/bot-avatar.png`; the exact commands are named in the progress entry. sharp is not a dependency and no dependency is added",
+        "A unit test (src/lib/bot/bot-avatar.test.ts) reads the PNG header of public/bot-avatar.png without a new dependency (the PNG signature, then the IHDR width and height at bytes 16 - 23) and asserts 512 x 512, and that the file is under 200 kB; it passes for any 512 x 512 PNG, so the owner may replace the file with his own",
+        "The progress entry's Owner review says the owner may replace public/bot-avatar.png with another 512 x 512 PNG before running `npm run bot:profile` (T115)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D77 (evening of 2026-11-19). The avatar is what T115 sends with setMyProfilePhoto. If the sandbox denies `sips`, block the task with the exact commands for the owner; never add an image dependency for this."
+    },
+    {
+      "id": "T115",
+      "milestone": "M7",
+      "title": "Bot profile script: name, descriptions and photo through the Bot API, `npm run bot:profile -- [--dry-run]` (D77)",
+      "spec": "src/lib/bot/README.md#going-live",
+      "dependsOn": ["T114"],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/bot/profile-texts.ts holds the texts as the source of truth: BOT_PROFILE with, for the default (RU) and for language codes uk, en and pl (pl = the EN texts, D68), the name (agent draft, e.g. 'Passflat'; listed for review), the description and the short description moved verbatim from docs/marketing/bot-profile.md ('About' = short description); BOT_PROFILE_LIMITS = { name: 64, description: 512, shortDescription: 120 } (the Bot API limits), typed so every language has all three texts",
+        "src/lib/bot/profile.ts exports applyBotProfile(api, { dryRun, photoPath }) that calls api.setMyName, api.setMyDescription and api.setMyShortDescription for the default (no language_code) and for uk, en and pl, then api.setMyProfilePhoto({ photo: { type: 'static', photo: new InputFile(photoPath) } }) with public/bot-avatar.png (T114); it validates every text against BOT_PROFILE_LIMITS before the first call and throws naming the key and language on a breach; with dryRun it prints each call (method, language_code, text length or file) and makes no request; it returns the list of calls for the tests",
+        "scripts/tg-profile.ts (a thin runner in the style of scripts/tg-webhook.ts, covered by knip's scripts/** entry) is run as `npm run bot:profile -- [--dry-run]` (package.json script with the same env flags as bot:webhook: .env.local and .env); it reads TELEGRAM_BOT_TOKEN from the environment only, exits 1 with a message when it is missing, never reads a file in the repository for the token, builds the grammY Bot and calls applyBotProfile; `--dry-run` works without a token too and makes no request",
+        "Tests (src/lib/bot/profile-texts.test.ts, src/lib/bot/profile.test.ts) with a fake api object: every text of every language is within 64 / 512 / 120 characters (and the test proves it fails on a 513-character description); the honesty rules of roommate-posting-kit.test.ts (brokenRules: no 'verified', no promise of a match, date or result, no figure) run over every text, with the rule list shared from one test-support module so both tests use the same list; the exact sequence of calls and their language codes (default, uk, en, pl), the pl texts equal the en texts; the photo call carries the file; dryRun makes no call; nothing in the suite calls Telegram",
+        "docs/marketing/bot-profile.md stays the human-readable copy: its header says the source of truth is src/lib/bot/profile-texts.ts and that the owner runs `npm run bot:profile` (after `--dry-run`) instead of setting the texts in BotFather; a test asserts that the Markdown's text blocks equal the module's texts so the two cannot drift (the 'bot profile texts' block of roommate-posting-kit.test.ts moves to the new test or reads the module)",
+        "Docs: src/lib/bot/README.md 'Going live' (step 1 and step 5) says the production bot's name, descriptions, short descriptions and photo are set by `npm run bot:profile` (owner only, after the token is set in the environment; `--dry-run` first), and that the dev bot @passflatdev_bot can be used to try it; docs/development-workflow.md 'Commands with additional effects' gets a `npm run bot:profile -- …` row (sets the bot profile through the Bot API; owner only; `--dry-run` has no effect); docs/specs/05-measurement-docs.md §Posting kit's bot-profile bullet says the script sets them and the Markdown is the copy",
+        "The name, descriptions and short descriptions in every language are listed in the progress entry as draft copy for the owner's review"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D77 (evening of 2026-11-19); D68 for pl = EN; D63 for the EN deposit line. The installed grammY 1.46 (@grammyjs/types 5.0.0) declares setMyName, setMyDescription, setMyShortDescription and setMyProfilePhoto (InputProfilePhoto). A client language without a text falls back to the default text in Telegram, which is RU, as normalizeLocale does in the bot. Checks never call Telegram; the script is an owner command with an external effect (docs/development-workflow.md)."
+    },
+    {
+      "id": "T116",
+      "milestone": "M7",
+      "title": "One place for the production bot's username: the posting kit's `<bot>` placeholder is filled from NEXT_PUBLIC_TELEGRAM_BOT_USERNAME by a documented step (D76)",
+      "spec": "docs/marketing/roommate-posts.md#how-to-use-a-template",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "The username has one place, NEXT_PUBLIC_TELEGRAM_BOT_USERNAME (already read by the website's bot links); nothing new stores it. src/lib/bot/bot-username.ts exports isValidBotUsername(value) (Telegram's rule: 5 - 32 characters of [A-Za-z0-9_], ending in 'bot' case-insensitively, no leading @) and fillBotPlaceholder(markdown, username), which replaces every `<bot>` (in `t.me/<bot>` links and `@<bot>` mentions) and refuses an invalid username; unit tests for both, including that the filled posting kit contains no `<bot>` and that every filled t.me link still parses with parseStartPayload to { kind: 'roommate' }",
+        "scripts/tg-posts.ts, run as `npm run bot:posts` (package.json script with the same env flags as bot:webhook), prints docs/marketing/roommate-posts.md to stdout with the placeholders filled from NEXT_PUBLIC_TELEGRAM_BOT_USERNAME, exits 1 with a message when the variable is missing or invalid, and writes nothing to the repository; it is the documented step the owner runs before the first slot (`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=<production username> npm run bot:posts > <a file outside the repo>` when .env.local holds the dev bot's username)",
+        "docs/marketing/roommate-posts.md 'How to use a template' describes that step and says the kit in the repository keeps `<bot>` on purpose (no username is committed before the owner chooses it, and the dev bot's username never lands in a post); docs/marketing/roommate-posting-log.md holds no `<bot>` (it holds none today; a test asserts it stays so); src/lib/bot/README.md 'Going live' step 5 names the variable as the one place and the step; docs/development-workflow.md 'Commands with additional effects' gets a `npm run bot:posts` row (prints only; no external effect)",
+        "A test asserts that no file under docs/marketing, src/lib/bot (texts.ts, deposit-texts.ts, roommate-texts.ts) or src/i18n/messages holds a hardcoded t.me bot link with a username (only `<bot>` or a value from the environment); test fixtures with passflat_test_bot in *.test.ts files are allowed"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D76 (evening of 2026-11-19): the production username is Open; T117 records it once the owner answers. The posting kit's test (roommate-posting-kit.test.ts) expects `@<bot>` in the no-link templates and parses links with `<bot>` in them: keep the placeholder in the repository and fill it only in the printed copy."
+    },
+    {
+      "id": "T117",
+      "milestone": "M7",
+      "title": "Set the production bot username (owner question, D76)",
+      "spec": "docs/marketing/roommate-posts.md#how-to-use-a-template",
+      "dependsOn": ["T116"],
+      "status": "blocked",
+      "acceptance": [
+        "The owner's username (without @) passes isValidBotUsername (T116) and is recorded where a reader looks for it: src/lib/bot/README.md 'Production status' and 'Going live' (the production bot's username; a username is public, not a secret), the example value in the NEXT_PUBLIC_TELEGRAM_BOT_USERNAME comment of .env.example, and docs/marketing/roommate-posts.md 'How to use a template' as the value to fill; nothing else changes in the repository (the owner sets the variable in Vercel and in his own .env.local)",
+        "The token of the production bot never appears in the repository, the progress entry or the chat (D76); the dev bot @passflatdev_bot and its token in .env.local are untouched",
+        "The progress entry reminds the owner of the steps that need the username: NEXT_PUBLIC_TELEGRAM_BOT_USERNAME in Vercel (the website's bot links render nothing until it is set), `npm run bot:posts` for the posting kit, `npm run bot:webhook` and `npm run bot:profile` with that bot's token"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner question (D76, Open). What is the production bot's username, without the @? You create the bot in BotFather (`/newbot`); @passflatdev_bot stays the development bot. The username is needed for NEXT_PUBLIC_TELEGRAM_BOT_USERNAME in Vercel, for the posting kit's `<bot>` placeholder (`npm run bot:posts`, T116) and to know which bot `npm run bot:profile` (T115) and `npm run bot:webhook` act on. Answer with the username only; never paste the token (it goes only into Vercel)."
     }
   ]
 }

@@ -38,10 +38,12 @@ What every reply keeps, also when you reword it (spec 05 §Posting kit):
   below, and change the source when you use the template on another platform. The bot records the source and the key as `entry_source` and `entry_detail` of
   `tg_roommate_flow_started` (spec 04 §Start payloads); a key outside the table's shape lands as
   `other` and is lost for the readout.
-- **Stage 1 only.** The templates describe the bot with the matching switch off. The sentence
-  «Подбор пока не открыт.» / «Підбір поки що не відкрито.» / "Matching isn't open yet." is true
-  only until `ROOMMATE_MATCHING_ENABLED` goes on: delete it from every template on the day of the
-  switch. Everything else stays true after the switch.
+- **Delete the "not open yet" sentence before the first slot.** The templates were written for
+  a launch with the matching switch off. Since D75 the switch is on from the deploy, so the
+  sentence «Подбор пока не открыт.» / «Підбір поки що не відкрито.» / "Matching isn't open yet."
+  is false from day 0: delete it from every template before your first slot (the templates keep
+  it here so you see what to cut; nothing else in them changes). Keep it only if you ever set the
+  switch off again.
 
 ## Templates
 
