@@ -1416,6 +1416,7 @@
         "depositReturnedArea": "{level, select, district {У районі {area}} other {У місті {area}}}: {gotBack} з {answered} тих, хто відповів, отримали заставу назад — повністю або частково",
         "countOfTotal": "{count} з {total}",
         "oneObservation": "Одне спостереження за цією адресою",
+        "oneObservationArea": "{level, select, district {Одне спостереження у районі {area}} other {Одне спостереження у місті {area}}}",
         "roomsValue": "Кімнат: {count}",
         "areaValue": "Площа ≈ {area} м²",
         "knownPart": "Відома частина витрат",

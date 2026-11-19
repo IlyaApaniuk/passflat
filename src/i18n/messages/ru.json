@@ -1416,6 +1416,7 @@
         "depositReturnedArea": "{level, select, district {По району {area}} other {По городу {area}}}: {gotBack} из {answered} ответивших получили залог обратно — полностью или частично",
         "countOfTotal": "{count} из {total}",
         "oneObservation": "Одно наблюдение по этому адресу",
+        "oneObservationArea": "{level, select, district {Одно наблюдение по району {area}} other {Одно наблюдение по городу {area}}}",
         "roomsValue": "Комнат: {count}",
         "areaValue": "Площадь ≈ {area} м²",
         "knownPart": "Известная часть расходов",

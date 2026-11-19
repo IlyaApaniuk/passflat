@@ -1416,6 +1416,7 @@
         "depositReturnedArea": "{level, select, district {W dzielnicy {area}} other {W mieście {area}}}: {gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
         "countOfTotal": "{count} z {total}",
         "oneObservation": "Jedna obserwacja pod tym adresem",
+        "oneObservationArea": "{level, select, district {Jedna obserwacja w dzielnicy {area}} other {Jedna obserwacja w mieście {area}}}",
         "roomsValue": "Pokoje: {count}",
         "areaValue": "Powierzchnia ≈ {area} m²",
         "knownPart": "Znana część kosztów",

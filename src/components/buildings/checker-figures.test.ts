@@ -236,6 +236,100 @@ describe('CheckerAreaReference', () => {
   });
 });
 
+describe('CheckerAreaReference: a group of one report', () => {
+  // A district reference is chosen by MIN_AREA_REPORTS over both groups: 1 tenant report +
+  // 4 asking prices qualifies, so its tenant group is one observation. A city can rest on one.
+  const thinDistrict: AreaReference = {
+    level: 'district',
+    slug: 'mokotow',
+    name: 'Mokotów',
+    summary: summarizeFigures(
+      [
+        report('user', 3200, 4000, true, { rooms: 2, areaM2: 52 }),
+        ...[4100, 3900, 4200, 3800].map((total) => report('scraped', total - 800, total, false)),
+      ],
+      districtLevel,
+    ),
+  };
+  const thinCity: AreaReference = {
+    level: 'city',
+    slug: 'warsaw',
+    name: 'cities.warsaw',
+    summary: summarizeFigures([report('user', 3000, 3800, true)], cityLevel),
+  };
+  const buildingWording = (locale: Locale) =>
+    (messages[locale].costs as { building: { figures: { oneObservation: string } } }).building
+      .figures.oneObservation;
+  const cityNames: Record<Locale, string> = {
+    en: 'Warsaw',
+    pl: 'Warszawa',
+    ru: 'Варшава',
+    uk: 'Варшава',
+  };
+  const expected: Record<Locale, { district: string; city: string }> = {
+    en: { district: 'One observation in the Mokotów district', city: 'One observation in Warsaw' },
+    pl: {
+      district: 'Jedna obserwacja w dzielnicy Mokotów',
+      city: 'Jedna obserwacja w mieście Warszawa',
+    },
+    ru: {
+      district: 'Одно наблюдение по району Mokotów',
+      city: 'Одно наблюдение по городу Варшава',
+    },
+    uk: {
+      district: 'Одне спостереження у районі Mokotów',
+      city: 'Одне спостереження у місті Варшава',
+    },
+  };
+
+  it('names the district, never "at this address", in every locale', () => {
+    expect(thinDistrict.summary.groups.tenant?.reportCount).toBe(1);
+    for (const locale of LOCALES) {
+      const text = areaReference({ reference: thinDistrict, deposit: null }, locale);
+      expect(text, locale).toContain(expected[locale].district);
+      expect(text, locale).not.toContain(buildingWording(locale));
+    }
+    const en = areaReference({ reference: thinDistrict, deposit: null });
+    expect(en).toContain('Reference: tenant reports in Mokotów (1)');
+    expect(en).not.toContain('at this address');
+    // The one observation's values and characteristics, without "≈" or N.
+    const tenant = en.slice(
+      en.indexOf('Reference: tenant reports'),
+      en.indexOf('Reference: asking prices'),
+    );
+    expect(tenant).toContain('Whole apartment · Rooms: 2 · Area ≈ 50 m²');
+    expect(tenant).toContain(`Monthly total ${n(4000)} PLN`);
+    expect(tenant).not.toMatch(/≈ [\d\s.,]+PLN/);
+    // The asking-price group keeps its median and N.
+    const asking = en.slice(en.indexOf('Reference: asking prices'));
+    expect(asking).toContain('Reference: asking prices from listings in Mokotów (4)');
+    expect(asking).toContain('4 listings');
+    expect(asking).not.toContain('One observation');
+  });
+
+  it('names the city in the visitor’s locale, never "at this address"', () => {
+    for (const locale of LOCALES) {
+      const text = areaReference({ reference: thinCity, deposit: null }, locale, cityNames[locale]);
+      expect(text, locale).toContain(expected[locale].city);
+      expect(text, locale).not.toContain(buildingWording(locale));
+      expect(text, locale).not.toContain('cities.warsaw');
+    }
+    const en = areaReference({ reference: thinCity, deposit: null });
+    expect(en).toContain('Reference: tenant reports in Warsaw (1)');
+    expect(en).not.toContain('at this address');
+  });
+
+  it('keeps the building wording for the building’s own one observation', () => {
+    const single = summarizeFigures([report('user', 3200, 4000, true)], building);
+    for (const locale of LOCALES) {
+      const text = buildingFigures(single, locale);
+      expect(text, locale).toContain(buildingWording(locale));
+      expect(text, locale).not.toContain(expected[locale].district);
+    }
+    expect(buildingFigures(single)).toContain('One observation at this address');
+  });
+});
+
 describe('checker copy', () => {
   it('no longer carries the district verdict keys', () => {
     for (const locale of LOCALES) {

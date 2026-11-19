@@ -11,6 +11,7 @@ import type { FigureSummary } from '@/lib/cost-figures';
 import type { LocationCheckerCosts } from '@/lib/location-checker';
 import {
   areaDepositMessage,
+  areaOneObservationMessage,
   FIGURE_GROUP_TITLE_KEY,
   orderedFigureGroups,
   referenceHintMessage,
@@ -47,7 +48,10 @@ export function CheckerBuildingFigures({ summary }: { summary: FigureSummary }) 
  * The area the building is set against, labelled with its level, group and N ("Reference:
  * tenant reports in Mokotów (6)") and never as the building's figures, followed by the area's
  * deposit statistic from MIN_DEPOSIT_ANSWERS answers. The district name comes from the
- * response; the city name is the checker's own, already in the visitor's locale.
+ * response; the city name is the checker's own, already in the visitor's locale. A group of
+ * one report names its area ("One observation in the Mokotów district"), never "at this
+ * address": a district reference is chosen by MIN_AREA_REPORTS over both groups, so one of
+ * them can hold a single report.
  */
 export function CheckerAreaReference({
   costs,
@@ -69,7 +73,11 @@ export function CheckerAreaReference({
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         {render(referenceHintMessage(reference.level))}
       </p>
-      <AreaReferenceGroups reference={reference} area={area} />
+      <AreaReferenceGroups
+        reference={reference}
+        area={area}
+        oneObservationLabel={render(areaOneObservationMessage(reference.level, area))}
+      />
       {deposit && (
         <p className="flex items-start gap-1.5 text-sm">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />

@@ -1416,6 +1416,7 @@
         "depositReturnedArea": "{level, select, district {In the {area} district} other {In {area}}}, {gotBack} of {answered} who answered got the deposit back, fully or partly",
         "countOfTotal": "{count} of {total}",
         "oneObservation": "One observation at this address",
+        "oneObservationArea": "{level, select, district {One observation in the {area} district} other {One observation in {area}}}",
         "roomsValue": "Rooms: {count}",
         "areaValue": "Area ≈ {area} m²",
         "knownPart": "Known part of the costs",

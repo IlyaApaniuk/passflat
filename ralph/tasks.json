@@ -903,13 +903,13 @@
         "Tests: checker-figures.test.ts renders a district and a city reference whose tenant group has one report and asserts the area wording and the absence of 'at this address'; the building's own one observation keeps 'One observation at this address'"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found by T086. The building page and the checker's building block keep the building wording. No figure or contract change.",
       "id": "T112",
       "milestone": "M2",
       "title": "Checker area reference: a one-observation group says the area, not 'at this address' (FR-24 gap)",
       "spec": "docs/specs/03-building-figures.md#checker",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T095"],

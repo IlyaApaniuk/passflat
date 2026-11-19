@@ -3166,3 +3166,35 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - only a month that has passed triggers it. A month that ends within 3 days still saves at once, as before, so the profile can hide within days. The renewal also asks in that case; the save does not, because the task's criteria name only the past month.
   - No new copy (`monthPassed`, `askMonth` from T068), no new event, no table, no migration.
 - Next: `node scripts/ralph-tasks.mjs next` (now T112, the checker's one-observation area wording, found in T086; T105, the PRD 3 final check, comes after the remaining tasks).
+
+### 2026-11-19 21:40 · T112 · done
+
+- Done:
+  - `src/lib/building-figures-view.ts`: `areaOneObservationMessage(level, area)` → `costs.building.figures.oneObservationArea` with `{ level, area }`, next to `referenceHintMessage`.
+  - `src/components/buildings/checker-figures.tsx`: `CheckerAreaReference` passes it to `AreaReferenceGroups`' `oneObservationLabel`, so a district or city reference group of one report names its area and level instead of "One observation at this address". `CheckerBuildingFigures` and the building page are unchanged (building wording).
+  - Copy: new key `costs.building.figures.oneObservationArea` in all four locales (the checker page's provider picks `costs`).
+  - `docs/specs/README.md`: new PRD 3 row "FR-24 (gap)" → T112, Done (PRD 1's FR-24, one observation, spec 03 §Checker).
+- Tests: `checker-figures.test.ts`, new block "a group of one report" (3 tests):
+  - a district reference of 1 tenant report + 4 asking prices: the area wording in every locale, no locale's building wording, "Reference: tenant reports in Mokotów (1)", the observation's values and characteristics without "≈" or N; the asking group keeps "4 listings" and no one-observation line;
+  - a city reference of one report: the city named in the visitor's locale in every locale, no building wording, no `cities.warsaw`;
+  - the building's own one observation keeps "One observation at this address" (and each locale's building wording).
+  - Mutation check: the label dropped → both reference tests fail showing "Jedna obserwacja pod tym adresem"; reverted.
+- Checks:
+  - `npx vitest run src/components/buildings/checker-figures.test.ts src/i18n/messages.test.ts src/i18n/honesty-copy.test.ts`: 21 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2958 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent), `costs.building.figures.oneObservationArea`:**
+    - en: "One observation in the {area} district" / "One observation in {area}";
+    - pl: "Jedna obserwacja w dzielnicy {area}" / "Jedna obserwacja w mieście {area}";
+    - ru: "Одно наблюдение по району {area}" / "Одно наблюдение по городу {area}";
+    - uk: "Одне спостереження у районі {area}" / "Одне спостереження у місті {area}".
+      The wording follows `referenceTenantDistrict` / `referenceTenantCity` and `depositReturnedArea` in each locale.
+  - The building page's own area-reference fallback (FR-33) shows no one-observation line at all, so it was left as it is.
+  - No figure or contract change, no event, no table, no migration.
+- Next: `node scripts/ralph-tasks.mjs next` (now T113; T105, the PRD 3 final check, FR-44, comes after the remaining tasks).

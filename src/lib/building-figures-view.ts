@@ -143,6 +143,17 @@ export function referenceGroupLabel(
   };
 }
 
+/**
+ * Replaces the building's "One observation at this address" on an area reference group of
+ * one report: "One observation in the Mokotów district" / "One observation in Warsaw".
+ */
+export function areaOneObservationMessage(
+  level: AreaReference['level'],
+  area: string,
+): FigureMessage {
+  return { key: 'costs.building.figures.oneObservationArea', values: { level, area } };
+}
+
 /** Says that the reference describes the district or the city, not this building. */
 export function referenceHintMessage(level: AreaReference['level']): FigureMessage {
   return { key: 'costs.building.figures.referenceHint', values: { level } };
