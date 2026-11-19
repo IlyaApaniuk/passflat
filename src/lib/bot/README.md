@@ -72,6 +72,11 @@ the migrations are missing (`docs/architecture.md` §9).
   defaults to `ru`).
 - A rate limit of 12 text messages per minute per chat (`bot.ts`), because
   geocoding is paid.
+- **Blocked chats** (spec 06 §Blocked chats): a `my_chat_member` update in a
+  private chat sets `TelegramChat.blockedAt` when the person blocks the bot
+  (`kicked`) and clears it when they unblock it (`member`); no event, no reply,
+  no new row; group chats are ignored. A 403 on a send and any later message
+  (`touchChat`) set and clear it too.
 
 ## Layout
 
@@ -332,8 +337,8 @@ letter" tap. `sendDueFollowUps` claims each due row before sending (clears
 `followUpAt` with a conditional `updateMany` on the value it read, and sends
 only when that updated one row), so overlapping cron runs send once. A failed
 send restores the date and the next run retries; a 403 marks the chat blocked,
-and the cron skips blocked chats (a later message from the chat clears the
-mark). Delivery is at most once: a crash between the
+and the cron skips blocked chats (a later message or an unblock clears the
+mark; blocking the bot sets it without a send, see "Blocked chats" above). Delivery is at most once: a crash between the
 claim and the send loses that reminder. `/cancel` abandons an open intake and
 clears `followUpAt` (not `followUpKind`, which the outcome buttons of sent
 reminders read) on the chat's `verdict` and `letter_sent` cases, replying

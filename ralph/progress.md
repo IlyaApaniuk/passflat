@@ -106,6 +106,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The Write and Edit tools turn ` ` / ` ` escapes into literal characters (a regex literal then fails `no-irregular-whitespace`): use `\s` in regexes and `String.fromCharCode(0xa0)` in tests.
 - A new module imported by `bot.ts` must be mocked in `bot.test.ts` (`./roommate-flow` is), or its Prisma calls hit the real local database; every `rm:` callback registers through `roommateCallback` in `roommate-flow.ts` (answers the query, returns a toast string, swallows "message is not modified").
 - Handlers registered inside a `register*(bot)` function are testable with a fake bot that records `callbackQuery(trigger, handler)` (example: `depStartHandler` in `src/lib/bot/one-open-intake.test.ts`).
+- A whole update can run through the real `createBot`: set `bot.botInfo`, capture API calls with `bot.api.config.use((_prev, method) => …)` (nothing reaches Telegram), mock `@/lib/prisma`, `next/cache`, `./analytics`, `./geocode`, then `await bot.handleUpdate(update)` (example: `src/lib/bot/blocked-chats.test.ts`).
 
 ## Log
 
@@ -1806,3 +1807,15 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Typed district names (spec step 1, listed under T071) are built here, because the districts step is the only step T069 creates and the routing test needs a text step; T071 keeps the callbacks.
   - No new copy (all keys from T068), no new event beyond `tg_roommate_flow_started` of spec 06 §Events, no tables, no migrations, no assumptions beyond the spec's (`/mate`, button placement, D68).
 - Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T070 or T071). T071 adds the `rm:d:<slug>:<1|0>`, `rm:d:any`, `rm:d:done`, `rm:b:*`, `rm:m:*` handlers to `registerRoommateFlow` through `roommateCallback` (return a string for a toast such as `districtLimit`; edit in place with `ctx.editMessageReplyMarkup({ reply_markup: districtsKeyboard(...) })`, the wrapper swallows "message is not modified"), adds `budget` and `month` cases to `sendStep` and a `budget` entry to `TEXT_STEPS` (return false for text without a band so it passes on), and advances steps with a conditional `updateMany where { id, step }`. T074 replaces the `sendOwnCard` stub. T075 adds `edit_*` entries to `sendStep` / `TEXT_STEPS`. T076 handles `rm:c:del` (the FR-14 reply's button already sends it).
+
+### 2026-11-19 14:33 · T106 · done
+
+- Done:
+  - `src/lib/bot/store.ts`: `setChatBlocked(chatId, blocked)` → `telegramChat.updateMany({ where: { chatId }, data: { blockedAt: blocked ? now : null } })`; an unknown chat gets no row.
+  - `src/lib/bot/bot.ts`: `handleMyChatMember` (not exported) registered as `bot.on('my_chat_member')` before `message:text`: private chats only; new status `kicked` → blocked, `member` → unblocked, any other status ignored. No event, no reply, no log.
+  - `src/lib/bot/bot.test.ts`: `setChatBlocked` added to the `./store` mock. `src/lib/bot/README.md`: "Blocked chats" bullet under "What is implemented"; the deposit-reminder paragraph names the unblock.
+- Tests: `src/lib/bot/blocked-chats.test.ts` (new, 9): real `createBot` with `botInfo` set and every API call captured by a transformer, fake `my_chat_member` updates through `bot.handleUpdate` over a mocked `@/lib/prisma`: member → kicked sets `blockedAt` to the frozen now, kicked → member sets null, an unknown chat creates nothing, group/supergroup/channel transitions write nothing, a private `left` writes nothing; every case asserts no `track`, no API call, no `create`/`update`. Proven to fail by temporarily dropping the private check (4 failures) and the registration (3 failures), reverted.
+- Checks: `npx vitest run src/lib/bot/blocked-chats.test.ts src/lib/bot/bot.test.ts` 85 passed. `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 99 files / 1542 tests, build OK). `next-env.d.ts` restored. Nothing deployed, no message sent, no migration.
+- Did not work: nothing.
+- Owner review: nothing new (no copy, events, tables, migrations or assumptions). The webhook already subscribes to `my_chat_member` (`scripts/tg-webhook.ts`), so no re-registration is needed for production.
+- Next: the next runnable task from `node scripts/ralph-tasks.mjs next`. Stage 1 counts (T079) and every sender filter on `chat: { blockedAt: null }` as `sendDueFollowUps` does.

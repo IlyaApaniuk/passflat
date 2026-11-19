@@ -59,6 +59,18 @@ export async function touchChat({
   return { id: created.id, locale: created.locale, isNew: true };
 }
 
+/**
+ * The person blocked (`true`) or unblocked (`false`) the bot in a private chat
+ * (spec 06 §Blocked chats). Only an existing row changes: a block from a chat
+ * we never saw creates nothing.
+ */
+export async function setChatBlocked(chatId: number, blocked: boolean): Promise<void> {
+  await prisma.telegramChat.updateMany({
+    where: { chatId: BigInt(chatId) },
+    data: { blockedAt: blocked ? new Date() : null },
+  });
+}
+
 export async function setChatLocale(chatId: number, locale: BotLocale): Promise<void> {
   await prisma.telegramChat.updateMany({
     where: { chatId: BigInt(chatId) },

@@ -59,6 +59,7 @@ vi.mock('./store', () => ({
   addSubscription: mocks.addSubscription,
   listSubscriptions: mocks.listSubscriptions,
   removeSubscription: mocks.removeSubscription,
+  setChatBlocked: vi.fn(),
   setChatLocale: vi.fn(),
 }));
 vi.mock('./analytics', () => ({ track: mocks.track }));

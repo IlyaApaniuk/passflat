@@ -148,13 +148,13 @@
       "title": "Mark chats blocked or unblocked from my_chat_member updates (FR-16 'chat not blocked')",
       "spec": "docs/specs/06-roommate-profiles.md#blocked-chats",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "bot.on('my_chat_member') for private chats: new status kicked sets telegram_chats.blocked_at = now, member sets it to null; no event, no reply; group chats ignored",
         "Tests with a fake update for both transitions and a group chat"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Gap from the architect review: blocked_at is set today only on a failed send, so people who blocked the bot would keep counting in stage 1."
     },
     {

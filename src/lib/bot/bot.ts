@@ -50,6 +50,7 @@ import {
   addSubscription,
   listSubscriptions,
   removeSubscription,
+  setChatBlocked,
   setChatLocale,
   touchChat,
 } from './store';
@@ -532,6 +533,18 @@ export function logBotError(error: BotError): void {
   );
 }
 
+/**
+ * FR-16 "the chat not blocked" (spec 06 §Blocked chats): a private chat whose
+ * person blocks the bot (`kicked`) or unblocks it (`member`) updates
+ * `blocked_at`. No event and no reply; group chats are ignored.
+ */
+async function handleMyChatMember(ctx: Filter<Context, 'my_chat_member'>): Promise<void> {
+  const { chat, new_chat_member: member } = ctx.myChatMember;
+  if (chat.type !== 'private') return;
+  if (member.status === 'kicked') await setChatBlocked(chat.id, true);
+  else if (member.status === 'member') await setChatBlocked(chat.id, false);
+}
+
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
 
@@ -625,6 +638,8 @@ export function createBot(token: string): Bot {
   });
 
   bot.callbackQuery(UNSUBSCRIBE_CALLBACK, handleUnsubscribe);
+
+  bot.on('my_chat_member', handleMyChatMember);
 
   // Anything else is treated as an address — the one thing the bot is for.
   bot.on('message:text', handleText);
