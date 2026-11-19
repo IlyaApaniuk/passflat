@@ -62,14 +62,14 @@
       "title": "Europe/Warsaw calendar helpers for move-in months, expiry and the send hour (FR-6, FR-15, D68)",
       "spec": "docs/specs/06-roommate-profiles.md#warsaw-calendar",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/roommate/time.ts exports moveInMonthOptions, endOfWarsawMonth, computeExpiresAt, isMoveInMonthPast, isRoommateSendHour, monthOffset and a month-name formatter, using Intl with timeZone Europe/Warsaw and no new dependency",
         "Every golden row of spec 06 §Warsaw calendar is a unit test, including the CET and CEST month ends and the winter and summer send hours",
         "Month names in the nominative for ru, uk and en ('декабрь 2026', 'грудень 2026', 'December 2026') are tested"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D68: daily messages at 10:00 Europe/Warsaw, not 09:00 UTC."
     },
     {
