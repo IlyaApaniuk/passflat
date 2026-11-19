@@ -396,7 +396,14 @@ export function summarizeFigures(
  * how many got the deposit back fully or partly, and how many in full. Shown
  * only when `answered >= MIN_DEPOSIT_ANSWERS`; `full` only with its own N.
  */
-export function summarizeDepositReturns(reports: FigureReport[]): DepositReturns {
+export function summarizeDepositReturns(
+  reports: Array<
+    Pick<
+      FigureReport,
+      'depositAmount' | 'depositReturned' | 'depositReturnedAmount' | 'isCurrentTenant'
+    >
+  >,
+): DepositReturns {
   const answered = reports.filter(
     (report) => report.depositReturned != null && report.isCurrentTenant !== true,
   );

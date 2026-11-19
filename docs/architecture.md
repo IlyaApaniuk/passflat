@@ -100,7 +100,7 @@ How each source is counted:
 
 - The cost medians (`cost-aggregates.ts`, `cost-baselines.ts`, building page baselines) filter on `isVisible` only, so all three sources count. Blending them is the owner's decision (`CLAUDE.md`).
 - The checker labels results `tenant`, `mixed` or `scraped` (`location-checker.ts:323-336`).
-- The shared figure contract (`src/lib/cost-figures.ts`, pure; spec 03) splits reports into a `tenant` group (`user` + `import`) and an `asking` group (`scraped`) with per-metric N, untrimmed medians and the `MIN_AREA_REPORTS` / `MIN_DEPOSIT_ANSWERS` gates. Surfaces move to it task by task; until then the medians above stay as they are.
+- The shared figure contract (`src/lib/cost-figures.ts`, pure; spec 03) splits reports into a `tenant` group (`user` + `import`) and an `asking` group (`scraped`) with per-metric N, untrimmed medians and the `MIN_AREA_REPORTS` / `MIN_DEPOSIT_ANSWERS` gates. Its server loaders (`src/lib/cost-figures-query.ts`: `loadBuildingFigures`, `loadAreaReference`, `loadDepositReturns`) read visible reports only, are cached with `unstable_cache` under the `costs` tag (300 s, expired by `revalidateCostSurfaces()`), and call straight through where Next has no incremental cache (`npm run bot:dev` under tsx). Surfaces move to it task by task; until then the medians above stay as they are.
 - The global hourly flood guard counts `source = 'user'` only.
 - When an account is hard-deleted, its reports move to `DELETED_AUTHOR_ID` with identifiers stripped (`cron/cleanup-accounts`).
 

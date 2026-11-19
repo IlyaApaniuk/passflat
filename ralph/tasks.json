@@ -281,7 +281,7 @@
       "title": "Add the cached server loaders of the figure contract",
       "spec": "docs/specs/03-building-figures.md#loaders",
       "dependsOn": ["T017"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/cost-figures-query.ts exports loadBuildingFigures, loadAreaReference (returns level, slug, districtName or the city nameKey, and the summary) and loadDepositReturns, selecting only the needed fields with isVisible true and take 5000",
         "Loaders are cached with unstable_cache, tag costs, 300 s, through a helper that calls straight through when the Next incremental cache is unavailable (bot:dev under tsx)",
@@ -289,7 +289,7 @@
         "Tests mock @/lib/prisma and next/cache: the where includes isVisible true, the rental-type filter, district → city fallback, no reference when the city has no report"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

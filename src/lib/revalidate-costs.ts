@@ -2,7 +2,8 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { routing } from '@/i18n/routing';
 
 /** Tag carried by every cached cost aggregate (lib/cost-aggregates.ts, the
- *  building page's district/city baselines, the costs overview page). */
+ *  figure contract loaders in lib/cost-figures-query.ts, the building page's
+ *  district/city baselines, the costs overview page). */
 const COSTS_TAG = 'costs';
 
 /**
