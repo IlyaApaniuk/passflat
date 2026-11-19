@@ -36,6 +36,8 @@ import type { BotLocale } from './texts';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LETTER_FOLLOW_UP_DAYS = 8; // 7 days the letter gives, plus one for delivery
 const OPEN_STATUSES = ['intake', 'verdict', 'letter_sent'];
+/** Open cases that can carry a follow-up date. */
+const FOLLOW_UP_STATUSES = ['verdict', 'letter_sent'];
 
 type Step = 'moved_out' | 'deposit' | 'returned' | 'reason' | 'protocol' | 'contract';
 
@@ -463,12 +465,24 @@ export async function maybeOfferDeposit(ctx: Context, locale: BotLocale, text: s
   return true;
 }
 
+/**
+ * /cancel: leaves the intake questions and turns off pending follow-ups. Only
+ * the date is cleared; `followUpKind` stays because the outcome buttons of
+ * follow-ups already sent branch on it.
+ */
 export async function cancelDepositFlow(ctx: Context, chatDbId: string, locale: BotLocale) {
-  const { count } = await prisma.depositCase.updateMany({
+  const intake = await prisma.depositCase.updateMany({
     where: { chatId: chatDbId, status: 'intake' },
     data: { status: 'abandoned' },
   });
-  await ctx.reply(dt(locale, count ? 'cancelled' : 'nothingToCancel'));
+  const reminders = await prisma.depositCase.updateMany({
+    where: { chatId: chatDbId, status: { in: FOLLOW_UP_STATUSES }, followUpAt: { not: null } },
+    data: { followUpAt: null },
+  });
+  const replies: string[] = [];
+  if (intake.count) replies.push(dt(locale, 'cancelled'));
+  if (reminders.count) replies.push(dt(locale, 'remindersOff'));
+  await ctx.reply(replies.length ? replies.join('\n') : dt(locale, 'nothingToCancel'));
 }
 
 function botLink(payload: string): string | null {
@@ -736,12 +750,16 @@ export function registerDepositFlow(bot: Bot) {
  * Sends every follow-up that has come due. Run daily by the cron route; the
  * bot writes first only on dates the person agreed to (the landlord's deadline,
  * or a week after their letter).
+ *
+ * Each row is claimed before sending (its date cleared only if it still holds
+ * the value read), so overlapping runs send a follow-up once. At most once: a
+ * crash between the claim and the send loses that follow-up.
  */
 export async function sendDueFollowUps(api: Api, now = new Date()) {
   const due = await prisma.depositCase.findMany({
     where: {
       followUpAt: { lte: now },
-      status: { in: ['verdict', 'letter_sent'] },
+      status: { in: FOLLOW_UP_STATUSES },
       chat: { blockedAt: null },
     },
     include: { chat: { select: { chatId: true, locale: true } } },
@@ -751,6 +769,13 @@ export async function sendDueFollowUps(api: Api, now = new Date()) {
   let sent = 0;
   let blocked = 0;
   for (const row of due) {
+    // Clear the date but keep the kind: the outcome buttons read it.
+    const claim = await prisma.depositCase.updateMany({
+      where: { id: row.id, followUpAt: row.followUpAt },
+      data: { followUpAt: null },
+    });
+    if (claim.count !== 1) continue; // another run has it, or /cancel cleared it
+
     const locale = row.chat.locale as BotLocale;
     const text = dt(
       locale,
@@ -771,12 +796,18 @@ export async function sendDueFollowUps(api: Api, now = new Date()) {
           data: { blockedAt: now },
         });
       } else {
-        console.error('[bot/deposit] follow-up failed', error);
-        continue; // leave it due; tomorrow's run retries
+        // The message only: a GrammyError's payload holds the chat id.
+        console.error(
+          '[bot/deposit] follow-up failed',
+          error instanceof Error ? error.message : error,
+        );
+        // Due again, so tomorrow's run retries; unless a newer date was set meanwhile.
+        await prisma.depositCase.updateMany({
+          where: { id: row.id, followUpAt: null },
+          data: { followUpAt: row.followUpAt },
+        });
       }
     }
-    // Clear the date but keep the kind: the outcome buttons read it.
-    await prisma.depositCase.update({ where: { id: row.id }, data: { followUpAt: null } });
   }
 
   return { due: due.length, sent, blocked };

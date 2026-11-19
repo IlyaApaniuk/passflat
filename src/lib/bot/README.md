@@ -176,6 +176,16 @@ under `/deposit`, or the deep link `?start=dep` — the one to paste under
    (full / partial / none) and `wants_lawyer` are the deposit statistic and
    the demand signal for a lawyer partnership.
 
+Follow-ups are opt-in: a date is set only by the "remind me" or "I sent the
+letter" tap. `sendDueFollowUps` claims each due row before sending (clears
+`followUpAt` with a conditional `updateMany` on the value it read, and sends
+only when that updated one row), so overlapping cron runs send once. A failed
+send restores the date and the next run retries; a 403 marks the chat blocked.
+Delivery is at most once: a crash between the claim and the send loses that
+follow-up. `/cancel` abandons an open intake and clears `followUpAt` (not
+`followUpKind`, which the outcome buttons of sent follow-ups read) on the
+chat's `verdict` and `letter_sent` cases, replying `remindersOff`.
+
 Outcomes by reason:
 
 ```sql

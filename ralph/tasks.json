@@ -649,14 +649,14 @@
       "title": "Deposit reminders: claim before sending and let /cancel stop them",
       "spec": "docs/specs/04-telegram-bot.md#deposit-reminders",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "sendDueFollowUps claims each row with a conditional updateMany and sends only when count is 1; a non-403 error restores followUpAt; 403 marks the chat blocked as today",
         "/cancel clears followUpAt (not followUpKind) on the chat's verdict and letter_sent cases and replies «Напоминания отключены.» (RU and UK drafts); with nothing to cancel, the existing reply",
         "Tests with mocked Prisma and a fake api.sendMessage: two runs over one due row send once; a failed send restores the row; /cancel clears pending follow-ups; the cron route without auth is 401"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

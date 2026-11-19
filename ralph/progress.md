@@ -73,6 +73,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The bot's capability list (`CAPABILITIES_RU/UK`) and command menu (`COMMAND_MENU`, published by `scripts/tg-webhook.ts`) live in `texts.ts`; a new command updates both, and `texts.test.ts` checks that they agree and that no text promises to write later.
 - A pure helper that `bot.ts` uses must not live in a module `bot.test.ts` mocks (`./analytics`, `./lookup`, ...): the mock hides it. Bot check-event properties live in `check-events.ts` for that reason.
 - A route that calls `after()` is testable by mocking `next/server` with `importOriginal` plus `after: vi.fn()` and running the recorded callbacks (example: `src/app/api/telegram/webhook/route.test.ts`). Next runs `after()` callbacks concurrently, so a flush registered there does not wait for another `after()` task.
+- Conditional writes (claims, races) are tested over an in-memory Prisma fake whose `findMany` returns copies and whose `updateMany` applies its `where`; overlapping runs are `Promise.all` of two calls (example: `src/lib/bot/deposit-flow.test.ts`).
+- Never `console.error` a `GrammyError` object: its `payload` holds `chat_id`. Log `error.message`.
 
 ## Log
 
@@ -811,3 +813,38 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Not changed, outside the spec: the district card's «Добавить» button (`webLink(..., 'district')`) and the deposit «Оставить отчёт» button (`webLink(..., 'deposit')`) also open the cost form, but without `source=tgbot`. Their `cost_form_started` therefore says `direct`, and only `utm_*` marks them as bot traffic. Adding `source=tgbot` there (keeping their `utm_campaign`) is a one-line change each if wanted.
   - After deploy: open a bot card's «Добавить расходы» button and check `cost_form_started` with `source: tgbot` in Live Events.
 - Next: nothing from this task. Remaining M4 tasks per `ralph/tasks.json` (T049, T050 and the others).
+
+### 2026-11-19 04:59 · T040 · done
+
+- Done:
+  - `src/lib/bot/deposit-flow.ts`:
+    - New `FOLLOW_UP_STATUSES` (`verdict`, `letter_sent`), used by the cron query and `/cancel`.
+    - `sendDueFollowUps` claims each due row first: `updateMany({ where: { id, followUpAt: <value read> }, data: { followUpAt: null } })`. It sends only when `count === 1`.
+    - A non-403 error restores the date with `updateMany({ where: { id, followUpAt: null } })`, so a date set meanwhile is not overwritten. A 403 marks the chat blocked as before; the date stays cleared. `followUpKind` is never touched.
+    - The failure log now prints `error.message` only, because a `GrammyError`'s `payload` holds the chat id (CLAUDE.md: never log chat ids).
+    - `cancelDepositFlow` still abandons `intake` cases. It also clears `followUpAt` (not `followUpKind`) on the chat's `verdict` / `letter_sent` cases that have a date. It replies `remindersOff`, `cancelled`, both joined by a newline, or `nothingToCancel` when neither updated a row.
+  - `src/lib/bot/deposit-texts.ts`: new key `remindersOff` (RU and UK).
+  - `src/lib/bot/README.md`: a paragraph under "Deposit recovery" on opt-in, the claim, the retry, the 403 handling, at-most-once delivery and `/cancel`.
+- Tests:
+  - New `src/lib/bot/deposit-flow.test.ts` (13 tests) over an in-memory `depositCase` / `telegramChat` fake with a conditional `updateMany`, and a fake `api.sendMessage`:
+    - the claim's exact `where` / `data`, made before the send;
+    - two overlapping runs that both read the due row send once, and a later run finds nothing;
+    - a row cleared between the read and the claim is skipped;
+    - a 429 `GrammyError` and a plain network error restore the date and the next run sends; the error log has no chat id;
+    - a date set during a failing send is kept;
+    - 403 marks the chat blocked, the date stays cleared, the next run sends nothing;
+    - rows not due, resolved or without a date are left alone;
+    - `/cancel`: a `verdict` and a `letter_sent` reminder are cleared with the kind and status kept, «Напоминания отключены.» / «Нагадування вимкнено.», and the next run sends nothing; intake gives the existing reply; with nothing to cancel the existing reply, and another chat's case is untouched.
+  - The cron route without auth → 401 was already covered by `src/app/api/cron/telegram-followups/route.test.ts` (T038). It still passes.
+- Checks:
+  - `npx vitest run src/lib/bot/deposit-flow.test.ts src/app/api/cron/telegram-followups` passed (16 tests).
+  - `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types / the `publish-store.ts` duplicate export, as before), Vitest 71 files / 916 tests, build OK.
+  - `next-env.d.ts` restored.
+- Did not work: nothing. The bot and the cron were not run, and no Telegram call was made.
+- Owner review:
+  - Draft copy (`deposit-texts.ts`, RU and UK): `remindersOff` («Напоминания отключены.» / «Нагадування вимкнено.»).
+  - Choices to confirm:
+    - (1) An intake and a pending reminder at once (normally impossible: starting a case abandons the others) get both lines in one reply.
+    - (2) The command menu and the capability list still say «/cancel — выйти из вопросов о залоге». They do not mention reminders, because the spec did not ask for it.
+  - No assumptions, tables, migrations or analytics changes.
+- Next: remaining M4 tasks per `ralph/tasks.json` (T049, T050 and the others).
