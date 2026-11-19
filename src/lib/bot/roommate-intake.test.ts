@@ -3,9 +3,9 @@ import { GrammyError, type Bot, type CommandContext, type Context } from 'grammy
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Intake steps 1 – 6 (spec 06 §Intake steps: districts, budget, move-in month, languages, own
- * gender, "live with") with the callback data of §Entry and routing and the "Stale and repeated
- * taps" rule. Taps go through
+ * Intake steps 1 – 8 (spec 06 §Intake steps: districts, budget, move-in month, languages, own
+ * gender, "live with", the short text, smoking and pets) with the callback data of §Entry and
+ * routing and the "Stale and repeated taps" rule. Taps go through
  * the handlers `registerRoommateFlow` registers, so the callback data is routed as in the bot.
  * Profiles live in an in-memory Prisma fake whose `updateMany` applies its `where`, so the
  * conditional step writes behave as in the database. Nothing reaches Telegram or a database.
@@ -66,7 +66,9 @@ import {
   GENDER_TAP,
   LANGUAGE_TOGGLE,
   MONTH_TAP,
+  PETS_TAP,
   PREFERS_TAP,
+  SMOKING_TAP,
   handleMate,
   handleRoommateText,
   registerRoommateFlow,
@@ -240,7 +242,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('callback data of spec 06 §Entry and routing, steps 1 – 6', () => {
+describe('callback data of spec 06 §Entry and routing, steps 1 – 8', () => {
   it.each([
     ['rm:start', 'rm:start'],
     ['rm:d:wola:1', DISTRICT_TOGGLE],
@@ -256,6 +258,12 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 6', () => {
     ['rm:g:skip', GENDER_TAP],
     ['rm:p:anyone', PREFERS_TAP],
     ['rm:p:men', PREFERS_TAP],
+    ['rm:t:skip', 'rm:t:skip'],
+    ['rm:s:no', SMOKING_TAP],
+    ['rm:s:outside', SMOKING_TAP],
+    ['rm:s:skip', SMOKING_TAP],
+    ['rm:pt:have', PETS_TAP],
+    ['rm:pt:skip', PETS_TAP],
   ])('%s reaches exactly one handler', (callbackData, trigger) => {
     const routes = routesFor(callbackData);
     expect(routes).toHaveLength(1);
@@ -300,6 +308,24 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 6', () => {
       ...replyKeyboard(prefers.reply).flat(),
     ];
     expect(buttons).toHaveLength(5 + 5 + 3 + 3);
+    for (const button of buttons) {
+      expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
+      expect(routesFor(button.callback_data!)).toHaveLength(1);
+    }
+  });
+
+  it('every button of steps 7 – 8 fits the 64-byte limit and is routed', async () => {
+    seed({ step: 'prefers' });
+    const about = await tap('rm:p:anyone');
+    const smoking = await tap('rm:t:skip');
+    const pets = await tap('rm:s:skip');
+
+    const buttons = [
+      ...replyKeyboard(about.reply).flat(),
+      ...replyKeyboard(smoking.reply).flat(),
+      ...replyKeyboard(pets.reply).flat(),
+    ];
+    expect(buttons).toHaveLength(1 + 4 + 4);
     for (const button of buttons) {
       expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
       expect(routesFor(button.callback_data!)).toHaveLength(1);
@@ -984,8 +1010,311 @@ describe('steps 5 and 6: own gender and "live with" (FR-8)', () => {
   });
 });
 
-describe('steps 1 – 6 in one run', () => {
-  it('/mate through "live with" leaves one draft at the short text step', async () => {
+describe('step 7: the short text (FR-10)', () => {
+  const ACCEPTED = 'Pracuję w IT, spokojna, nie palę';
+
+  it('asks for a few words, not sensitive facts, with one "Skip" button', async () => {
+    seed({ step: 'prefers' });
+    const { reply } = await tap('rm:p:anyone');
+
+    expect(texts(reply)).toEqual([rt('ru', 'askAbout')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([['Пропустить']]);
+    expect(data(replyKeyboard(reply))).toEqual([['rm:t:skip']]);
+  });
+
+  it.each([
+    ['ru', 'Не пиши о здоровье, религии и других личных вещах'],
+    ['uk', 'Не пиши про здоровʼя, релігію та інші особисті речі'],
+    ['en', "Don't include health, religion or other personal details"],
+  ] as const)('the %s question asks not to write sensitive facts', (locale, ask) => {
+    expect(rt(locale, 'askAbout')).toContain(ask);
+    expect(rt(locale, 'askAbout')).toContain('280');
+  });
+
+  it('accepted text is stored and the intake moves on to smoking', async () => {
+    seed({ step: 'about' });
+    const { ctx, reply } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', ACCEPTED)).toBe('used');
+    expect(row()).toMatchObject({ about: ACCEPTED, step: 'smoking' });
+    expect(texts(reply)).toEqual([rt('ru', 'askSmoking')]);
+  });
+
+  it('accepts "Мне 25, есть 2 кота" and exactly 280 characters', async () => {
+    seed({ step: 'about' });
+    expect(await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', 'Мне 25, есть 2 кота')).toBe(
+      'used',
+    );
+    expect(row()).toMatchObject({ about: 'Мне 25, есть 2 кота', step: 'smoking' });
+
+    seed({ step: 'about' });
+    expect(await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', 'a'.repeat(280))).toBe('used');
+    expect(row()).toMatchObject({ about: 'a'.repeat(280), step: 'smoking' });
+  });
+
+  it('stores the text NFKC-normalised and trimmed', async () => {
+    seed({ step: 'about' });
+    await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', '  ｓｐｏｋｏｊｎａ  ');
+    expect(row()).toMatchObject({ about: 'spokojna', step: 'smoking' });
+  });
+
+  it.each([
+    ['пиши @anna_w', 'foundHandle', '@ник'],
+    ['zadzwoń 501 234 567', 'foundPhone', 'номер телефона'],
+    ['see https://x.pl', 'foundLink', 'ссылка'],
+    ['PL61109010140000071219812874', 'foundIban', 'номер банковского счёта'],
+    ['anna@x.pl', 'foundEmail', 'e-mail'],
+    ['звони ５０１ ２３４ ５６７', 'foundPhone', 'номер телефона'],
+  ] as const)(
+    '%j is refused naming %s; nothing is stored and the step stays open',
+    async (text, foundKey, word) => {
+      seed({ step: 'about' });
+      const { ctx, reply } = fakeCtx();
+
+      expect(await handleRoommateText(ctx, 'chat-row', 'ru', text)).toBe('used');
+      expect(texts(reply)).toEqual([rt('ru', 'aboutRefused', { found: rt('ru', foundKey) })]);
+      expect(texts(reply)[0]).toContain(word);
+      // The reply never echoes the person's text.
+      expect(texts(reply)[0]).not.toContain(text);
+      expect(row()).toMatchObject({ about: null, step: 'about' });
+      expect(db.roommateProfile.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('281 characters are refused with the limit and the length', async () => {
+    seed({ step: 'about' });
+    const { ctx, reply } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'a'.repeat(281))).toBe('used');
+    expect(texts(reply)).toEqual([rt('ru', 'aboutTooLong', { max: '280', length: '281' })]);
+    expect(texts(reply)[0]).toContain('280');
+    expect(texts(reply)[0]).toContain('281');
+    expect(row()).toMatchObject({ about: null, step: 'about' });
+  });
+
+  it('writes the refusal in the chat locale', async () => {
+    seed({ step: 'about' });
+    const { ctx, reply } = fakeCtx();
+
+    await handleRoommateText(ctx, 'chat-row', 'uk', 'пиши @anna_w');
+    expect(texts(reply)).toEqual([rt('uk', 'aboutRefused', { found: '@нік' })]);
+  });
+
+  it('a corrected text after a refusal is accepted', async () => {
+    seed({ step: 'about' });
+    await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', 'zadzwoń 501 234 567');
+    await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', ACCEPTED);
+    expect(row()).toMatchObject({ about: ACCEPTED, step: 'smoking' });
+  });
+
+  it.each([
+    ['spaces', '   '],
+    ['no-break spaces', `${NBSP} ${NBSP}`],
+  ])('only %s is a skip: no text is stored and the intake moves on', async (_name, text) => {
+    seed({ step: 'about' });
+    const { ctx, reply } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', text)).toBe('used');
+    expect(row()).toMatchObject({ about: null, step: 'smoking' });
+    expect(texts(reply)).toEqual([rt('ru', 'askSmoking')]);
+  });
+
+  it('"Skip" stores no text and moves on to smoking', async () => {
+    seed({ step: 'about', about: 'старый текст' });
+    const { reply } = await tap('rm:t:skip');
+
+    expect(row()).toMatchObject({ about: null, step: 'smoking' });
+    expect(texts(reply)).toEqual([rt('ru', 'askSmoking')]);
+  });
+
+  it('"Skip" after the step moved on changes nothing', async () => {
+    seed({ step: 'smoking', about: ACCEPTED });
+    const { reply } = await tap('rm:t:skip');
+
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askSmoking')]);
+    expect(row()).toMatchObject({ about: ACCEPTED, step: 'smoking' });
+  });
+
+  it('a typed text after the step moved on (a lost race) changes nothing', async () => {
+    seed({ step: 'smoking', about: null });
+    db.roommateProfile.findUnique.mockResolvedValueOnce(profile({ step: 'about' }));
+    const { ctx, reply } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', ACCEPTED)).toBe('used');
+    expect(row()).toMatchObject({ about: null, step: 'smoking' });
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askSmoking')]);
+  });
+
+  it('neither path sends an event or logs anything', async () => {
+    const spies = (['log', 'info', 'warn', 'error'] as const).map((method) =>
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+    seed({ step: 'about' });
+    await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', 'пиши @anna_w');
+    await handleRoommateText(fakeCtx().ctx, 'chat-row', 'ru', ACCEPTED);
+
+    expect(mocks.track).not.toHaveBeenCalled();
+    for (const spy of spies) {
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('step 8: smoking and pets (FR-11)', () => {
+  it('asks about smoking with one option per row, then "Skip"', async () => {
+    seed({ step: 'about' });
+    const { reply } = await tap('rm:t:skip');
+
+    expect(texts(reply)).toEqual([rt('ru', 'askSmoking')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([
+      ['Без курения'],
+      ['Только на улице'],
+      ['Можно курить'],
+      ['Пропустить'],
+    ]);
+    expect(data(replyKeyboard(reply))).toEqual([
+      ['rm:s:no'],
+      ['rm:s:outside'],
+      ['rm:s:fine'],
+      ['rm:s:skip'],
+    ]);
+  });
+
+  it.each([
+    ['rm:s:no', 'no'],
+    ['rm:s:outside', 'outside'],
+    ['rm:s:fine', 'fine'],
+    ['rm:s:skip', null],
+  ])('%s stores smoking %j and asks about pets', async (callbackData, smoking) => {
+    seed({ step: 'smoking' });
+    const { reply } = await tap(callbackData);
+
+    expect(row()).toMatchObject({ smoking, step: 'pets', pets: null });
+    expect(texts(reply)).toEqual([rt('ru', 'askPets')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([
+      ['Без животных'],
+      ['У меня есть питомец'],
+      ['Не против животных'],
+      ['Пропустить'],
+    ]);
+    expect(data(replyKeyboard(reply))).toEqual([
+      ['rm:pt:no'],
+      ['rm:pt:have'],
+      ['rm:pt:fine'],
+      ['rm:pt:skip'],
+    ]);
+  });
+
+  it.each([
+    ['rm:pt:no', 'no'],
+    ['rm:pt:have', 'have'],
+    ['rm:pt:fine', 'fine'],
+    ['rm:pt:skip', null],
+  ])('%s stores pets %j and moves on to the 18+ step', async (callbackData, pets) => {
+    seed({ step: 'pets', smoking: 'outside' });
+    await tap(callbackData);
+    expect(row()).toMatchObject({ smoking: 'outside', pets, step: 'adult' });
+  });
+
+  it('"Skip" stores null over an earlier answer', async () => {
+    seed({ step: 'smoking', smoking: 'fine', pets: 'have' });
+    await tap('rm:s:skip');
+    await tap('rm:pt:skip');
+    expect(row()).toMatchObject({ smoking: null, pets: null, step: 'adult' });
+  });
+
+  it('writes the smoking and pets buttons in the chat locale', async () => {
+    mocks.touchChat.mockResolvedValue({ ...CHAT, locale: 'uk' });
+    seed({ step: 'about' });
+    const smoking = await tap('rm:t:skip');
+    const pets = await tap('rm:s:no');
+
+    expect(texts(smoking.reply)).toEqual([rt('uk', 'askSmoking')]);
+    expect(labels(replyKeyboard(smoking.reply))).toEqual([
+      ['Без куріння'],
+      ['Лише надворі'],
+      ['Можна курити'],
+      ['Пропустити'],
+    ]);
+    expect(texts(pets.reply)).toEqual([rt('uk', 'askPets')]);
+    expect(labels(replyKeyboard(pets.reply))).toEqual([
+      ['Без тварин'],
+      ['У мене є улюбленець'],
+      ['Не проти тварин'],
+      ['Пропустити'],
+    ]);
+  });
+
+  it.each([
+    ['rm:s:have', 'smoking'],
+    ['rm:s:yes', 'smoking'],
+    ['rm:pt:outside', 'pets'],
+    ['rm:pt:cat', 'pets'],
+  ])('%s (not a value the step offers) is ignored', async (callbackData, step) => {
+    seed({ step });
+    const { reply, answerCallbackQuery } = await tap(callbackData);
+
+    expect(row()).toMatchObject({ step, smoking: null, pets: null });
+    expect(db.roommateProfile.updateMany).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('a smoking button after the step moved on changes nothing', async () => {
+    seed({ step: 'pets', smoking: 'no' });
+    const { reply } = await tap('rm:s:fine');
+
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askPets')]);
+    expect(row()).toMatchObject({ step: 'pets', smoking: 'no' });
+  });
+
+  it('a pets button after the step moved on changes nothing', async () => {
+    seed({ step: 'adult', pets: 'have' });
+    const { reply } = await tap('rm:pt:no');
+
+    expect(texts(reply)[0]).toBe(rt('ru', 'stepDone'));
+    expect(row()).toMatchObject({ step: 'adult', pets: 'have' });
+  });
+
+  it('two smoking taps at once store one answer and advance once', async () => {
+    seed({ step: 'smoking' });
+    const first = fakeCtx();
+    const second = fakeCtx();
+    await Promise.all([tap('rm:s:no', first), tap('rm:s:fine', second)]);
+
+    expect(row().step).toBe('pets');
+    expect(['no', 'fine']).toContain(row().smoking);
+    expect([...texts(first.reply), ...texts(second.reply)].sort()).toEqual(
+      [rt('ru', 'askPets'), rt('ru', 'askPets'), rt('ru', 'stepDone')].sort(),
+    );
+  });
+
+  it.each(['smoking', 'pets'])(
+    'typed text at the %s step passes on and the step stays open',
+    async (step) => {
+      seed({ step });
+      const { ctx, reply } = fakeCtx();
+
+      expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'не курю')).toBe('passed');
+      expect(row()).toMatchObject({ step, smoking: null, pets: null });
+      expect(reply).not.toHaveBeenCalled();
+    },
+  );
+
+  it('neither step sends an event', async () => {
+    seed({ step: 'smoking' });
+    await tap('rm:s:outside');
+    await tap('rm:pt:have');
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+});
+
+describe('steps 1 – 8 in one run', () => {
+  it('/mate through pets leaves one draft at the 18+ step', async () => {
     const start = fakeCtx();
     await handleMate(start.ctx as CommandContext<Context>);
     expect(texts(start.reply)[1]).toBe(askDistricts());
@@ -1001,24 +1330,34 @@ describe('steps 1 – 6 in one run', () => {
     await tap('rm:l:done');
     await tap('rm:g:skip');
     await tap('rm:p:women');
+    const about = fakeCtx();
+    expect(await handleRoommateText(about.ctx, 'chat-row', 'ru', 'пиши @anna_w')).toBe('used');
+    expect(await handleRoommateText(about.ctx, 'chat-row', 'ru', 'Мне 25, есть 2 кота')).toBe(
+      'used',
+    );
+    await tap('rm:s:outside');
+    await tap('rm:pt:skip');
 
     expect(db.rows).toHaveLength(1);
     expect(row()).toMatchObject({
       status: 'draft',
-      step: 'about',
+      step: 'adult',
       districtSlugs: ['wola', 'mokotow'],
       anyDistrict: false,
       budgetBand: 'b3',
       languages: ['en', 'ru'],
       gender: null,
       prefers: 'women',
+      about: 'Мне 25, есть 2 кота',
+      smoking: 'outside',
+      pets: null,
     });
     expect(row().moveInMonth?.toISOString()).toBe('2027-02-01T00:00:00.000Z');
     // The intake steps send no event; only the start of the flow does (spec 06 §Events), and
-    // nothing about gender or "live with" reaches analytics (D51).
+    // nothing about gender, "live with" or the short text reaches analytics (D51).
     expect(mocks.track.mock.calls.map(([, event]) => event)).toEqual(['tg_roommate_flow_started']);
     expect(JSON.stringify(mocks.track.mock.calls)).not.toMatch(
-      /gender|prefers|wom[ae]n|\bm[ae]n\b/,
+      /gender|prefers|wom[ae]n|\bm[ae]n\b|anna|кота|smoking|outside/,
     );
   });
 });

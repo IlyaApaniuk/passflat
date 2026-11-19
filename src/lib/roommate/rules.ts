@@ -99,9 +99,21 @@ export function isPrefers(value: string): value is Prefers {
 
 /** FR-11: smoking (no / outside only / fine); skip stores null. */
 export const SMOKING = ['no', 'outside', 'fine'] as const;
+type Smoking = (typeof SMOKING)[number];
+
+/** True for a value of `SMOKING`: a smoking button's data is checked before it is stored. */
+export function isSmoking(value: string): value is Smoking {
+  return (SMOKING as readonly string[]).includes(value);
+}
 
 /** FR-11: pets (no pets / I have a pet / fine with pets); skip stores null. */
 export const PETS = ['no', 'have', 'fine'] as const;
+type Pets = (typeof PETS)[number];
+
+/** True for a value of `PETS`: a pets button's data is checked before it is stored. */
+export function isPets(value: string): value is Pets {
+  return (PETS as readonly string[]).includes(value);
+}
 
 /** Spec 06 §Save and the own card: the fields of the edit picker (`rm:e:<field>`). */
 export const EDIT_FIELDS = [

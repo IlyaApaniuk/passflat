@@ -23,7 +23,9 @@ import {
   isDistrictPickComplete,
   isGender,
   isLanguage,
+  isPets,
   isPrefers,
+  isSmoking,
   languageOfLocale,
   nextIntakeStep,
   profileCreatedProperties,
@@ -81,6 +83,16 @@ describe('value checks of the callback data', () => {
   it('isPrefers accepts anyone, women and men only', () => {
     expect(PREFERS.every(isPrefers)).toBe(true);
     expect(['skip', 'woman', 'all', ''].some(isPrefers)).toBe(false);
+  });
+
+  it('isSmoking accepts no, outside and fine only (skip is the button, not a value)', () => {
+    expect(SMOKING.every(isSmoking)).toBe(true);
+    expect(['skip', 'have', 'yes', 'No', ''].some(isSmoking)).toBe(false);
+  });
+
+  it('isPets accepts no, have and fine only (skip is the button, not a value)', () => {
+    expect(PETS.every(isPets)).toBe(true);
+    expect(['skip', 'outside', 'cat', 'Have', ''].some(isPets)).toBe(false);
   });
 });
 

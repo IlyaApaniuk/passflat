@@ -63,19 +63,25 @@ the migrations are missing (`docs/architecture.md` §9).
   per chat: the deposit questions do not start while a roommate draft or edit
   step is open, and the other way round. Typed text goes to an open roommate
   step that takes text first (a district name at the districts step, an amount
-  at the budget step); at a button-only step, or for text the step cannot read,
-  it is answered as usual plus the "/cancel leaves the roommate questions" line.
+  at the budget step, any text at the short-text step); at a button-only step,
+  or for text the step cannot read, it is answered as usual plus the "/cancel
+  leaves the roommate questions" line.
   Every roommate handler stores the Telegram username on the profile when it
   changed.
-- **Roommate intake, steps 1 – 6** (spec 06 §Intake steps): districts
+- **Roommate intake, steps 1 – 8** (spec 06 §Intake steps): districts
   (`rm:d:<slug>:<1|0>` carries the target state and edits the keyboard in place,
   up to 3 or `rm:d:any`, then `rm:d:done`), budget per person (`rm:b:<b1..b5>` or
   a typed amount through `bandForAmount`), move-in month (four
   `rm:m:<YYYY-MM>` buttons from `moveInMonthOptions`, Warsaw time), languages
   (`rm:l:<pl|en|ru|uk>:<1|0>` like the districts, the chat's language ticked in
   advance, `rm:l:done` needs one), own gender (`rm:g:<woman|man|skip>`, skip keeps
-  null) and "live with" (`rm:p:<anyone|women|men>`); gender and "live with" are
-  never put into an event. A button
+  null), "live with" (`rm:p:<anyone|women|men>`), the short text (typed, through
+  `checkAboutText` in `../roommate/text-filter.ts`: a contact or more than 280
+  characters is refused with a reply naming what was found and the step stays
+  open; blank text or `rm:t:skip` stores null), smoking
+  (`rm:s:<no|outside|fine|skip>`) and pets (`rm:pt:<no|have|fine|skip>`), skip
+  storing null; gender, "live with" and the short text are never put into an
+  event. A button
   whose step has moved on gets "this step is done" and the current step; a step
   advances only through `advanceStep` (`updateMany where { id, step }`), so a
   double tap or a redelivered update moves it once. The intake order is

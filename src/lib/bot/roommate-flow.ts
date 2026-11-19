@@ -12,12 +12,16 @@ import {
   BUDGET_BANDS,
   LANGUAGES,
   MAX_DISTRICTS,
+  PETS,
+  SMOKING,
   bandForAmount,
   isBudgetBand,
   isDistrictPickComplete,
   isGender,
   isLanguage,
+  isPets,
   isPrefers,
+  isSmoking,
   languageOfLocale,
   nextIntakeStep,
   reduceDistrictPick,
@@ -39,6 +43,11 @@ import {
   type StepAnswer,
 } from '@/lib/roommate/store';
 import {
+  ABOUT_MAX_LENGTH,
+  checkAboutText,
+  type AboutTextFinding,
+} from '@/lib/roommate/text-filter';
+import {
   formatMoveInMonth,
   isMoveInMonthPast,
   monthKey,
@@ -58,10 +67,10 @@ import { normalizeLocale, type BotLocale } from './texts';
 
 /**
  * The roommate conversation in the bot (spec 06): the entry and its routing and
- * the intake steps districts, budget, move-in month, languages, own gender and
- * "live with" for now; the later steps,
- * the own card, edit, delete, renew, the counts reply and the opt-in are added
- * here by their tasks.
+ * the intake steps districts, budget, move-in month, languages, own gender,
+ * "live with", the short text, smoking and pets for now; the 18+ step and the
+ * save, the own card, edit, delete, renew, the counts reply and the opt-in are
+ * added here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -283,6 +292,38 @@ async function sendPrefersStep(ctx: Context, locale: BotLocale): Promise<void> {
   await ctx.reply(rt(locale, 'askPrefers'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
+/**
+ * Step 7 (FR-10): the short text is typed (`aboutText`); the one button is
+ * "Skip" (`rm:t:skip`). The question asks not to write sensitive facts.
+ */
+async function sendAboutStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = new InlineKeyboard().text(rt(locale, 'btnSkip'), 'rm:t:skip');
+  await ctx.reply(rt(locale, 'askAbout'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
+const SMOKING_LABEL = { no: 'smokingNo', outside: 'smokingOutside', fine: 'smokingFine' } as const;
+const PETS_LABEL = { no: 'petsNo', have: 'petsHave', fine: 'petsFine' } as const;
+
+/** Step 8a (FR-11): smoking, one option per row, then "Skip" (`rm:s:<no|outside|fine|skip>`). */
+async function sendSmokingStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from([
+    ...SMOKING.map((value) => [
+      InlineKeyboard.text(rt(locale, SMOKING_LABEL[value]), `rm:s:${value}`),
+    ]),
+    [InlineKeyboard.text(rt(locale, 'btnSkip'), 'rm:s:skip')],
+  ]);
+  await ctx.reply(rt(locale, 'askSmoking'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
+/** Step 8b (FR-11): pets, one option per row, then "Skip" (`rm:pt:<no|have|fine|skip>`). */
+async function sendPetsStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from([
+    ...PETS.map((value) => [InlineKeyboard.text(rt(locale, PETS_LABEL[value]), `rm:pt:${value}`)]),
+    [InlineKeyboard.text(rt(locale, 'btnSkip'), 'rm:pt:skip')],
+  ]);
+  await ctx.reply(rt(locale, 'askPets'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
 /** The question of the profile's open step, sent again (a draft reopened, a stale answer). */
 async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocale): Promise<void> {
   switch (profile.step) {
@@ -304,8 +345,17 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
     case 'prefers':
       await sendPrefersStep(ctx, locale);
       return;
+    case 'about':
+      await sendAboutStep(ctx, locale);
+      return;
+    case 'smoking':
+      await sendSmokingStep(ctx, locale);
+      return;
+    case 'pets':
+      await sendPetsStep(ctx, locale);
+      return;
     default:
-      // The later steps (T073 – T075) add their questions here.
+      // The 18+ step (T074) and the edit steps (T075) add their questions here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -503,9 +553,44 @@ async function budgetText(
   return true;
 }
 
+/** What `checkAboutText` found, as the refusal names it. */
+const FOUND_LABEL = {
+  link: 'foundLink',
+  email: 'foundEmail',
+  handle: 'foundHandle',
+  phone: 'foundPhone',
+  iban: 'foundIban',
+} as const satisfies Record<Exclude<AboutTextFinding, 'too_long'>, string>;
+
+/**
+ * The short text (FR-10) through `checkAboutText`: accepted text is stored
+ * NFKC-normalised and the intake moves on; blank text is a skip (null); a
+ * refused text gets a reply naming what was found (the length when too long),
+ * stores nothing and the step stays open. Always true: every text at this step
+ * is its answer and never reaches the district check or the address lookup.
+ */
+async function aboutText(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  text: string,
+): Promise<boolean> {
+  const result = checkAboutText(text);
+  if (result.ok) {
+    await moveOn(ctx, profile, locale, { about: result.value });
+    return true;
+  }
+  const refusal =
+    result.found === 'too_long'
+      ? rt(locale, 'aboutTooLong', { max: String(ABOUT_MAX_LENGTH), length: String(result.length) })
+      : rt(locale, 'aboutRefused', { found: rt(locale, FOUND_LABEL[result.found]) });
+  await ctx.reply(refusal, { parse_mode: 'HTML' });
+  return true;
+}
+
 /**
  * The steps that take typed text, each returning false for text it cannot use.
- * The short text (T073) and the edit steps (T075) join them.
+ * The edit steps (T075) join them.
  */
 const TEXT_STEPS: Record<
   string,
@@ -514,6 +599,7 @@ const TEXT_STEPS: Record<
 > = {
   districts: districtsText,
   budget: budgetText,
+  about: aboutText,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -673,6 +759,40 @@ const handlePrefersTap = roommateCallback(async (ctx, chat, locale) => {
   await moveOn(ctx, profile, locale, { prefers: value });
 });
 
+// ---------------------------------------------------------------------------------------------
+// Intake buttons, steps 7 – 8 (FR-10, FR-11)
+// ---------------------------------------------------------------------------------------------
+
+export const SMOKING_TAP = /^rm:s:([^:]+)$/;
+export const PETS_TAP = /^rm:pt:([^:]+)$/;
+
+/** `rm:t:skip`: no short text (`about = null`); moves on to smoking. */
+const handleAboutSkip = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'about');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { about: null });
+});
+
+/** `rm:s:<no|outside|fine|skip>`: stores smoking (skip stores null) and moves on to pets. */
+const handleSmokingTap = roommateCallback(async (ctx, chat, locale) => {
+  const [value] = matchGroups(ctx);
+  if (value !== 'skip' && !isSmoking(value)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'smoking');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { smoking: value === 'skip' ? null : value });
+});
+
+/** `rm:pt:<no|have|fine|skip>`: stores pets (skip stores null) and moves on to the 18+ step. */
+const handlePetsTap = roommateCallback(async (ctx, chat, locale) => {
+  const [value] = matchGroups(ctx);
+  if (value !== 'skip' && !isPets(value)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'pets');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { pets: value === 'skip' ? null : value });
+});
+
 /**
  * Typed text while a roommate step is open, asked before anything else reads the
  * text: `used` when the open step took it (it never reaches the deposit flow, the
@@ -747,4 +867,7 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:l:done', handleLanguagesDone);
   bot.callbackQuery(GENDER_TAP, handleGenderTap);
   bot.callbackQuery(PREFERS_TAP, handlePrefersTap);
+  bot.callbackQuery('rm:t:skip', handleAboutSkip);
+  bot.callbackQuery(SMOKING_TAP, handleSmokingTap);
+  bot.callbackQuery(PETS_TAP, handlePetsTap);
 }

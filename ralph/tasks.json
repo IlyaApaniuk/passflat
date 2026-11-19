@@ -212,14 +212,14 @@
       "title": "Intake steps: the optional short text and house rules (FR-10, FR-11)",
       "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
       "dependsOn": ["T067", "T072"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Step 7: typed text through checkAboutText, a refusal naming what was found (and the length when too long), Skip and spaces-only as skip; the step asks not to write health, religion or other sensitive facts",
         "Step 8: smoking and pets, one tap each, skip stores null",
         "Tests for the text step's accept, refuse and skip paths and for both rule steps"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D54."
     },
     {
