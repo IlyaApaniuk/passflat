@@ -363,14 +363,14 @@
       "title": "The one-time 'matching is open' message (FR-19)",
       "spec": "docs/specs/06-roommate-profiles.md#matching-is-open",
       "dependsOn": ["T064", "T077", "T081"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "sendMatchingOpenMessages(api, now) in roommate-daily.ts runs in the send-hour run only with the switch on, through the claim helper on notified_open_at, with the copy of PRD 3 §8 and the zero wording",
         "Each delivered message sends tg_roommate_open_notified with count_band; the profile's last_push_at is set to the send time so no push follows the same day",
         "Tests: switch off sends nothing, claim once over two runs, the N = 0 wording, the count band"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49."
     },
     {

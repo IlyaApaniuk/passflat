@@ -1,16 +1,21 @@
 import { GrammyError, InlineKeyboard, type Api } from 'grammy';
 
 import { prisma } from '@/lib/prisma';
+import { activeProfilesWhere } from '@/lib/roommate/counts';
 import {
   DRAFT_LIFE_DAYS,
   GRACE_DAYS,
   RENEWAL_REMINDER_DAYS,
   REPORT_LIFE_MONTHS,
+  countBand,
 } from '@/lib/roommate/rules';
+import { findCompatible } from '@/lib/roommate/store';
+import { isMatchingEnabled } from '@/lib/roommate/switch';
 import { formatWarsawDate, isRoommateSendHour } from '@/lib/roommate/time';
 
 import { track } from './analytics';
-import { rt, type RoommateLocale } from './roommate-texts';
+import { rt, rtPeople, type RoommateLocale } from './roommate-texts';
+import { plural } from './texts';
 
 /**
  * The jobs of the roommate daily cron (spec 06 §Daily cron; FR-15, FR-12 criterion 4, D55, D68):
@@ -368,6 +373,85 @@ const sendRenewalReminders: MessageJob = async (sender, now) => {
   }
 };
 
+/** A stage 2 job (spec 07 §Switch): runs only while the matching switch is on, read per run. */
+function switchOnOnly(job: MessageJob): MessageJob {
+  return async (sender, now) => {
+    if (isMatchingEnabled()) await job(sender, now);
+  };
+}
+
+/**
+ * "Matching is open. N people fit you right now." (PRD 3 §8), the verb agreeing with N; N = 0 says
+ * nobody fits yet and, only while the daily push is on (it is what backs the sentence), that the
+ * bot writes once a day when someone new fits (FR-19 criterion 4).
+ */
+function matchingOpenText(locale: RoommateLocale, count: number, pushOn: boolean): string {
+  if (count === 0) {
+    const nobody = rt(locale, 'openNobody');
+    return pushOn ? `${nobody} ${rt(locale, 'openNobodyDaily')}` : nobody;
+  }
+  const one = locale === 'en' ? count === 1 : plural(count, ['one', 'many', 'many']) === 'one';
+  return rt(locale, one ? 'openFitsOne' : 'openFitsMany', {
+    count: String(count),
+    people: rtPeople(locale, count),
+  });
+}
+
+/**
+ * The one-time "matching is open" message (spec 06 §Matching is open, FR-19, D49), switch on only:
+ * every active profile (the counts' definition, so its chat is neither blocked nor banned) that
+ * opted in (`notify_on_open_at`) and has not had it (`notified_open_at` null) gets the number of
+ * people who fit it now (`findCompatible`) and "Show" (`rm:show:o`, spec 07 §Cards). Claimed on
+ * `notified_open_at`; the claim also checks the opt-in is still on and sets `last_push_at` to the
+ * send time, so the daily push gives this profile nothing the same day; a release restores both.
+ * Earliest opt-ins first. Each delivered message sends `tg_roommate_open_notified` with
+ * `count_band` only.
+ */
+const sendMatchingOpenMessages: MessageJob = async (sender, now) => {
+  const due = await prisma.roommateProfile.findMany({
+    where: { ...activeProfilesWhere(now), notifyOnOpenAt: { not: null }, notifiedOpenAt: null },
+    include: { chat: { select: { chatId: true, blockedAt: true, locale: true } } },
+    orderBy: { notifyOnOpenAt: 'asc' },
+    take: MAX_MESSAGES_PER_RUN,
+  });
+
+  for (const { chat, ...profile } of due) {
+    if (sender.stopped) return;
+    const count = (await findCompatible(profile, now)).length;
+    const locale = roommateLocale(chat.locale);
+    await sender.send({
+      chatId: chat.chatId,
+      blockedAt: chat.blockedAt,
+      claim: async () => {
+        const claimed = await prisma.roommateProfile.updateMany({
+          where: {
+            id: profile.id,
+            status: 'active',
+            notifyOnOpenAt: { not: null },
+            notifiedOpenAt: null,
+          },
+          data: { notifiedOpenAt: now, lastPushAt: now },
+        });
+        return claimed.count === 1;
+      },
+      release: async () => {
+        await prisma.roommateProfile.updateMany({
+          where: { id: profile.id, notifiedOpenAt: now },
+          data: { notifiedOpenAt: null, lastPushAt: profile.lastPushAt },
+        });
+      },
+      text: matchingOpenText(locale, count, !profile.pushOff),
+      options: {
+        reply_markup: InlineKeyboard.from([
+          [InlineKeyboard.text(rt(locale, 'btnShow'), 'rm:show:o')],
+        ]),
+      },
+      onSent: () =>
+        track(Number(chat.chatId), 'tg_roommate_open_notified', { count_band: countBand(count) }),
+    });
+  }
+};
+
 /**
  * The send-hour jobs in the priority order of spec 06 §Daily cron step 2, so the important ones go
  * first when the cap or the time budget runs out. Each later task adds its job at its place:
@@ -380,7 +464,10 @@ const sendRenewalReminders: MessageJob = async (sender, now) => {
  * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`, T090).
  * The retries and the outcome question run with the switch on or off.
  */
-const MESSAGE_JOBS: readonly MessageJob[] = [sendRenewalReminders];
+const MESSAGE_JOBS: readonly MessageJob[] = [
+  sendRenewalReminders,
+  switchOnOnly(sendMatchingOpenMessages),
+];
 
 export type RoommateDailyResult = {
   housekeeping: HousekeepingCounts;

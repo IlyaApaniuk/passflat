@@ -45,11 +45,15 @@ const LATER_MESSAGE_PROMISES = [
 
 /**
  * Roommate keys that may promise a message, each with the code that sends it.
- * Empty for the stage 1 copy: T084 adds the opt-in confirmation
- * (`sendMatchingOpenMessages`, roommate-daily.ts) and its closing sentence
- * (the roommate-close route, T083). Every other promise fails.
+ * T084 adds the opt-in confirmation (`sendMatchingOpenMessages`,
+ * roommate-daily.ts) and its closing sentence (the roommate-close route,
+ * T083). Every other promise fails.
  */
-const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {};
+const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
+  // Sent only with the switch on and the push on (`matchingOpenText`); the
+  // switch stays off until T090 builds the push.
+  openNobodyDaily: 'the daily push of spec 07 FR-27: sendDailyPushes, roommate-daily.ts (T090)',
+};
 
 const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
 
@@ -156,6 +160,19 @@ describe('bot texts: no notification promises', () => {
       }
     }
     expect(found).toEqual([]);
+  });
+
+  it('every promise exception is a roommate key whose text the check would catch', () => {
+    for (const key of Object.keys(ROOMMATE_PROMISE_EXCEPTIONS)) {
+      expect(ROOMMATE_TEXT_KEYS as string[], key).toContain(key);
+      for (const locale of ROOMMATE_LOCALES) {
+        const text = rt(locale, key as (typeof ROOMMATE_TEXT_KEYS)[number]);
+        expect(
+          LATER_MESSAGE_PROMISES.some((phrase) => phrase.test(text)),
+          `${locale}.${key}`,
+        ).toBe(true);
+      }
+    }
   });
 
   it('the later-message check catches promises and passes requests', () => {

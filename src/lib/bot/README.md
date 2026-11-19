@@ -184,10 +184,20 @@ the migrations are missing (`docs/architecture.md` §9).
   skipped, the row claimed first, a 403 marks the chat blocked and keeps the
   claim, any other error releases it, a 429 releases it and stops the run, at
   most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
-  `MESSAGE_JOBS`: the renewal reminder (`sendRenewalReminders`; reveals,
-  statements, outcome, the one-time message and the push add theirs in the
-  priority order of the spec). The response holds counts only; PostHog is
-  flushed before it.
+  `MESSAGE_JOBS`: the renewal reminder (`sendRenewalReminders`) and, with the
+  switch on only (`switchOnOnly`), the one-time message
+  (`sendMatchingOpenMessages`); reveals, statements, outcome and the push add
+  theirs in the priority order of the spec. The response holds counts only;
+  PostHog is flushed before it.
+- **Matching is open** (spec 06 §Matching is open, FR-19): with the switch on,
+  each active profile with `notify_on_open_at` set and `notified_open_at` null
+  gets "Matching is open. N people fit you right now." once, N from
+  `findCompatible`, with "Show" (`rm:show:o`); N = 0 says nobody fits yet and,
+  only while the daily push is on, that the bot writes once a day when someone
+  new fits. Claimed on `notified_open_at` (the claim re-checks the opt-in); the
+  claim also sets `last_push_at` to the run's time so no push follows the same
+  day, and a release restores both. Earliest opt-ins first; each delivered
+  message sends `tg_roommate_open_notified` with `count_band`.
 - **Renewal** (spec 06 §Renewal, FR-15): from the first send-hour run at or after
   `expires_at` − 3 days, each active profile with `renewal_reminded_at` null gets
   one reminder naming its hide date, with Renew (`rm:c:renew`) and Delete

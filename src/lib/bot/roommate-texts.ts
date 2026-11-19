@@ -208,6 +208,14 @@ const RU = {
   /** D61: half of the tenant all-in median of whole flats, N ≥ 2. */
   roomSplit:
     'На двоих — примерно по {value} с человека (половина медианы по целым квартирам, {area}; отчёты жильцов: {count}).',
+
+  // --- the one-time message (spec 06 §Matching is open, FR-19); the verb agrees with the count ---
+  openFitsOne: 'Подбор открыт. Сейчас тебе подходит {count} {people}.',
+  openFitsMany: 'Подбор открыт. Сейчас тебе подходят {count} {people}.',
+  openNobody: 'Подбор открыт. Пока тебе никто не подходит.',
+  /** Backed by the daily push (spec 07 FR-27); left out when the push is off. */
+  openNobodyDaily: 'Раз в день проверяю новые анкеты и напишу, когда появится подходящий человек.',
+  btnShow: '👀 Показать',
 } as const;
 
 type Key = keyof typeof RU;
@@ -372,6 +380,13 @@ const UK: Record<Key, string> = {
   roomNoFigures: 'Даних про кімнати тут поки немає.',
   roomSplit:
     'Удвох — приблизно по {value} з людини (половина медіани за цілими квартирами, {area}; звіти мешканців: {count}).',
+
+  openFitsOne: 'Підбір відкрито. Зараз тобі підходить {count} {people}.',
+  openFitsMany: 'Підбір відкрито. Зараз тобі підходять {count} {people}.',
+  openNobody: 'Підбір відкрито. Поки тобі ніхто не підходить.',
+  openNobodyDaily:
+    'Раз на день перевіряю нові анкети й напишу, коли зʼявиться людина, яка тобі підходить.',
+  btnShow: '👀 Показати',
 };
 
 const EN: Record<Key, string> = {
@@ -537,6 +552,12 @@ const EN: Record<Key, string> = {
   roomNoFigures: 'No room figures for this area yet.',
   roomSplit:
     'For two people about {value} each (half of the median flat, {count} tenant reports, {area}).',
+
+  openFitsOne: 'Matching is open. {count} person fits you right now.',
+  openFitsMany: 'Matching is open. {count} people fit you right now.',
+  openNobody: 'Matching is open. Nobody fits you yet.',
+  openNobodyDaily: "I check new profiles once a day and I'll message you when someone new fits.",
+  btnShow: '👀 Show',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };
