@@ -446,13 +446,13 @@
       "title": "Per-person split without studios, if the owner says so (Q-17, D61)",
       "spec": "docs/specs/06-roommate-profiles.md#room-cost-reference",
       "dependsOn": ["T080"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The per-person line uses the apartment set the owner chose, through one filter in the line's function, with its own N and level, and the golden case updated",
         "The figure contract's loaders gain the filter only if the answer needs it, with a consistency test against the checker"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-17 (prd-3-decision-review.md, architect gaps). D61 builds 'for two people about X each' from the tenant all-in median of whole apartments, studios included; halving a studio's median can overstate what two people sharing can expect, and the loaders have no rooms filter today. T080 builds the line exactly as D61 says. Options: (a) only apartments with 2 or more rooms (a rooms filter in the loader; fewer reports, so the line appears less often); (b) keep D61 as built; (c) drop the line. Proposal: (a). An honesty rule for displayed figures, so the owner decides.\nOwner answer: Owner (D71, Q-17 (a)): the per-person split uses only apartments with 2 or more rooms, through a rooms filter in the figure contract loader; supersedes D61 for the apartment set."
     },
     {

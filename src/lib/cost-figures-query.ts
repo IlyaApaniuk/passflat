@@ -99,9 +99,26 @@ function rentalTypeWhere(rentalType: RentalTypeFilter): Prisma.CostReportWhereIn
   return rentalType === 'all' ? {} : { rentalType };
 }
 
-function findFigureReports(where: Prisma.CostReportWhereInput, rentalType: RentalTypeFilter) {
+/**
+ * A room-count floor (D71, the roommate per-person split): `rooms >= minRooms`, which also
+ * leaves out a report without a room count. Null keeps every report.
+ */
+function minRoomsWhere(minRooms: number | null): Prisma.CostReportWhereInput {
+  return minRooms == null ? {} : { rooms: { gte: minRooms } };
+}
+
+function findFigureReports(
+  where: Prisma.CostReportWhereInput,
+  rentalType: RentalTypeFilter,
+  minRooms: number | null = null,
+) {
   return prisma.costReport.findMany({
-    where: { ...where, isVisible: true, ...rentalTypeWhere(rentalType) },
+    where: {
+      ...where,
+      isVisible: true,
+      ...rentalTypeWhere(rentalType),
+      ...minRoomsWhere(minRooms),
+    },
     select: FIGURE_REPORT_SELECT,
     take: REPORT_LIMIT,
   });
@@ -130,6 +147,7 @@ const loadAreaReferenceCached = cachedCostLoader(
     districtId: string | null,
     cityId: string,
     rentalType: RentalTypeFilter,
+    minRooms: number | null,
   ): Promise<AreaReference | null> => {
     if (districtId) {
       const [district, reports] = await Promise.all([
@@ -137,7 +155,7 @@ const loadAreaReferenceCached = cachedCostLoader(
           where: { id: districtId },
           select: { slug: true, nameKey: true },
         }),
-        findFigureReports({ building: { districtId } }, rentalType),
+        findFigureReports({ building: { districtId } }, rentalType, minRooms),
       ]);
       const summary = summarizeFigures(reports, { level: 'district', rentalType });
       // The city is read only when the district cannot answer on its own.
@@ -148,7 +166,7 @@ const loadAreaReferenceCached = cachedCostLoader(
 
     const [city, reports] = await Promise.all([
       prisma.city.findUnique({ where: { id: cityId }, select: { slug: true, nameKey: true } }),
-      findFigureReports({ building: { cityId } }, rentalType),
+      findFigureReports({ building: { cityId } }, rentalType, minRooms),
     ]);
     const summary = summarizeFigures(reports, { level: 'city', rentalType });
     // The district is ruled out above, so the rule decides between the city and nothing.
@@ -165,17 +183,22 @@ const loadAreaReferenceCached = cachedCostLoader(
  * after the rental-type filter, otherwise the city, and null when the city has
  * no report either. `name` is the display name source (the district's or the
  * city's `nameKey`); each surface renders it in its own locale and grammar.
+ * `minRooms` keeps only reports with at least that many rooms, a report without a room
+ * count left out (D71: only the roommate per-person split passes it); the level rule then
+ * counts the filtered reports. Every other caller leaves it out and reads every report.
  */
 export function loadAreaReference({
   districtId,
   cityId,
   rentalType = 'all',
+  minRooms = null,
 }: {
   districtId: string | null;
   cityId: string;
   rentalType?: RentalTypeFilter;
+  minRooms?: number | null;
 }): Promise<AreaReference | null> {
-  return loadAreaReferenceCached(districtId, cityId, rentalType);
+  return loadAreaReferenceCached(districtId, cityId, rentalType, minRooms);
 }
 
 /**

@@ -11,6 +11,7 @@ import type { FigureReport } from '@/lib/cost-figures';
 
 type Where = {
   rentalType?: string;
+  rooms?: { gte: number };
   building?: { districtId?: string; cityId?: string };
 };
 
@@ -52,8 +53,19 @@ function room(source: string, total: number, complete = true): FigureReport {
   return { source, rentalType: 'room', totalMonthlyAvg: total, utilitiesComplete: complete };
 }
 
-function flat(source: string, total: number, complete = true): FigureReport {
-  return { source, rentalType: 'apartment', totalMonthlyAvg: total, utilitiesComplete: complete };
+function flat(
+  source: string,
+  total: number,
+  complete = true,
+  rooms: number | null = 2,
+): FigureReport {
+  return {
+    source,
+    rentalType: 'apartment',
+    totalMonthlyAvg: total,
+    utilitiesComplete: complete,
+    rooms,
+  };
 }
 
 /** PRD 3 §5 example 2: R1 user 1,600, R2 import 1,800, R3–R7 scraped known parts. */
@@ -62,10 +74,21 @@ const MOKOTOW_ROOMS = [
   room('import', 1_800),
   ...[1_400, 1_500, 1_550, 1_700, 2_000].map((total) => room('scraped', total, false)),
 ];
-/** Tenant all-in totals of whole flats in Mokotów: median 4,850 zł, N = 6. */
-const MOKOTOW_FLATS = [4_200, 4_600, 4_800, 4_900, 5_100, 5_400].map((total) =>
-  flat('user', total),
-);
+/**
+ * Tenant all-in totals of whole flats in Mokotów with rooms 1 / 2 / 2 / 3 / 2 / 3 (spec 06,
+ * D71): the studio (4,200) is left out, so the split's median is 4,900 over N = 5 (D61 over
+ * all six: 4,850, N = 6).
+ */
+const MOKOTOW_FLATS = (
+  [
+    [4_200, 1],
+    [4_600, 2],
+    [4_800, 2],
+    [4_900, 3],
+    [5_100, 2],
+    [5_400, 3],
+  ] as const
+).map(([total, rooms]) => flat('user', total, true, rooms));
 /** Two room reports: below MIN_AREA_REPORTS, so Wesoła answers with Warsaw. */
 const WESOLA_ROOMS = [room('user', 1_500), room('scraped', 1_300, false)];
 
@@ -91,6 +114,10 @@ beforeEach(() => {
   h.costReportFindMany.mockImplementation(async ({ where }: { where: Where }) =>
     h.reports
       .filter((row) => !where.rentalType || row.rentalType === where.rentalType)
+      // `rooms: { gte }` as SQL reads it: a null room count never passes.
+      .filter(
+        (row) => !where.rooms || (typeof row.rooms === 'number' && row.rooms >= where.rooms.gte),
+      )
       .filter((row) =>
         where.building?.districtId
           ? row.districtId === where.building.districtId
@@ -116,14 +143,14 @@ async function reply(
 const RU_HEADER = '📊 <b>Для ориентира — комнаты</b>';
 const RU_MOKOTOW_TENANT = `   отчёты жильцов, всего в месяц: <b>${zl('1 700')}</b> <i>(медиана по 2 отчётам)</i>`;
 const RU_MOKOTOW_ASKING = `   цены из объявлений, известная часть расходов: <b>${zl('1 550')}</b> <i>(медиана по 5 объявлениям)</i>`;
-const RU_MOKOTOW_SPLIT = `На двоих — примерно по ${zl('2 430')} с человека (половина медианы по целым квартирам, Mokotów; отчёты жильцов: 6).`;
+const RU_MOKOTOW_SPLIT = `На двоих — примерно по ${zl('2 450')} с человека (половина медианы по целым квартирам, Mokotów; отчёты жильцов: 5).`;
 /** Warsaw rooms: tenant 1,500 / 1,600 / 1,800 (N 3), asking 1,300 … 2,000 (N 6, median 1,525). */
 const RU_WARSAW_TENANT = `   отчёты жильцов, всего в месяц: <b>${zl('1 600')}</b> <i>(медиана по 3 отчётам)</i>`;
 const RU_WARSAW_ASKING = `   цены из объявлений, известная часть расходов: <b>${zl('1 525')}</b> <i>(медиана по 6 объявлениям)</i>`;
-const RU_WARSAW_SPLIT = `На двоих — примерно по ${zl('2 430')} с человека (половина медианы по целым квартирам, Варшава; отчёты жильцов: 6).`;
+const RU_WARSAW_SPLIT = `На двоих — примерно по ${zl('2 450')} с человека (половина медианы по целым квартирам, Варшава; отчёты жильцов: 5).`;
 
-describe('golden case (PRD 3 §5 example 2)', () => {
-  it('Mokotów: tenant reports 1,700 all-in (2), asking prices 1,550 known part (5), for two about 2,430 each (6, Mokotów)', async () => {
+describe('golden case (PRD 3 §5 example 2, D71)', () => {
+  it('Mokotów: tenant reports 1,700 all-in (2), asking prices 1,550 known part (5), for two about 2,450 each (5 flats of 2+ rooms, Mokotów)', async () => {
     expect(await reply(districts('mokotow'))).toBe(
       [RU_HEADER, '<b>Mokotów</b>:', RU_MOKOTOW_TENANT, RU_MOKOTOW_ASKING, RU_MOKOTOW_SPLIT].join(
         '\n',
@@ -138,7 +165,7 @@ describe('golden case (PRD 3 §5 example 2)', () => {
         '<b>Mokotów</b>:',
         `   звіти мешканців, разом на місяць: <b>${zl('1 700')}</b> <i>(медіана за 2 звітами)</i>`,
         `   ціни з оголошень, відома частина витрат: <b>${zl('1 550')}</b> <i>(медіана за 5 оголошеннями)</i>`,
-        `Удвох — приблизно по ${zl('2 430')} з людини (половина медіани за цілими квартирами, Mokotów; звіти мешканців: 6).`,
+        `Удвох — приблизно по ${zl('2 450')} з людини (половина медіани за цілими квартирами, Mokotów; звіти мешканців: 5).`,
       ].join('\n'),
     );
   });
@@ -150,7 +177,7 @@ describe('golden case (PRD 3 §5 example 2)', () => {
         '<b>Mokotów</b>:',
         `   tenant reports, all-in a month: <b>${zl('1 700')}</b> <i>(median of 2 reports)</i>`,
         `   asking prices from listings, known part of the costs: <b>${zl('1 550')}</b> <i>(median of 5 listings)</i>`,
-        `For two people about ${zl('2 430')} each (half of the median flat, 6 tenant reports, Mokotów).`,
+        `For two people about ${zl('2 450')} each (half of the median flat, 5 tenant reports, Mokotów).`,
       ].join('\n'),
     );
   });
@@ -158,7 +185,7 @@ describe('golden case (PRD 3 §5 example 2)', () => {
   it('in EN, a district below the minimum says it answers with Warsaw', async () => {
     const text = await reply(districts('wesola'), 'en');
     expect(text).toContain('Wesoła has fewer than 5 room reports; Warsaw:');
-    expect(text).toContain('6 tenant reports, Warsaw).');
+    expect(text).toContain('5 tenant reports, Warsaw).');
     expect(text).not.toMatch(/\p{Script=Cyrillic}/u);
   });
 
@@ -174,10 +201,76 @@ describe('golden case (PRD 3 §5 example 2)', () => {
       building: { districtId: 'd-mok' },
       isVisible: true,
       rentalType: 'apartment',
+      rooms: { gte: 2 },
     });
     expect(
       wheres.every((where) => where.rentalType === 'room' || where.rentalType === 'apartment'),
     ).toBe(true);
+    // D71: the rooms filter is the split's alone; the room lines read every room report.
+    expect(
+      wheres.filter((where) => where.rentalType === 'room').some((where) => 'rooms' in where),
+    ).toBe(false);
+    expect(
+      wheres
+        .filter((where) => where.rentalType === 'apartment')
+        .every((where) => where.rooms?.gte === 2),
+    ).toBe(true);
+  });
+});
+
+describe('the per-person split over flats with 2 or more rooms (D71)', () => {
+  it('leaves the studio out: 2,450 from 5 flats, not D61’s 2,430 from all 6', async () => {
+    const text = await reply(districts('mokotow'));
+    expect(text).toContain(RU_MOKOTOW_SPLIT);
+    expect(text).not.toContain(zl('2 430'));
+    expect(text).not.toContain('отчёты жильцов: 6');
+  });
+
+  it('leaves out a flat without a room count', async () => {
+    serve({
+      'd-mok': [
+        ...MOKOTOW_ROOMS,
+        ...MOKOTOW_FLATS,
+        ...[9_000, 9_200, 9_400].map((total) => flat('user', total, true, null)),
+      ],
+    });
+    expect(await reply(districts('mokotow'))).toContain(RU_MOKOTOW_SPLIT);
+  });
+
+  it('the level is that of the filtered flats: 4 of 2+ rooms in Mokotów answer with Warsaw', async () => {
+    // Seven flats would let Mokotów answer on its own (D61: 4,600 → 2,300, N 7); only four
+    // have 2+ rooms, below MIN_AREA_REPORTS, so the split says Warsaw over the same four.
+    serve({
+      'd-mok': [
+        ...MOKOTOW_ROOMS,
+        ...[3_000, 3_100, 3_200].map((total) => flat('user', total, true, 1)),
+        ...[4_600, 4_800, 5_000, 5_200].map((total) => flat('user', total, true, 2)),
+      ],
+    });
+    const text = await reply(districts('mokotow'));
+    expect(text).toContain('<b>Mokotów</b>:');
+    expect(text).toContain(
+      `примерно по ${zl('2 450')} с человека (половина медианы по целым квартирам, Варшава; отчёты жильцов: 4).`,
+    );
+    expect(text).not.toContain(zl('2 300'));
+  });
+
+  it('one flat of 2+ rooms beside studios is one observation: no split', async () => {
+    serve({
+      'd-mok': [
+        ...MOKOTOW_ROOMS,
+        flat('user', 4_800, true, 2),
+        ...[3_000, 3_100, 3_200, 3_300].map((total) => flat('user', total, true, 1)),
+      ],
+    });
+    expect(await reply(districts('mokotow'))).not.toContain('На двоих');
+  });
+
+  it('only studios: no split', async () => {
+    serve({
+      'd-mok': [...MOKOTOW_ROOMS, ...MOKOTOW_FLATS.map((row) => ({ ...row, rooms: 1 }))],
+    });
+    expect(await reply(districts('mokotow'))).not.toContain('На двоих');
   });
 });
 
@@ -251,9 +344,10 @@ describe('the level of the figures', () => {
     serve({ 'd-mok': MOKOTOW_ROOMS, 'd-wol': MOKOTOW_FLATS.slice(0, 4) });
     const text = await reply(districts('mokotow'));
     expect(text).toContain('<b>Mokotów</b>:');
-    // Mokotów holds no flat report, so the flats are Warsaw's four: 4,200 … 4,900 → 4,700 → 2,350.
+    // Mokotów holds no flat report, so the flats are Warsaw's: of 4,200 … 4,900 the studio is
+    // left out (D71), 4,600 / 4,800 / 4,900 → 4,800 → 2,400.
     expect(text).toContain(
-      `примерно по ${zl('2 350')} с человека (половина медианы по целым квартирам, Варшава; отчёты жильцов: 4).`,
+      `примерно по ${zl('2 400')} с человека (половина медианы по целым квартирам, Варшава; отчёты жильцов: 3).`,
     );
   });
 

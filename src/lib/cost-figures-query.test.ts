@@ -268,6 +268,44 @@ describe('loadAreaReference', () => {
       summary: { rentalType: 'room', reportCount: 40 },
     });
   });
+
+  it('D71: minRooms filters both queries by rooms ≥ n, and the level counts the filtered reports', async () => {
+    // The database returns only flats with 2+ rooms: 4 in the district, so the city answers.
+    h.findMany
+      .mockResolvedValueOnce(reports(4, { rooms: 2 }))
+      .mockResolvedValueOnce(reports(12, { rooms: 3 }));
+
+    const reference = await loadAreaReference({
+      districtId: 'd1',
+      cityId: 'c1',
+      rentalType: 'apartment',
+      minRooms: 2,
+    });
+
+    expect(findManyArgs(0).where).toEqual({
+      building: { districtId: 'd1' },
+      isVisible: true,
+      rentalType: 'apartment',
+      rooms: { gte: 2 },
+    });
+    expect(findManyArgs(1).where).toEqual({
+      building: { cityId: 'c1' },
+      isVisible: true,
+      rentalType: 'apartment',
+      rooms: { gte: 2 },
+    });
+    expect(reference).toMatchObject({
+      level: 'city',
+      summary: { rentalType: 'apartment', reportCount: 12 },
+    });
+  });
+
+  it('without minRooms (every other caller) the query has no rooms filter', async () => {
+    h.findMany.mockResolvedValue(reports(5));
+    await loadAreaReference({ districtId: 'd1', cityId: 'c1', rentalType: 'apartment' });
+    await loadAreaReference({ districtId: 'd1', cityId: 'c1', minRooms: null });
+    expect(h.findMany.mock.calls.every(([args]) => !('rooms' in args.where))).toBe(true);
+  });
 });
 
 describe('loadDistrictFigures', () => {

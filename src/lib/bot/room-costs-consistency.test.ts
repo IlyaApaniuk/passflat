@@ -5,7 +5,8 @@ import { NextRequest } from 'next/server';
 // (POST /api/location-score, its `costs.reference`) and through the roommate room cost
 // reference (`roomCostsReply`) show the same median and N per group. The checker reads every
 // rental type, so each fixture holds one rental type only: room reports for the room lines,
-// whole flats for the per-person split.
+// whole flats for the per-person split. The split reads flats with 2 or more rooms only (D71,
+// the loader's `minRooms`); the checker reads every flat, unfiltered.
 
 const h = vi.hoisted(() => ({
   cityFindUnique: vi.fn(),
@@ -64,6 +65,7 @@ vi.mock('next-intl/server', () => ({
 import { POST } from '@/app/api/location-score/route';
 import { groupFigureRows, orderedFigureGroups } from '@/lib/building-figures-view';
 import type { FigureReport, FigureSummary } from '@/lib/cost-figures';
+import { loadAreaReference } from '@/lib/cost-figures-query';
 import { resetLocationCheckRateLimit, type LocationCheckerCosts } from '@/lib/location-checker';
 import { roundHalfUpTo10 } from '@/lib/roommate/room-costs';
 import { SCORE_VERSION } from '@/lib/location-score';
@@ -125,6 +127,7 @@ const building = {
 type Where = {
   buildingId?: string;
   rentalType?: string;
+  rooms?: { gte: number };
   building?: { districtId?: string; cityId?: string };
 };
 
@@ -138,12 +141,22 @@ function serveReports(rows: { district?: FigureReport[]; elsewhere?: FigureRepor
       : where.building?.cityId
         ? [...district, ...(rows.elsewhere ?? [])]
         : [];
-    return pool.filter((row) => !where.rentalType || row.rentalType === where.rentalType);
+    return pool
+      .filter((row) => !where.rentalType || row.rentalType === where.rentalType)
+      .filter(
+        (row) => !where.rooms || (typeof row.rooms === 'number' && row.rooms >= where.rooms.gte),
+      );
   });
 }
 
-function report(rentalType: string, source: string, total: number, complete = true): FigureReport {
-  return { source, rentalType, totalMonthlyAvg: total, utilitiesComplete: complete };
+function report(
+  rentalType: string,
+  source: string,
+  total: number,
+  complete = true,
+  rooms: number | null = null,
+): FigureReport {
+  return { source, rentalType, totalMonthlyAvg: total, utilitiesComplete: complete, rooms };
 }
 
 /** PRD 3 §5 example 2. */
@@ -152,9 +165,17 @@ const MOKOTOW_ROOMS = [
   report('room', 'import', 1_800),
   ...[1_400, 1_500, 1_550, 1_700, 2_000].map((total) => report('room', 'scraped', total, false)),
 ];
-const MOKOTOW_FLATS = [4_200, 4_600, 4_800, 4_900, 5_100, 5_400].map((total) =>
-  report('apartment', 'user', total),
-);
+/** Rooms 1 / 2 / 2 / 3 / 2 / 3 (spec 06 golden case under D71): the 4,200 flat is a studio. */
+const MOKOTOW_FLATS = (
+  [
+    [4_200, 1],
+    [4_600, 2],
+    [4_800, 2],
+    [4_900, 3],
+    [5_100, 2],
+    [5_400, 3],
+  ] as const
+).map(([total, rooms]) => report('apartment', 'user', total, true, rooms));
 
 async function checkerCosts(): Promise<LocationCheckerCosts> {
   const response = await POST(
@@ -263,20 +284,42 @@ describe('the checker area summary and the room cost reference agree on the same
     expect(replyRoomLines(text!)).toEqual(city);
   });
 
-  it('the per-person split is half the checker tenant all-in median of the same flats, with its N', async () => {
+  it('the per-person split is half the filtered loader tenant all-in median of the same flats, with its N (D71)', async () => {
     serveReports({ district: MOKOTOW_FLATS });
 
-    const costs = await checkerCosts();
+    const filtered = await loadAreaReference({
+      districtId: 'd-mok',
+      cityId: 'city-1',
+      rentalType: 'apartment',
+      minRooms: 2,
+    });
     const text = await roomCostsReply(MOKOTOW, 'ru');
 
-    const [tenant] = checkerHeadlines(costs.reference!.summary);
-    expect(tenant).toEqual({ group: 'tenant', median: 4_850, n: 6 });
+    expect(filtered?.level).toBe('district');
+    const [tenant] = checkerHeadlines(filtered!.summary);
+    expect(tenant).toEqual({ group: 'tenant', median: 4_900, n: 5 });
     const split = text!.match(
       /примерно по ([^с]+) с человека \([^,]+, Mokotów; отчёты жильцов: (\d+)\)/,
     );
     expect(split).not.toBeNull();
     expect(amount(split![1])).toBe(roundHalfUpTo10(tenant.median / 2));
-    expect(amount(split![1])).toBe(2_430);
+    expect(amount(split![1])).toBe(2_450);
     expect(Number(split![2])).toBe(tenant.n);
+  });
+
+  it('the checker area summary of the same flats is unchanged: every flat, studio included, no rooms filter', async () => {
+    serveReports({ district: MOKOTOW_FLATS });
+
+    const costs = await checkerCosts();
+    const unfiltered = await loadAreaReference({ districtId: 'd-mok', cityId: 'city-1' });
+
+    expect(costs.reference?.level).toBe('district');
+    expect(checkerHeadlines(costs.reference!.summary)).toEqual([
+      { group: 'tenant', median: 4_850, n: 6 },
+    ]);
+    expect(costs.reference!.summary).toEqual(unfiltered!.summary);
+    const wheres: Where[] = h.costReportFindMany.mock.calls.map(([args]) => args.where);
+    expect(wheres.length).toBeGreaterThan(0);
+    expect(wheres.some((where) => 'rooms' in where)).toBe(false);
   });
 });

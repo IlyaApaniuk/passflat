@@ -29,7 +29,11 @@ function reference(
   };
 }
 
-/** PRD 3 §5 example 2: Mokotów tenant apartment totals, median 4,850 zł, N = 6. */
+/**
+ * PRD 3 §5 example 2 under D61: six tenant apartment totals, median 4,850 zł, N = 6. The
+ * room filter of D71 is the loader's (`loadRoomCostAreas` passes it, below); this rule halves
+ * whatever flats the reference holds.
+ */
 const MOKOTOW_FLATS = [4_200, 4_600, 4_800, 4_900, 5_100, 5_400].map((total) =>
   report('user', total),
 );
@@ -50,7 +54,7 @@ describe('roundHalfUpTo10', () => {
 });
 
 describe('perPersonSplit (D61)', () => {
-  it('halves the tenant all-in median of whole flats: the golden case 4,850 → 2,430 (N 6, Mokotów)', () => {
+  it('halves the tenant all-in median of the flats it is given: 4,850 → 2,430 (N 6, Mokotów)', () => {
     expect(perPersonSplit(reference(MOKOTOW_FLATS))).toEqual({
       value: 2_430,
       n: 6,
@@ -126,11 +130,19 @@ describe('loadRoomCostAreas', () => {
     ]);
     expect(h.loadAreaReference.mock.calls.map(([args]) => args)).toEqual([
       { districtId: 'd-wes', cityId: 'city-1', rentalType: 'room' },
-      { districtId: 'd-wes', cityId: 'city-1', rentalType: 'apartment' },
+      { districtId: 'd-wes', cityId: 'city-1', rentalType: 'apartment', minRooms: 2 },
       { districtId: 'd-mok', cityId: 'city-1', rentalType: 'room' },
-      { districtId: 'd-mok', cityId: 'city-1', rentalType: 'apartment' },
+      { districtId: 'd-mok', cityId: 'city-1', rentalType: 'apartment', minRooms: 2 },
     ]);
     expect(areas[0]).toMatchObject({ room: null, split: { value: 2_430, n: 6 } });
+  });
+
+  it('D71: only the split filters by rooms (2 or more); the room lines read every room report', async () => {
+    await loadRoomCostAreas(city, ['mokotow']);
+    const calls = h.loadAreaReference.mock.calls.map(([args]) => args);
+    expect(calls.filter((args) => 'minRooms' in args)).toEqual([
+      { districtId: 'd-mok', cityId: 'city-1', rentalType: 'apartment', minRooms: 2 },
+    ]);
   });
 
   it('loads Warsaw for "any" (no district)', async () => {
@@ -139,7 +151,7 @@ describe('loadRoomCostAreas', () => {
     expect(areas[0].district).toBeNull();
     expect(h.loadAreaReference.mock.calls.map(([args]) => args)).toEqual([
       { districtId: null, cityId: 'city-1', rentalType: 'room' },
-      { districtId: null, cityId: 'city-1', rentalType: 'apartment' },
+      { districtId: null, cityId: 'city-1', rentalType: 'apartment', minRooms: 2 },
     ]);
   });
 

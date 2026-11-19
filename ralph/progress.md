@@ -3353,3 +3353,36 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - the migration on the production database;
     - stage 2 with real people: the switch has never been on outside tests.
 - Next: the owner answers Q-15 – Q-18 (`/ralph-answer`), which unblocks T107 – T110. Otherwise PRD 3 is complete, and the owner deploys PRD 1, then PRD 3, with the steps above.
+
+### 2026-11-19 22:08 · T107 · done
+
+- Done:
+  - `src/lib/cost-figures-query.ts`: `loadAreaReference` takes an optional `minRooms` (default `null`). With it set, both the district query and the city query add `rooms: { gte: minRooms }` (`minRoomsWhere`), so a report without a room count is left out too. The level rule (`MIN_AREA_REPORTS`) counts the filtered reports. Every other caller passes nothing and gets the same `where` as before. The result shape is unchanged, so the cache key name stays `cost-figures-area-reference-v2` (the new argument is part of the key).
+  - `src/lib/roommate/room-costs.ts`: `loadPerPersonSplit` passes `minRooms: SPLIT_MIN_ROOMS` (`= 2`, D71, Decided, next to `SPLIT_PEOPLE`). The room lines still call the loader unfiltered. `perPersonSplit` and the line's wording are unchanged ("half of the median flat"; the rest of D61 stands).
+  - Docs: spec 03 §Loaders names `minRooms`; bot README §Room cost reference; `docs/specs/README.md` FR-17 (Q-17) row → Done.
+- Tests:
+  - `roommate-room-costs.test.ts`:
+    - the fake now applies `rooms.gte` as SQL does (null never passes);
+    - golden case updated to D71: Mokotów flats with rooms 1/2/2/3/2/3 → "2,450 each … 5 tenant reports, Mokotów" in RU/UK/EN, and Warsaw likewise;
+    - new block "over flats with 2 or more rooms (D71)": the studio is left out (no 2,430, no N 6); a flat without a room count is left out; the level comes from the filtered set (4 of 7 Mokotów flats qualify → Warsaw, N 4, not 2,300 / N 7); one qualifying flat beside studios → no line; only studios → no line;
+    - the `where` check: apartment queries carry `rooms: { gte: 2 }`, room queries carry no `rooms`.
+  - `room-costs-consistency.test.ts`: the same fixture gives the filtered loader's tenant headline 4,900 / N 5 and the reply's split 2,450 / N 5. The checker's area summary is unchanged (4,850 / N 6, equal to the unfiltered `loadAreaReference`, no `rooms` in any query).
+  - `cost-figures-query.test.ts`: `minRooms` puts `rooms: { gte: 2 }` on both queries and the level counts the filtered set; without it, no `rooms` key.
+  - `room-costs.test.ts`: the loader calls carry `minRooms: 2` on the apartment call only; the pure halving test is no longer called the golden case.
+  - Mutation check: with the filter dropped from the split's call, 21 tests fail; reverted.
+- Checks:
+  - `npx vitest run` of the five room-cost / loader / room-money test files: all passed.
+  - Local DB, read-only (a scratchpad `npx tsx --env-file=.env` script, guard on 127.0.0.1:54322): over 353 visible apartment reports, Prisma's `rooms: { gte: 2 }` count is 302. That equals the raw SQL `rooms >= 2` count, and the one report with a null room count is excluded.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2973 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Agent's reading applied (spec 06):** a report without a room count is left out of the split.
+  - **Expect the line less often.** Fewer reports qualify, so a district needs 5 flats with 2+ rooms before the split says the district; otherwise it says Warsaw. On the local data, about 14 % of visible apartment reports drop out (50 studios, 1 without a room count, of 353).
+  - Decided constant: `SPLIT_MIN_ROOMS = 2` in `src/lib/roommate/room-costs.ts`.
+  - No copy change, no event, no table, no migration.
+- Next: `node scripts/ralph-tasks.mjs next` (T108 – T110, unblocked by D72 – D74).

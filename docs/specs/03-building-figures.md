@@ -174,7 +174,10 @@ FR-21, FR-30, FR-34. `src/lib/cost-figures-query.ts`:
 - `loadBuildingFigures(buildingId, rentalType = 'all')` → `FigureSummary` for that building's
   visible reports (`level: 'building'`).
 - `loadAreaReference({ districtId, cityId, rentalType })` → `{ level: 'district' | 'city',
-name, summary: FigureSummary } | null` with the rule above.
+name, summary: FigureSummary } | null` with the rule above. An optional `minRooms` keeps only
+  reports with `rooms >= minRooms` (a report without a room count is left out) and the rule
+  counts the filtered reports; only the roommate per-person split passes it (D71, spec 06
+  §Room cost reference).
 - `loadDepositReturns({ districtId | cityId })` → the deposit statistic for that area.
 - Selects only the fields the contract needs, `isVisible: true`, `take: 5000` as today. Cached
   with `unstable_cache` and tag `costs` (300 s) so `revalidateCostSurfaces()` expires them;

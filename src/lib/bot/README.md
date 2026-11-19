@@ -339,8 +339,10 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   `format.ts`, the cards' headline rule and labels, one observation without a
   median), the Warsaw lines once for every district below `MIN_AREA_REPORTS` room
   reports, "no room figures" when the city has none. Then D61's "for two people
-  about X each" from the tenant all-in median of whole flats (its own level, N ≥ 2,
-  half rounded half up to 10 zł; never a known part or asking prices). A loader
+  about X each" from the tenant all-in median of whole flats with 2 or more rooms
+  (D71: `loadAreaReference`'s `minRooms: 2`, so no studios and no flat without a
+  room count; its own level, N ≥ 2, half rounded half up to 10 zł; never a known
+  part or asking prices). A loader
   error leaves only this part out. An English chat gets it in English (the area
   texts of `texts.ts`).
 - **Compatibility** (spec 07 §Compatibility, FR-24; read by the cards, the
