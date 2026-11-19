@@ -3076,3 +3076,54 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Not decided, for the owner:** a stop rule can hold while every go rule holds, e.g. 35 profiles over 40 posting hours = 0.875 per hour with 25 active and 3 districts. D52 does not say which wins, and the D58 daily check reads only the go numbers, so the switch could go on although the owner-hour stop rule holds. The doc says so (§7.3) and leaves it to the owner.
   - No new copy, event, table or migration.
 - Next: `node scripts/ralph-tasks.mjs next` (T104, stage 2 readout, FR-43). Add its queries to `src/lib/bot/roommate-readouts.test.ts` with `docSection(DOC, 'Roommate stage 2 (E15)')`.
+
+### 2026-11-19 21:28 · T104 · done
+
+- Done:
+  - `docs/analytics/activation-funnels.md`: new "## 8. Roommate stage 2 (E15)", written from the code at `c14ec61`, plus the intro, the thresholds line and "How this was checked". It has:
+    - the parameters `{switch_at}` (from the posting log's "Switch on at:" line / the PostHog annotation) and `{readout_at}` (switch + 14 days at the same clock time; `2027-04-01 00:00:00` for the final readout), and a numbers table;
+    - 8.1 HogQL:
+      - query G (one row): `roommate_events_in_window` for "no data", qualifying persons (E15), both match rates (E15's, and active at switch without a rule, Q-15 open), `pairs` (`role = 'completer'` events), outcome persons (only with `tg_roommate_matched` in the window), browsing persons;
+      - query H (H12): persons and person-days with `tg_roommate_push_sent` → same Warsaw day `tg_roommate_cards_viewed` with `via = 'push'`, persons with `tg_roommate_push_opted_out`;
+      - query I (A28): `has_username` of the person's last save, prompted → set by `context` (browse, reveal);
+      - reading notes: per-person E15 edge cases, the 21-day outcome question, `via` values.
+    - 8.2 read-only SQL query J: mutual pairs among the existing rows (the two `interest` rows with `matched_at`, as `formMutualMatch` writes them), in the window, revealed to both, not revealed, waiting on a username (`tg_username IS NULL` on either side, never selected); how to read it against `pairs`.
+    - 8.3 the D52 continue rules and the D60 stop rules, "fewer than 10 qualifying → counts only", and the two gaps no rule covers (15 – 30 %; ≥ 10 pairs with < 3 outcome persons).
+    - 8.4 the worked examples (33 % holds with 5 pairs so far; 12.5 % stop; 22 browsing, no `completer` → stop; 9 qualifying → "the rule cannot be read").
+    - 8.5 no data, the EU project, the season.
+  - `src/lib/bot/roommate-readouts.test.ts`: a stage 2 block (11 tests) plus one self-test. It covers:
+    - the reused event, property, table and column checks over §8;
+    - every query takes `{switch_at}` and `{readout_at}`;
+    - query G's definitions (qualifying, active at switch, the windows, completer, outcome values ⊂ `OUTCOMES`, outcome persons need a match);
+    - query H's same-day `via = 'push'` against `CARDS_VIA`;
+    - query I's contexts against the `track` calls;
+    - query J's pair conditions against `formMutualMatch`;
+    - no personal data: a `tg_username` only in `IS (NOT) NULL`, no `chat_id`;
+    - the rules, dates and example arithmetic.
+  - `docs/specs/README.md`: FR-43 → Done (the FR-43 (Q-15) row stays Blocked with T110).
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-readouts.test.ts`: 24 passed.
+  - Mutation check: `properties.via` → `properties.via_kind`, `b.kind` → `b.kinds`, `matched AND` dropped from outcome persons → 5 failures naming all three; reverted.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2944 tests;
+    - build OK.
+  - `next-env.d.ts` restored. No query run against PostHog or any database; nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Assumption (query shape, spec 05):**
+    - `{readout_at}` is switch + 14 days to the minute, so "created or renewed ≥ 14 days before the readout" means "before the switch" at the 14-day readout. The final readout ends at `2027-04-01 00:00:00`.
+    - If the switch went off and on again, the windows count from the first switch-on, and the readout names both moments.
+    - H12 "same day" is the Europe/Warsaw calendar day of the tap. It is counted as persons and as person-days.
+    - A28 `has_username` is read from the person's last save.
+  - **Agent's readings to confirm:**
+    1. E15's definitions are applied per person, as written. A person who deleted before the switch and created again is not qualifying. A profile that expired and was renewed before the switch is left out of "active at switch". A profile hidden before the switch stays in both.
+    2. With fewer than 10 qualifying persons only the match-rate rules "cannot be read". The browsing rule (no pair among ≥ 20 browsing persons) is a count and is still applied.
+    3. Until Q-15 (T110) is answered, the rules read the E15 rate. The active-at-switch rate is reported next to it without a rule.
+  - **Not decided, for the owner:**
+    - a 14-day match rate between 15 % and 30 %;
+    - ≥ 10 pairs with fewer than 3 outcome persons at about 2027-03-31.
+      D52 and D60 cover neither case; the doc says so (§8.3).
+  - No new copy, event, table or migration.
+- Next: `node scripts/ralph-tasks.mjs next` (now T111, the past move-in month at save, found in T074; T105, the PRD 3 final check, FR-44, comes after the remaining tasks).

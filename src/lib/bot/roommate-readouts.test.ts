@@ -4,7 +4,12 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { activeProfilesWhere } from '@/lib/roommate/counts';
-import { BUDGET_BANDS, DRAFT_LIFE_DAYS } from '@/lib/roommate/rules';
+import {
+  BUDGET_BANDS,
+  DRAFT_LIFE_DAYS,
+  OUTCOMES,
+  OUTCOME_QUESTION_DAYS,
+} from '@/lib/roommate/rules';
 
 import { trackCalls } from './track-calls.test-support';
 
@@ -12,9 +17,10 @@ vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 
 /**
  * The roommate readout queries in `docs/analytics/activation-funnels.md` against the code (spec 05
- * §Stage 1 readout, FR-42): every event a HogQL query or the prose names is sent by a `track` call,
- * every property it reads is sent by one of the query's events, every table and column of the
- * read-only SQL is in `prisma/schema.prisma`, the SQL's "active" is the counts' rule, and no query
+ * §Stage 1 readout, FR-42, and §Stage 2 readout, FR-43): every event a HogQL query or the prose
+ * names is sent by a `track` call, every property it reads is sent by one of the query's events,
+ * every table and column of the read-only SQL is in `prisma/schema.prisma`, the stage 1 SQL's
+ * "active" is the counts' rule, the stage 2 numbers follow spec 05's definitions, and no query
  * returns personal data. Nothing here runs a query.
  */
 
@@ -22,6 +28,8 @@ const ROOT = process.cwd();
 const DOC = readFileSync(join(ROOT, 'docs/analytics/activation-funnels.md'), 'utf8');
 const SCHEMA = readFileSync(join(ROOT, 'prisma/schema.prisma'), 'utf8');
 const POSTING_LOG = readFileSync(join(ROOT, 'docs/marketing/roommate-posting-log.md'), 'utf8');
+const MATCHING_SOURCE = readFileSync(join(ROOT, 'src/lib/bot/roommate-matching.ts'), 'utf8');
+const STORE_SOURCE = readFileSync(join(ROOT, 'src/lib/roommate/store.ts'), 'utf8');
 
 /** The text of the `## <n>. <title>` section, up to the next `## ` heading. */
 function docSection(doc: string, title: string): string {
@@ -161,6 +169,21 @@ function sqlProblems(
   return { problems, checked };
 }
 
+/** Every `tg_username` that is not read as `IS NULL` / `IS NOT NULL` (a username in a result). */
+function readUsernames(code: string): string[] {
+  return [
+    ...withoutComments(code).matchAll(/\b\w*\.?tg_username\b(?!\s+IS\s+(?:NOT\s+)?NULL)/g),
+  ].map((m) => m[0]);
+}
+
+/** The query block that starts `-- HogQL. Query <letter>,` or `-- Read-only SQL. Query <letter>,`. */
+function queryBlock(blocks: Block[], letter: string): string {
+  const pattern = new RegExp(`^-- (?:HogQL|Read-only SQL)\\. Query ${letter},`);
+  const block = blocks.find(({ code }) => pattern.test(code));
+  if (!block) throw new Error(`query ${letter} not found`);
+  return withoutComments(block.code);
+}
+
 const SECTION = docSection(DOC, 'Roommate stage 1 (E14)');
 const BLOCKS = sqlBlocks(SECTION);
 const HOGQL = BLOCKS.filter((block) => block.kind === 'hogql');
@@ -280,7 +303,207 @@ describe('the roommate stage 1 readout (activation-funnels.md)', () => {
   });
 });
 
+const STAGE_2 = docSection(DOC, 'Roommate stage 2 (E15)');
+const STAGE_2_BLOCKS = sqlBlocks(STAGE_2);
+const STAGE_2_HOGQL = STAGE_2_BLOCKS.filter((block) => block.kind === 'hogql');
+const STAGE_2_SQL = STAGE_2_BLOCKS.filter((block) => block.kind === 'sql');
+
+/** `toDateTime('{switch_at}', ...)` / `{readout_at}` as the HogQL writes them. */
+const AT = (name: 'switch_at' | 'readout_at') => `toDateTime\\('\\{${name}\\}', 'Europe/Warsaw'\\)`;
+
+describe('the roommate stage 2 readout (activation-funnels.md)', () => {
+  it('has the parts of spec 05 §Stage 2 readout', () => {
+    for (const part of [
+      '### 8.1 HogQL',
+      '### 8.2 Read-only SQL',
+      '### 8.3 Rules',
+      '### 8.4 Worked examples',
+      '### 8.5 No data, the PostHog project and the season',
+    ]) {
+      expect(STAGE_2).toContain(part);
+    }
+    const text = STAGE_2.replace(/\s+/g, ' ');
+    expect(text).toContain('"Switch on at:"');
+    expect(text).toContain('**No data, not 0.**');
+    expect(text).toContain('**Open** (PRD 3 Q-15');
+    expect(text).toContain(
+      `${OUTCOME_QUESTION_DAYS} days after the match (\`OUTCOME_QUESTION_DAYS\`)`,
+    );
+  });
+
+  it('marks every query as HogQL or read-only SQL, and each takes {switch_at}', () => {
+    expect(STAGE_2_BLOCKS.filter((block) => block.kind === 'unknown')).toEqual([]);
+    expect(STAGE_2_HOGQL.length).toBeGreaterThanOrEqual(3);
+    expect(STAGE_2_SQL.length).toBeGreaterThanOrEqual(1);
+    for (const block of STAGE_2_BLOCKS) {
+      expect(withoutComments(block.code)).toContain("'{switch_at}'");
+      expect(withoutComments(block.code)).toContain("'{readout_at}'");
+    }
+  });
+
+  it('reads only events the code sends, with properties those events carry', () => {
+    for (const block of STAGE_2_HOGQL) expect(hogqlProblems(block.code, SENT)).toEqual([]);
+  });
+
+  it('names only events the code sends, in the prose too', () => {
+    const named = roommateEventNames(STAGE_2);
+    expect(named).toEqual(
+      expect.arrayContaining([
+        'tg_roommate_matched',
+        'tg_roommate_outcome',
+        'tg_roommate_cards_viewed',
+        'tg_roommate_push_sent',
+        'tg_roommate_push_opted_out',
+        'tg_roommate_username_prompted',
+        'tg_roommate_username_set',
+      ]),
+    );
+    expect(named.filter((event) => !SENT.has(event))).toEqual([]);
+  });
+
+  it('reads only tables and columns of the schema', () => {
+    let checked = 0;
+    for (const block of STAGE_2_SQL) {
+      const result = sqlProblems(block.code, TABLES);
+      expect(result.problems).toEqual([]);
+      checked += result.checked;
+    }
+    expect(checked).toBeGreaterThanOrEqual(20);
+  });
+
+  it('counts qualifying persons, both match rates, pairs, outcome and browsing persons (query G)', () => {
+    const g = queryBlock(STAGE_2_HOGQL, 'G');
+    const qualifying = new RegExp(
+      `event IN \\('tg_roommate_profile_created', 'tg_roommate_profile_renewed'\\)\\s+AND timestamp < ${AT('readout_at')} - INTERVAL 14 DAY\\) > 0\\s+AND countIf\\(event = 'tg_roommate_profile_deleted'\\s+AND timestamp < ${AT('switch_at')}\\) = 0\\) AS qualifying\\b`,
+    );
+    expect(g).toMatch(qualifying);
+    const activeAtSwitch = new RegExp(
+      `event IN \\('tg_roommate_profile_expired', 'tg_roommate_profile_deleted'\\)\\s+AND timestamp < ${AT('switch_at')}\\) = 0\\) AS active_at_switch\\b`,
+    );
+    expect(g).toMatch(activeAtSwitch);
+    const inWindow = (event: string) =>
+      new RegExp(
+        `event = '${event}'(?:(?!countIf)[\\s\\S])*?AND timestamp >= ${AT('switch_at')}\\s+AND timestamp < ${AT('readout_at')}\\)`,
+      );
+    for (const event of [
+      'tg_roommate_matched',
+      'tg_roommate_outcome',
+      'tg_roommate_cards_viewed',
+    ]) {
+      expect(g).toMatch(inWindow(event));
+    }
+    expect(g).toContain('countIf(qualifying AND matched) AS qualifying_with_match');
+    expect(g).toContain(
+      'countIf(qualifying AND active_at_switch AND matched) AS active_at_switch_with_match',
+    );
+    expect(g).toContain('countIf(matched AND good_outcome) AS outcome_persons');
+    expect(g).toContain('countIf(browsing) AS browsing_persons');
+
+    expect(g).toContain("coalesce(toString(properties.role), '') = 'completer'");
+    expect(MATCHING_SOURCE).toContain(
+      "track(ctx.chat!.id, 'tg_roommate_matched', { role: 'completer' })",
+    );
+    const outcomes = /properties\.outcome\), ''\) IN \(([^)]*)\)/.exec(g)?.[1] ?? '';
+    expect(outcomes).toBe("'renting_together', 'talking'");
+    expect(OUTCOMES).toEqual(expect.arrayContaining(['renting_together', 'talking']));
+  });
+
+  it('reads the push for H12 through via=push on the same Warsaw day (query H)', () => {
+    const h = queryBlock(STAGE_2_HOGQL, 'H');
+    expect(h).toContain("toDate(toTimeZone(timestamp, 'Europe/Warsaw')) AS day");
+    expect(h).toContain('GROUP BY distinct_id, day');
+    expect(h).toContain("countIf(event = 'tg_roommate_push_sent') > 0) AS pushed");
+    expect(h).toMatch(
+      /event = 'tg_roommate_cards_viewed'\s+AND coalesce\(toString\(properties\.via\), ''\) = 'push'\) > 0\) AS viewed_via_push/,
+    );
+    expect(h).toContain('countIf(pushed AND viewed_via_push) AS push_days_viewed');
+    expect(h).toContain("countIf(event = 'tg_roommate_push_opted_out')");
+    expect(MATCHING_SOURCE).toMatch(/const CARDS_VIA = \{[^}]*\bp: 'push'/);
+  });
+
+  it('reads A28 from has_username and the prompts by context (query I)', () => {
+    const i = queryBlock(STAGE_2_HOGQL, 'I');
+    expect(i).toContain('properties.has_username');
+    for (const context of ['browse', 'reveal']) {
+      expect(i).toContain(`coalesce(toString(properties.context), '') = '${context}'`);
+      expect(MATCHING_SOURCE).toContain(`'tg_roommate_username_set', { context: '${context}' }`);
+      expect(MATCHING_SOURCE).toContain(
+        `'tg_roommate_username_prompted', { context: '${context}' }`,
+      );
+    }
+  });
+
+  it('cross-checks pairs as formMutualMatch forms them and counts pairs waiting on a username (query J)', () => {
+    expect(STORE_SOURCE).toMatch(/WHERE kind = 'interest'\s+AND matched_at IS NULL/);
+    expect(STORE_SOURCE).toMatch(/SET matched_at = \$\{now\}/);
+    const j = queryBlock(STAGE_2_SQL, 'J');
+    for (const condition of [
+      'b.from_profile_id = r.to_profile_id AND b.to_profile_id = r.from_profile_id',
+      "r.kind = 'interest'",
+      "b.kind = 'interest'",
+      'r.matched_at IS NOT NULL',
+      'b.matched_at IS NOT NULL',
+      'r.from_profile_id < r.to_profile_id',
+      '(r.revealed_at IS NOT NULL AND b.revealed_at IS NOT NULL) AS revealed',
+      '(p.tg_username IS NULL OR q.tg_username IS NULL) AS username_missing',
+      'count(*) FILTER (WHERE NOT x.revealed AND x.username_missing) AS pairs_waiting_on_username',
+    ]) {
+      expect(j).toContain(condition);
+    }
+  });
+
+  it('returns no personal data', () => {
+    for (const block of STAGE_2_BLOCKS) {
+      const code = withoutComments(block.code);
+      expect(readUsernames(code)).toEqual([]);
+      for (const forbidden of [
+        'chat_id',
+        '.about',
+        '.gender',
+        '.prefers',
+        'start_payload',
+        'SELECT *',
+        'groupArray',
+      ]) {
+        expect(code, forbidden).not.toContain(forbidden);
+      }
+    }
+  });
+
+  it('states the rules of D52 and D60 and the worked examples', () => {
+    const text = STAGE_2.replace(/\s+/g, ' ');
+    for (const rule of [
+      'if the match rate is ≥ 30 %',
+      'fewer than 15 % of qualifying persons have a match',
+      'no pair formed (`pairs = 0`) among 20 or more browsing persons',
+      '**Fewer than 10 qualifying persons:** report counts only',
+      'continue if there are ≥ 10 pairs and ≥ 3 outcome persons; **stop** (D60) below 10 pairs',
+      'Outcomes are counted as persons (D60)',
+      '`2027-04-01 00:00:00`',
+    ]) {
+      expect(text).toContain(rule);
+    }
+    for (const date of ['2027-01-08', '2027-01-22', '2027-03-31']) expect(text).toContain(date);
+    expect(text).toContain('8 ÷ 24 = 33 %');
+    expect(Math.round((8 / 24) * 100)).toBe(33);
+    expect(text).toContain('3 ÷ 24 = 12.5 %');
+    expect((3 / 24) * 100).toBe(12.5);
+    expect(text).toContain('5 pairs so far');
+    expect(text).toContain('22 browsing persons, no `completer` event');
+    expect(text).toContain('"the rule cannot be read"');
+  });
+});
+
 describe('the readout checks themselves', () => {
+  it('catch a username read into a result', () => {
+    expect(
+      readUsernames(
+        'SELECT p.tg_username, count(*) FROM roommate_profiles p WHERE q.tg_username IS NULL',
+      ),
+    ).toEqual(['p.tg_username']);
+    expect(readUsernames('WHERE p.tg_username IS NOT NULL OR tg_username IS NULL')).toEqual([]);
+  });
+
   it('catch an unknown event, prefix or property and a listed person', () => {
     const bad = [
       "SELECT distinct_id, countIf(event = 'tg_roommate_profile_saved') AS saved",

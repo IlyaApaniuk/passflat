@@ -1,15 +1,16 @@
 # Activation funnels (PRD 1, PRD 3)
 
 How to read the PRD 1 activation funnels in PostHog and in the database, the events of PRD 3's
-roommate matching (§1) and the roommate stage 1 readout (§7). Spec:
+roommate matching (§1) and the roommate stage 1 and stage 2 readouts (§7, §8). Spec:
 `docs/specs/05-measurement-docs.md` §Activation funnels document (FR-47, FR-5). Experiments: E8
 (roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`; E14 (roommate stage 1) in
-§7.
+§7; E15 (roommate stage 2) in §8.
 
 Written on 2026-11-19 from the code at `23e0c34`; the PRD 3 roommate events (bot, and the web
 values `intent=find_flatmate` and `telegram_bot_opened` `source=roommate`) were added on
 2026-11-19 from the code at `541ae34` (spec 05 §PRD 3: roommate docs, FR-40), and §7 on
-2026-11-19 from the code at `79a9361` (spec 05 §Stage 1 readout, FR-42). Every event and
+2026-11-19 from the code at `79a9361` (spec 05 §Stage 1 readout, FR-42), and §8 on 2026-11-19
+from the code at `c14ec61` (spec 05 §Stage 2 readout, FR-43). Every event and
 property below was checked by a search of `src/` (see [How this was checked](#how-this-was-checked)), not copied from the
 specs. None of the queries has been run: loop iterations never query PostHog. HogQL and SQL were
 checked by reading only, so run each one on a short interval before you rely on it.
@@ -22,7 +23,8 @@ checked by reading only, so run each one on a short interval before you rely on 
 > page is wrong there (see [Limitations](#6-limitations)).
 
 This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
-§6 and `docs/product/experiments.md`), and so are E14's (D52, D58, D59; quoted in §7). It contains no A/B
+§6 and `docs/product/experiments.md`), and so are E14's (D52, D58, D59; quoted in §7) and E15's
+(D52, D60; quoted in §8). It contains no A/B
 tests and no revenue forecasts. Read counts, not rates, while the samples are small.
 
 ## 1. Event table
@@ -1066,6 +1068,287 @@ decides "continue the test".
   (`docs/research/roommate-fit-and-test-2026-11-19.md`, "Seasonality"). A null result in January
   is weak evidence and a pass is strong evidence; the readout says so next to its result.
 
+## 8. Roommate stage 2 (E15)
+
+The stage 2 readout of PRD 3 (FR-43, spec 05 §Stage 2 readout; E15 in
+`docs/product/experiments.md`, H15, and the push reading for H12; BRD A28). The thresholds are the
+owner's (D52, D60), quoted here, not set here; they are **Assumptions** he may change. The query
+shapes are this document's (**Assumption**). Nothing here has been run: loop iterations never query
+PostHog or the production database. `src/lib/bot/roommate-readouts.test.ts` checks the event,
+property, table and column names of the queries against the `track(` calls in `src/` and
+`prisma/schema.prisma`.
+
+Parameters (replace them as text before you run a query; Europe/Warsaw, the end is exclusive):
+
+- **`{switch_at}`:** the moment `ROOMMATE_MATCHING_ENABLED` went on, from the "Switch on at:" line
+  of `docs/marketing/roommate-posting-log.md` (also a PostHog annotation, spec 07 §Switch), written
+  `YYYY-MM-DD HH:MM:SS`, for example `2027-01-08 10:30:00`. No stage 2 event exists before it (§1).
+  If the switch went off and on again in between, the readout names both moments; the queries count
+  from the first.
+- **`{readout_at}`:** the end of the counted window. For the 14-day readout, `{switch_at}` plus 14
+  days at the same clock time (`2027-01-22 10:30:00` in the example); run it at or after that
+  moment. For the final readout, `2027-04-01 00:00:00`, so the window ends with 2027-03-31.
+
+| Number                       | What it counts                                                                                                                                                              | From                    |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Qualifying persons           | persons with `tg_roommate_profile_created` or `tg_roommate_profile_renewed` ≥ 14 days before `{readout_at}` and no `tg_roommate_profile_deleted` before `{switch_at}` (E15) | PostHog, query G        |
+| Match rate                   | qualifying persons with ≥ 1 `tg_roommate_matched` (either role) from `{switch_at}` to `{readout_at}` ÷ qualifying persons                                                   | PostHog, query G        |
+| Match rate, active at switch | the same over qualifying persons with no `tg_roommate_profile_expired` or `tg_roommate_profile_deleted` before `{switch_at}`; reported without a rule (Q-15)                | PostHog, query G        |
+| Pairs                        | `tg_roommate_matched` events with `role = 'completer'` in the window: one per pair                                                                                          | PostHog, query G        |
+| Outcome persons              | persons with `tg_roommate_matched` in the window and a `tg_roommate_outcome` of `renting_together` or `talking` in it                                                       | PostHog, query G        |
+| Browsing persons             | persons with ≥ 1 `tg_roommate_cards_viewed` in the window                                                                                                                   | PostHog, query G        |
+| Push reading (H12)           | persons with `tg_roommate_push_sent`; of them, with a same-day `tg_roommate_cards_viewed` with `via = 'push'`; persons with `tg_roommate_push_opted_out`                    | PostHog, query H        |
+| A28                          | `has_username` at the save; `tg_roommate_username_prompted` → `tg_roommate_username_set` by `context`; pairs waiting on a username                                          | PostHog, query I; SQL J |
+| Mutual pairs among rows      | the cross-check of pairs (existing reaction rows only)                                                                                                                      | database, query J       |
+
+Every number except query J comes from PostHog, because a deleted profile deletes its reactions
+(E15 notes): a pair who found each other and deleted their profiles still counts in the events.
+
+### 8.1 HogQL
+
+Each query groups by person first, so it counts persons (and pairs as events), never lists one; it
+returns counts only, never a `distinct_id`.
+
+```sql
+-- HogQL. Query G, E15 (1): qualifying persons, both match rates, pairs, outcome persons and
+-- browsing persons, and the "no data" check. One row. Replace {switch_at} and {readout_at}.
+SELECT
+    sum(events_in_window) AS roommate_events_in_window,
+    countIf(qualifying) AS qualifying_persons,
+    countIf(qualifying AND matched) AS qualifying_with_match,
+    countIf(qualifying AND active_at_switch) AS qualifying_active_at_switch,
+    countIf(qualifying AND active_at_switch AND matched) AS active_at_switch_with_match,
+    countIf(matched) AS matched_persons,
+    sum(completer_events) AS pairs,
+    countIf(matched AND good_outcome) AS outcome_persons,
+    countIf(browsing) AS browsing_persons
+FROM (
+    SELECT
+        distinct_id,
+        countIf(timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) AS events_in_window,
+        (countIf(event IN ('tg_roommate_profile_created', 'tg_roommate_profile_renewed')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw') - INTERVAL 14 DAY) > 0
+            AND countIf(event = 'tg_roommate_profile_deleted'
+                AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw')) = 0) AS qualifying,
+        (countIf(event IN ('tg_roommate_profile_expired', 'tg_roommate_profile_deleted')
+            AND timestamp < toDateTime('{switch_at}', 'Europe/Warsaw')) = 0) AS active_at_switch,
+        (countIf(event = 'tg_roommate_matched'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) > 0) AS matched,
+        countIf(event = 'tg_roommate_matched'
+            AND coalesce(toString(properties.role), '') = 'completer'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) AS completer_events,
+        (countIf(event = 'tg_roommate_outcome'
+            AND coalesce(toString(properties.outcome), '') IN ('renting_together', 'talking')
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) > 0) AS good_outcome,
+        (countIf(event = 'tg_roommate_cards_viewed'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')) > 0) AS browsing
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND startsWith(event, 'tg_roommate_')
+        AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')
+    GROUP BY distinct_id
+)
+```
+
+```sql
+-- HogQL. Query H, H12: the daily push from {switch_at} to {readout_at}. One row. A "day" is a
+-- Europe/Warsaw calendar day; a person counts once, a person-day once.
+SELECT
+    countIf(push_days > 0) AS persons_pushed,
+    countIf(push_days_viewed > 0) AS persons_pushed_and_viewed_same_day,
+    sum(push_days) AS person_days_pushed,
+    sum(push_days_viewed) AS person_days_pushed_and_viewed,
+    countIf(opted_out) AS persons_opted_out
+FROM (
+    SELECT
+        distinct_id,
+        countIf(pushed) AS push_days,
+        countIf(pushed AND viewed_via_push) AS push_days_viewed,
+        (sum(opt_outs) > 0) AS opted_out
+    FROM (
+        SELECT
+            distinct_id,
+            toDate(toTimeZone(timestamp, 'Europe/Warsaw')) AS day,
+            (countIf(event = 'tg_roommate_push_sent') > 0) AS pushed,
+            (countIf(event = 'tg_roommate_cards_viewed'
+                AND coalesce(toString(properties.via), '') = 'push') > 0) AS viewed_via_push,
+            countIf(event = 'tg_roommate_push_opted_out') AS opt_outs
+        FROM events
+        WHERE startsWith(distinct_id, 'tg_')
+            AND event IN ('tg_roommate_push_sent', 'tg_roommate_cards_viewed',
+                'tg_roommate_push_opted_out')
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')
+            AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')
+        GROUP BY distinct_id, day
+    )
+    GROUP BY distinct_id
+)
+```
+
+```sql
+-- HogQL. Query I, A28: the username at the save (the person's last `tg_roommate_profile_created`
+-- before {readout_at}) and the username prompts from {switch_at} by context. One row.
+SELECT
+    countIf(created) AS persons_created,
+    countIf(created AND last_save_had_username = 'true') AS saved_with_username,
+    countIf(created AND last_save_had_username != 'true') AS saved_without_username,
+    countIf(prompted_browse) AS persons_prompted_browse,
+    countIf(prompted_browse AND set_browse) AS persons_prompted_and_set_browse,
+    countIf(prompted_reveal) AS persons_prompted_reveal,
+    countIf(prompted_reveal AND set_reveal) AS persons_prompted_and_set_reveal
+FROM (
+    SELECT
+        distinct_id,
+        (countIf(event = 'tg_roommate_profile_created') > 0) AS created,
+        argMaxIf(coalesce(toString(properties.has_username), ''), timestamp,
+            event = 'tg_roommate_profile_created') AS last_save_had_username,
+        (countIf(event = 'tg_roommate_username_prompted'
+            AND coalesce(toString(properties.context), '') = 'browse'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')) > 0) AS prompted_browse,
+        (countIf(event = 'tg_roommate_username_set'
+            AND coalesce(toString(properties.context), '') = 'browse'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')) > 0) AS set_browse,
+        (countIf(event = 'tg_roommate_username_prompted'
+            AND coalesce(toString(properties.context), '') = 'reveal'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')) > 0) AS prompted_reveal,
+        (countIf(event = 'tg_roommate_username_set'
+            AND coalesce(toString(properties.context), '') = 'reveal'
+            AND timestamp >= toDateTime('{switch_at}', 'Europe/Warsaw')) > 0) AS set_reveal
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND event IN ('tg_roommate_profile_created', 'tg_roommate_username_prompted',
+            'tg_roommate_username_set')
+        AND timestamp < toDateTime('{readout_at}', 'Europe/Warsaw')
+    GROUP BY distinct_id
+)
+```
+
+Read them with these facts:
+
+- **Match rate** = `qualifying_with_match` ÷ `qualifying_persons`; **active at switch** =
+  `active_at_switch_with_match` ÷ `qualifying_active_at_switch`. At the 14-day readout "≥ 14 days
+  before the readout" is "before the switch". The rules (§8.3) read the first; whether they should
+  read the second is **Open** (PRD 3 Q-15, blocked task T110), so both are reported.
+- E15's definitions are applied as written, per person: a person who deleted a profile before the
+  switch and created a new one is not qualifying; a person whose profile expired and was renewed
+  before the switch is left out of "active at switch" although it was active then. A profile hidden
+  by moderation before the switch stays in both (a hide sends `tg_roommate_profile_hidden`, not an
+  expiry or a delete). Name such cases in the readout when they change a result.
+- `tg_roommate_matched` fires once per person of a new pair: `role = 'completer'` for the tap that
+  formed it, `role = 'waiting'` under the other person's chat (§1). So `pairs` counts each pair once,
+  and `matched_persons` is about twice `pairs`.
+- **Outcome persons** count only persons who also have `tg_roommate_matched` in the window, and
+  both people of one pair may answer (D60: outcomes are persons). The outcome question goes out
+  21 days after the match (`OUTCOME_QUESTION_DAYS`), so the 14-day readout shows almost none: only
+  "Found someone here" after a delete, sent as `renting_together` with `asked = 'delete'`. The
+  person's own answer, not a verified move-in.
+- `tg_roommate_cards_viewed` is one per "Show people" tap with its `via` (`card`, `open_message`,
+  `push`, `next`). The H12 reading uses `via = 'push'`, the button under the daily push; a tap on an
+  older push's button counts on the day of the tap. `tg_roommate_push_sent` is one per delivered push,
+  at most one a day per person; `tg_roommate_push_opted_out` only for the tap that turned it off.
+  Reported without a rule.
+- **A28:** `has_username` is read from the person's last save, so a person who saved twice counts
+  once. A prompt with `context = 'browse'` comes before the cards, one with `context = 'reveal'`
+  after a mutual match; `tg_roommate_username_set` fires on Done when a username is found. Reported
+  without a rule; query J adds the pairs that wait on a username now.
+
+### 8.2 Read-only SQL
+
+Run it in the Supabase SQL editor of the production project, on the readout day, and write the
+numbers down; it reads the present only. It returns counts only: the usernames are read only as
+`IS NULL`, never selected.
+
+A pair is the two `interest` rows of two profiles, both with `matched_at` set by one statement
+(`formMutualMatch` in `src/lib/roommate/store.ts`); each row's `revealed_at` marks the reveal to
+the person who gave it (`claimReveal`).
+
+```sql
+-- Read-only SQL. Query J, E15 (2) and A28: mutual pairs among the existing rows, at the moment
+-- of the run. One row. Counts only. Replace {switch_at} and {readout_at}.
+WITH pairs AS (
+    SELECT
+        r.matched_at,
+        (r.revealed_at IS NOT NULL AND b.revealed_at IS NOT NULL) AS revealed,
+        (p.tg_username IS NULL OR q.tg_username IS NULL) AS username_missing
+    FROM roommate_reactions r
+    JOIN roommate_reactions b
+        ON b.from_profile_id = r.to_profile_id AND b.to_profile_id = r.from_profile_id
+    JOIN roommate_profiles p ON p.id = r.from_profile_id
+    JOIN roommate_profiles q ON q.id = r.to_profile_id
+    WHERE r.kind = 'interest'
+        AND b.kind = 'interest'
+        AND r.matched_at IS NOT NULL
+        AND b.matched_at IS NOT NULL
+        AND r.from_profile_id < r.to_profile_id
+)
+SELECT
+    count(*) AS mutual_pairs,
+    count(*) FILTER (WHERE x.matched_at >= ('{switch_at}'::timestamp AT TIME ZONE 'Europe/Warsaw')
+        AND x.matched_at < ('{readout_at}'::timestamp AT TIME ZONE 'Europe/Warsaw'))
+        AS mutual_pairs_in_window,
+    count(*) FILTER (WHERE x.revealed) AS pairs_revealed_to_both,
+    count(*) FILTER (WHERE NOT x.revealed) AS pairs_not_revealed,
+    count(*) FILTER (WHERE NOT x.revealed AND x.username_missing) AS pairs_waiting_on_username
+FROM pairs x;
+```
+
+How to read the cross-check:
+
+- `mutual_pairs_in_window` ≤ `pairs` of query G: a deleted profile deletes its reactions (and with
+  them the pair's rows), so rows only undercount. More rows than `completer` events means events
+  were lost; say so and use the larger number with that note.
+- `pairs_waiting_on_username`: matched, the reveal not delivered to both, and a username missing on
+  either side (spec 07 §Reveal: the reveal waits for Done). Many of them is A28's risk: "matches
+  stall at the reveal". `pairs_not_revealed` also holds pairs where a profile is no longer active or
+  a chat blocked the bot; the send-hour retry picks a pair up only when both are active with a
+  username.
+
+### 8.3 Rules
+
+The thresholds (D52 and D60, **Assumptions** set by the owner). The match-rate rules read the E15
+match rate; the active-at-switch rate is reported next to it without a rule (Q-15 open, §8.1).
+
+- **At switch + 14 days, continue** if the match rate is ≥ 30 %.
+- **At switch + 14 days, stop** (D60) if fewer than 15 % of qualifying persons have a match, or if
+  no pair formed (`pairs = 0`) among 20 or more browsing persons.
+- **Fewer than 10 qualifying persons:** report counts only; the match-rate rules "cannot be read"
+  (E15). The browsing rule is a count and is read as above.
+- **Between 15 % and 30 %** no rule holds; D52 and D60 do not say what follows. The readout reports
+  the numbers and the owner decides.
+- **At about 2027-03-31** (query G with `{readout_at}` = `2027-04-01 00:00:00`, query J that day):
+  continue if there are ≥ 10 pairs and ≥ 3 outcome persons; **stop** (D60) below 10 pairs. With
+  ≥ 10 pairs but fewer than 3 outcome persons no rule holds, and the owner decides.
+- Outcomes are counted as persons (D60).
+
+### 8.4 Worked examples
+
+The E15 examples (`docs/product/experiments.md`, "E15, stop rule (D60)"): switch 2027-01-08,
+readout 2027-01-22.
+
+| Case             | Numbers                                        | Rule                              | Result                                 |
+| ---------------- | ---------------------------------------------- | --------------------------------- | -------------------------------------- |
+| Holds            | 24 qualifying, 8 with a match: 8 ÷ 24 = 33 %   | continue ≥ 30 %                   | the 14-day rule holds; 5 pairs so far  |
+| Stop on the rate | 24 qualifying, 3 with a match: 3 ÷ 24 = 12.5 % | stop < 15 %                       | **stop**                               |
+| Stop on browsing | 22 browsing persons, no `completer` event      | stop: no pair among ≥ 20 browsing | **stop**                               |
+| Too few to read  | 9 qualifying, 4 with a match                   | fewer than 10 qualifying          | counts only: "the rule cannot be read" |
+
+In the first case the pair rule waits for about 2027-03-31: 5 pairs so far is not yet "below 10".
+
+### 8.5 No data, the PostHog project and the season
+
+- **No data, not 0.** If query G returns `roommate_events_in_window = 0`, every PostHog number of
+  the readout is "no data", never "0 % match rate" and never "stop": the events did not arrive, or
+  `{switch_at}` is wrong. Look for `tg_roommate_cards_viewed` in Live Events first. With events
+  present, 0 pairs is a real 0.
+- **PostHog project.** The EU Cloud project, as in §7.6 (D30).
+- **Season.** The 14-day readout falls in January, before the February summer-semester wave
+  (§7.6); a null result then is weak evidence and the readout says so.
+
 ## How this was checked
 
 Searches over `src/` (non-test files) on 2026-11-19:
@@ -1092,6 +1375,14 @@ Searches over `src/` (non-test files) on 2026-11-19:
   `src/lib/roommate/rules.ts`, `src/lib/roommate/website-counts.ts`, and the `RoommateProfile` and
   `TelegramChat` models; `src/lib/bot/roommate-readouts.test.ts` checks the queries' events,
   properties, tables and columns, the "active" filter and the bands against the code and the schema;
+- for §8: `handleShowTap`, `showNextCard` (`CARDS_VIA`), `handleInterestTap`, `handleUsernameDone`,
+  `handlePushToggle` and `handleOutcomeTap` in `src/lib/bot/roommate-matching.ts`, `revealPair` in
+  `src/lib/bot/roommate-reveal.ts`, the push and outcome-question jobs and the housekeeping in
+  `src/lib/bot/roommate-daily.ts`, `handleDeleteReason` and the renewal in
+  `src/lib/bot/roommate-flow.ts`, `formMutualMatch`, `claimReveal` and `pendingRevealPartners` in
+  `src/lib/roommate/store.ts`, `OUTCOMES`, `OUTCOME_QUESTION_DAYS` and `profileCreatedProperties`
+  (`has_username`) in `src/lib/roommate/rules.ts`, and the `RoommateReaction` and `RoommateProfile`
+  models; the same test checks §8's queries;
 - posthog-js 1.374 (`node_modules/posthog-js/lib/src/utils/event-utils.js`, `session-props.js`,
   `posthog-core.js`) for the automatic properties and `register_once`;
 - the tables in `prisma/schema.prisma` and their migrations.

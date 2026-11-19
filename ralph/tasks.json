@@ -790,13 +790,13 @@
       "title": "Stage 2 readout section (FR-43, E15)",
       "spec": "docs/specs/05-measurement-docs.md#stage-2-readout",
       "dependsOn": ["T103"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A 'Roommate stage 2 (E15)' section with the four points of spec 05 §Stage 2 readout: the match rate with {switch_at}, pairs, outcome persons (only persons with tg_roommate_matched), browsing persons, the H12 push reading through via=push, and the active-at-switch rate reported without a rule (Q-15 open); the SQL cross-check and the A28 events and counts; the continue and stop rules of D52 and D60; the worked examples",
         "Event and column names in the queries match the code; the loop runs no query"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D60."
     },
     {
