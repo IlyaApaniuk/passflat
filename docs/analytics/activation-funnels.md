@@ -1,13 +1,15 @@
 # Activation funnels (PRD 1, PRD 3)
 
-How to read the PRD 1 activation funnels in PostHog and in the database, and the events of PRD 3's
-roommate matching (§1). Spec:
+How to read the PRD 1 activation funnels in PostHog and in the database, the events of PRD 3's
+roommate matching (§1) and the roommate stage 1 readout (§7). Spec:
 `docs/specs/05-measurement-docs.md` §Activation funnels document (FR-47, FR-5). Experiments: E8
-(roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`.
+(roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`; E14 (roommate stage 1) in
+§7.
 
 Written on 2026-11-19 from the code at `23e0c34`; the PRD 3 roommate events (bot, and the web
 values `intent=find_flatmate` and `telegram_bot_opened` `source=roommate`) were added on
-2026-11-19 from the code at `541ae34` (spec 05 §PRD 3: roommate docs, FR-40). Every event and
+2026-11-19 from the code at `541ae34` (spec 05 §PRD 3: roommate docs, FR-40), and §7 on
+2026-11-19 from the code at `79a9361` (spec 05 §Stage 1 readout, FR-42). Every event and
 property below was checked by a search of `src/` (see [How this was checked](#how-this-was-checked)), not copied from the
 specs. None of the queries has been run: loop iterations never query PostHog. HogQL and SQL were
 checked by reading only, so run each one on a short interval before you rely on it.
@@ -20,7 +22,7 @@ checked by reading only, so run each one on a short interval before you rely on 
 > page is wrong there (see [Limitations](#6-limitations)).
 
 This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
-§6 and `docs/product/experiments.md`). It contains no A/B
+§6 and `docs/product/experiments.md`), and so are E14's (D52, D58, D59; quoted in §7). It contains no A/B
 tests and no revenue forecasts. Read counts, not rates, while the samples are small.
 
 ## 1. Event table
@@ -776,6 +778,294 @@ ORDER BY week, event, code
 - **`address_checked` is 0 since 2026-09-14**; unverified (see 2.2).
 - **Not run.** No query here has been run against PostHog or the production database.
 
+## 7. Roommate stage 1 (E14)
+
+The stage 1 readout of PRD 3 (FR-42, spec 05 §Stage 1 readout; E14 in
+`docs/product/experiments.md`, H14). The thresholds are the owner's (D52, D58, D59), quoted here,
+not set here; they are **Assumptions** he may change. The query shapes are this document's
+(**Assumption**). Nothing here has been run: loop iterations never query PostHog or the
+production database. `src/lib/bot/roommate-readouts.test.ts` checks the event, property, table
+and column names of the queries against the `track(` calls in `src/` and `prisma/schema.prisma`.
+
+Dates:
+
+- **Day 0:** the day the PRD 3 stage 1 code is deployed to production (target about 2026-12-01).
+  No roommate event or row exists before it.
+- **Readout:** 2027-01-18 (a Monday); the owner decides on 2027-01-20 (D43). An extension (D59)
+  is read on 2027-02-28.
+- **Daily check:** every day from 2027-01-04 (D58, §7.4).
+
+| Number                   | What it counts                                                                                   | From                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------ |
+| Profiles                 | persons (`tg_<chatId>`) with ≥ 1 `tg_roommate_profile_created` from day 0 to the readout         | PostHog, query A         |
+| Active                   | active profiles at the moment the query runs (spec 06 §Counts)                                   | database, query D        |
+| Districts with ≥ 3       | districts named by ≥ 3 active profiles; an "any district" profile counts in none                 | database, queries D, E   |
+| Profiles per owner-hour  | profiles ÷ logged posting hours                                                                  | query A, the posting log |
+| Manual minutes a week    | logged manual minutes per full week, averaged over full weeks                                    | the posting log          |
+| Reported, without a rule | flow → profile by entry (A23), opted-in persons and profiles, "any" profiles, budget bands (A26) | queries B, A, D, F       |
+
+Profiles come from PostHog, not from the database, because a deleted profile leaves no row (E14
+notes): a person who deleted the profile, or whose expired profile was deleted, still counts, and
+a person who deleted and created again counts once. The database holds only the present: "active"
+cannot be rebuilt for an earlier day, so run queries D, E and F on the readout day itself and
+write the numbers down.
+
+### 7.1 HogQL
+
+Replace both dates before you run a query: the first with day 0, the second with the day after
+the last day counted (2027-01-19 for the readout, tomorrow for the daily check). Dates are
+Europe/Warsaw; the end is exclusive. Each query groups by person first, so it counts persons, never
+events; it returns counts only, never a `distinct_id`.
+
+```sql
+-- HogQL. Query A, E14 (1): persons from day 0, and the "no data" check. One row.
+-- `profiles` is the number the stop and go rules use.
+SELECT
+    sum(events) AS roommate_events,
+    countIf(started) AS persons_flow_started,
+    countIf(created) AS profiles,
+    countIf(started AND created) AS persons_started_and_created,
+    countIf(opted_in) AS persons_opted_in
+FROM (
+    SELECT
+        distinct_id,
+        count() AS events,
+        countIf(event = 'tg_roommate_flow_started') > 0 AS started,
+        countIf(event = 'tg_roommate_profile_created') > 0 AS created,
+        countIf(event = 'tg_roommate_browse_opted_in'
+            AND coalesce(toString(properties.already), '') != 'true') > 0 AS opted_in
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND startsWith(event, 'tg_roommate_')
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id
+)
+```
+
+```sql
+-- HogQL. Query B, E14 (1) and A23: the same persons by the entry of their first
+-- `tg_roommate_flow_started` (source and detail). Each person is in one row, so the column
+-- sums equal query A. Counts only.
+SELECT
+    entry_source,
+    entry_detail,
+    countIf(started) AS persons_flow_started,
+    countIf(created) AS profiles,
+    countIf(started AND created) AS persons_started_and_created,
+    countIf(opted_in) AS persons_opted_in
+FROM (
+    SELECT
+        distinct_id,
+        countIf(event = 'tg_roommate_flow_started') > 0 AS started,
+        countIf(event = 'tg_roommate_profile_created') > 0 AS created,
+        countIf(event = 'tg_roommate_browse_opted_in'
+            AND coalesce(toString(properties.already), '') != 'true') > 0 AS opted_in,
+        if(
+            started,
+            argMinIf(coalesce(toString(properties.entry_source), ''), timestamp,
+                event = 'tg_roommate_flow_started'),
+            argMinIf(coalesce(toString(properties.entry_source), ''), timestamp,
+                event = 'tg_roommate_profile_created')
+        ) AS entry_source,
+        if(
+            started,
+            argMinIf(coalesce(toString(properties.entry_detail), ''), timestamp,
+                event = 'tg_roommate_flow_started'),
+            ''
+        ) AS entry_detail
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND event IN ('tg_roommate_flow_started', 'tg_roommate_profile_created',
+            'tg_roommate_browse_opted_in')
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id
+)
+GROUP BY entry_source, entry_detail
+ORDER BY entry_source, entry_detail
+```
+
+Read them with these facts:
+
+- `entry_source` is `direct`, `tg`, `fb`, `ig`, `threads`, `web`, `bot_menu` or `other` (§1);
+  `entry_detail` is the group key of a `mate_<source>_<key>` link from the posting kit
+  (`docs/marketing/roommate-posts.md`), `roommate` for the website block, and empty when the link
+  had none. Only `tg_roommate_flow_started` carries `entry_detail`; a person with a profile but no
+  flow event in the window (a lost event) is counted under the profile's `entry_source` with an
+  empty detail.
+- **A23** (at least half of the people who start finish): `persons_started_and_created` ÷
+  `persons_flow_started`, reported without a rule; read counts while they are small. A draft lives
+  7 days after its last answer (`DRAFT_LIFE_DAYS`), so persons who started in the last 7 days may
+  still finish and the latest days undercount.
+- `persons_opted_in`: persons who tapped "Message me when matching opens" at least once (the tap
+  that switched it on, `already` not true). Switching it off on the own card sends no event, so
+  this is "ever opted in"; `opted_in_profiles` of query D is "opted in now".
+- Optional for A26: `tg_roommate_profile_created` also carries `budget_band`, the band of every
+  profile saved since day 0, deleted ones included; query F is the band of the active ones.
+
+### 7.2 Read-only SQL
+
+Run these in the Supabase SQL editor of the production project (the PostHog MCP cannot read the
+database). They only read, and they return counts only: never select `chat_id`, `tg_username`,
+`about` or a row id (`p.id` is used only inside `count(DISTINCT …)`).
+
+"Active" is the rule the bot's counts and the website block use (spec 06 §Counts,
+`activeProfilesWhere` in `src/lib/roommate/counts.ts`): `status = 'active'`, `expires_at` later
+than now (by time, so a profile the daily cron has not marked expired yet is not counted), and the
+chat neither blocked nor banned. The bot's counts reply also leaves out the viewer and the people
+they reported or were reported by, so a number a person sees in the bot is not a readout number.
+The website block on `/warsaw/roommate` has no viewer: it shows the same Warsaw total and the five
+most named districts, up to an hour old (`FLATMATE_COUNTS_REVALIDATE_SECONDS`).
+
+```sql
+-- Read-only SQL. Query D, E14 (2): active profiles, districts with >= 3, "any" and opted-in,
+-- at the moment of the run. One row. Counts only.
+WITH active AS (
+    SELECT p.id, p.district_slugs, p.any_district, p.notify_on_open_at, p.notified_open_at
+    FROM roommate_profiles p
+    JOIN telegram_chats c ON c.id = p.chat_id
+    WHERE p.status = 'active'
+        AND p.expires_at > now()
+        AND c.blocked_at IS NULL
+        AND c.roommate_banned_at IS NULL
+),
+per_district AS (
+    SELECT d.slug, count(DISTINCT a.id) AS profiles
+    FROM active a
+    CROSS JOIN unnest(a.district_slugs) AS d(slug)
+    WHERE NOT a.any_district
+    GROUP BY d.slug
+)
+SELECT
+    (SELECT count(*) FROM active a) AS active_profiles,
+    (SELECT count(*) FROM per_district pd WHERE pd.profiles >= 3) AS districts_with_3_or_more,
+    (SELECT count(*) FROM active a WHERE a.any_district) AS any_district_profiles,
+    (SELECT count(*) FROM active a
+        WHERE a.notify_on_open_at IS NOT NULL AND a.notified_open_at IS NULL) AS opted_in_profiles;
+```
+
+```sql
+-- Read-only SQL. Query E, E14 (2)-(3): active profiles naming each district, at the moment of
+-- the run. Named districts only: an "any district" profile is counted in none, and a profile
+-- naming several districts counts in each, so the rows do not add up to the active total.
+SELECT d.slug AS district, count(DISTINCT p.id) AS active_profiles
+FROM roommate_profiles p
+JOIN telegram_chats c ON c.id = p.chat_id
+CROSS JOIN unnest(p.district_slugs) AS d(slug)
+WHERE p.status = 'active'
+    AND p.expires_at > now()
+    AND c.blocked_at IS NULL
+    AND c.roommate_banned_at IS NULL
+    AND NOT p.any_district
+GROUP BY d.slug
+ORDER BY active_profiles DESC, district;
+```
+
+```sql
+-- Read-only SQL. Query F, A26: active profiles per budget band, at the moment of the run.
+SELECT coalesce(p.budget_band, 'none') AS budget_band, count(*) AS active_profiles
+FROM roommate_profiles p
+JOIN telegram_chats c ON c.id = p.chat_id
+WHERE p.status = 'active'
+    AND p.expires_at > now()
+    AND c.blocked_at IS NULL
+    AND c.roommate_banned_at IS NULL
+GROUP BY 1
+ORDER BY 1;
+```
+
+Budget bands, per person a month, all-in (`BUDGET_BANDS` in `src/lib/roommate/rules.ts`, D68):
+b1 ≤ 1,199 zł; b2 1,200 – 1,599; b3 1,600 – 1,999; b4 2,000 – 2,499; b5 ≥ 2,500. A26 asks
+whether per-person budgets reach the about 2,000 – 2,500 zł a Warsaw flat costs for two, which is
+b4 and b5. Reported without a rule.
+
+### 7.3 Rules
+
+The thresholds (D52, **Assumptions** set by the owner):
+
+- **Stop** if any holds: fewer than 15 profiles; fewer than 1 profile per owner-hour; more than 30
+  manual minutes a week (the average over full weeks).
+- **Go** to stage 2 if all hold: ≥ 30 profiles; ≥ 20 active; ≥ 3 districts with ≥ 3 active
+  profiles each.
+- **Between** (no stop rule holds and not every go rule does): stage 1 is extended once to
+  2027-02-28 with the same rules and the switch off (D59); on 2027-01-20 the owner then decides
+  "continue the test". The extended readout runs the same queries from the same day 0 (HogQL end
+  2027-03-01, the SQL on 2027-02-28) and applies the same stop and go rules; a second "between" is
+  the owner's call on that day.
+- **Not decided:** a stop rule can hold while every go rule holds too, for example 35 profiles over
+  40 logged posting hours (0.875 per owner-hour) with 25 active and 3 districts. D52 does not say
+  which wins; the readout reports both and the owner decides. The daily check (§7.4) reads only the
+  go numbers (D58).
+
+From the posting log (`docs/marketing/roommate-posting-log.md`):
+
+- **Owner-hours:** the sum of "Minutes" over every row dated from day 0 to the readout day, ÷ 60.
+  Profiles per owner-hour = profiles (query A) ÷ owner-hours. With no posting minutes logged the
+  ratio cannot be read: "no data", never "infinite".
+- **Manual minutes a week:** full weeks are Monday – Sunday (Europe/Warsaw) weeks that start on or
+  after day 0 and end before the readout day; with day 0 on 2026-12-01 these are the six weeks from
+  2026-12-07 to 2027-01-17. Sum "Manual minutes" over each full week's rows, then average over the
+  full weeks that have at least one row. A week without a row is "missing": the readout names it
+  and never counts it as 0 minutes. With every full week missing, the rule cannot be read.
+
+### 7.4 The daily check from 2027-01-04 (D58)
+
+Every day from 2027-01-04 the owner runs the go part of the rules:
+
+1. **Profiles:** query A with tomorrow as the end date, in PostHog. His own Claude session with the
+   PostHog MCP may run it; loop iterations never do (CLAUDE.md).
+2. **Active and districts with ≥ 3:** query D in the Supabase SQL editor, because the PostHog MCP
+   cannot read the database. The website block (§7.2) shows the same total and top districts up to
+   an hour old, as a quick look; query D is the number of record.
+
+The switch goes on at the first day on or after 2027-01-07 when all three go numbers hold (≥ 30
+profiles, ≥ 20 active, ≥ 3 districts with ≥ 3 each): set `ROOMMATE_MATCHING_ENABLED=true` in the
+production environment and redeploy (a changed variable applies only to a new deployment, spec 07
+§Switch), then write the moment on the "Switch on at:" line of the posting log and add it as a
+PostHog annotation; the stage 2 readout takes it as `{switch_at}`. From 2027-01-04 to 2027-01-06
+the check runs but the switch waits for 2027-01-07. If no day before the readout has all three,
+the switch waits for the 2027-01-18 readout and the 2027-01-20 decision. During an extension (D59)
+it stays off.
+
+### 7.5 Worked examples
+
+Go: the E14 golden case (`docs/product/experiments.md`, "E14, worked example"), readout
+2027-01-18.
+
+| Number                                | Value                                                              | Rule               | Result      |
+| ------------------------------------- | ------------------------------------------------------------------ | ------------------ | ----------- |
+| Profiles (query A)                    | 34                                                                 | stop < 15; go ≥ 30 | no stop; go |
+| Active on 2027-01-18 (query D)        | 22                                                                 | go ≥ 20            | go          |
+| Districts with ≥ 3 (queries D, E)     | 3: `mokotow` 6, `wola` 4, `ochota` 3 (`praga-poludnie` 2 does not) | go ≥ 3             | go          |
+| Profiles per owner-hour (log: 27.5 h) | 34 ÷ 27.5 = 1.24                                                   | stop < 1           | no stop     |
+| Manual minutes a week (log)           | 18                                                                 | stop > 30          | no stop     |
+
+No stop rule holds and every go rule holds: **go**. If the three go numbers had held on a day from
+2027-01-07, the switch would have gone on that day (§7.4).
+
+Between stop and go: 20 profiles; 1,000 posting minutes logged (16.7 h), so 20 ÷ 16.7 = 1.2 per
+owner-hour; 22 manual minutes a week; 14 active; 1 district with ≥ 3 (`mokotow` 4, `wola` 2). No
+stop rule holds (20 ≥ 15, 1.2 ≥ 1, 22 ≤ 30), and not every go rule does (20 < 30, 14 < 20, 1 < 3):
+stage 1 is **extended** to 2027-02-28 with the switch off (D59), and on 2027-01-20 the owner
+decides "continue the test".
+
+### 7.6 No data, the PostHog project and the season
+
+- **No data, not 0.** If query A returns `roommate_events = 0`, every PostHog number of the readout
+  is "no data", never "0 profiles" and never "stop": the events did not arrive (the PRD 3 code, its
+  migration or the PostHog key is missing in production, or the query reads the wrong project).
+  Look for `tg_roommate_flow_started` in Live Events first. A posting log without rows is "no data"
+  for owner-hours and manual minutes in the same way. With events present, 0 in query D is a real 0.
+- **PostHog project.** Query the PostHog EU Cloud project (D30, `docs/ops/posthog-eu-migration.md`):
+  production moves there with the PRD 1 deploy, and PRD 3 deploys with it or later, so every
+  roommate event is there and the old US project holds none. The owner tests only on the dev bot,
+  which runs without the PostHog key (E14 notes), so the PostHog counts need no exclusion list.
+- **Season.** Stage 1 runs in the December – January trough: room demand peaks in August –
+  September and the summer-semester wave comes in February
+  (`docs/research/roommate-fit-and-test-2026-11-19.md`, "Seasonality"). A null result in January
+  is weak evidence and a pass is strong evidence; the readout says so next to its result.
+
 ## How this was checked
 
 Searches over `src/` (non-test files) on 2026-11-19:
@@ -795,6 +1085,13 @@ Searches over `src/` (non-test files) on 2026-11-19:
   `countBand`), `src/components/listings/find-flatmate-block.tsx` and
   `src/components/listings/roommate-role-selector.tsx`; `src/lib/bot/roommate-readme.test.ts`
   checks the bot README's events tables against the `track(` calls;
+- for §7: `openRoommate`, `handleAdultYes` and `handleOptInTap` in `src/lib/bot/roommate-flow.ts`,
+  `ROOMMATE_ENTRY_SOURCE` and `parseStartPayload` in `src/lib/bot/start-payload.ts`,
+  `activeProfilesWhere` in `src/lib/roommate/counts.ts`, `optInToOpenMessage` and
+  `waitsForOpenMessage` in `src/lib/roommate/store.ts`, `BUDGET_BANDS` and `DRAFT_LIFE_DAYS` in
+  `src/lib/roommate/rules.ts`, `src/lib/roommate/website-counts.ts`, and the `RoommateProfile` and
+  `TelegramChat` models; `src/lib/bot/roommate-readouts.test.ts` checks the queries' events,
+  properties, tables and columns, the "active" filter and the bands against the code and the schema;
 - posthog-js 1.374 (`node_modules/posthog-js/lib/src/utils/event-utils.js`, `session-props.js`,
   `posthog-core.js`) for the automatic properties and `register_once`;
 - the tables in `prisma/schema.prisma` and their migrations.

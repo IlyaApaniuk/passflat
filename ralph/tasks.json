@@ -775,13 +775,13 @@
       "title": "Stage 1 readout section (FR-42, E14)",
       "spec": "docs/specs/05-measurement-docs.md#stage-1-readout",
       "dependsOn": ["T101", "T102"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A 'Roommate stage 1 (E14)' section in docs/analytics/activation-funnels.md with the six points of spec 05 §Stage 1 readout: HogQL, read-only SQL, the stop, go and extension rules (D52, D59), the daily check from 2027-01-04 (D58), both worked examples, 'no data' and the season",
         "Event and column names in the queries match the code (checked by a search of src/ and prisma/schema.prisma); the loop runs no query"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The loop never queries PostHog (CLAUDE.md)."
     },
     {

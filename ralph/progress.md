@@ -145,7 +145,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `vi.clearAllMocks()` keeps a `mockImplementation`: a test that makes `api.sendMessage` fail leaks into the next one unless `beforeEach` resets it (example: `roommate-hide.test.ts`).
 - `node scripts/ralph-tasks.mjs add` needs an explicit `id` (the next free `T…`; check `grep -o '"id": "T1[0-9][0-9]"' ralph/tasks.json`).
 - A page render test proves its keys exist and parse in every locale when the mocked `useTranslations(namespace)` passes `namespace` and `onError: (e) => { throw e }` to `createTranslator` (a missing key otherwise renders its path silently); example: `src/app/[locale]/terms/matching-sections.test.ts`.
-- A new bot event (`track(…, 'tg_…')`) needs a row in a `src/lib/bot/README.md` events table naming every property key it sends; `src/lib/bot/roommate-readme.test.ts` checks it (a new property builder goes into its `PROPERTY_BUILDERS`).
+- A new bot event (`track(…, 'tg_…')`) needs a row in a `src/lib/bot/README.md` events table naming every property key it sends; `src/lib/bot/roommate-readme.test.ts` checks it (a new property builder goes into `PROPERTY_BUILDERS` in `src/lib/bot/track-calls.test-support.ts`, the shared `track(` scanner).
+- Readout queries in `docs/analytics/activation-funnels.md` §7+ are checked by `src/lib/bot/roommate-readouts.test.ts`: start each ```sql block with `-- HogQL.`or`-- Read-only SQL.`, alias every SQL table (`FROM roommate_profiles p`), qualify columns as `alias.column`, write `unnest(...) AS d(slug)`without`LATERAL`, and keep the outer HogQL SELECT free of `distinct_id`.
 - `src/lib/bot/roommate-posting-kit.test.ts` parses `docs/marketing/roommate-posts.md` (every `t.me/…?start=` link, the group-key table), `roommate-posting-log.md` (columns, rows) and `bot-profile.md` (BotFather limits): change their headings, table columns or `text` blocks together with that test.
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
 
@@ -3042,3 +3043,36 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - write the switch moment into the posting log.
   - No new table, migration or event.
 - Next: `node scripts/ralph-tasks.mjs next` (T103, stage 1 readout, FR-42; it reads the posting log's columns).
+
+### 2026-11-19 21:20 · T103 · done
+
+- Done:
+  - `docs/analytics/activation-funnels.md`: new "## 7. Roommate stage 1 (E14)", written from the code at `79a9361`, plus the intro and "How this was checked" lines. It has:
+    - a numbers table (what each counts, PostHog or database or posting log), and why profiles come from PostHog (a deleted profile leaves no row) while "active" can be read only on the day itself;
+    - 7.1 HogQL: query A (one row: `roommate_events` for the "no data" check, persons with flow started, `profiles`, started and created, opted in) and query B (the same per first `entry_source` / `entry_detail`; its column sums equal A). A23 is reported as a ratio without a rule, with the 7-day draft caveat;
+    - 7.2 read-only SQL for the Supabase SQL editor: D (active, districts with ≥ 3, "any", opted in now), E (active per named district), F (budget bands, A26). "Active" is `activeProfilesWhere`. Counts only;
+    - 7.3 the D52 stop and go rules and the D59 extension (same day 0, end 2027-02-28); how owner-hours and manual minutes per full week come from the posting log (a week without rows is "missing");
+    - 7.4 the D58 daily check from 2027-01-04 (query A in PostHog, query D in SQL; the switch on the first day ≥ 2027-01-07 when all three go numbers hold: set the variable, redeploy, record the moment);
+    - 7.5 both worked examples: E14 → go; 20 profiles / 1.2 per owner-hour → extend;
+    - 7.6 "no data, not 0", the EU project (D30), the December – January season.
+  - New `src/lib/bot/track-calls.test-support.ts`: the `track(` scanner (`trackCalls`, `PROPERTY_BUILDERS`) moved out of `roommate-readme.test.ts`, which now imports it (no behaviour change). The scanner skips `*.test-support.ts` files.
+  - New `src/lib/bot/roommate-readouts.test.ts` (12 tests). Every quoted HogQL event and every roommate event in the prose is a tracked event; every `properties.x` is sent by one of the query's events; the outer SELECT never lists `distinct_id`. Every SQL table and `alias.column` is in `prisma/schema.prisma` (mapped names, scalar fields; CTE and `unnest` aliases resolved; ≥ 30 references read). Each SQL query has the `activeProfilesWhere` conditions, which are pinned. No personal column is selected. The budget bands and `DRAFT_LIFE_DAYS` match `rules.ts`, the posting log has the columns it reads, and the six parts and dates are present. The checks are also tested on bad samples.
+  - `docs/specs/README.md`: FR-42 → Done.
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-readouts.test.ts src/lib/bot/roommate-readme.test.ts`: 17 passed.
+  - Mutation check: `p.budget_band` → `p.budget` and `properties.entry_detail` → `properties.entry_group` in the doc → 2 failures naming both; reverted.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2932 tests;
+    - build OK.
+  - `next-env.d.ts` restored. No query run against PostHog or any database; nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Assumption (query shape, spec 05):**
+    - persons are grouped per `distinct_id` and broken down by the first `tg_roommate_flow_started` entry;
+    - "opted in" is counted twice: persons who ever opted in (PostHog, `already` not true) and profiles waiting for the one-time message now (SQL: `notify_on_open_at` set, `notified_open_at` null);
+    - full weeks are Monday – Sunday weeks between day 0 and the readout day. The manual-minutes average is taken over the weeks that have rows; missing weeks are named, never counted as 0.
+  - **Not decided, for the owner:** a stop rule can hold while every go rule holds, e.g. 35 profiles over 40 posting hours = 0.875 per hour with 25 active and 3 districts. D52 does not say which wins, and the D58 daily check reads only the go numbers, so the switch could go on although the owner-hour stop rule holds. The doc says so (§7.3) and leaves it to the owner.
+  - No new copy, event, table or migration.
+- Next: `node scripts/ralph-tasks.mjs next` (T104, stage 2 readout, FR-43). Add its queries to `src/lib/bot/roommate-readouts.test.ts` with `docSection(DOC, 'Roommate stage 2 (E15)')`.
