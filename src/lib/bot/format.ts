@@ -1,13 +1,28 @@
 import type { AddressLookup, DistrictRow } from './lookup';
 import type { AreaStats } from '@/lib/cost-baselines';
 import {
+  groupFigureRows,
+  isOneObservation,
+  orderedFigureGroups,
+  type GroupFigureKey,
+} from '@/lib/building-figures-view';
+import {
+  MIN_AREA_REPORTS,
   MIN_DEPOSIT_ANSWERS,
+  type AreaReference,
   type DepositReturns,
-  type FigureGroupKey,
-  type FigureSummary,
-  type MetricFigure,
+  type FigureGroup,
 } from '@/lib/cost-figures';
-import { reportsWord, t, tenanciesWord, type BotLocale } from './texts';
+import {
+  listingsWord,
+  observationsBasisWord,
+  observationsWord,
+  reportsWord,
+  t,
+  tenanciesWord,
+  type BotLocale,
+  type TextKey,
+} from './texts';
 
 /**
  * Message rendering.
@@ -16,9 +31,15 @@ import { reportsWord, t, tenanciesWord, type BotLocale } from './texts';
  * the address leads, the source of the numbers is stated, and the link at the
  * bottom works for someone who has never heard of us. Forwarding is the bot's
  * only free distribution, so the message is the ad.
+ *
+ * Figures follow the shared contract (spec 04 §Cards on the shared contract):
+ * tenant reports and asking prices are separate groups, each figure carries its
+ * own N, and the district or city is a labelled reference shown next to the
+ * building, never a "pricier / cheaper than the district" verdict. The headline
+ * of a group is picked by `groupFigureRows`, the website checker's rule.
  */
 
-const NBSP = '\u00A0';
+const NBSP = ' ';
 
 export function money(value: number | null | undefined): string | null {
   if (value == null || !Number.isFinite(value)) return null;
@@ -65,16 +86,6 @@ export function submitLink(
   return url.toString();
 }
 
-/** "12% дороже района" — a number means nothing without the comparison. */
-function verdict(value: number | null, baseline: number | null, locale: BotLocale): string | null {
-  if (value == null || baseline == null || baseline <= 0) return null;
-  const diff = Math.round(((value - baseline) / baseline) * 100);
-  if (Math.abs(diff) < 3) return t(locale, 'verdictSame');
-  return diff > 0
-    ? t(locale, 'verdictAbove', { pct: String(diff) })
-    : t(locale, 'verdictBelow', { pct: String(Math.abs(diff)) });
-}
-
 function depositLine(deposit: DepositReturns, area: string, locale: BotLocale): string | null {
   const { gotBack, answered, medianDeposit } = deposit;
   if (answered < MIN_DEPOSIT_ANSWERS) return null;
@@ -95,32 +106,6 @@ function areaIsCity(lookup: AddressLookup): boolean {
 }
 
 /**
- * Interim single-number lines over the figure contract, in the old wording,
- * until the cards render each group with its N (spec 04 §Cards on the shared
- * contract): the tenant group, else the asking group; its complete total, else
- * the known part. `count` is that group's report count.
- */
-interface InterimFigures {
-  group: FigureGroupKey;
-  total: MetricFigure;
-  rent: number | null;
-  expenses: number | null;
-  count: number;
-}
-
-function interimFigures(summary: FigureSummary | null | undefined): InterimFigures | null {
-  const group = summary?.groups.tenant ?? summary?.groups.asking ?? null;
-  if (!group) return null;
-  return {
-    group: group.key,
-    total: group.completeTotal.n > 0 ? group.completeTotal : group.knownPartTotal,
-    rent: group.rent.median,
-    expenses: group.expenses.median,
-    count: group.reportCount,
-  };
-}
-
-/**
  * Deposit figures are never building-level, so the area is always named — under
  * a building card an unlabelled "88% returned" would read as this house's record.
  */
@@ -130,33 +115,169 @@ function lookupDepositLine(lookup: AddressLookup, locale: BotLocale): string | n
   return depositLine(lookup.deposit, area, locale);
 }
 
+/** A headline label per metric; a known part is never called the monthly total (FR-25). */
+const HEADLINE_KEY: Partial<Record<GroupFigureKey, TextKey>> = {
+  completeTotal: 'headlineTotal',
+  knownPartTotal: 'headlineKnownPart',
+  rent: 'headlineRent',
+};
+
+/** The figures shown under the headline; per m² stays on the website. */
+const DETAIL_KEY: Partial<Record<GroupFigureKey, TextKey>> = {
+  knownPartTotal: 'detailKnownPart',
+  rent: 'detailRent',
+  expenses: 'detailExpenses',
+};
+
+/** What a reference line adds after the group label; nothing for the all-in total. */
+const REFERENCE_METRIC_KEY: Partial<Record<GroupFigureKey, TextKey>> = {
+  knownPartTotal: 'referenceKnownPart',
+  rent: 'referenceRent',
+};
+
+/** "отчётам" for tenant reports, "объявлениям" for asking prices: never "жильцов" for listings. */
+function groupNWord(group: Pick<FigureGroup, 'key'>, locale: BotLocale, count: number): string {
+  return group.key === 'tenant' ? reportsWord(locale, count) : listingsWord(locale, count);
+}
+
+/** The headline's N: "(медиана по 2 отчётам)", or "(по 1 объявлению)" for a single value. */
+function headlineN(group: FigureGroup, n: number, locale: BotLocale): string {
+  return t(locale, n === 1 ? 'singleN' : 'medianN', {
+    count: String(n),
+    word: groupNWord(group, locale, n),
+  });
+}
+
+function groupTitle(group: FigureGroup, locale: BotLocale): string {
+  const count = String(group.reportCount);
+  if (group.key === 'asking') return t(locale, 'groupAsking', { count });
+  const imported = group.sourceCounts.import;
+  return t(locale, 'groupTenant', {
+    count,
+    imported: imported > 0 ? t(locale, 'groupTenantImported', { count: String(imported) }) : '',
+  });
+}
+
+/** Rental type, rooms and area of a one-observation group, as the building page lists them. */
+function characteristicsLine(group: FigureGroup, locale: BotLocale): string | null {
+  const characteristics = group.characteristics;
+  if (!characteristics) return null;
+  const parts: string[] = [];
+  if (characteristics.rentalType === 'apartment') parts.push(t(locale, 'characteristicApartment'));
+  else if (characteristics.rentalType === 'room') parts.push(t(locale, 'characteristicRoom'));
+  if (characteristics.rooms != null && characteristics.rooms > 0) {
+    parts.push(t(locale, 'characteristicRooms', { count: String(characteristics.rooms) }));
+  }
+  if (characteristics.areaM2 != null) {
+    parts.push(t(locale, 'characteristicArea', { area: String(characteristics.areaM2) }));
+  }
+  return parts.length ? `<i>${parts.join(' · ')}</i>` : null;
+}
+
+type CardScope = 'building' | 'area';
+
+/**
+ * One group's block: its label and size, then the headline with its N and the
+ * other figures with theirs. One observation shows its values without a median
+ * or N (FR-24); a known part says it is not the full monthly cost.
+ */
+function groupLines(group: FigureGroup, scope: CardScope, locale: BotLocale): string[] {
+  const { headline, rows, knownPart } = groupFigureRows(group);
+  const one = isOneObservation(group);
+  const lines = [groupTitle(group, locale)];
+
+  if (one) {
+    lines.push(t(locale, scope === 'building' ? 'oneObservation' : 'oneObservationArea'));
+    const characteristics = scope === 'building' ? characteristicsLine(group, locale) : null;
+    if (characteristics) lines.push(characteristics);
+  }
+
+  const headlineKey = headline ? HEADLINE_KEY[headline.key] : undefined;
+  if (!headline || !headlineKey) return lines;
+  lines.push(
+    t(locale, headlineKey, {
+      value: money(headline.figure.median) ?? '—',
+      n: one ? '' : headlineN(group, headline.figure.n, locale),
+    }),
+  );
+
+  // A "typical range" of a couple of values describes the sample, not the area.
+  const { p25, p75, n } = headline.figure;
+  if (scope === 'area' && n >= MIN_AREA_REPORTS && p25 != null && p75 != null) {
+    lines.push(t(locale, 'areaBand', { band: `${money(p25)} – ${money(p75)}` }));
+  }
+
+  for (const row of rows) {
+    const key = DETAIL_KEY[row.key];
+    if (!key) continue;
+    lines.push(
+      t(locale, key, {
+        value: money(row.figure.median) ?? '—',
+        n: one ? '' : ` <i>(${row.figure.n})</i>`,
+      }),
+    );
+  }
+
+  if (knownPart) lines.push(t(locale, 'knownPartHint'));
+  return lines;
+}
+
+/** Blocks of every group with reports, tenant reports first, separated by a blank line. */
+function groupBlocks(groups: FigureGroup[], scope: CardScope, locale: BotLocale): string[] {
+  return groups.flatMap((group, index) => [
+    ...(index > 0 ? [''] : []),
+    ...groupLines(group, scope, locale),
+  ]);
+}
+
+/** "Район Mokotów" or "Варшава", already escaped. */
+function referenceAreaName(reference: AreaReference, locale: BotLocale): string {
+  return reference.level === 'district'
+    ? t(locale, 'referenceDistrictName', { name: escapeHtml(reference.name) })
+    : t(locale, 'cityName');
+}
+
+/**
+ * The area a building is set against, labelled with its level, group and N:
+ * "Район Mokotów, отчёты жильцов: 3 900 zł (37)". Values side by side, never a
+ * conclusion (spec 03 §Comparisons).
+ */
+function referenceLines(reference: AreaReference | null, locale: BotLocale): string[] {
+  if (!reference) return [];
+  const area = referenceAreaName(reference, locale);
+  const lines: string[] = [];
+  for (const group of orderedFigureGroups(reference.summary)) {
+    const { headline } = groupFigureRows(group);
+    if (!headline || !HEADLINE_KEY[headline.key]) continue;
+    const metricKey = REFERENCE_METRIC_KEY[headline.key];
+    lines.push(
+      t(locale, group.key === 'tenant' ? 'referenceTenant' : 'referenceAsking', {
+        area,
+        metric: metricKey ? t(locale, metricKey) : '',
+        value: money(headline.figure.median) ?? '—',
+        count: String(headline.figure.n),
+      }),
+    );
+  }
+  if (!lines.length) return [];
+  const header = reference.level === 'district' ? 'referenceHeaderDistrict' : 'referenceHeaderCity';
+  return [t(locale, header), ...lines];
+}
+
 /**
  * The building-level card: the case where we hold reports for this exact house.
  */
 function buildingCard(lookup: AddressLookup, locale: BotLocale): string {
-  const costs = interimFigures(lookup.building);
-  const area = interimFigures(lookup.reference?.summary);
   const lines: string[] = [`🏠 <b>${escapeHtml(lookup.address)}</b>`];
   if (lookup.districtName) lines.push(`<i>${escapeHtml(lookup.districtName)}</i>`);
   lines.push('');
 
-  const total = money(costs?.total.median);
-  if (costs && total) {
-    // Only a figure of the same group is set against the building's.
-    const v =
-      area?.group === costs.group ? verdict(costs.total.median, area.total.median, locale) : null;
-    lines.push(t(locale, 'totalLine', { total, verdict: v ? ` — ${v}` : '' }));
+  if (lookup.building) {
+    lines.push(...groupBlocks(orderedFigureGroups(lookup.building), 'building', locale));
   }
 
-  const rent = money(costs?.rent);
-  const expenses = money(costs?.expenses);
-  if (rent || expenses) {
-    lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
-  }
-
-  const count = costs?.count ?? 0;
-  lines.push(t(locale, 'basedOn', { count: String(count), word: reportsWord(locale, count) }));
-  if (count < 2) lines.push(t(locale, 'thinBuilding'));
+  const reference = referenceLines(lookup.reference, locale);
+  if (reference.length) lines.push('', ...reference);
 
   const deposit = lookupDepositLine(lookup, locale);
   if (deposit) lines.push('', deposit);
@@ -168,46 +289,40 @@ function buildingCard(lookup: AddressLookup, locale: BotLocale): string {
  * The district-level card: what the bot says when this exact house is not in the
  * data — which, at ~300 covered buildings, is the common case. It must still be
  * worth the message, so it answers the question the address was really asking:
- * "is this a normal price for here?"
+ * "what do people pay around here?", with the level it answers from stated.
  */
 function districtCard(lookup: AddressLookup, locale: BotLocale): string {
-  const isCity = areaIsCity(lookup);
-  const areaName = isCity ? t(locale, 'cityName') : (lookup.districtName ?? t(locale, 'cityName'));
+  const { reference } = lookup;
   const lines: string[] = [`📍 <b>${escapeHtml(lookup.address)}</b>`];
 
   // Say which level the numbers come from before showing them. A median silently
   // widened from the district to the city would read as a district figure.
-  if (isCity && lookup.districtName) {
+  if (!reference) {
+    lines.push(t(locale, 'noAreaData'));
+  } else if (reference.level === 'city' && lookup.districtName) {
     lines.push(t(locale, 'thinDistrict', { district: escapeHtml(lookup.districtName) }));
   } else {
     lines.push(lookup.imprecise ? t(locale, 'noHouseNumber') : t(locale, 'noBuildingData'));
   }
 
-  lines.push('', t(locale, isCity ? 'cityHeader' : 'areaHeader', { area: escapeHtml(areaName) }));
-
-  const area = interimFigures(lookup.reference?.summary);
-  const total = money(area?.total.median);
-  const rent = money(area?.rent);
-  const expenses = money(area?.expenses);
-
-  if (total) lines.push(t(locale, 'areaTotal', { total }));
-  if (rent || expenses) {
-    lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
+  if (reference) {
+    const isCity = reference.level === 'city';
+    const area = isCity ? t(locale, 'cityName') : escapeHtml(reference.name);
+    lines.push('', t(locale, isCity ? 'cityHeader' : 'areaHeader', { area }));
+    lines.push(...groupBlocks(orderedFigureGroups(reference.summary), 'area', locale));
   }
-  const band =
-    area?.total.p25 != null && area.total.p75 != null
-      ? `${money(area.total.p25)} – ${money(area.total.p75)}`
-      : null;
-  if (band) lines.push(t(locale, 'areaBand', { band }));
-  const count = area?.count ?? 0;
-  lines.push(t(locale, 'basedOn', { count: String(count), word: reportsWord(locale, count) }));
 
   if (lookup.neighbours.length) {
     lines.push('', t(locale, 'neighboursHeader'));
     for (const neighbour of lookup.neighbours) {
-      const value = money(neighbour.totalMedian);
       lines.push(
-        `• ${escapeHtml(neighbour.address)} — ${value ?? '—'} <i>(${neighbour.distanceM}${NBSP}м)</i>`,
+        t(locale, 'neighbourLine', {
+          address: escapeHtml(neighbour.address),
+          value: money(neighbour.totalMedian) ?? '—',
+          count: String(neighbour.totalCount),
+          word: observationsWord(locale, neighbour.totalCount),
+          distance: String(neighbour.distanceM),
+        }),
       );
     }
   }
@@ -256,7 +371,8 @@ export interface DistrictAnswer {
 /**
  * The answer to a district name typed on its own ("Мокотов", "wola") — the
  * question "how much does it cost to live here?" asked before there is an
- * address to ask about.
+ * address to ask about. Still the blended `cost-baselines` figure until T049
+ * moves it to the contract, so its count is "observations", not tenant reports.
  */
 export function renderDistrict(
   district: DistrictAnswer,
@@ -292,7 +408,7 @@ export function renderDistrict(
   lines.push(
     t(locale, 'basedOn', {
       count: String(district.stats.count),
-      word: reportsWord(locale, district.stats.count),
+      word: observationsBasisWord(locale, district.stats.count),
     }),
   );
 

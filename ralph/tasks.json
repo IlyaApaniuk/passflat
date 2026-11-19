@@ -531,7 +531,7 @@
       "title": "Bot cards: groups with N, one observation, labelled reference, no district verdict",
       "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
       "dependsOn": ["T032"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "buildingCard and districtCard render per group the headline value with N and its source label, «одно наблюдение по этому адресу», «известная часть расходов», and a reference line labelled with its level (district or city) and N; RU and UK drafts",
         "verdict (дороже/дешевле района) is removed; basedOn no longer counts asking prices as жильцы; cardFooter and start copy no longer say «реальные расходы»",
@@ -539,7 +539,7 @@
         "A consistency test renders the same fixture through the checker summary (T023) and the bot card and finds the same median and N"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

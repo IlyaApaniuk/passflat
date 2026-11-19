@@ -110,7 +110,13 @@ describe('aggregateLocationCheckerCosts (Q-2 blended number)', () => {
         { source: 'import', totalMonthlyAvg: '4200', rent: '3300' },
         { source: 'scraped', totalMonthlyAvg: 4_400, rent: 3_400 },
       ]),
-    ).toEqual({ totalMedian: 4_200, rentMedian: 3_300, expensesMedian: 900, reportCount: 3 });
+    ).toEqual({
+      totalMedian: 4_200,
+      totalCount: 3,
+      rentMedian: 3_300,
+      expensesMedian: 900,
+      reportCount: 3,
+    });
   });
 
   it('computes its medians with the contract (untrimmed, same rounding, values above zero)', () => {
@@ -123,6 +129,7 @@ describe('aggregateLocationCheckerCosts (Q-2 blended number)', () => {
     const totals = [3_000, 3_101, 40_000];
     expect(aggregateLocationCheckerCosts(reports)).toEqual({
       totalMedian: metricFigure(totals).median,
+      totalCount: 3,
       rentMedian: metricFigure([2_500, 2_600, 39_000]).median,
       expensesMedian: metricFigure([500, 501, 1_000]).median,
       reportCount: 4,
@@ -141,7 +148,13 @@ describe('aggregateLocationCheckerCosts (Q-2 blended number)', () => {
     expect(aggregateLocationCheckerCosts([])).toBeNull();
     expect(
       aggregateLocationCheckerCosts([{ source: 'user', totalMonthlyAvg: null, rent: null }]),
-    ).toEqual({ totalMedian: null, rentMedian: null, expensesMedian: null, reportCount: 1 });
+    ).toEqual({
+      totalMedian: null,
+      totalCount: 0,
+      rentMedian: null,
+      expensesMedian: null,
+      reportCount: 1,
+    });
   });
 });
 

@@ -40,6 +40,8 @@ interface NeighbourSummary {
   slug: string;
   distanceM: number;
   totalMedian: number | null;
+  /** The N of `totalMedian`, shown next to it. */
+  totalCount: number;
   reportCount: number;
 }
 
@@ -140,6 +142,7 @@ async function findNeighbours(
         slug: building.slug,
         distanceM: Math.round(haversineMeters({ lat, lng }, { lat: bLat, lng: bLng })),
         totalMedian: costs?.totalMedian ?? null,
+        totalCount: costs?.totalCount ?? 0,
         reportCount: building.costReports.length,
       };
     })

@@ -67,6 +67,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `CostsMap` renders in Vitest with `react-map-gl` mocked (`Popup`/`Source` render children) and `react`'s `useState` mocked so `useState(null)` returns the open popup; `NEXT_PUBLIC_MAPBOX_TOKEN` is set in `vi.hoisted` (example: `src/components/map/CostsMap.test.ts`).
 - Bot handlers are tested by exporting the handler body from `bot.ts` and calling it with a fake `{ chat, from, message: { text }, reply }` cast to `CommandContext<Context>`; mock `./store`, `./analytics`, `./deposit-flow`, `./lookup` and `@/lib/cost-baselines` with every named import `bot.ts` uses (example: `src/lib/bot/bot.test.ts`). Top-level `await` fails typecheck in tests; import statically, `vi.mock` is hoisted.
 - The bot's data layer is tested with `@/lib/prisma` (city, district, building, costReport), `next/cache` (pass-through) and `@/lib/geo/district` mocked, and reports served by `where`; deposit queries are the `costReport.findMany` calls whose `select` has `depositReturned` (example: `src/lib/bot/lookup.test.ts`).
+- Bot cards pick each group's headline with `groupFigureRows` (`building-figures-view.ts`, pure and importable by the bot), so web and bot agree; a module can be rendered for a visual check with `npx tsx --tsconfig tsconfig.json <scratchpad script>` (path aliases resolve).
+- Web-vs-bot consistency tests call `POST /api/location-score` and `lookupAddress` over one Prisma mock (example: `src/lib/bot/checker-consistency.test.ts`).
 
 ## Log
 
@@ -495,3 +497,63 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - No copy, assumptions, tables or migrations. Analytics unchanged: `tg_address_checked.report_count` is still the building's visible report count.
   - New task T049 (depends on T033): the typed-district answer (`renderDistrict`, `getDistrictBySlug` stats, `replyDistrict`'s city median) still reads `cost-baselines`. Spec 03 moves every bot consumer except the Q-2 rank and `/districts` table, and no task did this one.
 - Next: T033 renders the groups from `lookup.building` / `lookup.reference` and deletes `interimFigures` and `verdict` in `format.ts`. T035 can reuse `loadAreaFacts` and the select in `lookupAddress` for `lookupBuilding`. T038's `tg_district_checked` `source_kind`/`n` needs T049's district `FigureSummary`.
+
+### 2026-11-19 04:11 · T033 · done
+
+- Done:
+  - `src/lib/bot/format.ts`: the building and area cards render one block per group, tenant reports first, then asking prices.
+    - Each block has a title with the group's size (tenant: with the Passflat import count). The headline is picked by `groupFigureRows` from `building-figures-view.ts`, the checker's rule: complete total, else known part, else rent. It shows its N ("медиана по 2 отчётам" / "медиана по 2 объявлениям", "по 1 …" for a single value). Known part, rent and expenses follow, each with its own N, then the known-part hint when a known part is shown.
+    - One observation: «Одно наблюдение по этому адресу» with rental type, rooms and area on the building card ("Одно наблюдение" on an area card), with no median and no N.
+    - A known-part total is labelled «Известная часть расходов», never "Всего в месяц".
+    - The building card ends with a labelled reference: «Для ориентира — данные по району/городу, а не по этому дому:», then one line per reference group, e.g. «Район Ochota, отчёты жильцов: 4 400 zł (5)» or «Варшава, …». The N is the headline metric's N.
+    - The area card states its level ("данные по району/городу"), then the groups. The "typical range" appears only from `MIN_AREA_REPORTS` (5) values. With no reference at all it says so (`noAreaData`). Neighbours show the N of their blended total.
+    - `verdict`, `interimFigures` and the `verdictAbove/Below/Same`, `totalLine`, `thinBuilding` keys are gone.
+  - `renderDistrict` (typed district, still `cost-baselines` until T049): `basedOn` says "по N наблюдениям" instead of "отчётам жильцов", because that count blends listings.
+  - `src/lib/bot/texts.ts`:
+    - New RU/UK keys; `cardFooter`, `start` and `startAfterPayload` no longer say «реальные расходы».
+    - New plural sets `listingsWord`, `observationsWord`, `observationsBasisWord`. The UK report forms are now instrumental ("за 2 звітами"; before "за 2 звітам").
+    - Exports `TextKey`.
+  - `src/lib/location-checker.ts`: the blended number adds `totalCount` (N of `totalMedian`). The bot's `NeighbourSummary` carries it.
+  - Docs: `docs/architecture.md` §3 (the bot line), `src/lib/bot/README.md` intro.
+- Tests:
+  - `format.test.ts` (21). Area card:
+    - both district groups with N and labels, import note, band, and no band from 2 listings;
+    - no "жильцов" in the asking block;
+    - city reference;
+    - one observation in an area, without "по этому адресу";
+    - no reference;
+    - neighbour N;
+    - deposit kept as is.
+  - `format.test.ts`, building card:
+    - mixed (golden example 1: 3 850 (2), known part 3 900 (1), rent 3 200 (3), expenses 750 (2); asking known part 4 000 (2 listings));
+    - district reference lines 4 400 (5) and known part 9 250 (2);
+    - one observation with characteristics and no N;
+    - known part only (never "Всего в месяц", no expenses);
+    - city reference;
+    - asking-only building;
+    - no reference;
+    - no verdict wording in any case.
+  - `format.test.ts`, other: escaping of the address, district name, reference name and neighbour address; a UK render with no RU strings; footer, start and startAfterPayload without "реальн" in RU and UK; `renderDistrict` "по 12 наблюдениям".
+  - New `src/lib/bot/checker-consistency.test.ts` (3): the same mocked reports go through `POST /api/location-score` (the checker summary) and through `lookupAddress` → `renderLookup`. The card is parsed back to group, median and N, and compared with the checker's headline per group: a mixed building with its district reference, a building without reports (district card), and the thin district → city fallback.
+  - `location-checker.test.ts` and `lookup.test.ts`: `totalCount` added.
+- Checks: `npx vitest run src/lib/bot src/lib/location-checker.test.ts src/app/api/location-score` passed (10 files / 175 tests). `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 64 files / 782 tests, build OK. `next-env.d.ts` restored.
+- Did not work: my hand-computed district median in the consistency test was wrong (4 000; it is 4 100); fixed. The bot was not started and no Telegram call was made: cards are proven by unit tests and by a scratch render with `npx tsx`.
+- Owner review:
+  - Draft copy, RU and UK (`texts.ts`), new:
+    - group titles: `groupTenant`, `groupTenantImported`, `groupAsking`;
+    - one observation: `oneObservation`, `oneObservationArea`, `characteristicApartment` / `Room` / `Rooms` / `Area`;
+    - headline and N: `headlineTotal`, `headlineKnownPart`, `headlineRent`, `medianN`, `singleN`;
+    - details: `detailKnownPart`, `detailRent`, `detailExpenses`, `knownPartHint`;
+    - reference: `referenceHeaderDistrict`, `referenceHeaderCity`, `referenceDistrictName`, `referenceTenant`, `referenceAsking`, `referenceKnownPart`, `referenceRent`;
+    - other: `neighbourLine`, `noAreaData`.
+  - Draft copy, changed: `cardFooter` («Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы»), the first line of `start` and `startAfterPayload`, `areaHeader` / `cityHeader` ("данные по району/городу" instead of "по данным жильцов"), `noBuildingData` / `noHouseNumber` (no longer "показываю район"; the next line names the level), `basedOn` (neutral "наблюдениям").
+  - Removed: `totalLine`, `thinBuilding`, `verdictAbove`, `verdictBelow`, `verdictSame`.
+  - Display choices to confirm:
+    - (1) A reference line shows the headline metric's N, not the group's report count.
+    - (2) The band appears only from 5 values.
+    - (3) Per m² is not shown in the bot.
+    - (4) Neighbours stay the blended Q-2 number, now with "N наблюдений".
+    - (5) `beFirstPrompt` still says «соседи увидят реальные цифры» and `help` / `start` body are unchanged (T037 aligns them).
+    - (6) The deposit line keeps the old "возвращают полностью X%" wording until T034.
+  - No assumptions, tables or migrations. Analytics unchanged.
+- Next: T034 (deposit line and `/deposit` wording via `summarizeDepositReturns`, in `depositLine` of `format.ts`), T035 (`b_` deep link, reuses `renderLookup`), T049 (`renderDistrict` on the contract; reuse `groupBlocks(…, 'area', …)` from `format.ts`).

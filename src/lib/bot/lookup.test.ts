@@ -296,6 +296,7 @@ describe('lookupAddress on the figure contract', () => {
         slug: 'pulawska-12',
         distanceM: 100,
         totalMedian: 4_200,
+        totalCount: 2,
         reportCount: 2,
       },
     ]);

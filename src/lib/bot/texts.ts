@@ -30,9 +30,28 @@ export function plural(count: number, forms: [string, string, string]): string {
   return forms[2];
 }
 
+/** "по 2 отчётам" / "за 2 звітами". */
 const REPORT_FORMS: Record<BotLocale, [string, string, string]> = {
   ru: ['отчёту', 'отчётам', 'отчётам'],
-  uk: ['звіту', 'звітам', 'звітам'],
+  uk: ['звітом', 'звітами', 'звітами'],
+};
+
+/** "по 2 объявлениям" / "за 2 оголошеннями": the N of asking prices. */
+const LISTING_FORMS: Record<BotLocale, [string, string, string]> = {
+  ru: ['объявлению', 'объявлениям', 'объявлениям'],
+  uk: ['оголошенням', 'оголошеннями', 'оголошеннями'],
+};
+
+/** "по 12 наблюдениям": a count that blends tenant reports and asking prices (Q-2). */
+const OBSERVATION_BASIS_FORMS: Record<BotLocale, [string, string, string]> = {
+  ru: ['наблюдению', 'наблюдениям', 'наблюдениям'],
+  uk: ['спостереженням', 'спостереженнями', 'спостереженнями'],
+};
+
+/** "(2 наблюдения, 100 м)": a neighbour's own N. */
+const OBSERVATION_FORMS: Record<BotLocale, [string, string, string]> = {
+  ru: ['наблюдение', 'наблюдения', 'наблюдений'],
+  uk: ['спостереження', 'спостереження', 'спостережень'],
 };
 
 const TENANCY_FORMS: Record<BotLocale, [string, string, string]> = {
@@ -42,6 +61,18 @@ const TENANCY_FORMS: Record<BotLocale, [string, string, string]> = {
 
 export function reportsWord(locale: BotLocale, count: number): string {
   return plural(count, REPORT_FORMS[locale]);
+}
+
+export function listingsWord(locale: BotLocale, count: number): string {
+  return plural(count, LISTING_FORMS[locale]);
+}
+
+export function observationsBasisWord(locale: BotLocale, count: number): string {
+  return plural(count, OBSERVATION_BASIS_FORMS[locale]);
+}
+
+export function observationsWord(locale: BotLocale, count: number): string {
+  return plural(count, OBSERVATION_FORMS[locale]);
 }
 
 export function tenanciesWord(locale: BotLocale, count: number): string {
@@ -65,13 +96,13 @@ const RU = {
   cityNameIn: 'Варшаве',
 
   start:
-    '👋 Это Passflat — реальные расходы на аренду в Варшаве.\n\n' +
+    '👋 Это Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы.\n\n' +
     'Мы собираем то, чего нет в объявлениях: сколько жильцы <b>на самом деле</b> платят каждый месяц ' +
     'вместе с комуналкой и доплатами, и возвращают ли им залог.\n\n' +
     '<b>Пришли адрес</b> — покажу цифры по дому или по району.\n' +
     'Например: <code>Grójecka 45</code> или просто район: <code>Мокотов</code>',
   startAfterPayload:
-    '👋 Это Passflat — реальные расходы на аренду в Варшаве.\n\n<b>Пришли адрес</b>, например <code>Grójecka 45</code>.',
+    '👋 Это Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы.\n\n<b>Пришли адрес</b>, например <code>Grójecka 45</code>.',
 
   help:
     '<b>Что я умею</b>\n\n' +
@@ -85,18 +116,47 @@ const RU = {
     'Данные — из отчётов жильцов. Чем больше отчётов, тем точнее цифры: ' +
     'свой можно оставить за 3 минуты.',
 
-  // --- address answers ---
-  totalLine: '💸 Всего в месяц: <b>{total}</b>{verdict}',
+  // --- address answers: one block per group, each figure with its own N ---
+  groupTenant: '👥 <b>Отчёты жильцов: {count}</b>{imported}',
+  groupTenantImported: ' <i>(из них внесено Passflat: {count})</i>',
+  groupAsking: '📰 <b>Цены из объявлений: {count}</b>',
+  oneObservation: '<i>Одно наблюдение по этому адресу</i>',
+  oneObservationArea: '<i>Одно наблюдение</i>',
+  characteristicApartment: 'Вся квартира',
+  characteristicRoom: 'Комната',
+  characteristicRooms: 'комнат: {count}',
+  characteristicArea: 'площадь ≈ {area} м²',
+  headlineTotal: '💸 Всего в месяц: <b>{value}</b>{n}',
+  headlineKnownPart: '💸 Известная часть расходов: <b>{value}</b>{n}',
+  headlineRent: '💸 Аренда: <b>{value}</b>{n}',
+  medianN: ' <i>(медиана по {count} {word})</i>',
+  singleN: ' <i>(по {count} {word})</i>',
+  detailKnownPart: '   Известная часть расходов: {value}{n}',
+  detailRent: '   Аренда: {value}{n}',
+  detailExpenses: '   Расходы: {value}{n}',
+  knownPartHint:
+    '   <i>Указаны не все коммунальные платежи — полная сумма в месяц может быть выше.</i>',
+  referenceHeaderDistrict: '📊 <b>Для ориентира</b> — данные по району, а не по этому дому:',
+  referenceHeaderCity: '📊 <b>Для ориентира</b> — данные по городу, а не по этому дому:',
+  referenceDistrictName: 'Район {name}',
+  referenceTenant: '   {area}, отчёты жильцов{metric}: <b>{value}</b> ({count})',
+  referenceAsking: '   {area}, цены из объявлений{metric}: <b>{value}</b> ({count})',
+  referenceKnownPart: ', известная часть расходов',
+  referenceRent: ', аренда',
+  neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
+
+  // --- the typed-district answer (renderDistrict) ---
   splitLine: '   Аренда {rent} + расходы {expenses}',
-  basedOn: '   <i>по {count} {word} жильцов</i>',
-  thinBuilding: '   <i>Отчёт пока один — цифра может сдвинуться, когда появятся соседи.</i>',
-  areaHeader: '📊 <b>{area}</b> — по данным жильцов района:',
-  cityHeader: '📊 <b>{area}</b> — по данным жильцов города:',
+  basedOn: '   <i>по {count} {word}</i>',
   areaTotal: '💸 Медиана: <b>{total}</b> в месяц',
+
+  areaHeader: '📊 <b>{area}</b> — данные по району:',
+  cityHeader: '📊 <b>{area}</b> — данные по городу:',
   areaBand: '   Обычный диапазон: {band}',
   neighboursHeader: '🏘 <b>Соседние дома с данными:</b>',
-  noBuildingData: 'По этому дому отчётов пока нет — показываю район.',
-  noHouseNumber: 'Без номера дома точных данных не найти — показываю район.',
+  noBuildingData: 'По этому дому отчётов пока нет.',
+  noHouseNumber: 'Без номера дома точных данных не найти.',
+  noAreaData: 'По этому дому, району и городу отчётов пока нет.',
   thinDistrict:
     'По району <b>{district}</b> отчётов пока мало, чтобы считать медиану — показываю Варшаву целиком.',
   beFirstPrompt:
@@ -104,10 +164,7 @@ const RU = {
   depositLine:
     '🔐 По {area}: залог возвращают полностью в {pct}% случаев <i>(по {answered} {word})</i>.{amount}',
   depositTypical: 'Типичный залог — {amount}.',
-  verdictAbove: 'на {pct}% дороже района',
-  verdictBelow: 'на {pct}% дешевле района',
-  verdictSame: 'на уровне района',
-  cardFooter: '<i>Passflat — реальные расходы жильцов Варшавы</i>',
+  cardFooter: '<i>Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы</i>',
 
   addressNotFound:
     '🤔 Не нашёл такой адрес в Варшаве.\n\nПопробуй в формате <code>улица + номер</code>, например <code>Grójecka 45</code> или <code>Marszałkowska 10</code>.',
@@ -171,20 +228,21 @@ const RU = {
   langSet: 'Готово. Пиши адрес.',
 } as const;
 
-type Key = keyof typeof RU;
+export type TextKey = keyof typeof RU;
+type Key = TextKey;
 
 const UK: Record<Key, string> = {
   cityName: 'Варшава',
   cityNameIn: 'Варшаві',
 
   start:
-    '👋 Це Passflat — реальні витрати на оренду у Варшаві.\n\n' +
+    '👋 Це Passflat — витрати на оренду у Варшаві, про які повідомили мешканці.\n\n' +
     'Ми збираємо те, чого немає в оголошеннях: скільки мешканці <b>насправді</b> платять щомісяця ' +
     'разом із комуналкою та доплатами, і чи повертають їм заставу.\n\n' +
     '<b>Надішли адресу</b> — покажу цифри по будинку або по району.\n' +
     'Наприклад: <code>Grójecka 45</code> або просто район: <code>Мокотув</code>',
   startAfterPayload:
-    '👋 Це Passflat — реальні витрати на оренду у Варшаві.\n\n<b>Надішли адресу</b>, наприклад <code>Grójecka 45</code>.',
+    '👋 Це Passflat — витрати на оренду у Варшаві, про які повідомили мешканці.\n\n<b>Надішли адресу</b>, наприклад <code>Grójecka 45</code>.',
 
   help:
     '<b>Що я вмію</b>\n\n' +
@@ -198,17 +256,45 @@ const UK: Record<Key, string> = {
     'Дані — зі звітів мешканців. Що більше звітів, то точніші цифри: ' +
     'свій можна залишити за 3 хвилини.',
 
-  totalLine: '💸 Разом на місяць: <b>{total}</b>{verdict}',
+  groupTenant: '👥 <b>Звіти мешканців: {count}</b>{imported}',
+  groupTenantImported: ' <i>(з них внесено Passflat: {count})</i>',
+  groupAsking: '📰 <b>Ціни з оголошень: {count}</b>',
+  oneObservation: '<i>Одне спостереження за цією адресою</i>',
+  oneObservationArea: '<i>Одне спостереження</i>',
+  characteristicApartment: 'Вся квартира',
+  characteristicRoom: 'Кімната',
+  characteristicRooms: 'кімнат: {count}',
+  characteristicArea: 'площа ≈ {area} м²',
+  headlineTotal: '💸 Разом на місяць: <b>{value}</b>{n}',
+  headlineKnownPart: '💸 Відома частина витрат: <b>{value}</b>{n}',
+  headlineRent: '💸 Оренда: <b>{value}</b>{n}',
+  medianN: ' <i>(медіана за {count} {word})</i>',
+  singleN: ' <i>(за {count} {word})</i>',
+  detailKnownPart: '   Відома частина витрат: {value}{n}',
+  detailRent: '   Оренда: {value}{n}',
+  detailExpenses: '   Витрати: {value}{n}',
+  knownPartHint:
+    '   <i>Вказано не всі комунальні платежі — повна сума на місяць може бути вищою.</i>',
+  referenceHeaderDistrict: '📊 <b>Для орієнтиру</b> — дані по району, а не по цьому будинку:',
+  referenceHeaderCity: '📊 <b>Для орієнтиру</b> — дані по місту, а не по цьому будинку:',
+  referenceDistrictName: 'Район {name}',
+  referenceTenant: '   {area}, звіти мешканців{metric}: <b>{value}</b> ({count})',
+  referenceAsking: '   {area}, ціни з оголошень{metric}: <b>{value}</b> ({count})',
+  referenceKnownPart: ', відома частина витрат',
+  referenceRent: ', оренда',
+  neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
+
   splitLine: '   Оренда {rent} + витрати {expenses}',
-  basedOn: '   <i>за {count} {word} мешканців</i>',
-  thinBuilding: '   <i>Звіт поки один — цифра може зсунутися, коли з’являться сусіди.</i>',
-  areaHeader: '📊 <b>{area}</b> — за даними мешканців району:',
-  cityHeader: '📊 <b>{area}</b> — за даними мешканців міста:',
+  basedOn: '   <i>за {count} {word}</i>',
   areaTotal: '💸 Медіана: <b>{total}</b> на місяць',
+
+  areaHeader: '📊 <b>{area}</b> — дані по району:',
+  cityHeader: '📊 <b>{area}</b> — дані по місту:',
   areaBand: '   Звичайний діапазон: {band}',
   neighboursHeader: '🏘 <b>Сусідні будинки з даними:</b>',
-  noBuildingData: 'По цьому будинку звітів поки немає — показую район.',
-  noHouseNumber: 'Без номера будинку точних даних не знайти — показую район.',
+  noBuildingData: 'По цьому будинку звітів поки немає.',
+  noHouseNumber: 'Без номера будинку точних даних не знайти.',
+  noAreaData: 'По цьому будинку, району й місту звітів поки немає.',
   thinDistrict:
     'По району <b>{district}</b> звітів поки замало, щоб рахувати медіану — показую Варшаву цілком.',
   beFirstPrompt:
@@ -216,10 +302,7 @@ const UK: Record<Key, string> = {
   depositLine:
     '🔐 По {area}: заставу повертають повністю у {pct}% випадків <i>(за {answered} {word})</i>.{amount}',
   depositTypical: 'Типова застава — {amount}.',
-  verdictAbove: 'на {pct}% дорожче за район',
-  verdictBelow: 'на {pct}% дешевше за район',
-  verdictSame: 'на рівні району',
-  cardFooter: '<i>Passflat — реальні витрати мешканців Варшави</i>',
+  cardFooter: '<i>Passflat — витрати на оренду у Варшаві, про які повідомили мешканці</i>',
 
   addressNotFound:
     '🤔 Не знайшов такої адреси у Варшаві.\n\nСпробуй у форматі <code>вулиця + номер</code>, наприклад <code>Grójecka 45</code>.',

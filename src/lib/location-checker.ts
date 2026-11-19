@@ -53,6 +53,8 @@ export interface LocationCheckerCostReport {
  */
 interface BlendedBuildingCosts {
   totalMedian: number | null;
+  /** The N of `totalMedian`: reports with a usable total. */
+  totalCount: number;
   rentMedian: number | null;
   expensesMedian: number | null;
   reportCount: number;
@@ -356,8 +358,10 @@ export function aggregateLocationCheckerCosts(
     return CLAMP_EXPENSES_AT_ZERO ? Math.max(0, total - rent) : total - rent;
   });
 
+  const total = metricFigure(totals);
   return {
-    totalMedian: metricFigure(totals).median,
+    totalMedian: total.median,
+    totalCount: total.n,
     rentMedian: metricFigure(rents).median,
     expensesMedian: metricFigure(expenses).median,
     reportCount: reports.length,
