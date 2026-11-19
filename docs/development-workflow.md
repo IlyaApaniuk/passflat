@@ -84,6 +84,7 @@ same command as a separate, non-blocking job; `npm run verify` does not include 
 | `npm run db:import-pois`   | Imports OpenStreetMap points of interest; uses the network                   |
 | `npm run bot:dev`          | Long-polls the Telegram dev bot; takes its updates; owner only               |
 | `npm run bot:webhook -- …` | Registers or deletes the production webhook; owner only                      |
+| `npm run bot:posts`        | Prints the posting kit with `<bot>` filled from the env; no external effect  |
 | `npm run test:e2e`         | Builds into `.next-e2e` and serves the app on port 3100 (see above)          |
 
 ## Feature task template

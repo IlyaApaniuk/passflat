@@ -540,6 +540,17 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 5. **Deploy** — set the same three plus `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` in
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
+   `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the production bot's username without
+   the `@`, D76; Open until the owner chooses it, task T117) is the one place
+   for the username: the website's bot links read it, and `npm run bot:posts`
+   prints the posting kit (`docs/marketing/roommate-posts.md`) to stdout with
+   its `<bot>` placeholders filled from it, writing nothing to the repository.
+   Before the first posting slot run
+   `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=<production username> npm run bot:posts > <a file outside the repo>`
+   (a value on the command line wins over `.env.local`, which may hold the dev
+   bot's username; the script exits with a message when the variable is missing
+   or is not a bot username). The kit in the repository keeps `<bot>`; nothing
+   else stores the username.
 
 The production database needs five migrations, none applied to prod (the
 first four as of 2026-10-05) — run them deliberately: `20260831120000_add_telegram_bot`

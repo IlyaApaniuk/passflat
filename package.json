@@ -37,6 +37,7 @@
     "db:studio": "prisma studio",
     "bot:dev": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-dev.ts",
     "bot:webhook": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-webhook.ts",
+    "bot:posts": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-posts.ts",
     "prepare": "husky"
   },
   "dependencies": {

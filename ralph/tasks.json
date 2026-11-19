@@ -969,7 +969,7 @@
       "title": "One place for the production bot's username: the posting kit's `<bot>` placeholder is filled from NEXT_PUBLIC_TELEGRAM_BOT_USERNAME by a documented step (D76)",
       "spec": "docs/marketing/roommate-posts.md#how-to-use-a-template",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The username has one place, NEXT_PUBLIC_TELEGRAM_BOT_USERNAME (already read by the website's bot links); nothing new stores it. src/lib/bot/bot-username.ts exports isValidBotUsername(value) (Telegram's rule: 5 - 32 characters of [A-Za-z0-9_], ending in 'bot' case-insensitively, no leading @) and fillBotPlaceholder(markdown, username), which replaces every `<bot>` (in `t.me/<bot>` links and `@<bot>` mentions) and refuses an invalid username; unit tests for both, including that the filled posting kit contains no `<bot>` and that every filled t.me link still parses with parseStartPayload to { kind: 'roommate' }",
         "scripts/tg-posts.ts, run as `npm run bot:posts` (package.json script with the same env flags as bot:webhook), prints docs/marketing/roommate-posts.md to stdout with the placeholders filled from NEXT_PUBLIC_TELEGRAM_BOT_USERNAME, exits 1 with a message when the variable is missing or invalid, and writes nothing to the repository; it is the documented step the owner runs before the first slot (`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=<production username> npm run bot:posts > <a file outside the repo>` when .env.local holds the dev bot's username)",
@@ -977,7 +977,7 @@
         "A test asserts that no file under docs/marketing, src/lib/bot (texts.ts, deposit-texts.ts, roommate-texts.ts) or src/i18n/messages holds a hardcoded t.me bot link with a username (only `<bot>` or a value from the environment); test fixtures with passflat_test_bot in *.test.ts files are allowed"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D76 (evening of 2026-11-19): the production username is Open; T117 records it once the owner answers. The posting kit's test (roommate-posting-kit.test.ts) expects `@<bot>` in the no-link templates and parses links with `<bot>` in them: keep the placeholder in the repository and fill it only in the printed copy."
     },
     {
