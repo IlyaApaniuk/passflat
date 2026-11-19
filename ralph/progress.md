@@ -42,6 +42,9 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - A client component's capture call can be unit-tested without a DOM: `vi.mock` `next-intl` and
   `posthog-js/react` (capture from `vi.hoisted`), call the component as a function and invoke
   `element.props.onClick()` (example: `src/components/costs/telegram-bot-cta.test.ts`).
+- A component with `useState`/`useEffect` can be called the same way when the test mocks `react`
+  (spread `importOriginal`, stub the two hooks) and walks `props.children` to the handler
+  (example: `src/components/listings/listings-empty-state.test.ts`, with `fetch` stubbed).
 
 ## Log
 
@@ -116,3 +119,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing. The capture call itself has no component test (the 1,000-line client runs it in `useEffect`; no React testing library in the repo).
 - Owner review: Assumption applied — the property names `report_count`, `user_count`, `import_count`, `scraped_count` live only in `src/lib/analytics/building-events.ts`. No copy, tables or migrations. After deploy: check in PostHog Live Events that `building_detail_viewed` carries the four counts next to `building_id`, `building_slug`, `city`.
 - Next: the next `todo` task of M1; T019 swaps `reportSourceCounts(...)` in `page.tsx` for the figure contract's `sourceCounts` (map `user`/`import`/`scraped` to the `_count` names in `building-events.ts`).
+
+### 2026-11-19 01:18 · T010 · done
+
+- Done: new `src/lib/analytics/interest-events.ts` exports `RoommateIntent` (`find_room` | `offer_room`, spec 02), the pure `interestOutcomeEvent({ status, code? } | { networkError: true }, listingType, districtSlug, intent? })` → `{ event, properties }` and `responseErrorCode(res)` (reads only the `code` field of an error body, never throws). 2xx → `listing_interest_saved {listing_type, district_scope: district|city, intent?}` (`intent` only when set); otherwise `listing_interest_failed {error_code}` and nothing else: a known API `code` wins, else the status fallback (429 `rate_limited`, 400 `invalid_input`, any other status `server_error`), `network_error` when fetch threw. `src/components/listings/listings-empty-state.tsx` takes an optional `intent` prop (not passed yet; the role selector of spec 02 does it), computes one outcome per submit and captures it once; success/error UI state unchanged (success iff 2xx, as `res.ok` before). Tests: `src/lib/analytics/interest-events.test.ts` (26: both scopes, with/without intent, 2xx/3xx, every API code, status fallback incl. 404/403, unknown and non-string code, network error, failed sends only `error_code`, `responseErrorCode` on JSON/no code/non-JSON/null) and `src/components/listings/listings-empty-state.test.ts` (6: mocked `react` `useState`/`useEffect`, `fetch` stubbed; one saved event with district/city scope and intent, one failed event with code / status fallback / network error and no success state, logged-out form sends the email to the API but not to the event). `docs/architecture.md` Listings row lists both events (Prettier realigned the table).
+- Checks: `npx vitest run` on the two new files passed (32/32). `npm run verify` exit 0 twice (second run after Prettier: lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 38 files / 427 tests, build OK); `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: Assumption applied — the `error_code` set and the status fallback live only in `src/lib/analytics/interest-events.ts` (`API_ERROR_CODES`, `errorCodeFromStatus`). No copy, tables or migrations. After deploy: check in PostHog Live Events that a waitlist submit on an empty listings page sends exactly one `listing_interest_saved` (or `listing_interest_failed` with `error_code`) and no email.
+- Next: the next `todo` task of M1; T011 adds the API `code` field (the client already reads it), and the spec 02 role selector passes `intent` to `ListingsEmptyState`.

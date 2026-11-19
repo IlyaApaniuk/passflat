@@ -1,0 +1,157 @@
+import type { ReactElement, ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { capture, setState, stateQueue } = vi.hoisted(() => ({
+  capture: vi.fn(),
+  setState: vi.fn(),
+  // Values handed out by the mocked useState in call order (email, consent, consentError,
+  // status); an empty queue returns the initial value.
+  stateQueue: [] as unknown[],
+}));
+
+// The hooks are mocked, so the component can be called as a plain function and its element
+// tree inspected without a DOM. Effects do not run (district_waitlist_viewed is not under test).
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react')>()),
+  useState: (initial: unknown) => [stateQueue.length > 0 ? stateQueue.shift() : initial, setState],
+  useEffect: () => {},
+}));
+vi.mock('next-intl', () => ({
+  useTranslations: () => Object.assign((key: string) => key, { rich: (key: string) => key }),
+  useLocale: () => 'ru',
+}));
+vi.mock('posthog-js/react', () => ({ usePostHog: () => ({ capture }) }));
+vi.mock('@/i18n/navigation', () => ({ Link: () => null }));
+
+import { Button } from '@/components/ui/button';
+import { ListingsEmptyState } from './listings-empty-state';
+
+type Props = Parameters<typeof ListingsEmptyState>[0];
+type AnyElement = ReactElement<{
+  children?: ReactNode;
+  onClick?: () => void;
+  onSubmit?: (e: { preventDefault: () => void }) => void;
+}>;
+
+function findElement(node: ReactNode, match: (el: AnyElement) => boolean): AnyElement | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findElement(child, match);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!node || typeof node !== 'object' || !('props' in node)) return null;
+  const el = node as AnyElement;
+  if (match(el)) return el;
+  return findElement(el.props.children, match);
+}
+
+const baseProps: Props = {
+  citySlug: 'warsaw',
+  listingType: 'roommate',
+  districtSlug: 'mokotow',
+  selectedDistrict: 'Mokotów',
+  isLoggedIn: true,
+};
+
+/** Clicks the logged-in one-tap subscribe button and waits for the submit to settle. */
+async function clickSubscribe(props: Partial<Props> = {}) {
+  const tree = ListingsEmptyState({ ...baseProps, ...props });
+  const button = findElement(tree, (el) => el.type === Button && Boolean(el.props.onClick));
+  expect(button).not.toBeNull();
+  button?.props.onClick?.();
+  await vi.waitFor(() => expect(capture).toHaveBeenCalled());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+describe('ListingsEmptyState interest events', () => {
+  beforeEach(() => {
+    capture.mockClear();
+    setState.mockClear();
+    stateQueue.length = 0;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('fires one listing_interest_saved after a 2xx with district scope', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ success: true })));
+    await clickSubscribe();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('listing_interest_saved', {
+      listing_type: 'roommate',
+      district_scope: 'district',
+    });
+    expect(setState).toHaveBeenCalledWith('success');
+  });
+
+  it('sends city scope and the intent prop when set', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ success: true })));
+    await clickSubscribe({ districtSlug: '', selectedDistrict: undefined, intent: 'find_room' });
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('listing_interest_saved', {
+      listing_type: 'roommate',
+      district_scope: 'city',
+      intent: 'find_room',
+    });
+  });
+
+  it('fires one listing_interest_failed with the response code and no success event', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ error: 'Unknown district', code: 'unknown_district' }, { status: 400 }),
+        ),
+    );
+    await clickSubscribe();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('listing_interest_failed', {
+      error_code: 'unknown_district',
+    });
+    expect(setState).toHaveBeenCalledWith('error');
+    expect(setState).not.toHaveBeenCalledWith('success');
+  });
+
+  it('falls back to the status when the response has no code', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(Response.json({ error: 'Too many requests.' }, { status: 429 })),
+    );
+    await clickSubscribe();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('listing_interest_failed', { error_code: 'rate_limited' });
+  });
+
+  it('fires one listing_interest_failed with network_error when fetch threw', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    await clickSubscribe();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('listing_interest_failed', {
+      error_code: 'network_error',
+    });
+    expect(setState).toHaveBeenCalledWith('error');
+  });
+
+  it('sends the email to the API but never to the event (logged-out form)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ success: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    stateQueue.push('tenant@example.com', true);
+    const tree = ListingsEmptyState({ ...baseProps, isLoggedIn: false });
+    const form = findElement(tree, (el) => el.type === 'form');
+    form?.props.onSubmit?.({ preventDefault: () => {} });
+    await vi.waitFor(() => expect(capture).toHaveBeenCalled());
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      email: 'tenant@example.com',
+      city: 'warsaw',
+      districtSlug: 'mokotow',
+      listingType: 'roommate',
+    });
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(capture.mock.calls[0])).not.toContain('tenant@example.com');
+  });
+});

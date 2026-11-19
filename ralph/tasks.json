@@ -145,7 +145,7 @@
       "title": "Fire listing_interest_saved and listing_interest_failed from the interest form",
       "spec": "docs/specs/01-analytics-context.md#interest-events",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/components/listings/listings-empty-state.tsx fires exactly one listing_interest_saved after a 2xx response from /api/city-notify, with listing_type, district_scope (district | city) and intent only when an optional intent prop is set",
         "A non-2xx response or a thrown fetch fires exactly one listing_interest_failed with error_code from the spec set: taken from the response's code field when present, otherwise by status (429 rate_limited, 400 invalid_input, 500+ server_error), network_error when fetch threw",
@@ -153,7 +153,7 @@
         "A pure interestOutcomeEvent function has unit tests for both scopes, with and without intent, and every error code including the status fallback"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The API's code field arrives with T011; the status fallback keeps this task independent."
     },
     {

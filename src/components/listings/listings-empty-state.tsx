@@ -10,6 +10,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Bell, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
+import {
+  interestOutcomeEvent,
+  responseErrorCode,
+  type RoommateIntent,
+} from '@/lib/analytics/interest-events';
 
 /**
  * Demand-capture for the empty listings state, organised as two intents:
@@ -25,6 +30,7 @@ export function ListingsEmptyState({
   selectedDistrict,
   districtSlug,
   isLoggedIn,
+  intent,
 }: {
   citySlug: string;
   /** District display name (already translated from nameKey), or undefined for whole-city. */
@@ -34,6 +40,8 @@ export function ListingsEmptyState({
   listingType: ListingType;
   /** Logged-in users get a one-tap subscribe (email resolved from their session). */
   isLoggedIn: boolean;
+  /** The role the visitor chose on this page (roommate), sent with `listing_interest_saved`. */
+  intent?: RoommateIntent;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -55,6 +63,8 @@ export function ListingsEmptyState({
 
   const subscribe = async (withEmail: string | undefined) => {
     setStatus('loading');
+    let outcome: Parameters<typeof interestOutcomeEvent>[0];
+    const scope = { listingType, districtSlug, intent };
     try {
       const res = await fetch('/api/city-notify', {
         method: 'POST',
@@ -68,12 +78,21 @@ export function ListingsEmptyState({
           locale,
         }),
       });
-      if (!res.ok) throw new Error();
+      outcome = res.ok
+        ? { ...scope, status: res.status }
+        : { ...scope, status: res.status, code: await responseErrorCode(res) };
+    } catch {
+      outcome = { ...scope, networkError: true };
+    }
+    // One event per submit: saved after a 2xx, failed otherwise (spec 01 §Interest events).
+    const { event, properties } = interestOutcomeEvent(outcome);
+    posthog?.capture(event, properties);
+    if (event === 'listing_interest_saved') {
       setStatus('success');
       setEmail('');
       setConsent(false);
       setConsentError(false);
-    } catch {
+    } else {
       setStatus('error');
     }
   };
