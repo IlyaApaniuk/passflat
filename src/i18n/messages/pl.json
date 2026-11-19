@@ -1307,7 +1307,7 @@
     },
     "building": {
       "whiteSpotTitle": "Temu budynkowi brakuje raportów",
-      "whiteSpotDesc": "{count, plural, one {Na razie # zgłoszenie z pięciu, po których dom dostaje status „wiarygodne”.} few {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.} many {Na razie # zgłoszeń z pięciu, po których dom dostaje status „wiarygodne”.} other {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.}}",
+      "whiteSpotDesc": "{count, plural, one {Na razie # raport: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} few {Na razie # raporty: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} many {Na razie # raportów: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} other {Na razie # raportu: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.}}",
       "follow": "Obserwuj",
       "following": "Obserwujesz",
       "followToast": "Obserwujesz — wyślemy e-mail przy nowych raportach.",
@@ -1425,11 +1425,20 @@
         "tenancyCurrent": "Okres tych kosztów: do dziś",
         "tenancyFrom": "Okres tych kosztów: od {from}",
         "tenancyUntil": "Okres tych kosztów: do {to}",
-        "tenancyUnknown": "Nie wiadomo, za jaki okres płacono te koszty"
+        "tenancyUnknown": "Nie wiadomo, za jaki okres płacono te koszty",
+        "viewDetails": "Zobacz szczegóły",
+        "addExperience": "Dodaj swoje doświadczenie",
+        "noBuildingData": "Brak danych dla tego budynku",
+        "noAreaData": "Dla tej okolicy nie ma jeszcze danych",
+        "referenceTenantDistrict": "Dla orientacji: raporty najemców w dzielnicy {area} ({count})",
+        "referenceTenantCity": "Dla orientacji: raporty najemców w mieście {area} ({count})",
+        "referenceAskingDistrict": "Dla orientacji: ceny ofertowe z ogłoszeń w dzielnicy {area} ({count})",
+        "referenceAskingCity": "Dla orientacji: ceny ofertowe z ogłoszeń w mieście {area} ({count})",
+        "referenceHint": "{level, select, district {To dane dla dzielnicy, a nie dla tego budynku.} other {To dane dla miasta, a nie dla tego budynku.}}"
       }
     },
     "trust": {
-      "reliable": "Popularny budynek",
+      "sampleSize": "{count}+ obserwacji",
       "outdated": "Dane mogą być nieaktualne",
       "earlyData": "{count, plural, one {Dane wstępne · # raport} few {Dane wstępne · # raporty} many {Dane wstępne · # raportów} other {Dane wstępne · # raportu}}"
     },

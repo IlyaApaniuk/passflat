@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeFigures, type FigureReport } from '@/lib/cost-figures';
+import { answerProperties, summarizeFigures, type FigureReport } from '@/lib/cost-figures';
 import { buildingDetailViewedProperties, reportSourceCounts } from './building-events';
 
 const countsOf = (sources: string[]) =>
@@ -54,13 +54,27 @@ describe('reportSourceCounts', () => {
   });
 });
 
+const summaryOf = (reports: FigureReport[], level: 'building' | 'district' | 'city') =>
+  summarizeFigures(reports, { level, rentalType: 'all' });
+
 describe('buildingDetailViewedProperties', () => {
-  it('keeps building_id, building_slug and city and adds the counts', () => {
+  const building = { id: 'b-1', slug: 'pulawska-10' };
+
+  it('keeps building_id, building_slug and city and adds the counts and the answer quality', () => {
+    const figures = summaryOf(
+      [
+        { source: 'user', rent: 3000, totalMonthlyAvg: 3800, utilitiesComplete: true },
+        { source: 'user', rent: 3200, totalMonthlyAvg: 3900, utilitiesComplete: false },
+        { source: 'scraped', rent: 3300 },
+      ],
+      'building',
+    );
     expect(
       buildingDetailViewedProperties(
-        { id: 'b-1', slug: 'pulawska-10' },
+        building,
         'warsaw',
-        countsOf(['user', 'user', 'scraped']),
+        reportSourceCounts(figures),
+        answerProperties(figures, null),
       ),
     ).toEqual({
       building_id: 'b-1',
@@ -70,6 +84,65 @@ describe('buildingDetailViewedProperties', () => {
       user_count: 2,
       import_count: 0,
       scraped_count: 1,
+      answer_level: 'building',
+      source_kind: 'mixed',
+      n: 1,
+      incomplete: false,
     });
+  });
+
+  it('reports a district reference for a building without reports, with its headline N', () => {
+    const figures = summaryOf([], 'building');
+    const reference = {
+      level: 'district' as const,
+      summary: summaryOf(
+        [
+          { source: 'user', totalMonthlyAvg: 3900, utilitiesComplete: false },
+          { source: 'import', totalMonthlyAvg: 3700, utilitiesComplete: false },
+          { source: 'user', totalMonthlyAvg: 3600, utilitiesComplete: null },
+          { source: 'user', rent: 3000 },
+          { source: 'user', rent: 3100 },
+        ],
+        'district',
+      ),
+    };
+    expect(
+      buildingDetailViewedProperties(
+        building,
+        'warsaw',
+        reportSourceCounts(figures),
+        answerProperties(figures, reference),
+      ),
+    ).toMatchObject({
+      report_count: 0,
+      answer_level: 'district',
+      source_kind: 'tenant',
+      n: 3,
+      incomplete: true,
+    });
+  });
+
+  it('reports a city reference and no answer at all', () => {
+    const figures = summaryOf([], 'building');
+    const city = {
+      level: 'city' as const,
+      summary: summaryOf([{ source: 'scraped', rent: 3300 }], 'city'),
+    };
+    expect(
+      buildingDetailViewedProperties(
+        building,
+        'warsaw',
+        reportSourceCounts(figures),
+        answerProperties(figures, city),
+      ),
+    ).toMatchObject({ answer_level: 'city', source_kind: 'asking', n: 1, incomplete: false });
+    expect(
+      buildingDetailViewedProperties(
+        building,
+        'warsaw',
+        reportSourceCounts(figures),
+        answerProperties(figures, null),
+      ),
+    ).toMatchObject({ answer_level: 'none', source_kind: 'none', n: 0, incomplete: false });
   });
 });

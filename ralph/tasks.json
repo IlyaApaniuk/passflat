@@ -334,7 +334,7 @@
       "title": "Building page: first-screen order, two actions, fallback and neutral badges",
       "spec": "docs/specs/03-building-figures.md#building-page",
       "dependsOn": ["T020"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "First screen order: address and district, source line, known costs per group with their limits, then two actions View details (scrolls to the breakdown) and Add your experience (/costs/submit?b=<id>&source=building); sources and limits are never behind useHasContributed",
         "No visible report: «По дому данных нет» (RU given) first, then the area reference from loadAreaReference labelled with its level, group and N; no reference: 'No figures for this area yet' plus location score and nuisances; district figures never labelled as the building's",
@@ -343,7 +343,7 @@
         "A pure function picks the fallback state; tests cover building data, district reference, city reference, none"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

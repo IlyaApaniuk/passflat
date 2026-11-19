@@ -1307,7 +1307,7 @@
     },
     "building": {
       "whiteSpotTitle": "This building needs more reports",
-      "whiteSpotDesc": "{count, plural, one {# report so far, out of the five that mark a building as reliable.} other {# reports so far, out of the five that mark a building as reliable.}}",
+      "whiteSpotDesc": "{count, plural, one {# report so far: add yours so these figures rest on more answers.} other {# reports so far: add yours so these figures rest on more answers.}}",
       "follow": "Follow",
       "following": "Following",
       "followToast": "Following — we'll email you when new reports arrive.",
@@ -1425,11 +1425,20 @@
         "tenancyCurrent": "Period of these costs: up to now",
         "tenancyFrom": "Period of these costs: from {from}",
         "tenancyUntil": "Period of these costs: until {to}",
-        "tenancyUnknown": "The period these costs were paid is not known"
+        "tenancyUnknown": "The period these costs were paid is not known",
+        "viewDetails": "View details",
+        "addExperience": "Add your experience",
+        "noBuildingData": "No data for this building",
+        "noAreaData": "No figures for this area yet",
+        "referenceTenantDistrict": "Reference: tenant reports in {area} ({count})",
+        "referenceTenantCity": "Reference: tenant reports in {area} ({count})",
+        "referenceAskingDistrict": "Reference: asking prices from listings in {area} ({count})",
+        "referenceAskingCity": "Reference: asking prices from listings in {area} ({count})",
+        "referenceHint": "{level, select, district {These figures are for the district, not for this building.} other {These figures are for the city, not for this building.}}"
       }
     },
     "trust": {
-      "reliable": "Popular building",
+      "sampleSize": "{count}+ observations",
       "outdated": "Data may be outdated",
       "earlyData": "{count, plural, one {Early data · # report} other {Early data · # reports}}"
     },

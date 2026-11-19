@@ -10,6 +10,7 @@ import {
   breakdownHasFigures,
   breakdownNotes,
   breakdownRows,
+  buildingFiguresFallback,
   characteristicMessages,
   comparableTenantGroup,
   FIGURE_GROUP_N_KEY,
@@ -20,8 +21,14 @@ import {
   groupFigureRows,
   isOneObservation,
   KNOWN_PART_HINT_KEY,
+  NO_AREA_DATA_KEY,
+  NO_BUILDING_DATA_KEY,
   ONE_OBSERVATION_KEY,
   orderedFigureGroups,
+  referenceGroupLabel,
+  referenceHintMessage,
+  SAMPLE_SIZE_BADGE_MIN,
+  sampleSizeBadge,
   sourceLineMessages,
   tenancyMessage,
   type FigureMessage,
@@ -506,6 +513,131 @@ describe('dates', () => {
   });
 });
 
+/** A loader's area reference over the given reports (district or city). */
+const referenceOf = (level: 'district' | 'city', reports: FigureReport[], areaName: string) => ({
+  level,
+  areaName,
+  summary: summarizeFigures(reports, { level, rentalType: 'all' }),
+});
+
+describe('buildingFiguresFallback (FR-33)', () => {
+  const district = referenceOf(
+    'district',
+    [
+      complete('user', { rent: 3500, totalMonthlyAvg: 3900 }),
+      complete('user', { rent: 3300, totalMonthlyAvg: 3800 }),
+      complete('import', { rent: 3100, totalMonthlyAvg: 3600 }),
+      incomplete('scraped', { rent: 3600, totalMonthlyAvg: 4000 }),
+      incomplete('scraped', { rent: 3400, totalMonthlyAvg: 3800 }),
+    ],
+    'Mokotów',
+  );
+  const city = referenceOf(
+    'city',
+    [complete('user', { rent: 3000, totalMonthlyAvg: 3600 })],
+    'Warszawa',
+  );
+  const empty = summarizeFigures([], building);
+
+  it('shows the building figures when the building has a report, whatever the reference', () => {
+    expect(buildingFiguresFallback(mixedBuilding, district)).toEqual({ state: 'building' });
+    expect(buildingFiguresFallback(mixedBuilding, null)).toEqual({ state: 'building' });
+  });
+
+  it('falls back to a district reference', () => {
+    const fallback = buildingFiguresFallback(empty, district);
+    expect(fallback).toEqual({ state: 'reference', reference: district });
+  });
+
+  it('falls back to a city reference', () => {
+    const fallback = buildingFiguresFallback(empty, city);
+    expect(fallback.state).toBe('reference');
+    expect(fallback.state === 'reference' && fallback.reference.level).toBe('city');
+  });
+
+  it('has nothing without a reference or with an empty one', () => {
+    expect(buildingFiguresFallback(empty, null)).toEqual({ state: 'none' });
+    expect(buildingFiguresFallback(empty, referenceOf('city', [], 'Warszawa'))).toEqual({
+      state: 'none',
+    });
+  });
+
+  it('labels each reference group with its level, group and N, never as the building', () => {
+    const en = translator('en');
+    const ru = translator('ru');
+    const [tenant, asking] = orderedFigureGroups(district.summary);
+    const render = (t: Translate, message: FigureMessage) => t(message.key, message.values);
+
+    expect(render(en, referenceGroupLabel('district', tenant, 'Mokotów'))).toBe(
+      'Reference: tenant reports in Mokotów (3)',
+    );
+    expect(render(en, referenceGroupLabel('district', asking, 'Mokotów'))).toBe(
+      'Reference: asking prices from listings in Mokotów (2)',
+    );
+    const [cityTenant] = orderedFigureGroups(city.summary);
+    expect(render(en, referenceGroupLabel('city', cityTenant, 'Warsaw'))).toBe(
+      'Reference: tenant reports in Warsaw (1)',
+    );
+    expect(render(ru, referenceGroupLabel('district', tenant, 'Мокотув'))).toBe(
+      'Для ориентира: отчёты арендаторов по району Мокотув (3)',
+    );
+    expect(render(ru, referenceGroupLabel('city', cityTenant, 'Варшава'))).toBe(
+      'Для ориентира: отчёты арендаторов по городу Варшава (1)',
+    );
+    expect(render(en, referenceHintMessage('district'))).toBe(
+      'These figures are for the district, not for this building.',
+    );
+    expect(render(en, referenceHintMessage('city'))).toBe(
+      'These figures are for the city, not for this building.',
+    );
+    for (const locale of LOCALES) {
+      const t = translator(locale);
+      for (const level of ['district', 'city'] as const) {
+        for (const group of [tenant, asking]) {
+          expect(render(t, referenceGroupLabel(level, group, 'X'))).toContain('X');
+        }
+        expect(render(t, referenceHintMessage(level))).not.toBe('');
+      }
+    }
+  });
+
+  it('gives the no-data lines (RU as given)', () => {
+    expect(translator('ru')(NO_BUILDING_DATA_KEY)).toBe('По дому данных нет');
+    expect(translator('en')(NO_BUILDING_DATA_KEY)).toBe('No data for this building');
+    expect(translator('en')(NO_AREA_DATA_KEY)).toBe('No figures for this area yet');
+  });
+});
+
+describe('sampleSizeBadge (FR-31)', () => {
+  it('states the sample size, neutrally, from the threshold on', () => {
+    expect(SAMPLE_SIZE_BADGE_MIN).toBe(5);
+    const badge = sampleSizeBadge(7)!;
+    expect(translator('en')(badge.key, badge.values)).toBe('5+ observations');
+    expect(translator('ru')(badge.key, badge.values)).toBe('5+ наблюдений');
+    expect(sampleSizeBadge(5)!.key).toBe('costs.trust.sampleSize');
+  });
+
+  it('keeps "early data" below the threshold and shows nothing without reports', () => {
+    const badge = sampleSizeBadge(2)!;
+    expect(translator('en')(badge.key, badge.values)).toBe('Early data · 2 reports');
+    expect(sampleSizeBadge(0)).toBeNull();
+  });
+
+  it.each(LOCALES)('never claims reliability or verification in %s', (locale) => {
+    const t = translator(locale);
+    const texts = [sampleSizeBadge(5)!, sampleSizeBadge(1)!].map((badge) =>
+      t(badge.key, badge.values),
+    );
+    texts.push(t('costs.building.whiteSpotDesc', { count: 2 }));
+    expect(lookup(messages[locale], 'costs.trust.reliable')).toBeUndefined();
+    for (const text of texts) {
+      expect(text).not.toMatch(
+        /reliab|verif|popular|wiarygod|zweryfik|popularn|надёжн|надежн|провер|популяр|надійн|перевір/i,
+      );
+    }
+  });
+});
+
 describe('message keys', () => {
   const keys = [
     ...Object.values(FIGURE_GROUP_TITLE_KEY),
@@ -537,7 +669,20 @@ describe('message keys', () => {
       'tenancyFrom',
       'tenancyUntil',
       'tenancyUnknown',
+      'viewDetails',
+      'addExperience',
+      'referenceTenantDistrict',
+      'referenceTenantCity',
+      'referenceAskingDistrict',
+      'referenceAskingCity',
+      'referenceHint',
     ].map((name) => `costs.building.figures.${name}`),
+    NO_BUILDING_DATA_KEY,
+    NO_AREA_DATA_KEY,
+    'costs.trust.sampleSize',
+    'costs.trust.earlyData',
+    'costs.building.whiteSpotTitle',
+    'costs.building.whiteSpotDesc',
   ];
 
   it.each(LOCALES)('exist as strings in %s.json (client namespace costs)', (locale) => {

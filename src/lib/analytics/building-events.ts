@@ -1,4 +1,4 @@
-import type { FigureSummary } from '@/lib/cost-figures';
+import type { AnswerProperties, FigureSummary } from '@/lib/cost-figures';
 
 /**
  * How many visible reports stand behind a building page, in total and per source (spec 01
@@ -28,19 +28,26 @@ export function reportSourceCounts(
 }
 
 /**
- * Properties of `building_detail_viewed`: the building and its city plus the report counts. Page
- * context (`page_type`, `locale`, ...) is added by the `before_send` hook, not here; the `city`
- * slug sent here is the event's own property, as before.
+ * Properties of `building_detail_viewed`: the building and its city, the report counts and the
+ * answer quality (spec 01 §Answer quality: `answer_level`, `source_kind`, `n`, `incomplete`
+ * from `answerProperties`). Page context (`page_type`, `locale`, ...) is added by the
+ * `before_send` hook, not here; the `city` slug sent here is the event's own property, as before.
  */
 export function buildingDetailViewedProperties(
   building: { id: string; slug: string },
   citySlug: string,
   counts: ReportSourceCounts,
-): ReportSourceCounts & { building_id: string; building_slug: string; city: string } {
+  answer: AnswerProperties,
+): ReportSourceCounts &
+  AnswerProperties & { building_id: string; building_slug: string; city: string } {
   return {
     building_id: building.id,
     building_slug: building.slug,
     city: citySlug,
     ...counts,
+    answer_level: answer.answer_level,
+    source_kind: answer.source_kind,
+    n: answer.n,
+    incomplete: answer.incomplete,
   };
 }

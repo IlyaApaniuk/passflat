@@ -4,11 +4,13 @@
 
 import {
   TENANCY_ONGOING,
+  type AreaReference,
   type FigureGroup,
   type FigureGroupKey,
   type FigureSummary,
   type MetricFigure,
 } from '@/lib/cost-figures';
+import { TRUST_THRESHOLDS } from '@/lib/cost-stats';
 
 /** A message key with its ICU values, rendered by the caller's `t()`. */
 export interface FigureMessage {
@@ -69,6 +71,78 @@ export function sourceLineMessages(summary: Pick<FigureSummary, 'groups'>): Figu
     });
   }
   return messages;
+}
+
+/** From this many reports the page shows the neutral sample-size badge, below it "early data". */
+export const SAMPLE_SIZE_BADGE_MIN = TRUST_THRESHOLDS.reliableMin;
+
+/**
+ * The header badge about the size of the sample (FR-31): "5+ observations" or
+ * "Early data · N reports". It states a count, never reliability or
+ * verification; no badge without reports.
+ */
+export function sampleSizeBadge(reportCount: number): FigureMessage | null {
+  if (reportCount <= 0) return null;
+  if (reportCount >= SAMPLE_SIZE_BADGE_MIN) {
+    return { key: 'costs.trust.sampleSize', values: { count: SAMPLE_SIZE_BADGE_MIN } };
+  }
+  return { key: 'costs.trust.earlyData', values: { count: reportCount } };
+}
+
+/** Shown first when the building has no visible report. */
+export const NO_BUILDING_DATA_KEY = 'costs.building.figures.noBuildingData';
+/** Shown when neither the district nor the city has a report to refer to. */
+export const NO_AREA_DATA_KEY = 'costs.building.figures.noAreaData';
+
+/**
+ * What fills the figure part of the building page (FR-33): the building's own
+ * figures when it has a visible report; otherwise the area reference the loader
+ * found (district or city); otherwise nothing.
+ */
+export type BuildingFiguresFallback<R> =
+  | { state: 'building' }
+  | { state: 'reference'; reference: R }
+  | { state: 'none' };
+
+export function buildingFiguresFallback<R extends Pick<AreaReference, 'level' | 'summary'>>(
+  summary: Pick<FigureSummary, 'reportCount'>,
+  reference: R | null,
+): BuildingFiguresFallback<R> {
+  if (summary.reportCount > 0) return { state: 'building' };
+  if (reference && reference.summary.reportCount > 0) return { state: 'reference', reference };
+  return { state: 'none' };
+}
+
+const REFERENCE_LABEL_KEY: Record<FigureGroupKey, Record<AreaReference['level'], string>> = {
+  tenant: {
+    district: 'costs.building.figures.referenceTenantDistrict',
+    city: 'costs.building.figures.referenceTenantCity',
+  },
+  asking: {
+    district: 'costs.building.figures.referenceAskingDistrict',
+    city: 'costs.building.figures.referenceAskingCity',
+  },
+};
+
+/**
+ * The title of one group of an area reference, with its level, group and N:
+ * "Reference: tenant reports in Mokotów (3)". Area figures are never labelled
+ * as the building's.
+ */
+export function referenceGroupLabel(
+  level: AreaReference['level'],
+  group: Pick<FigureGroup, 'key' | 'reportCount'>,
+  area: string,
+): FigureMessage {
+  return {
+    key: REFERENCE_LABEL_KEY[group.key][level],
+    values: { area, count: group.reportCount },
+  };
+}
+
+/** Says that the reference describes the district or the city, not this building. */
+export function referenceHintMessage(level: AreaReference['level']): FigureMessage {
+  return { key: 'costs.building.figures.referenceHint', values: { level } };
 }
 
 /** The groups that have reports, tenant first, then asking prices. */

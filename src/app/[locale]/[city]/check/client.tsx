@@ -8,12 +8,7 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
-  Ambulance,
-  Beer,
-  Flame,
-  TrainTrack,
   MessageSquarePlus,
-  Music,
   CheckCircle2,
   Loader2,
   MapPin,
@@ -22,7 +17,6 @@ import {
   Send,
   Share2,
   WalletCards,
-  type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import type { CityBounds } from '@/lib/listings-data';
@@ -34,11 +28,12 @@ import {
   LocationScoreSkeleton,
   useDistanceFormatter,
 } from '@/components/buildings/location-score-block';
+import { NuisancesCard, nuisanceItems } from '@/components/buildings/nuisances-card';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
 import { TelegramBotCta } from '@/components/costs/telegram-bot-cta';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -131,14 +126,6 @@ interface CheckerClientProps {
   cityBounds: CityBounds | null;
   initialPlaceId: string | null;
 }
-
-const NUISANCE_ICONS: Record<string, LucideIcon> = {
-  fireStation: Flame,
-  hospital: Ambulance,
-  railway: TrainTrack,
-  nightclub: Music,
-  bars: Beer,
-};
 
 function isInsideBounds(lat: number, lng: number, bounds: CityBounds) {
   return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
@@ -606,40 +593,15 @@ export function CheckerClient({
             {/* Noise sources. Needs no tenant input, so unlike the tag block
                 below it has something to say on the very first check. */}
             {result.nuisances && result.nuisances.length > 0 && (
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle className="text-lg">{t('nuisances.title')}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{t('nuisances.subtitle')}</p>
-                </CardHeader>
-                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
-                  {result.nuisances.map((nuisance) => {
-                    const Icon = NUISANCE_ICONS[nuisance.key] ?? AlertCircle;
-                    return (
-                      <div
-                        key={nuisance.key}
-                        className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3.5"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
-                          <Icon className="h-[18px] w-[18px] text-amber-600 dark:text-amber-500" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">{t(`nuisances.${nuisance.key}`)}</p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                            {nuisance.report === 'count'
-                              ? t('nuisances.count', {
-                                  count: nuisance.count,
-                                  distance: formatDistance(nuisance.nearestM),
-                                })
-                              : `${nuisance.name ? `${nuisance.name} · ` : ''}${formatDistance(nuisance.nearestM)}`}
-                            {' · '}
-                            {t(`nuisances.${nuisance.key}Note`)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+              <NuisancesCard
+                title={t('nuisances.title')}
+                subtitle={t('nuisances.subtitle')}
+                items={nuisanceItems(
+                  result.nuisances,
+                  (key, values) => t(`nuisances.${key}`, values),
+                  formatDistance,
+                )}
+              />
             )}
 
             <Card>

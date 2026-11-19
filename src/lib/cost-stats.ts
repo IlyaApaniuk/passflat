@@ -114,7 +114,7 @@ export function monthsSince(date: string | Date | null | undefined): number | nu
 export const TRUST_THRESHOLDS = {
   /** Below this many reports the figures are flagged as a preliminary estimate. */
   lowDataMax: 3,
-  /** At/above this many reports the figures are flagged as reliable. */
+  /** At/above this many reports the building page shows its neutral "5+ observations" badge. */
   reliableMin: 5,
   /** Reports older than this many months are flagged as potentially outdated. */
   staleMonths: 12,

@@ -8,11 +8,18 @@ import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd, buildingPlaceJsonLd } from '@/lib/json-ld';
 import { formatAddressDisplay } from '@/lib/address';
 import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
-import { loadBuildingFigures } from '@/lib/cost-figures-query';
+import { loadAreaReference, loadBuildingFigures } from '@/lib/cost-figures-query';
+import type { AreaReference } from '@/lib/cost-figures';
 import { buildingTenantDetails } from '@/lib/building-tenant-details';
 import { comparableTenantGroup } from '@/lib/building-figures-view';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
+import { findNuisances, type NuisanceResult } from '@/lib/nuisances';
+import {
+  formatDistanceM,
+  NuisancesCard,
+  nuisanceItems,
+} from '@/components/buildings/nuisances-card';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -235,6 +242,17 @@ const getCityBaseline = unstable_cache(
 
 // ---------------------------------------------------------------------------
 
+/** Nuisances around the building, from the local POI table; none without coordinates. */
+async function findBuildingNuisances(
+  citySlug: string,
+  building: { lat: unknown; lng: unknown },
+): Promise<NuisanceResult[]> {
+  if (building.lat == null || building.lng == null) return [];
+  const origin = { lat: Number(building.lat), lng: Number(building.lng) };
+  if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return [];
+  return findNuisances(citySlug, origin);
+}
+
 function cheaperThanPercentile(values: number[], buildingMedian: number | null): number | null {
   if (buildingMedian == null || values.length === 0) return null;
   const pricier = values.filter((v) => v > buildingMedian).length;
@@ -358,6 +376,29 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   ]);
   const tenant = figures.groups.tenant;
 
+  // No visible report (FR-33): the district or the city stands in as an
+  // explicitly labelled reference, and the location facts that need no report
+  // (nuisances next to the location score) are read for this case only.
+  const [areaReference, nuisances]: [AreaReference | null, NuisanceResult[]] =
+    figures.reportCount === 0
+      ? await Promise.all([
+          loadAreaReference({ districtId: building.districtId, cityId: building.cityId }),
+          findBuildingNuisances(citySlug, building),
+        ])
+      : [null, []];
+  const nuisancesCard =
+    nuisances.length > 0 ? (
+      <NuisancesCard
+        title={t('checker.nuisances.title')}
+        subtitle={t('checker.nuisances.subtitle')}
+        items={nuisanceItems(
+          nuisances,
+          (key, values) => t(`checker.nuisances.${key}`, values),
+          (distanceM) => formatDistanceM(locale, distanceM),
+        )}
+      />
+    ) : null;
+
   // The items spec 03 keeps on the page (winter/summer, periodic charges,
   // deposit, tenure, lease type), over the tenant group's reports only.
   const tenantDetails = tenant
@@ -480,6 +521,18 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           placeId: building.placeId,
         }}
         figures={figures}
+        areaReference={
+          areaReference
+            ? {
+                level: areaReference.level,
+                // A district's `nameKey` is its display name; a city's is a message key.
+                areaName:
+                  areaReference.level === 'district' ? areaReference.name : t(areaReference.name),
+                summary: areaReference.summary,
+              }
+            : null
+        }
+        nuisancesCard={nuisancesCard}
         tenantDetails={tenantDetails}
         lastUpdated={lastUpdated}
         comparison={{

@@ -18,12 +18,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { monthsSince, TRUST_THRESHOLDS } from '@/lib/cost-stats';
-import type { FigureGroup, FigureGroupKey, FigureSummary, MetricFigure } from '@/lib/cost-figures';
+import {
+  answerProperties,
+  type AreaReference,
+  type FigureGroup,
+  type FigureGroupKey,
+  type FigureSummary,
+  type MetricFigure,
+} from '@/lib/cost-figures';
 import type { PeriodicBreakdownRow, TenantDetails } from '@/lib/building-tenant-details';
 import {
   breakdownHasFigures,
   breakdownNotes,
   breakdownRows,
+  buildingFiguresFallback,
   characteristicMessages,
   FIGURE_GROUP_N_KEY,
   FIGURE_GROUP_TITLE_KEY,
@@ -31,8 +39,14 @@ import {
   groupFigureRows,
   isOneObservation,
   KNOWN_PART_HINT_KEY,
+  NO_AREA_DATA_KEY,
+  NO_BUILDING_DATA_KEY,
   ONE_OBSERVATION_KEY,
   orderedFigureGroups,
+  referenceGroupLabel,
+  referenceHintMessage,
+  SAMPLE_SIZE_BADGE_MIN,
+  sampleSizeBadge,
   sourceLineMessages,
   type BreakdownKey,
   type BreakdownRow,
@@ -72,6 +86,9 @@ import {
 import { relativeCostStyle } from '@/lib/cost-color';
 
 const DATE_LOCALE_MAP: Record<string, Locale> = { en: enUS, pl, ru, uk };
+
+/** The breakdown card, where "View details" scrolls to. */
+const BREAKDOWN_ANCHOR = 'cost-breakdown';
 
 // i18n key maps for the periodic-charge detail sub-list.
 const PERIODIC_CAT_LABEL: Record<string, string> = {
@@ -398,6 +415,14 @@ interface BuildingCostsClientProps {
   };
   /** The figure contract's summary of the building's visible reports (tenant and asking groups). */
   figures: FigureSummary;
+  /**
+   * The district or city figures shown when the building has no visible report
+   * (FR-33), with the area's display name; null when the building has reports
+   * or the city has none either.
+   */
+  areaReference: (Pick<AreaReference, 'level' | 'summary'> & { areaName: string }) | null;
+  /** The nuisances block, rendered on the server; only for a building without reports. */
+  nuisancesCard: ReactNode;
   /** The items the page keeps computing, over the tenant group only; null without one. */
   tenantDetails: TenantDetails | null;
   lastUpdated: string | null;
@@ -431,6 +456,8 @@ interface BuildingCostsClientProps {
 export function BuildingCostsClient({
   building,
   figures,
+  areaReference,
+  nuisancesCard,
   tenantDetails,
   lastUpdated,
   comparison,
@@ -443,16 +470,17 @@ export function BuildingCostsClient({
   const posthog = usePostHog();
   const reports = figures.reportCount;
   const groups = orderedFigureGroups(figures);
+  // The building's own figures, else the labelled area reference, else nothing (FR-33).
+  const fallback = buildingFiguresFallback(figures, areaReference);
+  const submitHref = `/${citySlug}/costs/submit?b=${building.id}&source=building`;
 
-  // Data-confidence (trust) signals derived from existing data only. Thin
-  // per-building data is the norm (long tail), so we don't flag "few reports" as
-  // a warning — we anchor trust on the district and reward dense buildings with a
-  // positive badge instead.
+  // Sample-size signals from existing data only: a neutral count badge
+  // ("5+ observations" / "Early data · N reports"), never a claim of
+  // reliability or verification (FR-31), and the outdated flag.
   const ageMonths = monthsSince(lastUpdated);
-  const trust = {
-    reliable: reports >= TRUST_THRESHOLDS.reliableMin,
-    outdated: ageMonths !== null && ageMonths > TRUST_THRESHOLDS.staleMonths,
-  };
+  const sampleBadge = sampleSizeBadge(reports);
+  const belowSampleSize = reports < SAMPLE_SIZE_BADGE_MIN;
+  const outdated = ageMonths !== null && ageMonths > TRUST_THRESHOLDS.staleMonths;
 
   // Public (SEO + teaser): the summary (total, split, deposit/return/tenure),
   // rent + komunalka in the breakdown, and the location score. Gated behind a
@@ -468,7 +496,12 @@ export function BuildingCostsClient({
   useEffect(() => {
     posthog?.capture(
       'building_detail_viewed',
-      buildingDetailViewedProperties(building, citySlug, reportSourceCounts(figures)),
+      buildingDetailViewedProperties(
+        building,
+        citySlug,
+        reportSourceCounts(figures),
+        answerProperties(figures, areaReference),
+      ),
     );
   }, [building.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -499,6 +532,92 @@ export function BuildingCostsClient({
     row.key === 'completeTotalPerM2'
       ? `${Math.round(row.figure.median!).toLocaleString()} ${t('costs.building.perM2')}`
       : `${row.figure.median!.toLocaleString()} PLN`;
+
+  // A group's headline, its other figures (each with its own N) and the
+  // known-part hint: the building's groups and an area reference's alike.
+  const renderGroupFigures = (group: FigureGroup, emphasised: boolean) => {
+    const { headline, rows, knownPart } = groupFigureRows(group);
+    if (!headline) return null;
+    const one = isOneObservation(group);
+    return (
+      <>
+        <p className="text-sm text-muted-foreground">{t(headline.labelKey)}</p>
+        <motion.p
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
+          className={`text-4xl font-bold ${emphasised ? 'text-primary' : ''}`}
+        >
+          {approx(one)}
+          {formatFigure(headline)}
+        </motion.p>
+        {!one && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {metricN(group.key, headline.figure.n)}
+          </p>
+        )}
+
+        {rows.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t pt-4">
+            {rows.map((row) => {
+              const { icon: Icon, tint } = GROUP_FIGURE_ICON[row.key];
+              return (
+                <div key={row.key} className="flex items-center gap-2">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t(row.labelKey)}</p>
+                    <p className="text-lg font-semibold">
+                      {approx(one)}
+                      {formatFigure(row)}
+                    </p>
+                    {!one && (
+                      <p className="text-xs text-muted-foreground">
+                        {metricN(group.key, row.figure.n)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* The known part is never the full monthly cost (FR-25). */}
+        {knownPart && (
+          <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {t(KNOWN_PART_HINT_KEY)}
+          </p>
+        )}
+      </>
+    );
+  };
+
+  // The district or city figures of a building without reports (FR-33): by
+  // group, each titled with its level, group and N, and introduced as the
+  // area's figures, never the building's.
+  const renderAreaReference = (reference: NonNullable<typeof areaReference>) => (
+    <div className="space-y-4">
+      <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        {renderMessage(referenceHintMessage(reference.level))}
+      </p>
+      {orderedFigureGroups(reference.summary).map((group) =>
+        groupFigureRows(group).headline ? (
+          <Card key={group.key}>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {renderMessage(referenceGroupLabel(reference.level, group, reference.areaName))}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>{renderGroupFigures(group, false)}</CardContent>
+          </Card>
+        ) : null,
+      )}
+    </div>
+  );
 
   const renderDeltaBadge = (pct: number) => {
     if (pct === 0)
@@ -729,19 +848,14 @@ export function BuildingCostsClient({
               <div className="flex flex-wrap items-center gap-2">
                 <ShareButton path={`/${citySlug}/building/${building.slug}`} source="building" />
                 <FollowBuildingButton buildingId={building.id} citySlug={citySlug} />
-                {reports > 0 && trust.reliable && (
-                  <Badge className="w-fit gap-1 bg-green-500/10 text-green-600">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {t('costs.trust.reliable')}
-                  </Badge>
-                )}
-                {reports > 0 && !trust.reliable && (
+                {/* A count, not a verdict: neutral styling either way (FR-31). */}
+                {sampleBadge && (
                   <Badge variant="secondary" className="w-fit gap-1 text-muted-foreground">
                     <Info className="h-3 w-3" />
-                    {t('costs.trust.earlyData', { count: reports })}
+                    {renderMessage(sampleBadge)}
                   </Badge>
                 )}
-                {trust.outdated && (
+                {outdated && (
                   <Badge variant="secondary" className="w-fit gap-1 text-amber-600">
                     <CalendarClock className="h-3 w-3" />
                     {t('costs.trust.outdated')}
@@ -754,66 +868,71 @@ export function BuildingCostsClient({
             </div>
           </motion.div>
 
-          {reports === 0 ? (
+          {fallback.state !== 'building' ? (
             <div className="space-y-8">
+              {/* No visible report: say so first, then the area's figures as an
+                  explicitly labelled reference, or that the area has none. */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
                 <Card>
-                  <CardContent className="flex flex-col items-center py-16 text-center">
+                  <CardContent className="flex flex-col items-center py-10 text-center">
                     <Building2 className="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold">
-                      {t('costs.overview.noBuildingsFound')}
-                    </h3>
-                    <p className="mt-1 text-muted-foreground">
-                      {t('costs.overview.noBuildingsDesc')}
-                    </p>
+                    <h2 className="text-lg font-semibold">{t(NO_BUILDING_DATA_KEY)}</h2>
                     <Button className="mt-6" asChild>
-                      <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
-                        {t('costs.overview.submitCostReport')}
-                      </Link>
+                      <Link href={submitHref}>{t('costs.building.figures.addExperience')}</Link>
                     </Button>
                   </CardContent>
                 </Card>
               </motion.div>
+
+              <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
+                {fallback.state === 'reference' ? (
+                  renderAreaReference(fallback.reference)
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      {t(NO_AREA_DATA_KEY)}
+                    </CardContent>
+                  </Card>
+                )}
+              </motion.div>
+
+              {/* What needs no report: the location score and the nuisances. */}
+              <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp}>
+                <LocationScore
+                  buildingId={building.id}
+                  citySlug={citySlug}
+                  initialData={initialLocationScore}
+                  surface="building"
+                />
+              </motion.div>
+
+              {nuisancesCard && (
+                <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp}>
+                  {nuisancesCard}
+                </motion.div>
+              )}
 
               {/* Tags arrive without a cost report — /review and the checker
                   collect them on their own — so a building can hold what its
                   tenants said while having no numbers at all. Skipping this
                   branch would answer such a visitor with "no data" while their
                   neighbours' answers sat in the database. */}
-              <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
+              <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
                 {tenantTagsCard}
               </motion.div>
             </div>
           ) : (
             <div className="space-y-8">
-              {!trust.reliable && (
-                <motion.div custom={0} initial="hidden" animate="visible" variants={fadeUp}>
-                  <Card className="border-primary/20 bg-primary/5">
-                    <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h3 className="font-semibold">{t('costs.building.whiteSpotTitle')}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t('costs.building.whiteSpotDesc', { count: reports })}
-                        </p>
-                      </div>
-                      <Button className="shrink-0" asChild>
-                        <Link href={`/${citySlug}/costs/submit?b=${building.id}&source=building`}>
-                          {t('costs.overview.submitCostReport')}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-              {/* One card per group, tenant reports first, then asking prices:
+              {/* First screen (FR-32): the source line above, then the known
+                  costs per group with their limits, then the two actions. One
+                  card per group, tenant reports first, then asking prices:
                   each with its own figures and N, never one number over both. */}
               {groups.map((group) => {
-                const { headline, rows, knownPart } = groupFigureRows(group);
-                if (!headline) return null;
+                if (!groupFigureRows(group).headline) return null;
                 const isTenant = group.key === 'tenant';
                 // One observation: its values and characteristics, no median,
                 // range or N per figure (the group is one report).
@@ -844,60 +963,7 @@ export function BuildingCostsClient({
                         )}
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-muted-foreground">{t(headline.labelKey)}</p>
-                        <motion.p
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
-                          className={`text-4xl font-bold ${isTenant ? 'text-primary' : ''}`}
-                        >
-                          {approx(one)}
-                          {formatFigure(headline)}
-                        </motion.p>
-                        {!one && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {metricN(group.key, headline.figure.n)}
-                          </p>
-                        )}
-
-                        {rows.length > 0 && (
-                          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t pt-4">
-                            {rows.map((row) => {
-                              const { icon: Icon, tint } = GROUP_FIGURE_ICON[row.key];
-                              return (
-                                <div key={row.key} className="flex items-center gap-2">
-                                  <div
-                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}
-                                  >
-                                    <Icon className="h-4 w-4" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">
-                                      {t(row.labelKey)}
-                                    </p>
-                                    <p className="text-lg font-semibold">
-                                      {approx(one)}
-                                      {formatFigure(row)}
-                                    </p>
-                                    {!one && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {metricN(group.key, row.figure.n)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* The known part is never the full monthly cost (FR-25). */}
-                        {knownPart && (
-                          <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
-                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            {t(KNOWN_PART_HINT_KEY)}
-                          </p>
-                        )}
+                        {renderGroupFigures(group, isTenant)}
 
                         {isTenant && !one && (
                           <p className="mt-4 text-xs text-muted-foreground">
@@ -920,6 +986,33 @@ export function BuildingCostsClient({
                   </motion.div>
                 );
               })}
+
+              {/* The two actions of the first screen: read the breakdown, or
+                  add a report; below the sample-size badge, also why it helps. */}
+              <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
+                <Card className={belowSampleSize ? 'border-primary/20 bg-primary/5' : undefined}>
+                  <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+                    {belowSampleSize && (
+                      <div>
+                        <h3 className="font-semibold">{t('costs.building.whiteSpotTitle')}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {t('costs.building.whiteSpotDesc', { count: reports })}
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button variant="outline" asChild>
+                        <a href={`#${BREAKDOWN_ANCHOR}`}>
+                          {t('costs.building.figures.viewDetails')}
+                        </a>
+                      </Button>
+                      <Button asChild>
+                        <Link href={submitHref}>{t('costs.building.figures.addExperience')}</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {tenantDetails && tenantDetails.deposit.n > 0 && (
                 <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp}>
@@ -1040,7 +1133,14 @@ export function BuildingCostsClient({
                 />
               </motion.div>
 
-              <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
+              <motion.div
+                id={BREAKDOWN_ANCHOR}
+                className="scroll-mt-24"
+                custom={4}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('costs.building.costBreakdown')}</CardTitle>
@@ -1062,7 +1162,7 @@ export function BuildingCostsClient({
                           {detail.length > 0 && (
                             <GatedSection
                               show={showDetails || !detailHasFigures}
-                              submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                              submitHref={submitHref}
                             >
                               <div className="space-y-3">
                                 {detail.map((item, i) => renderCostRow(group.key, one, item, i))}
@@ -1077,7 +1177,7 @@ export function BuildingCostsClient({
                         icon={FileText}
                         title={t('costs.building.emptyBreakdownTitle')}
                         desc={t('costs.building.emptyBreakdownDesc')}
-                        submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                        submitHref={submitHref}
                         source="building_breakdown_empty"
                       />
                     )}
@@ -1116,10 +1216,7 @@ export function BuildingCostsClient({
                           percentile position to mean something. */}
                       {comparison.district &&
                       comparison.district.count >= TRUST_THRESHOLDS.reliableMin ? (
-                        <GatedSection
-                          show={showDetails}
-                          submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
-                        >
+                        <GatedSection show={showDetails} submitHref={submitHref}>
                           {(() => {
                             const d = comparison.district!;
                             const unit = t('costs.building.perM2');
@@ -1230,7 +1327,7 @@ export function BuildingCostsClient({
                             icon={BarChart3}
                             title={t('costs.building.emptyDistrictTitle')}
                             desc={t('costs.building.emptyDistrictDesc')}
-                            submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                            submitHref={submitHref}
                             source="building_district_thin"
                           />
                         </div>
@@ -1253,7 +1350,7 @@ export function BuildingCostsClient({
                         icon={BarChart3}
                         title={t('costs.building.emptyCompareTitle')}
                         desc={t('costs.building.emptyCompareDesc')}
-                        submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
+                        submitHref={submitHref}
                         source="building_comparison_empty"
                       />
                     </CardContent>
