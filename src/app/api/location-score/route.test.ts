@@ -62,7 +62,11 @@ vi.mock('next-intl/server', () => ({
 
 import type { FigureGroup, FigureReport, FigureSummary } from '@/lib/cost-figures';
 import { loadBuildingFigures } from '@/lib/cost-figures-query';
-import { isLocationCheckRateLimited, resetLocationCheckRateLimit } from '@/lib/location-checker';
+import {
+  isLocationCheckRateLimited,
+  NEIGHBOUR_REPORT_SELECT,
+  resetLocationCheckRateLimit,
+} from '@/lib/location-checker';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { GET, POST } from './route';
 
@@ -301,7 +305,10 @@ describe('POST /api/location-score', () => {
         addressFull: 'Far 2',
         lat: 52.23,
         lng: 21.0215,
-        costReports: [{ source: 'user', totalMonthlyAvg: 5_000, rent: 4_000 }],
+        // Asking prices only, utilities not established: the asking group's known part.
+        costReports: [
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 5_000, rent: 4_000 },
+        ],
       },
       // ~110m north — nearest, so it must come first.
       {
@@ -310,7 +317,11 @@ describe('POST /api/location-score', () => {
         addressFull: 'Near 1',
         lat: 52.231,
         lng: 21.01,
-        costReports: [{ source: 'user', totalMonthlyAvg: 4_000, rent: 3_100 }],
+        // The tenant report wins; the asking price is not blended into it.
+        costReports: [
+          { source: 'user', utilitiesComplete: true, totalMonthlyAvg: 4_000, rent: 3_100 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 9_000, rent: 8_000 },
+        ],
       },
       // Inside the bounding box corner but ~1.2km away, so outside the circle.
       {
@@ -339,10 +350,22 @@ describe('POST /api/location-score', () => {
     expect(body.neighbours[0]).toMatchObject({
       slug: 'near',
       address: 'Near 1',
-      totalMedian: 4_000,
+      figure: { group: 'tenant', metric: 'completeTotal', value: 4_000, n: 1 },
+      // Both groups' visible reports, for analytics only.
+      reportCount: 2,
+    });
+    expect(body.neighbours[1]).toMatchObject({
+      slug: 'far',
+      figure: { group: 'asking', metric: 'knownPartTotal', value: 5_000, n: 1 },
       reportCount: 1,
     });
+    expect(body.neighbours[0]).not.toHaveProperty('totalMedian');
     expect(body.neighbours[0].distanceM).toBeLessThan(body.neighbours[1].distanceM);
+    // The neighbour query selects only the headline fields.
+    const neighbourQuery = h.buildingFindMany.mock.calls.find(
+      ([args]) => args?.select?.costReports,
+    )?.[0];
+    expect(neighbourQuery.select.costReports.select).toEqual(NEIGHBOUR_REPORT_SELECT);
   });
 
   it('uses a fresh cache, increments the check and returns the costs by group', async () => {

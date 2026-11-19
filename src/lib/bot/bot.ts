@@ -233,19 +233,18 @@ async function replyDistrict(
   const chatId = ctx.chat?.id;
   if (!chatId) return false;
 
-  const [district, table] = await Promise.all([getDistrictBySlug(slug), getDistrictTable()]);
+  const district = await getDistrictBySlug(slug);
   if (!district) return false;
 
-  // The rank and `report_count` come from the blended league table (Q-2); the
-  // card's figures come from the district's reference on the contract.
-  const position = table.findIndex((row) => row.slug === slug);
+  // `report_count` is the size of the group behind the district's single number
+  // (D23), its `/districts` row; the card's figures come from its reference.
   track(
     chatId,
     'tg_district_checked',
     districtCheckEventProperties(
       {
         slug: district.slug,
-        reportCount: position >= 0 ? table[position].count : 0,
+        reportCount: district.figure?.reportCount ?? 0,
         reference: district.reference,
       },
       entrySource,
@@ -264,7 +263,7 @@ async function replyDistrict(
         name: district.name,
         reference: district.reference,
         deposit: district.deposit,
-        rank: position >= 0 ? { position: position + 1, total: table.length } : null,
+        rank: district.rank,
       },
       locale,
     ),

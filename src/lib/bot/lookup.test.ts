@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   cityFindUnique: vi.fn(),
   districtFindUnique: vi.fn(),
+  districtFindMany: vi.fn(),
   buildingFindFirst: vi.fn(),
   buildingFindUnique: vi.fn(),
   buildingFindMany: vi.fn(),
@@ -14,7 +15,7 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     city: { findUnique: h.cityFindUnique },
-    district: { findUnique: h.districtFindUnique },
+    district: { findUnique: h.districtFindUnique, findMany: h.districtFindMany },
     building: {
       findFirst: h.buildingFindFirst,
       findUnique: h.buildingFindUnique,
@@ -36,9 +37,26 @@ vi.mock('next/cache', () => ({
 
 vi.mock('@/lib/geo/district', () => ({ resolveDistrictByPoint: h.resolveDistrictByPoint }));
 
-import { summarizeDepositReturns, summarizeFigures, type FigureReport } from '@/lib/cost-figures';
+import {
+  RENTAL_TYPE_FILTERS,
+  singleNumberFigure,
+  summarizeDepositReturns,
+  summarizeFigures,
+  type FigureReport,
+  type RentalTypeFilter,
+  type SingleNumberFigure,
+} from '@/lib/cost-figures';
+import { loadAreaReference, type DistrictFigures } from '@/lib/cost-figures-query';
 import type { GeocodedAddress } from './geocode';
-import { getCityDepositFacts, getDistrictBySlug, lookupAddress, lookupBuilding } from './lookup';
+import {
+  districtRank,
+  districtTableRows,
+  getCityDepositFacts,
+  getDistrictBySlug,
+  getDistrictTable,
+  lookupAddress,
+  lookupBuilding,
+} from './lookup';
 
 type Where = {
   buildingId?: string;
@@ -114,17 +132,39 @@ const cityReports = many(12, (index) =>
   }),
 );
 
+/** The city's districts as `loadDistrictFigures` reads them: Mokotów and Wola. */
+const cityDistricts = [
+  { id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' },
+  { id: 'district-wola', slug: 'wola', nameKey: 'Wola' },
+];
+
+/**
+ * Reports by `where`. The district-figures query (it selects `building`) reads
+ * the whole city with each report's district: the district rows are Mokotów's,
+ * the city rows Wola's.
+ */
 function serveReports(rows: {
   building?: FigureReport[];
   district?: FigureReport[];
   city?: FigureReport[];
 }) {
-  h.costReportFindMany.mockImplementation(async ({ where }: { where: Where }) => {
-    if (where.buildingId) return where.buildingId === 'building-1' ? (rows.building ?? []) : [];
-    if (where.building?.districtId) return rows.district ?? [];
-    if (where.building?.cityId) return rows.city ?? [];
-    return [];
-  });
+  h.costReportFindMany.mockImplementation(
+    async ({ where, select }: { where: Where; select: Record<string, unknown> }) => {
+      if (where.buildingId) return where.buildingId === 'building-1' ? (rows.building ?? []) : [];
+      if (where.building?.districtId) return rows.district ?? [];
+      if (where.building?.cityId && select.building) {
+        return [
+          ...(rows.district ?? []).map((r) => ({
+            ...r,
+            building: { districtId: 'district-mokotow' },
+          })),
+          ...(rows.city ?? []).map((r) => ({ ...r, building: { districtId: 'district-wola' } })),
+        ];
+      }
+      if (where.building?.cityId) return rows.city ?? [];
+      return [];
+    },
+  );
 }
 
 /** The `where` of every cost-report query that selected deposit fields. */
@@ -142,6 +182,7 @@ beforeEach(() => {
   h.buildingFindFirst.mockResolvedValue(buildingRow);
   h.buildingFindUnique.mockResolvedValue(storedBuilding);
   h.buildingFindMany.mockResolvedValue([]);
+  h.districtFindMany.mockResolvedValue(cityDistricts);
   h.resolveDistrictByPoint.mockReturnValue('mokotow');
   serveReports({ building: buildingReports, district: districtReports, city: cityReports });
 });
@@ -288,7 +329,7 @@ describe('lookupAddress on the figure contract', () => {
     expect(lookup!.deposit).toEqual({ answered: 0, gotBack: 0, full: 0, medianDeposit: null });
   });
 
-  it('keeps the neighbours on their blended number (Q-2)', async () => {
+  it('gives each neighbour one group’s number with its N, never a blend (D23)', async () => {
     h.buildingFindMany.mockResolvedValue([
       {
         slug: 'pulawska-12',
@@ -296,8 +337,28 @@ describe('lookupAddress on the figure contract', () => {
         lat: 52.2009,
         lng: 21.02,
         costReports: [
-          { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000 },
-          { source: 'scraped', totalMonthlyAvg: 4_400, rent: 3_400 },
+          { source: 'user', utilitiesComplete: true, totalMonthlyAvg: 4_000, rent: 3_000 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 4_400, rent: 3_400 },
+        ],
+      },
+      {
+        slug: 'pulawska-14',
+        addressFull: 'Puławska 14',
+        lat: 52.2018,
+        lng: 21.02,
+        costReports: [
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 4_100, rent: 3_000 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 3_900, rent: 3_000 },
+        ],
+      },
+      // No usable value in either group: not listed.
+      {
+        slug: 'pulawska-16',
+        addressFull: 'Puławska 16',
+        lat: 52.2005,
+        lng: 21.02,
+        costReports: [
+          { source: 'user', utilitiesComplete: null, totalMonthlyAvg: null, rent: null },
         ],
       },
     ]);
@@ -309,12 +370,23 @@ describe('lookupAddress on the figure contract', () => {
         address: 'Puławska 12',
         slug: 'pulawska-12',
         distanceM: 100,
-        totalMedian: 4_200,
-        totalCount: 2,
-        reportCount: 2,
+        figure: { group: 'tenant', metric: 'completeTotal', value: 4_000, n: 1 },
+      },
+      {
+        address: 'Puławska 14',
+        slug: 'pulawska-14',
+        distanceM: 200,
+        figure: { group: 'asking', metric: 'knownPartTotal', value: 4_000, n: 2 },
       },
     ]);
-    expect(h.buildingFindMany.mock.calls[0][0].where.id).toEqual({ not: 'building-1' });
+    const query = h.buildingFindMany.mock.calls[0][0];
+    expect(query.where.id).toEqual({ not: 'building-1' });
+    expect(query.select.costReports.select).toEqual({
+      source: true,
+      utilitiesComplete: true,
+      totalMonthlyAvg: true,
+      rent: true,
+    });
   });
 
   it('returns null outside the city bounds and for an inactive city', async () => {
@@ -456,15 +528,18 @@ describe('getCityDepositFacts', () => {
   });
 });
 
-/** Cost-report queries of the blended `cost-baselines` figures (`totalMonthlyAvg: { not: null }`). */
-function blendedQueries() {
+/** Cost-report queries without a `select` of the contract's report fields: a second aggregation. */
+function nonContractQueries() {
   return h.costReportFindMany.mock.calls.filter(
     ([args]) => (args as { where: { totalMonthlyAvg?: unknown } }).where.totalMonthlyAvg,
   );
 }
 
+const districtSummary = (reports: FigureReport[]) =>
+  summarizeFigures(reports, { level: 'district', rentalType: 'all' });
+
 describe('getDistrictBySlug on the figure contract (the typed-district card)', () => {
-  it('carries the district reference from MIN_AREA_REPORTS reports', async () => {
+  it('carries the district reference, its single number and no rank under all', async () => {
     const district = await getDistrictBySlug('mokotow');
 
     expect(district).toEqual({
@@ -476,17 +551,31 @@ describe('getDistrictBySlug on the figure contract (the typed-district card)', (
         level: 'district',
         slug: 'mokotow',
         name: 'Mokotów',
-        summary: summarizeFigures(districtReports, { level: 'district', rentalType: 'all' }),
+        summary: districtSummary(districtReports),
       },
+      figure: singleNumberFigure(districtSummary(districtReports)),
+      // Mokotów (tenant, 6) and Wola (tenant, 8) pass every gate but the rental type.
+      rank: null,
     });
+    expect(district!.figure).toMatchObject({ group: 'tenant', n: 6, reportCount: 6 });
     expect(depositQueries()).toEqual([
       { isVisible: true, building: { districtId: 'district-mokotow' } },
     ]);
-    // No second aggregation: the blended district figure is no longer read.
-    expect(blendedQueries()).toEqual([]);
+    expect(nonContractQueries()).toEqual([]);
   });
 
-  it('falls back to the city reference for a thin district', async () => {
+  it('gives the district figure the value and N its reference headline has (FR-34)', async () => {
+    const district = await getDistrictBySlug('mokotow');
+    const reference = await loadAreaReference({
+      districtId: 'district-mokotow',
+      cityId: 'city-1',
+    });
+    const headline = singleNumberFigure(reference!.summary);
+
+    expect(district!.figure).toEqual(headline);
+  });
+
+  it('falls back to the city reference for a thin district; the figure stays the district’s', async () => {
     serveReports({ district: districtReports.slice(0, 2), city: cityReports });
     const district = await getDistrictBySlug('mokotow');
 
@@ -494,21 +583,117 @@ describe('getDistrictBySlug on the figure contract (the typed-district card)', (
     expect(district!.reference!.summary).toEqual(
       summarizeFigures(cityReports, { level: 'city', rentalType: 'all' }),
     );
-    // The deposit statistic stays the district's own, and nothing blended is read.
+    expect(district!.figure).toMatchObject({ group: 'tenant', n: 2, reportCount: 2 });
+    // The deposit statistic stays the district's own.
     expect(depositQueries()).toEqual([
       { isVisible: true, building: { districtId: 'district-mokotow' } },
     ]);
-    expect(blendedQueries()).toEqual([]);
+    expect(nonContractQueries()).toEqual([]);
   });
 
-  it('gives no reference when neither the district nor the city has a report', async () => {
+  it('gives no reference and no figure when neither the district nor the city has a report', async () => {
     serveReports({});
     const district = await getDistrictBySlug('mokotow');
 
-    expect(district).toMatchObject({ slug: 'mokotow', reference: null });
+    expect(district).toMatchObject({ slug: 'mokotow', reference: null, figure: null, rank: null });
   });
 
   it('gives null for a slug that is not a district of the city', async () => {
     expect(await getDistrictBySlug('atlantis')).toBeNull();
+  });
+});
+
+/** A district's figures with one value under every filter, as `loadDistrictFigures` gives them. */
+function districtFigures(
+  slug: string,
+  figure: Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'> | null,
+  filters: RentalTypeFilter[] = RENTAL_TYPE_FILTERS,
+): DistrictFigures {
+  const full: SingleNumberFigure | null = figure && {
+    ...figure,
+    reportCount: figure.n,
+    rent: null,
+    expenses: null,
+    rentPerM2: null,
+    completeTotalPerM2: null,
+    adminFeePerM2: null,
+  };
+  return {
+    slug,
+    name: slug.toUpperCase(),
+    figures: {
+      all: filters.includes('all') ? full : null,
+      apartment: filters.includes('apartment') ? full : null,
+      room: filters.includes('room') ? full : null,
+    },
+  };
+}
+
+describe('districtRank (golden example 16)', () => {
+  const total = (group: 'tenant' | 'asking', value: number, n: number) =>
+    ({ group, metric: 'completeTotal', value, n }) as const;
+  const districts = [
+    districtFigures('a', total('tenant', 3_900, 37)),
+    districtFigures('b', total('tenant', 3_500, 6)),
+    districtFigures('c', total('asking', 3_200, 12)),
+    districtFigures('d', total('tenant', 3_000, 2)),
+  ];
+
+  it('states no rank under all (the bot’s filter)', () => {
+    for (const slug of ['a', 'b', 'c', 'd']) {
+      expect(districtRank(districts, slug)).toBeNull();
+      expect(districtRank(districts, slug, 'all')).toBeNull();
+    }
+  });
+
+  it('ranks only A and B under apartment, B before A', () => {
+    expect(districtRank(districts, 'b', 'apartment')).toEqual({ position: 1, total: 2 });
+    expect(districtRank(districts, 'a', 'apartment')).toEqual({ position: 2, total: 2 });
+    expect(districtRank(districts, 'c', 'apartment')).toBeNull();
+    expect(districtRank(districts, 'd', 'apartment')).toBeNull();
+  });
+});
+
+describe('getDistrictTable (/districts on the single-number rule)', () => {
+  it('lists each district’s single number with its group and N, never a blend', async () => {
+    const rows = await getDistrictTable();
+
+    // Both all-in totals, so by value: Wola 3,900 before Mokotów 4,050 (a display order).
+    expect(rows).toEqual([
+      {
+        slug: 'wola',
+        name: 'Wola',
+        // The city fixture's Wola: 8 tenant and 4 asking reports, the tenant group wins.
+        figure: singleNumberFigure(districtSummary(cityReports)),
+      },
+      {
+        slug: 'mokotow',
+        name: 'Mokotów',
+        figure: singleNumberFigure(districtSummary(districtReports)),
+      },
+    ]);
+    expect(rows[0].figure).toMatchObject({ group: 'tenant', n: 8, reportCount: 8, value: 3_900 });
+    expect(nonContractQueries()).toEqual([]);
+  });
+
+  it('is empty for an unknown city', async () => {
+    h.cityFindUnique.mockResolvedValue(null);
+    expect(await getDistrictTable('atlantis')).toEqual([]);
+  });
+
+  it('orders all-in totals, then known parts, then rent, each by value; drops districts without a value', () => {
+    const rows = districtTableRows([
+      districtFigures('rent-only', { group: 'tenant', metric: 'rent', value: 2_000, n: 3 }),
+      districtFigures('known', { group: 'asking', metric: 'knownPartTotal', value: 2_500, n: 9 }),
+      districtFigures('dear', { group: 'tenant', metric: 'completeTotal', value: 4_500, n: 2 }),
+      districtFigures('cheap', { group: 'asking', metric: 'completeTotal', value: 3_000, n: 40 }),
+      districtFigures('empty', null),
+      // A value only under apartment: not in the table, which reads `all`.
+      districtFigures('flats', { group: 'tenant', metric: 'completeTotal', value: 100, n: 9 }, [
+        'apartment',
+      ]),
+    ]);
+
+    expect(rows.map((row) => row.slug)).toEqual(['cheap', 'dear', 'known', 'rent-only']);
   });
 });

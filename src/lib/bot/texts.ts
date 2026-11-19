@@ -90,8 +90,8 @@ type Vars = Record<string, string>;
 const CAPABILITIES_RU =
   '<b>Что я умею</b>\n' +
   '• Пришли адрес — расходы по дому, а если по нему данных нет, то по его району\n' +
-  '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — медиана и место в рейтинге\n' +
-  '• /districts — все районы Варшавы по расходам, от дешёвых к дорогим\n' +
+  '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — расходы по району\n' +
+  '• /districts — расходы по всем районам Варшавы\n' +
   '• /deposit — как часто возвращают залог и как вернуть свой\n' +
   '• /my — сохранённые интересы: дома, районы, города\n' +
   '• /lang — русский / українська\n' +
@@ -100,8 +100,8 @@ const CAPABILITIES_RU =
 const CAPABILITIES_UK =
   '<b>Що я вмію</b>\n' +
   '• Надішли адресу — витрати по будинку, а якщо по ньому даних немає, то по його району\n' +
-  '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — медіана і місце в рейтингу\n' +
-  '• /districts — усі райони Варшави за витратами, від дешевих до дорогих\n' +
+  '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — витрати по району\n' +
+  '• /districts — витрати по всіх районах Варшави\n' +
   '• /deposit — як часто повертають заставу і як повернути свою\n' +
   '• /my — збережені інтереси: будинки, райони, міста\n' +
   '• /lang — русский / українська\n' +
@@ -155,7 +155,10 @@ const RU = {
   referenceAsking: '   {area}, цены из объявлений{metric}: <b>{value}</b> ({count})',
   referenceKnownPart: ', известная часть расходов',
   referenceRent: ', аренда',
-  neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
+  /** The group of a single number (D23): a `/districts` row or a neighbour. */
+  figureSourceTenant: 'отчёты жильцов',
+  figureSourceAsking: 'цены из объявлений',
+  neighbourLine: '• {address}, {source}{metric}: {value} <i>({count} {word}, {distance} м)</i>',
 
   // --- area answers: an address without its own data, and a typed district (renderDistrict) ---
   areaHeader: '📊 <b>{area}</b> — данные по району:',
@@ -192,16 +195,16 @@ const RU = {
   intakeStillOpen: 'ℹ️ Вопросы о залоге пока открыты — чтобы выйти из них, отправь /cancel.',
 
   // --- districts ---
-  districtTableHeader: '📊 <b>Районы Варшавы: сколько реально уходит в месяц</b>',
+  districtTableHeader: '📊 <b>Районы Варшавы: расходы в месяц</b>',
+  districtRow: '• <b>{name}</b>, {source}{metric}: {value} <i>({count})</i>{expenses}',
   districtTableFooter:
-    '<i>Медиана = аренда + комуналка + доплаты, по отчётам жильцов.</i>\nПришли свой адрес — сравню с домом.',
+    '<i>По каждому району — отчёты жильцов, а если их нет — цены из объявлений; в скобках — число наблюдений. Это не рейтинг: цифры из разных источников и по малому числу наблюдений напрямую не сравниваются.</i>\nПришли свой адрес — покажу дом и район.',
   ofWhichExpenses: 'из них расходы {expenses}',
   noDistrictData: 'Данных по районам пока мало. Пришли адрес — посмотрим, что есть.',
   districtRank: '🏷 {position}-е место из {total} по цене <i>(1 — самый дешёвый)</i>',
   districtAskAddress: '👉 Пришли адрес в этом районе — покажу конкретный дом и соседей.',
   districtThin: 'По району <b>{district}</b> отчётов пока мало, чтобы считать медиану.',
-  districtThinPrompt:
-    '👉 Живёшь здесь? Твой отчёт станет одним из первых — и район появится в рейтинге.',
+  districtThinPrompt: '👉 Живёшь здесь? Твой отчёт станет одним из первых по этому району.',
 
   // --- deposit ---
   depositHeader: '🔐 <b>Залог в Варшаве</b>',
@@ -286,7 +289,9 @@ const UK: Record<Key, string> = {
   referenceAsking: '   {area}, ціни з оголошень{metric}: <b>{value}</b> ({count})',
   referenceKnownPart: ', відома частина витрат',
   referenceRent: ', оренда',
-  neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
+  figureSourceTenant: 'звіти мешканців',
+  figureSourceAsking: 'ціни з оголошень',
+  neighbourLine: '• {address}, {source}{metric}: {value} <i>({count} {word}, {distance} м)</i>',
 
   areaHeader: '📊 <b>{area}</b> — дані по району:',
   cityHeader: '📊 <b>{area}</b> — дані по місту:',
@@ -318,16 +323,16 @@ const UK: Record<Key, string> = {
   buildingLinkFailed: '🤔 Не вдалося відкрити цей будинок за посиланням — надішли його адресу.',
   intakeStillOpen: 'ℹ️ Питання про заставу поки відкриті — щоб вийти з них, надішли /cancel.',
 
-  districtTableHeader: '📊 <b>Райони Варшави: скільки реально йде на місяць</b>',
+  districtTableHeader: '📊 <b>Райони Варшави: витрати на місяць</b>',
+  districtRow: '• <b>{name}</b>, {source}{metric}: {value} <i>({count})</i>{expenses}',
   districtTableFooter:
-    '<i>Медіана = оренда + комуналка + доплати, за звітами мешканців.</i>\nНадішли свою адресу — порівняю з будинком.',
+    '<i>Для кожного району — звіти мешканців, а якщо їх немає — ціни з оголошень; у дужках — кількість спостережень. Це не рейтинг: цифри з різних джерел і за малою кількістю спостережень напряму не порівнюються.</i>\nНадішли свою адресу — покажу будинок і район.',
   ofWhichExpenses: 'з них витрати {expenses}',
   noDistrictData: 'Даних по районах поки мало. Надішли адресу — подивимось, що є.',
   districtRank: '🏷 {position}-е місце з {total} за ціною <i>(1 — найдешевший)</i>',
   districtAskAddress: '👉 Надішли адресу в цьому районі — покажу конкретний будинок і сусідів.',
   districtThin: 'По району <b>{district}</b> звітів поки замало, щоб рахувати медіану.',
-  districtThinPrompt:
-    '👉 Живеш тут? Твій звіт стане одним із перших — і район з’явиться в рейтингу.',
+  districtThinPrompt: '👉 Живеш тут? Твій звіт стане одним із перших по цьому району.',
 
   depositHeader: '🔐 <b>Застава у Варшаві</b>',
   depositNoData: 'Даних по заставах поки мало — але вони з’являться: кожен звіт додає цифру.',

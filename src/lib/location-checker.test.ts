@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { metricFigure } from './cost-figures';
+import { singleNumberFigure, summarizeFigures, type FigureReport } from './cost-figures';
 import {
-  aggregateLocationCheckerCosts,
+  NEIGHBOUR_REPORT_SELECT,
+  neighbourFigure,
   isInsideCityBounds,
   isLocationCheckRateLimited,
   localityMatchesCity,
@@ -102,58 +103,83 @@ describe('location checker rate limiter', () => {
   });
 });
 
-describe('aggregateLocationCheckerCosts (Q-2 blended number)', () => {
-  it('blends every source into one number per building, as the neighbour pins show it', () => {
-    expect(
-      aggregateLocationCheckerCosts([
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_200 },
-        { source: 'import', totalMonthlyAvg: '4200', rent: '3300' },
-        { source: 'scraped', totalMonthlyAvg: 4_400, rent: 3_400 },
-      ]),
-    ).toEqual({
-      totalMedian: 4_200,
-      totalCount: 3,
-      rentMedian: 3_300,
-      expensesMedian: 900,
-      reportCount: 3,
+describe('neighbourFigure (D23 single number of a neighbour pin)', () => {
+  type Amount = number | string | null;
+  const row = (source: string, total: Amount, rent: Amount, complete = true): FigureReport => ({
+    source,
+    utilitiesComplete: complete,
+    totalMonthlyAvg: total,
+    rent,
+  });
+  const asReports = (rows: FigureReport[]) => rows;
+
+  it('takes the tenant group, never a blend with the asking prices', () => {
+    const reports = asReports([
+      row('user', 4_000, 3_200),
+      row('import', '4200', '3300'),
+      row('scraped', 9_000, 8_000),
+    ]);
+    expect(neighbourFigure(reports)).toEqual({
+      group: 'tenant',
+      metric: 'completeTotal',
+      value: 4_100,
+      n: 2,
     });
   });
 
-  it('computes its medians with the contract (untrimmed, same rounding, values above zero)', () => {
-    const reports = [
-      { source: 'user', totalMonthlyAvg: 3_000, rent: 2_500 },
-      { source: 'user', totalMonthlyAvg: 3_101, rent: 2_600 },
-      { source: 'scraped', totalMonthlyAvg: 40_000, rent: 39_000 },
-      { source: 'scraped', totalMonthlyAvg: 0, rent: null },
-    ];
-    const totals = [3_000, 3_101, 40_000];
-    expect(aggregateLocationCheckerCosts(reports)).toEqual({
-      totalMedian: metricFigure(totals).median,
-      totalCount: 3,
-      rentMedian: metricFigure([2_500, 2_600, 39_000]).median,
-      expensesMedian: metricFigure([500, 501, 1_000]).median,
-      reportCount: 4,
+  it('equals the headline the building page shows (the full contract)', () => {
+    const reports = asReports([
+      row('user', 3_100, 2_500, false),
+      ...[1, 2, 3].map(() => row('scraped', 4_000, 3_500)),
+    ]);
+    const page = singleNumberFigure(
+      summarizeFigures(reports, { level: 'building', rentalType: 'all' }),
+    );
+    expect(neighbourFigure(reports)).toEqual({
+      group: page!.group,
+      metric: page!.metric,
+      value: page!.value,
+      n: page!.n,
     });
-    // The outlier is kept (no trimming) and the zero total is not a value.
-    expect(aggregateLocationCheckerCosts(reports)?.totalMedian).toBe(3_101);
+    // Golden example 14: one tenant report, known part, still wins over three asking prices.
+    expect(neighbourFigure(reports)).toEqual({
+      group: 'tenant',
+      metric: 'knownPartTotal',
+      value: 3_100,
+      n: 1,
+    });
   });
 
-  it('clamps a rent above the total at zero expenses', () => {
+  it('falls back to the asking prices, labelled as a known part (golden example 13)', () => {
     expect(
-      aggregateLocationCheckerCosts([{ source: 'user', totalMonthlyAvg: 3_000, rent: 3_200 }]),
-    ).toMatchObject({ expensesMedian: 0 });
+      neighbourFigure(
+        asReports([row('scraped', 4_100, 3_000, false), row('scraped', 3_900, 3_000, false)]),
+      ),
+    ).toEqual({ group: 'asking', metric: 'knownPartTotal', value: 4_000, n: 2 });
   });
 
-  it('returns null for no reports and null medians without usable values', () => {
-    expect(aggregateLocationCheckerCosts([])).toBeNull();
+  it('shows rent alone when no report has a total', () => {
+    expect(neighbourFigure(asReports([row('user', null, 3_200)]))).toEqual({
+      group: 'tenant',
+      metric: 'rent',
+      value: 3_200,
+      n: 1,
+    });
+  });
+
+  it('returns null without a usable value in either group', () => {
+    expect(neighbourFigure([])).toBeNull();
     expect(
-      aggregateLocationCheckerCosts([{ source: 'user', totalMonthlyAvg: null, rent: null }]),
-    ).toEqual({
-      totalMedian: null,
-      totalCount: 0,
-      rentMedian: null,
-      expensesMedian: null,
-      reportCount: 1,
+      neighbourFigure(asReports([row('user', null, null), row('scraped', 0, null)])),
+    ).toBeNull();
+  });
+
+  it('selects exactly the fields the headline reads', () => {
+    expect(NEIGHBOUR_REPORT_SELECT).toEqual({
+      source: true,
+      utilitiesComplete: true,
+      totalMonthlyAvg: true,
+      rent: true,
     });
   });
 });

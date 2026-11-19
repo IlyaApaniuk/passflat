@@ -1,19 +1,29 @@
 import type { Prisma } from '@prisma/client';
 
 import { normalizeAddress } from '@/lib/address';
-import { getDistrictCostStats } from '@/lib/cost-baselines';
-import type { AreaReference, DepositReturns, FigureSummary } from '@/lib/cost-figures';
+import {
+  comparableRanks,
+  type AreaReference,
+  type DepositReturns,
+  type FigureSummary,
+  type RentalTypeFilter,
+  type SingleNumberFigure,
+} from '@/lib/cost-figures';
 import {
   loadAreaReference,
   loadBuildingFigures,
   loadDepositReturns,
+  loadDistrictFigures,
+  type DistrictFigures,
 } from '@/lib/cost-figures-query';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import {
-  aggregateLocationCheckerCosts,
   isInsideCityBounds,
   LOCATION_CHECKER_CITY_SLUG,
+  NEIGHBOUR_REPORT_SELECT,
+  neighbourFigure,
   parseCityBounds,
+  type NeighbourFigure,
 } from '@/lib/location-checker';
 import { haversineMeters } from '@/lib/location-score';
 import { prisma } from '@/lib/prisma';
@@ -31,21 +41,22 @@ import type { GeocodedAddress } from './geocode';
  *
  * Figures come from the shared contract's loaders (`cost-figures-query.ts`),
  * the ones the website's checker and building page read, so the bot never
- * aggregates reports itself (CLAUDE.md). The exceptions are the neighbours'
- * single blended number and the cheapest-first district table, frozen by Q-2
- * (spec 03 §Single-number surfaces).
+ * aggregates reports itself (CLAUDE.md). The neighbours and the district table
+ * show one number per item by D23 (spec 03 §Single-number surfaces): the tenant
+ * group when it has a usable value, else the asking prices, with its N.
  */
 
 type LookupLevel = 'building' | 'district' | 'city';
+
+/** The bot answers over every rental type, as the checker does: no rank under `all`. */
+const BOT_RENTAL_TYPE: RentalTypeFilter = 'all';
 
 interface NeighbourSummary {
   address: string;
   slug: string;
   distanceM: number;
-  totalMedian: number | null;
-  /** The N of `totalMedian`, shown next to it. */
-  totalCount: number;
-  reportCount: number;
+  /** One group's number with its N: the checker's neighbour pin rule (`neighbourFigure`). */
+  figure: NeighbourFigure;
 }
 
 export interface AddressLookup {
@@ -80,13 +91,6 @@ export interface AddressLookup {
 const NEIGHBOUR_RADIUS_M = 1500;
 const NEIGHBOUR_LIMIT = 3;
 const NEIGHBOUR_BBOX_DEG = 0.02; // ~2.2 km latitude, a cheap prefilter before haversine
-
-/** The fields the neighbours' blended number reads (Q-2), nothing else. */
-const neighbourReportSelect = {
-  source: true,
-  totalMonthlyAvg: true,
-  rent: true,
-} as const;
 
 /** The building fields an answer reads, whichever way the building was found. */
 const buildingSelect = {
@@ -155,7 +159,7 @@ async function findNeighbours(
       addressFull: true,
       lat: true,
       lng: true,
-      costReports: { where: { isVisible: true }, select: neighbourReportSelect },
+      costReports: { where: { isVisible: true }, select: NEIGHBOUR_REPORT_SELECT },
     },
     take: 60,
   });
@@ -165,14 +169,14 @@ async function findNeighbours(
       const bLat = building.lat == null ? null : Number(building.lat);
       const bLng = building.lng == null ? null : Number(building.lng);
       if (bLat == null || bLng == null) return null;
-      const costs = aggregateLocationCheckerCosts(building.costReports);
+      // A neighbour without a usable number in either group is not listed, as on the checker.
+      const figure = neighbourFigure(building.costReports);
+      if (!figure) return null;
       return {
         address: building.addressFull,
         slug: building.slug,
         distanceM: Math.round(haversineMeters({ lat, lng }, { lat: bLat, lng: bLng })),
-        totalMedian: costs?.totalMedian ?? null,
-        totalCount: costs?.totalCount ?? 0,
-        reportCount: building.costReports.length,
+        figure,
       };
     })
     .filter((n): n is NeighbourSummary => n != null && n.distanceM <= NEIGHBOUR_RADIUS_M)
@@ -320,56 +324,93 @@ export async function lookupBuilding(buildingId: string): Promise<AddressLookup 
   });
 }
 
+/** One district of the `/districts` table: its single number (D23) with the group and N. */
 export interface DistrictRow {
   slug: string;
   name: string;
-  median: number | null;
-  rentMedian: number | null;
-  expensesMedian: number | null;
-  count: number;
+  figure: SingleNumberFigure;
+}
+
+/** Display order of the table: all-in totals first, then known parts, then rent only. */
+const TABLE_METRIC_ORDER: Record<SingleNumberFigure['metric'], number> = {
+  completeTotal: 0,
+  knownPartTotal: 1,
+  rent: 2,
+};
+
+/**
+ * The `/districts` rows from the districts' single numbers under the bot's
+ * filter (`all`), so a district shows the value and N its website pages show.
+ * A district without a usable value in either group is left out. Sorted by
+ * metric, then by value: a display order, not a rank (spec 03 §Single-number
+ * surfaces); the table names no position and no "cheapest".
+ */
+export function districtTableRows(districts: DistrictFigures[]): DistrictRow[] {
+  return districts
+    .flatMap((district) => {
+      const figure = district.figures[BOT_RENTAL_TYPE];
+      return figure ? [{ slug: district.slug, name: district.name, figure }] : [];
+    })
+    .sort(
+      (a, b) =>
+        TABLE_METRIC_ORDER[a.figure.metric] - TABLE_METRIC_ORDER[b.figure.metric] ||
+        a.figure.value - b.figure.value ||
+        a.name.localeCompare(b.name),
+    );
 }
 
 /**
- * District league table. This is the bot's second reason to exist: it answers
- * "where is it cheaper?" without needing the user's own address to be covered.
+ * The district table. This is the bot's second reason to exist: it answers
+ * "what does it cost around there?" without needing the user's own address to
+ * be covered. Each row is labelled with its group and N.
  */
 export async function getDistrictTable(
   citySlug = LOCATION_CHECKER_CITY_SLUG,
 ): Promise<DistrictRow[]> {
   const city = await getCity(citySlug);
   if (!city) return [];
+  return districtTableRows(await loadDistrictFigures(city.id));
+}
 
-  const rows = await Promise.all(
-    city.districts.map(async (district) => {
-      const stats = await getDistrictCostStats(district.id);
-      return {
-        slug: district.slug,
-        name: district.nameKey,
-        median: stats.total.median,
-        rentMedian: stats.rentMedian,
-        expensesMedian: stats.expensesMedian,
-        count: stats.count,
-      };
-    }),
-  );
-
-  return rows.filter((row) => row.median != null).sort((a, b) => (a.median ?? 0) - (b.median ?? 0));
+/**
+ * A district's place among the districts it may be compared with (golden
+ * example 16): only inside a `comparableRanks` rank (same group, metric and
+ * single rental type, N ≥ MIN_COMPARABLE_N), cheapest first; null otherwise.
+ * Under the bot's `all` filter there is never a rank.
+ */
+export function districtRank(
+  districts: DistrictFigures[],
+  slug: string,
+  rentalType: RentalTypeFilter = BOT_RENTAL_TYPE,
+): { position: number; total: number } | null {
+  const items = districts.flatMap((district) => {
+    const figure = district.figures[rentalType];
+    return figure ? [{ slug: district.slug, figure, rentalType }] : [];
+  });
+  for (const rank of comparableRanks(items)) {
+    const index = rank.findIndex((item) => item.slug === slug);
+    if (index >= 0) return { position: index + 1, total: rank.length };
+  }
+  return null;
 }
 
 /**
  * A district of the checker city with its figures from the shared contract:
  * `reference` is the district from MIN_AREA_REPORTS reports, else the city
  * (null when the city has none), what the typed-district card renders and
- * `tg_district_checked` describes. `deposit` is the district's own statistic.
+ * `tg_district_checked` describes. `figure` is the district's own single number
+ * (its `/districts` row; null without a usable value), `rank` its comparable
+ * rank (`districtRank`), and `deposit` the district's own statistic.
  */
 export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKER_CITY_SLUG) {
   const city = await getCity(citySlug);
   const district = city?.districts.find((d) => d.slug === slug);
   if (!city || !district) return null;
 
-  const [deposit, reference] = await Promise.all([
+  const [deposit, reference, districts] = await Promise.all([
     loadDepositReturns({ districtId: district.id }),
     loadAreaReference({ districtId: district.id, cityId: city.id }),
+    loadDistrictFigures(city.id),
   ]);
 
   return {
@@ -378,6 +419,8 @@ export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKE
     name: district.nameKey,
     deposit,
     reference,
+    figure: districts.find((d) => d.slug === district.slug)?.figures[BOT_RENTAL_TYPE] ?? null,
+    rank: districtRank(districts, district.slug),
   };
 }
 

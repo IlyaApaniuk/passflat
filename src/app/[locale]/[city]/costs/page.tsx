@@ -117,7 +117,7 @@ export default async function CostsPage({ params, searchParams }: PageProps) {
   ]);
 
   // The overview shows each building's single number only (spec 03 §Single-number surfaces,
-  // D23): the blended medians getBuildingsData still carries for other surfaces stay here.
+  // D23); only the fields the client reads are passed to it.
   const buildings = buildingsData.map(
     ({ id, slug, address, district, districtSlug, lat, lng, rentalType, figures }) => ({
       id,

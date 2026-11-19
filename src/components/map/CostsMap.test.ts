@@ -95,7 +95,9 @@ vi.mock('react-map-gl', () => ({
     createElement('div', { 'data-popup': '' }, children),
 }));
 
-import { CostsMap, figurePinLabel } from './CostsMap';
+import { figurePinLabel } from '@/lib/map-style';
+
+import { CostsMap } from './CostsMap';
 
 const building: PopupBuilding = {
   id: 'b1',

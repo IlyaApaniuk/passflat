@@ -23,8 +23,8 @@ or legal review.
 - `docs/specs/` and the spec section of the task; `docs/ralph-loop.md` for the build loop.
 - `docs/product/README.md`: how product documents relate; `docs/product/decisions.md`: the
   latest decision wins over older notes.
-- Cost figures: `src/lib/cost-aggregates.ts`, `cost-baselines.ts`, `cost-stats.ts`,
-  `location-checker.ts` and their tests.
+- Cost figures: `src/lib/cost-figures.ts`, `cost-figures-query.ts`, `cost-aggregates.ts`,
+  `cost-stats.ts`, `location-checker.ts` and their tests.
 - Analytics: `src/components/providers/posthog-provider.tsx`, `src/lib/posthog-server.ts`,
   `src/lib/bot/analytics.ts`.
 - Telegram bot: `src/lib/bot/README.md`.
@@ -77,9 +77,10 @@ conversation is Russian and is independent of repository language.
 - The building page, the checker and the bot read the figure contract (`src/lib/cost-figures.ts`)
   and show the tenant group (`user` + `import`) and the asking-price group (`scraped`)
   separately, each with its N (PRD 1 package C). Single-number surfaces (map, cards, district
-  roll-ups, calculator, OG, bot `/districts`, neighbours) move by D23 to the tenant group when it
-  has a usable value, else the asking-price group, labelled with group and N (T028, T052 – T054);
-  until those tasks ship they still blend all three sources. Never call a blended figure "market",
+  roll-ups, calculator, OG, bot `/districts`, neighbours) show the tenant group when it has a
+  usable value, else the asking-price group, labelled with group and N (D23,
+  `singleNumberFigure`); no surface shows a number blended over both groups, and a rank or
+  "cheapest" line needs `isComparable`. Never call a figure "market",
   never write "verified" or "checked by tenants", never invent statistics, and gate any
   percentage comparison at N ≥ 5.
 - Reviews and tags describe buildings, never named private persons.

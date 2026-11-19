@@ -258,10 +258,9 @@ FR-29 (**Decided**: no overpay / saving verdict); comparability **Assumption**.
   - `CostsMap` popups (`vsMedianAbove/Below/Equal`): removed;
   - share page (`costs/share/page.tsx`, `share.cardTitle*`, `landingBody*`): the card stays
     without a "less than X % of …" brag and shows the area reference neutrally (draft).
-- `src/lib/cost-baselines.ts` (`getDistrictCostStats`, `getCityCostStats`) stays only for the
-  single-number surfaces frozen by Q-2 and the share page; every consumer named in this spec
-  (dashboard, post-submit, checker, bot) moves to the contract. List the remaining consumers in
-  the progress entry.
+- `src/lib/cost-baselines.ts` (`getDistrictCostStats`, `getCityCostStats`): every consumer
+  named in this spec (dashboard, post-submit, checker, bot, share page) moved to the contract;
+  T054 deleted the file (§Single-number surfaces).
 
 ## Checker
 
@@ -276,18 +275,14 @@ contract; no second median code remains.
 
 ## Costs overview: room / flat filter
 
-FR-30, FR-34. `getBuildingsData` keeps its existing fields byte-identical (they feed the home
-page, city hub, district pages, calculator and blog report, all frozen by Q-2) and adds
-`byType: { apartment, room }`, each `{ medianTotal, medianRent, reports }` computed with
-`computeStats` over that type's reports only (the same D4 blend as the existing fields, just
-type-restricted; labelled as the blend until Q-2). The `/[city]/costs` filter uses `byType` of
-the selected type instead of the dominant type; a building with no report of that type is not
-shown under the filter, and counts follow the filter. Bump the cache key
-(`cost-aggregates-buildings` → a new name). The district tab's median of building medians
-(`costs/client.tsx:212-243`, `rollUpDistricts`) can differ from `loadAreaReference`'s median of
-reports for the same district: accepted until Q-2, noted in the progress entry. Golden test:
-example 6 as buildings data (`byType.room.medianTotal 2,200`, `byType.apartment.medianTotal
-4,400`).
+FR-30, FR-34. Superseded by D23 (§Single-number surfaces): `getBuildingsData` carries each
+building's single number per rental-type filter as `figures.{all,apartment,room}`, computed
+over that type's reports only (T028); its blended per-building medians and `byType` are gone
+(T054). The `/[city]/costs` filter uses `figures` of the selected type instead of the dominant
+type; a building without a figure under that type is not shown under the filter, and counts
+follow the filter. The district tab reads `loadDistrictFigures` (a median of reports, the value
+and N `loadAreaReference` gives), not a median of building medians. Golden test: example 6 as
+buildings data (`figures.room` 2,200 (1), `figures.apartment` 4,400 (2)).
 
 ## Single-number surfaces
 
@@ -298,8 +293,9 @@ building", the blog data report and OG images show one number per building or ar
 bot's `/districts` table with its "cheapest" rank (`lookup.ts:245-266`, `format.ts:269-277`,
 labelled "по отчётам жильцов") and the neighbour medians in the bot and the checker
 (`lookup.ts:138`, `location-score/route.ts:384`). The share page and its OG card show one
-district figure too and follow the same rule. Every "until Q-2" note elsewhere in this spec
-(costs overview, building metadata, `cost-baselines` consumers) ends with these tasks.
+district figure too and follow the same rule. Built in four slices (T028, T052 – T054, all
+done): no surface shows a number blended over the sources any more, and `cost-baselines.ts`
+and the blended `getBuildingsData` fields are deleted.
 
 ### The rule
 

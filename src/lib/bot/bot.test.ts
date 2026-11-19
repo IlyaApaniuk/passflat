@@ -402,28 +402,27 @@ describe('handleStart with a building link (b_<uuid>)', () => {
 });
 
 /** What `getDistrictBySlug('mokotow')` returns: by default a district with its own reference. */
-function district(name = 'Mokotów', reference: AreaReference | null = areaReference('district')) {
+/**
+ * What `getDistrictBySlug` returns: the reference, the district's single number
+ * (its `/districts` row: tenant group of 12 reports) and no rank, as under the
+ * bot's `all` filter.
+ */
+function district(
+  name = 'Mokotów',
+  reference: AreaReference | null = areaReference('district'),
+  figure: { reportCount: number } | null = { reportCount: 12 },
+  rank: { position: number; total: number } | null = null,
+) {
   return {
     citySlug: 'warsaw',
     slug: 'mokotow',
     name,
     deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
     reference,
+    figure,
+    rank,
   };
 }
-
-/** The district league table, cheapest first: Mokotów is 2nd of 2. */
-const districtTable = [
-  { slug: 'wola', name: 'Wola', median: 4_100, rentMedian: 3_300, expensesMedian: 800, count: 9 },
-  {
-    slug: 'mokotow',
-    name: 'Mokotów',
-    median: 4_400,
-    rentMedian: 3_500,
-    expensesMedian: 900,
-    count: 12,
-  },
-];
 
 /** The texts of a reply's inline buttons. */
 function buttonTexts(reply: ReturnType<typeof vi.fn>): string[] {
@@ -449,14 +448,13 @@ function fakeCallback(data: string) {
 describe('handleStart with a district link (d_<slug>)', () => {
   beforeEach(() => {
     mocks.getDistrictBySlug.mockResolvedValue(district());
-    mocks.getDistrictTable.mockResolvedValue(districtTable);
     mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
   });
 
   const card = (
     locale: 'ru' | 'uk',
     reference: AreaReference | null = areaReference('district'),
-    rank: { position: number; total: number } | null = { position: 2, total: 2 },
+    rank: { position: number; total: number } | null = null,
   ) => renderDistrict({ name: 'Mokotów', reference, deposit: district().deposit, rank }, locale);
 
   it('answers with the district card and a save-interest button, saving nothing', async () => {
@@ -469,7 +467,9 @@ describe('handleStart with a district link (d_<slug>)', () => {
     expect(replyKey(reply)).toContain('📊 <b>Mokotów</b> — данные по району:');
     expect(replyKey(reply)).toContain('👥 <b>Отчёты жильцов: 5</b>');
     expect(replyKey(reply)).toContain('(медиана по 5 отчётам)');
-    expect(replyKey(reply)).toContain('🏷 2-е место из 2 по цене');
+    // No rank under `all` (golden example 16), and no league table is read.
+    expect(replyKey(reply)).not.toContain('место из');
+    expect(mocks.getDistrictTable).not.toHaveBeenCalled();
     // The blended city median is no longer read: the card needs no city lookup.
     expect(mocks.getCity).not.toHaveBeenCalled();
     expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
@@ -508,9 +508,10 @@ describe('handleStart with a district link (d_<slug>)', () => {
     expect(replyKey(reply)).not.toContain('<i>&</i>');
   });
 
-  it('answers a thin district with the city reference; report_count stays the table count', async () => {
-    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', areaReference('city')));
-    mocks.getDistrictTable.mockResolvedValue([districtTable[0], { ...districtTable[1], count: 2 }]);
+  it('answers a thin district with the city reference; report_count stays the district’s', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(
+      district('Mokotów', areaReference('city'), { reportCount: 2 }),
+    );
     const { ctx, reply } = fakeContext('/start d_mokotow');
     await handleStart(ctx);
 
@@ -530,9 +531,24 @@ describe('handleStart with a district link (d_<slug>)', () => {
     });
   });
 
-  it('records report_count 0 and no rank for a district missing from the table', async () => {
-    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', null));
-    mocks.getDistrictTable.mockResolvedValue([districtTable[0]]);
+  it('passes a comparable rank through to the card', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(
+      district(
+        'Mokotów',
+        areaReference('district'),
+        { reportCount: 12 },
+        { position: 2, total: 2 },
+      ),
+    );
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('ru', areaReference('district'), { position: 2, total: 2 }));
+    expect(replyKey(reply)).toContain('🏷 2-е место из 2 по цене');
+  });
+
+  it('records report_count 0 and no rank for a district without a usable value', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', null, null));
     const { ctx, reply } = fakeContext('/start d_mokotow');
     await handleStart(ctx);
 
@@ -589,7 +605,6 @@ describe('handleText (typed address or district)', () => {
       districts: [{ id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' }],
     });
     mocks.getDistrictBySlug.mockResolvedValue(district());
-    mocks.getDistrictTable.mockResolvedValue(districtTable);
   });
 
   it('records a typed address as typed_address, once, with the answer quality', async () => {

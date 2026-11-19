@@ -5,17 +5,19 @@ import {
   summarizeFigures,
   type AreaReference,
   type FigureReport,
+  type SingleNumberFigure,
 } from '@/lib/cost-figures';
 
 import {
   depositStatement,
   money,
   renderDistrict,
+  renderDistrictTable,
   renderLookup,
   submitLink,
   webLink,
 } from './format';
-import type { AddressLookup } from './lookup';
+import type { AddressLookup, DistrictRow } from './lookup';
 import { plural, reportsWord, t } from './texts';
 
 function report(source: string, fields: Partial<FigureReport> = {}): FigureReport {
@@ -260,23 +262,48 @@ describe('renderLookup: area card', () => {
     expect(text).toContain('Оставь отчёт');
   });
 
-  it('shows each neighbour with its own N', () => {
-    const text = renderLookup(
-      lookup({
-        neighbours: [
-          {
-            address: 'Puławska 12',
-            slug: 'pulawska-12',
-            distanceM: 100,
-            totalMedian: 4_200,
-            totalCount: 2,
-            reportCount: 2,
-          },
-        ],
-      }),
-      'ru',
+  it('shows each neighbour with its group, label and own N (D23)', () => {
+    const neighbours = [
+      {
+        address: 'Puławska 12',
+        slug: 'pulawska-12',
+        distanceM: 100,
+        figure: { group: 'tenant', metric: 'completeTotal', value: 4_200, n: 2 },
+      },
+      {
+        address: 'Puławska 14',
+        slug: 'pulawska-14',
+        distanceM: 200,
+        figure: { group: 'asking', metric: 'knownPartTotal', value: 3_900, n: 1 },
+      },
+      {
+        address: 'Puławska 16',
+        slug: 'pulawska-16',
+        distanceM: 300,
+        figure: { group: 'tenant', metric: 'rent', value: 3_000, n: 5 },
+      },
+    ] as const;
+    const text = renderLookup(lookup({ neighbours: [...neighbours] }), 'ru');
+    expect(text).toContain(
+      `• Puławska 12, отчёты жильцов: ${money(4200)} <i>(2 наблюдения, 100 м)</i>`,
     );
-    expect(text).toContain(`• Puławska 12 — ${money(4200)} <i>(2 наблюдения, 100 м)</i>`);
+    expect(text).toContain(
+      `• Puławska 14, цены из объявлений, известная часть расходов: ${money(3900)} <i>(1 наблюдение, 200 м)</i>`,
+    );
+    expect(text).toContain(
+      `• Puławska 16, отчёты жильцов, аренда: ${money(3000)} <i>(5 наблюдений, 300 м)</i>`,
+    );
+    // An asking price is never labelled as tenants' reports.
+    const asking = text.split('\n').find((line) => line.includes('Puławska 14'))!;
+    expect(asking).not.toMatch(/жильц/);
+
+    const uk = renderLookup(lookup({ neighbours: [...neighbours] }), 'uk');
+    expect(uk).toContain(
+      `• Puławska 12, звіти мешканців: ${money(4200)} <i>(2 спостереження, 100 м)</i>`,
+    );
+    expect(uk).toContain(
+      `• Puławska 14, ціни з оголошень, відома частина витрат: ${money(3900)} <i>(1 спостереження, 200 м)</i>`,
+    );
   });
 
   it('labels the deposit stat with the area it came from', () => {
@@ -485,16 +512,14 @@ describe('renderLookup: escaping and locales', () => {
             address: 'Obok <script>',
             slug: 'obok',
             distanceM: 50,
-            totalMedian: 4_000,
-            totalCount: 1,
-            reportCount: 1,
+            figure: { group: 'tenant', metric: 'completeTotal', value: 4_000, n: 1 },
           },
         ],
       }),
       'ru',
     );
     expect(area).toContain('📊 <b>Wola &amp; &lt;Koło&gt;</b> — данные по району:');
-    expect(area).toContain('• Obok &lt;script&gt; — ');
+    expect(area).toContain('• Obok &lt;script&gt;, отчёты жильцов: ');
     expect(area).not.toContain('<script>');
   });
 
@@ -574,9 +599,12 @@ describe('renderDistrict (typed district on the contract)', () => {
     }
   });
 
-  it('keeps the cheapest-first rank line from the league table', () => {
+  it('shows a rank line only for a comparable rank, none without one', () => {
     const text = renderDistrict(answer({ rank: { position: 2, total: 9 } }), 'ru');
     expect(text).toContain('🏷 2-е место из 9 по цене');
+    // Under the bot's `all` filter `districtRank` gives null: no position, no "cheapest".
+    const none = renderDistrict(answer({ rank: null }), 'ru');
+    expect(none).not.toMatch(/место из|дешёв/);
   });
 
   it('says a thin district answers with the city, then shows the city groups with N', () => {
@@ -622,5 +650,87 @@ describe('renderDistrict (typed district on the contract)', () => {
       expect(text).toContain('Wola &lt;b&gt;&amp;&lt;/b&gt;');
       expect(text).not.toContain('<b>&</b>');
     }
+  });
+});
+
+describe('renderDistrictTable (/districts on the single-number rule)', () => {
+  const value = (v: number, n: number) => ({ value: v, n });
+  const row = (
+    name: string,
+    figure: Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'> &
+      Partial<SingleNumberFigure>,
+  ): DistrictRow => ({
+    slug: name.toLowerCase(),
+    name,
+    figure: {
+      reportCount: figure.n,
+      rent: null,
+      expenses: null,
+      rentPerM2: null,
+      completeTotalPerM2: null,
+      adminFeePerM2: null,
+      ...figure,
+    },
+  });
+  const rows = [
+    row('Mokotów', {
+      group: 'tenant',
+      metric: 'completeTotal',
+      value: 3_900,
+      n: 37,
+      expenses: value(800, 36),
+    }),
+    row('Wola', {
+      group: 'asking',
+      metric: 'knownPartTotal',
+      value: 3_200,
+      n: 12,
+      expenses: value(500, 12),
+    }),
+    row('Wawer', { group: 'tenant', metric: 'rent', value: 2_800, n: 2 }),
+  ];
+
+  it('lists each district with its group, N and label, expenses beside an all-in total only', () => {
+    const text = renderDistrictTable(rows, 'ru');
+    const lines = text.split('\n');
+
+    expect(lines[0]).toBe('📊 <b>Районы Варшавы: расходы в месяц</b>');
+    expect(lines).toContain(
+      `• <b>Mokotów</b>, отчёты жильцов: ${money(3900)} <i>(37)</i>, из них расходы ${money(800)}`,
+    );
+    expect(lines).toContain(
+      `• <b>Wola</b>, цены из объявлений, известная часть расходов: ${money(3200)} <i>(12)</i>`,
+    );
+    expect(lines).toContain(`• <b>Wawer</b>, отчёты жильцов, аренда: ${money(2800)} <i>(2)</i>`);
+    expect(text).toContain(t('ru', 'districtTableFooter'));
+    expect(text.endsWith(t('ru', 'cardFooter'))).toBe(true);
+  });
+
+  it('states no rank: no positions, no "cheapest", no blended median', () => {
+    const text = renderDistrictTable(rows, 'ru');
+    expect(text).not.toMatch(/^\d+\./m);
+    expect(text).not.toMatch(/дешёв|место|реально|Медиана =/);
+    const asking = text.split('\n').find((line) => line.includes('Wola'))!;
+    expect(asking).not.toMatch(/жильц/);
+  });
+
+  it('renders Ukrainian without Russian strings', () => {
+    const text = renderDistrictTable(rows, 'uk');
+    expect(text.split('\n')[0]).toBe('📊 <b>Райони Варшави: витрати на місяць</b>');
+    expect(text).toContain(
+      `• <b>Mokotów</b>, звіти мешканців: ${money(3900)} <i>(37)</i>, з них витрати ${money(800)}`,
+    );
+    expect(text).toContain('• <b>Wola</b>, ціни з оголошень, відома частина витрат');
+    expect(text).not.toMatch(/[ыэъё]/);
+    expect(text).not.toMatch(/найдешевш|місце|реально/);
+  });
+
+  it('escapes district names and says so when there is no data', () => {
+    const text = renderDistrictTable(
+      [row('Wola <b>&</b>', { group: 'tenant', metric: 'completeTotal', value: 4_000, n: 5 })],
+      'ru',
+    );
+    expect(text).toContain('• <b>Wola &lt;b&gt;&amp;&lt;/b&gt;</b>, отчёты жильцов');
+    expect(renderDistrictTable([], 'ru')).toBe(t('ru', 'noDistrictData'));
   });
 });

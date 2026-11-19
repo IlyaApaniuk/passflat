@@ -16,8 +16,9 @@ import type { FeatureCollection, Point } from 'geojson';
 import { Building2, MapPin, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import type { SingleNumberFigure } from '@/lib/cost-figures';
-import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
+import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, figurePinLabel } from '@/lib/map-style';
 import { isAllInTotal, singleNumberLabel } from '@/lib/single-number-view';
+import { FigureMapLegend } from './figure-map-legend';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 export interface CostBuilding {
@@ -147,12 +148,6 @@ const unclusteredLabelLayer: LayerProps = {
   },
 };
 
-/** The pin text: the abbreviated number, with "+" when it is not an all-in total. */
-export function figurePinLabel(figure: SingleNumberFigure): string {
-  const label = pinLabel(figure.value);
-  return label && !isAllInTotal(figure) ? `${label}+` : label;
-}
-
 export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
   const t = useTranslations();
   const mapRef = useRef<MapRef>(null);
@@ -281,29 +276,7 @@ export function CostsMap({ buildings, citySlug, bounds }: CostsMapProps) {
   // median" conclusion (spec 03 §Comparisons, FR-29).
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg border">
-      <div
-        data-legend=""
-        className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-[calc(100%-1rem)] space-y-0.5 rounded-md bg-white/90 px-2 py-1.5 text-[11px] leading-tight text-slate-700 shadow-sm backdrop-blur-sm"
-      >
-        <p className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full border"
-            style={{ backgroundColor: MAP_COLORS.pinFill, borderColor: MAP_COLORS.pinStroke }}
-          />
-          {t('costs.building.figures.tenantTitle')}
-        </p>
-        <p className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full border"
-            style={{
-              backgroundColor: MAP_COLORS.askingPinFill,
-              borderColor: MAP_COLORS.askingPinStroke,
-            }}
-          />
-          {t('costs.building.figures.askingTitle')}
-        </p>
-        <p>{t('costs.overview.mapLegendPart')}</p>
-      </div>
+      <FigureMapLegend className="absolute bottom-2 left-2" />
       <MapGL
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}

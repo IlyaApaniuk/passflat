@@ -44,9 +44,9 @@ export function checkEventProperties(
 /**
  * `tg_district_checked`: the existing two properties, then the answer quality of
  * the district's reference (the city's for a district below MIN_AREA_REPORTS).
- * `reportCount` is the district's count in the cost-baselines league table (its
- * reports with a total; 0 when it is not in the table), the value the property
- * always had, so a thin district can still be told apart from its city answer.
+ * `reportCount` is the size of the group behind the district's single number
+ * (D23, `SingleNumberFigure.reportCount`: its `/districts` row; 0 without a
+ * usable value), so a thin district can still be told apart from its city answer.
  */
 export function districtCheckEventProperties(
   district: { slug: string; reportCount: number; reference: AreaReference | null },

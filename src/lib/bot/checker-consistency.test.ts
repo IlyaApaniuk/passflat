@@ -334,4 +334,60 @@ describe('checker summary and bot card agree on the same reports', () => {
     expect(cardHeadlines(card)).toEqual(city);
     expect(card).toContain('данные по городу');
   });
+
+  it('gives a neighbour the same single number, group and N on the checker map and in the bot (D23)', async () => {
+    serveReports({ district: districtReports });
+    h.buildingFindMany.mockResolvedValue([
+      {
+        id: 'b-tenant',
+        slug: 'tenant-1',
+        addressFull: 'Marszałkowska 3',
+        lat: 52.2309,
+        lng: 21.01,
+        costReports: [
+          { source: 'user', utilitiesComplete: true, totalMonthlyAvg: 4_000, rent: 3_100 },
+          { source: 'import', utilitiesComplete: true, totalMonthlyAvg: 4_200, rent: 3_300 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 9_000, rent: 8_000 },
+        ],
+      },
+      {
+        id: 'b-asking',
+        slug: 'asking-1',
+        addressFull: 'Marszałkowska 5',
+        lat: 52.2318,
+        lng: 21.01,
+        costReports: [
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 4_100, rent: 3_000 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 3_900, rent: 3_000 },
+        ],
+      },
+    ]);
+    h.buildingFindFirst.mockResolvedValue(existingBuilding);
+    h.buildingUpdate.mockResolvedValue(existingBuilding);
+    const response = await POST(
+      new NextRequest('http://localhost/api/location-score', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.11' },
+        body: JSON.stringify(input),
+      }),
+    );
+    const checker = (await response.json()).neighbours as Array<{ slug: string; figure: unknown }>;
+    const lookup = await lookupAddress(geo);
+
+    const expected = [
+      {
+        slug: 'tenant-1',
+        figure: { group: 'tenant', metric: 'completeTotal', value: 4_100, n: 2 },
+      },
+      {
+        slug: 'asking-1',
+        figure: { group: 'asking', metric: 'knownPartTotal', value: 4_000, n: 2 },
+      },
+    ];
+    expect(checker.map(({ slug, figure }) => ({ slug, figure }))).toEqual(expected);
+    expect(lookup!.neighbours.map(({ slug, figure }) => ({ slug, figure }))).toEqual(expected);
+    const card = renderLookup(lookup!, 'ru');
+    expect(card).toContain('Marszałkowska 3, отчёты жильцов: 4');
+    expect(card).toContain('Marszałkowska 5, цены из объявлений, известная часть расходов: 4');
+  });
 });

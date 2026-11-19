@@ -11,6 +11,7 @@ import {
   type AreaReference,
   type DepositReturns,
   type FigureGroup,
+  type SingleNumberFigure,
 } from '@/lib/cost-figures';
 import {
   answeredWord,
@@ -154,6 +155,24 @@ const REFERENCE_METRIC_KEY: Partial<Record<GroupFigureKey, TextKey>> = {
   knownPartTotal: 'referenceKnownPart',
   rent: 'referenceRent',
 };
+
+/**
+ * The variables of a single-number line (D23), the reference lines' wording:
+ * "отчёты жильцов" or "цены из объявлений", then ", известная часть расходов" or
+ * ", аренда" when the number is not an all-in total, the value and its N.
+ */
+function singleNumberVars(
+  figure: Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'>,
+  locale: BotLocale,
+): Record<'source' | 'metric' | 'value' | 'count', string> {
+  const metricKey = REFERENCE_METRIC_KEY[figure.metric];
+  return {
+    source: t(locale, figure.group === 'tenant' ? 'figureSourceTenant' : 'figureSourceAsking'),
+    metric: metricKey ? t(locale, metricKey) : '',
+    value: money(figure.value) ?? '—',
+    count: String(figure.n),
+  };
+}
 
 /** "отчётам" for tenant reports, "объявлениям" for asking prices: never "жильцов" for listings. */
 function groupNWord(group: Pick<FigureGroup, 'key'>, locale: BotLocale, count: number): string {
@@ -337,10 +356,9 @@ function districtCard(lookup: AddressLookup, locale: BotLocale): string {
     for (const neighbour of lookup.neighbours) {
       lines.push(
         t(locale, 'neighbourLine', {
+          ...singleNumberVars(neighbour.figure, locale),
           address: escapeHtml(neighbour.address),
-          value: money(neighbour.totalMedian) ?? '—',
-          count: String(neighbour.totalCount),
-          word: observationsWord(locale, neighbour.totalCount),
+          word: observationsWord(locale, neighbour.figure.n),
           distance: String(neighbour.distanceM),
         }),
       );
@@ -361,18 +379,27 @@ export function renderLookup(lookup: AddressLookup, locale: BotLocale): string {
   return `${card}\n\n${t(locale, 'cardFooter')}`;
 }
 
+/**
+ * `/districts`: one line per district with its single number, group and N
+ * (D23). Bullets, not positions: under `all` the districts are not comparable,
+ * so the list order (`districtTableRows`) is a display order, never a rank.
+ * Expenses are shown beside an all-in total only, from the same group.
+ */
 export function renderDistrictTable(rows: DistrictRow[], locale: BotLocale): string {
   if (!rows.length) return t(locale, 'noDistrictData');
 
   const lines = [t(locale, 'districtTableHeader'), ''];
-  rows.forEach((row, index) => {
-    const total = money(row.median);
-    const expenses = money(row.expensesMedian);
+  for (const { name, figure } of rows) {
+    const expenses =
+      figure.metric === 'completeTotal' && figure.expenses ? money(figure.expenses.value) : null;
     lines.push(
-      `${index + 1}. <b>${escapeHtml(row.name)}</b> — ${total ?? '—'}` +
-        (expenses ? ` <i>(${t(locale, 'ofWhichExpenses', { expenses })})</i>` : ''),
+      t(locale, 'districtRow', {
+        ...singleNumberVars(figure, locale),
+        name: escapeHtml(name),
+        expenses: expenses ? `, ${t(locale, 'ofWhichExpenses', { expenses })}` : '',
+      }),
     );
-  });
+  }
 
   lines.push('', t(locale, 'districtTableFooter'), '', t(locale, 'cardFooter'));
   return lines.join('\n');
@@ -388,8 +415,9 @@ export interface DistrictAnswer {
   /** The district's own deposit statistic. */
   deposit: DepositReturns;
   /**
-   * 1-based position in the cheapest-first league table, when it has one: the
-   * blended `cost-baselines` table, frozen by Q-2 (spec 03 §Single-number surfaces).
+   * 1-based position among the districts it may be compared with
+   * (`districtRank`: a `comparableRanks` rank, golden example 16); null under
+   * the bot's `all` filter, so no rank line is shown there.
    */
   rank: { position: number; total: number } | null;
 }

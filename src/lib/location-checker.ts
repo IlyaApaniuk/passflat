@@ -1,10 +1,12 @@
 import { cleanStreet } from '@/lib/address';
 import {
-  CLAMP_EXPENSES_AT_ZERO,
-  metricFigure,
+  singleNumberFigure,
+  summarizeFigures,
   type AreaReference,
   type DepositReturns,
+  type FigureReport,
   type FigureSummary,
+  type SingleNumberFigure,
 } from '@/lib/cost-figures';
 import { transliterate } from '@/lib/slugify';
 
@@ -39,26 +41,21 @@ export interface CityBounds {
   west: number;
 }
 
-export interface LocationCheckerCostReport {
-  source: string;
-  totalMonthlyAvg: unknown;
-  rent: unknown;
-}
-
 /**
- * One blended number per building over every visible report, whatever its
- * source or completeness. Only for the single-number surfaces frozen by Q-2
- * (spec 03 §Single-number surfaces): the neighbour pins of the checker and the
- * bot. Never labelled as tenant figures.
+ * The report fields a neighbour's single number reads: the contract's headline
+ * metrics (complete total, known part, rent) depend on these alone, so the
+ * neighbour shows the headline its own building page shows. Shared by the
+ * checker route and the bot, so both select the same fields.
  */
-interface BlendedBuildingCosts {
-  totalMedian: number | null;
-  /** The N of `totalMedian`: reports with a usable total. */
-  totalCount: number;
-  rentMedian: number | null;
-  expensesMedian: number | null;
-  reportCount: number;
-}
+export const NEIGHBOUR_REPORT_SELECT = {
+  source: true,
+  utilitiesComplete: true,
+  totalMonthlyAvg: true,
+  rent: true,
+} as const;
+
+/** A neighbour's single number: its group, metric, value and N (spec 03 §Single-number surfaces). */
+export type NeighbourFigure = Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'>;
 
 /** The deposit statistic of the area a building is set against (spec 03 §Rules). */
 interface LocationCheckerDeposit {
@@ -89,7 +86,9 @@ export interface LocationCheckerNeighbour {
   lat: number;
   lng: number;
   distanceM: number;
-  totalMedian: number | null;
+  /** The tenant group when it has a usable value, else the asking prices, shown with its label and N. */
+  figure: NeighbourFigure;
+  /** The building's visible reports over both groups: an analytics count, never shown as a figure's N. */
   reportCount: number;
 }
 
@@ -332,40 +331,18 @@ export function resetLocationCheckRateLimit(): void {
 }
 
 /** Rent or a total as the contract uses it: finite and above zero. */
-function positiveAmount(value: unknown): number | null {
-  if (value == null) return null;
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? number : null;
-}
-
 /**
- * The blended per-building number of the Q-2 single-number surfaces, from
- * already-visible reports supplied by the caller. A thin wrapper over the
- * contract's `metricFigure` (untrimmed, rounded as every contract figure), so
- * no second median code exists; the checker's own figures come from the
- * loaders in `cost-figures-query.ts`.
+ * A neighbour's single number (D23) from its already-visible reports, supplied
+ * by the caller with `NEIGHBOUR_REPORT_SELECT`: `singleNumberFigure` over the
+ * building's summary, the tenant group when it has a usable value, else the
+ * asking prices, else null (the neighbour is not shown). Never a blend of the
+ * two groups, and no second median code: the contract computes it.
  */
-export function aggregateLocationCheckerCosts(
-  reports: LocationCheckerCostReport[],
-): BlendedBuildingCosts | null {
-  if (reports.length === 0) return null;
-
-  const totals = reports.map((report) => positiveAmount(report.totalMonthlyAvg));
-  const rents = reports.map((report) => positiveAmount(report.rent));
-  const expenses = totals.map((total, index) => {
-    const rent = rents[index];
-    if (total == null || rent == null) return null;
-    return CLAMP_EXPENSES_AT_ZERO ? Math.max(0, total - rent) : total - rent;
-  });
-
-  const total = metricFigure(totals);
-  return {
-    totalMedian: total.median,
-    totalCount: total.n,
-    rentMedian: metricFigure(rents).median,
-    expensesMedian: metricFigure(expenses).median,
-    reportCount: reports.length,
-  };
+export function neighbourFigure(reports: FigureReport[]): NeighbourFigure | null {
+  const figure = singleNumberFigure(
+    summarizeFigures(reports, { level: 'building', rentalType: 'all' }),
+  );
+  return figure && { group: figure.group, metric: figure.metric, value: figure.value, n: figure.n };
 }
 
 /** Stable suffix for the rare case where two normalized addresses map to one slug. */

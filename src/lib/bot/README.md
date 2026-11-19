@@ -7,10 +7,14 @@ contract's loaders (`@/lib/cost-figures-query`), the ones the checker and the
 building page read, and `format.ts` shows them by group with each figure's N,
 as the checker does. The typed-district answer reads the same contract
 (`getDistrictBySlug` → `loadAreaReference`: the district from five reports,
-else the city, said so first). The neighbours' single number
-(`@/lib/location-checker`), the `/districts` table and the district's rank
-line (`@/lib/cost-baselines`) stay as they are until Q-2. A split would mean
-either duplicating that logic or maintaining an API between two deploys.
+else the city, said so first). The neighbours, the `/districts` table and the
+district's `tg_district_checked.report_count` show one number per item by D23:
+the tenant group when it has a usable value, else the asking prices, labelled
+with the group and its N (`neighbourFigure` in `@/lib/location-checker`, the
+checker's pin rule; `loadDistrictFigures` for districts). A rank line appears
+only inside a `comparableRanks` rank (`districtRank`), so never under the bot's
+`all` filter; the table is a display order with no positions. A split would
+mean either duplicating that logic or maintaining an API between two deploys.
 
 ## Production status
 
@@ -41,7 +45,8 @@ the migrations are missing (`docs/architecture.md` §9).
   `districts.ts`) or a `d_<slug>` link answers with the district card.
 - **Building link**: `b_<uuid>` opens that building's card, as if its address
   had been typed.
-- **`/districts`**: the district table (cost-baselines, Q-2).
+- **`/districts`**: each district's single number with its group and N
+  (`getDistrictTable`), all-in totals first, then by value; no rank.
 - **Saved interests**: the building and district buttons and the city waitlist
   button save a `TelegramSubscription`; `/my` lists them with remove buttons.
   Saved interest sends nothing (see "Promises and capabilities").

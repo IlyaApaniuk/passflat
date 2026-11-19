@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { normalizeAddress } from '@/lib/address';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import {
-  aggregateLocationCheckerCosts,
+  NEIGHBOUR_REPORT_SELECT,
+  neighbourFigure,
   type LocationCheckerNeighbour,
   getLocationCheckIp,
   isInsideCityBounds,
@@ -367,10 +368,7 @@ async function findNeighboursWithCosts(
       addressFull: true,
       lat: true,
       lng: true,
-      costReports: {
-        where: { isVisible: true },
-        select: { source: true, totalMonthlyAvg: true, rent: true },
-      },
+      costReports: { where: { isVisible: true }, select: NEIGHBOUR_REPORT_SELECT },
     },
   });
 
@@ -382,9 +380,9 @@ async function findNeighboursWithCosts(
       // The box is a superset of the circle, so trim the corners.
       if (distanceM > NEIGHBOUR_RADIUS_M) return [];
 
-      // One blended number per pin: a single-number surface frozen by Q-2.
-      const costs = aggregateLocationCheckerCosts(row.costReports);
-      if (!costs || costs.totalMedian == null) return [];
+      // One number per pin (D23): the tenant group, else the asking prices, with its N.
+      const figure = neighbourFigure(row.costReports);
+      if (!figure) return [];
 
       return [
         {
@@ -394,8 +392,8 @@ async function findNeighboursWithCosts(
           lat: coord.lat,
           lng: coord.lng,
           distanceM: Math.round(distanceM),
-          totalMedian: costs.totalMedian,
-          reportCount: costs.reportCount,
+          figure,
+          reportCount: row.costReports.length,
         },
       ];
     })

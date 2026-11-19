@@ -25,7 +25,7 @@ import {
 } from '@/lib/analytics/checker-events';
 import { answerProperties, type AnswerProperties } from '@/lib/cost-figures';
 import type { CityBounds } from '@/lib/listings-data';
-import type { LocationCheckerCosts } from '@/lib/location-checker';
+import type { LocationCheckerCosts, LocationCheckerNeighbour } from '@/lib/location-checker';
 import type { CategoryResult } from '@/lib/location-score';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
@@ -48,16 +48,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface Neighbour {
-  id: string;
-  slug: string;
-  address: string;
-  lat: number;
-  lng: number;
-  distanceM: number;
-  totalMedian: number | null;
-  reportCount: number;
-}
+/** A neighbour pin: one group's number with its N (D23), from `/api/location-score`. */
+type Neighbour = LocationCheckerNeighbour;
 
 interface Nuisance {
   key: string;

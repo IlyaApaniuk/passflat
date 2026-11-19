@@ -902,13 +902,13 @@
         "CLAUDE.md Cost data honesty, spec 03, docs/specs/README.md, src/lib/bot/README.md and docs/architecture.md no longer say that single-number surfaces blend sources"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 4 of 4 (spec 03 §Single-number surfaces §Slices).",
       "id": "T054",
       "milestone": "M3",
       "title": "Single-number rule (slice 4): bot /districts and neighbour medians, then remove the blend",
       "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": [],

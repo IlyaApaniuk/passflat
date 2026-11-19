@@ -84,35 +84,35 @@ describe('getBuildingsData', () => {
     expect(row.figures.all?.rent).toEqual({ value: 3500, n: 3 });
   });
 
-  it('keeps every blended field byte-identical for the other surfaces and adds figures last', async () => {
+  it('carries no blended median over the sources, only the single numbers (T054)', async () => {
     findMany.mockResolvedValue([building('b1', EXAMPLE_6)]);
     const [row] = await getBuildingsData('city-1', null, null);
-    const { figures, ...existing } = row;
+    const { figures, ...rest } = row;
 
     expect(figures).toBeDefined();
-    expect(row).not.toHaveProperty('byType');
-    expect(Object.keys(row).at(-1)).toBe('figures');
-    // The values the code computed before the single numbers were added, in the same key order.
-    expect(JSON.stringify(existing)).toBe(
-      JSON.stringify({
-        id: 'b1',
-        slug: 'slug-b1',
-        address: 'Address b1',
-        district: 'Name mokotow',
-        districtSlug: 'mokotow',
-        reports: 3,
-        medianTotal: 4300,
-        medianRent: 3500,
-        medianAdminFee: 500,
-        medianExpenses: 800,
-        medianRentPerM2: 70,
-        medianTotalPerM2: 86,
-        medianAdminFeePerM2: 10,
-        lat: 52.2,
-        lng: 21,
-        rentalType: 'apartment',
-      }),
-    );
+    expect(rest).toEqual({
+      id: 'b1',
+      slug: 'slug-b1',
+      address: 'Address b1',
+      district: 'Name mokotow',
+      districtSlug: 'mokotow',
+      lat: 52.2,
+      lng: 21,
+      rentalType: 'apartment',
+    });
+    for (const blended of [
+      'byType',
+      'reports',
+      'medianTotal',
+      'medianRent',
+      'medianAdminFee',
+      'medianExpenses',
+      'medianRentPerM2',
+      'medianTotalPerM2',
+      'medianAdminFeePerM2',
+    ]) {
+      expect(row).not.toHaveProperty(blended);
+    }
   });
 
   it('never blends: tenant reports win over asking prices, which fill in only alone', async () => {
@@ -128,8 +128,7 @@ describe('getBuildingsData', () => {
     ]);
     const [mixed, asking] = await getBuildingsData('city-1', null, null);
 
-    // The blended field still mixes the sources; the single number does not.
-    expect(mixed.medianTotal).toBe(6000);
+    // The asking prices (6,000 and 6,200) are not blended into the tenant's number.
     expect(mixed.figures.all).toMatchObject({ group: 'tenant', value: 4300, n: 1, reportCount: 1 });
     expect(asking.figures.all).toMatchObject({
       group: 'asking',
@@ -149,8 +148,7 @@ describe('getBuildingsData', () => {
     expect(flats.figures.room).toBeNull();
     expect(flats.figures.apartment).toMatchObject({ value: 4300, n: 1 });
     expect(unknown.figures).toMatchObject({ apartment: null, room: null });
-    expect(unknown.figures.all).toMatchObject({ value: 2200, n: 1 });
-    expect(unknown.reports).toBe(1);
+    expect(unknown.figures.all).toMatchObject({ value: 2200, n: 1, reportCount: 1 });
   });
 
   it('reads visible reports only and is cached under a renamed key with the costs tag', async () => {
@@ -166,8 +164,12 @@ describe('getBuildingsData', () => {
     });
 
     expect(cacheCalls).toHaveLength(1);
-    expect(cacheCalls[0].keys).toEqual(['cost-aggregates-buildings-figures-v2']);
-    for (const old of ['cost-aggregates-buildings', 'cost-aggregates-buildings-by-type']) {
+    expect(cacheCalls[0].keys).toEqual(['cost-aggregates-buildings-figures-v3']);
+    for (const old of [
+      'cost-aggregates-buildings',
+      'cost-aggregates-buildings-by-type',
+      'cost-aggregates-buildings-figures-v2',
+    ]) {
       expect(cacheCalls[0].keys).not.toContain(old);
     }
     expect(cacheCalls[0].options).toEqual({ revalidate: 300, tags: ['costs'] });
