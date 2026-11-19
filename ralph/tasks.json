@@ -1032,13 +1032,13 @@
         "The progress entry is the owner handoff for the PRD 1 deploy as listed in spec 05 §Final check after the owner answers (draft copy keys, Assumption constants, the new cron, no table or migration, the PostHog EU checklist, the four bot migrations one by one, RLS on three tables, token, webhook, bot:webhook, what remains unverified)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Added in the day run of 2026-11-19 (D38).\nT061 added as a dependency and the task moved after T060 and T061 in the day run of 2026-11-19 (D42).",
       "id": "T059",
       "milestone": "M5",
       "title": "Final check of PRD 1 after the owner answers of 2026-11-19, with the deploy handoff",
       "spec": "docs/specs/05-measurement-docs.md#final-check-after-the-owners-answers",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

@@ -175,11 +175,11 @@ Numbers are never reused. Status: Confirmed, Partly, Testing, Untested, Contradi
 
 ### Law and data
 
-| No. | Assumption                                                                                                                     | Status   | Facts and how we test                                                       | If wrong                                   |
-| --- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | --------------------------------------------------------------------------- | ------------------------------------------ |
-| A14 | The bot's deposit rules (uopl art. 6 ust. 4, KC art. 112, 115, 675, 681, interest from the day after the deadline) are correct | Partly   | Checked against statute texts 2026-10-05 (commit a612f76); no lawyer review | Fix the rules before promotion             |
-| A15 | Cookieless analytics without consent is lawful under Art. 6(1)(f)                                                              | Untested | Owner decision D10; no legal review                                         | Consent-gated analytics, smaller samples   |
-| A16 | Users accept blended medians with scraped asking prices                                                                        | Untested | D4 by the owner                                                             | Separate labelled groups (PRD 1 package C) |
+| No. | Assumption                                                                                                                     | Status   | Facts and how we test                                                                                            | If wrong                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| A14 | The bot's deposit rules (uopl art. 6 ust. 4, KC art. 112, 115, 675, 681, interest from the day after the deadline) are correct | Partly   | Checked against statute texts 2026-10-05 (commit a612f76); no lawyer review                                      | Fix the rules before promotion             |
+| A15 | Cookieless analytics without consent is lawful under Art. 6(1)(f)                                                              | Untested | Owner decision D10; no legal review                                                                              | Consent-gated analytics, smaller samples   |
+| A16 | Users accept blended medians with scraped asking prices                                                                        | Untested | D4 by the owner, superseded by D23: no surface blends the groups any more (PRD 1 package C, built, not deployed) | Separate labelled groups (PRD 1 package C) |
 
 ### Team
 

@@ -95,6 +95,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Bot copy addresses the user with «ты» / «ти» (D42); `src/lib/bot/address-form.test.ts` walks every RU/UK text for formal pronouns and plural imperatives. A noun it catches (like «сайте») goes into its `NOT_IMPERATIVES` with a reason. New deposit keys are covered via `DEPOSIT_TEXT_KEYS`.
 - A RegExp with the `g` flag keeps `lastIndex` between `toMatch` / `test` calls; keep shared patterns without `g` and build a `g` copy for `matchAll`.
 - An e-mail renders end-to-end in Vitest through the real `sendEmail`: mock `next-intl/server` (`getTranslations({ locale, namespace })` → `createTranslator`), `../client` (Resend `emails.send` records `{ subject, html }`) and `@/lib/posthog-server`; example: `src/lib/email/templates/CityLaunchEmail.test.ts`. Never type a literal U+00A0 in source (`no-irregular-whitespace`); `\s` matches it.
+- The permission check can deny a grep whose regex holds `|` or `$` (even quoted) and `cd … &&` chains; use basic-regex `\|` alternation and absolute paths (`grep -rn "a\|b" /abs/path` works).
 - `toLocaleString('pl-PL')` does not group four-digit numbers ("4000", but "12 000" with a no-break space): match with `\s?`; rendered HTML keeps `&amp;`, so assert on text without `&`.
 
 ## Log
@@ -1586,3 +1587,85 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **After deploy:** the city-launch e-mail may be sent again (`POST /api/cron/city-launch`, manual, `CRON_SECRET`); Q-17 no longer holds it.
   - No tables, migrations or events.
 - Next: T059 (final check of PRD 1 with the deploy handoff, spec 05 §Final check after the owners' answers).
+
+### 2026-11-19 11:53 · T059 · done
+
+- Done (docs only, no code):
+  - `docs/specs/README.md`: the status line records both final checks and that Q-1 – Q-17 are answered (D22 – D33, D47; «ты» D42); the T059 row → Done. Every row is Done; none is Blocked or Planned.
+  - Stale wording fixed: `docs/specs/05-measurement-docs.md` (§Final check no longer says single-number surfaces "follow D4 until Q-2"; the FR-13 fallback and the §6 limitation now say "until the T002 fix is verified after deploy" instead of "while FR-13 is open"), `docs/specs/01-analytics-context.md` (same FR-13 wording), `docs/specs/03-building-figures.md` (the post-submit route was a blended median before T025), `docs/product/brd.md` A16 (D4 superseded by D23; no surface blends).
+  - Searched `docs/` (dated reviews, `decisions.md` and `prd-1-decision-review.md` excluded as records), `CLAUDE.md` and the bot README for "blend", "D4", "Q-1" – "Q-17", "Open", "Blocked" and the two removed waitlist events. Nothing else says that single-number surfaces blend sources, that a Q is open, or that waitlist events are keyed by e-mail. `CLAUDE.md` was already right (T054).
+  - Left for `ralph-start` (it closes a PRD): the PRD 1 status line, `roadmap.md` ("59 done") and the BRD stage table.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, no unused files, Vitest 90 files / 1210 tests, build OK). `npm run test:e2e` exit 0 (8/8 on port 3100, stopped afterwards; the `fetch failed` lines are the fake PostHog host). `node scripts/ralph-tasks.mjs summary` before `done`: 59 done, 0 todo, 0 blocked, only T059 in progress. `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: **PRD 1 deploy handoff (D29).** State: built and tested on `chore/agent-harness`. Not pushed, not deployed, no production migration run, no PostHog, Vercel or Telegram change made.
+  1. **Review the draft copy before the deploy (D29).** Wording is in each task's entry above. Website keys are in all four locales.
+     - **Website, from T046's list** (T013, T015, T016, T019, T020, T021, T024, T025, T026, T035, T047, T048, T051): see the T046 entry, "Website draft copy".
+     - **T028:** `costs.overview.figureTenant`, `figureAsking`, `figureKnownPart`, `figureRentOnly`, `mapLegendPart`.
+     - **T029 (33 keys):** `landing.hero.subtitle`, `trustRealCostDesc`, `trustVerified`, `trustVerifiedDesc`, `statsDeposit`; `landing.bentoGrid.realCostDataDesc`; `landing.costTransparency.subtitle`, `anonymousVerified`, `communityVerified`; `landing.faq.a5`; `landing.checkAddress.subtitle`, `pointCosts`; `share.landingHeading`, `cardTitleArea`, `cardTitleGeneric`; `rentReport.storyReality`, `storyNotException`, `faqA1`, `faqA3`, `kaucjaReturnedLabel`; `checker.subtitle`, `checker.result.checkedAddress`; `costsSeo.cityMetaDescription`, `cityH1`, `districtIntro`, `buildingMetaDescriptionWithData`; `costs.subtitle`, `costs.overview.title`, `costs.building.lookingForApartmentDesc`; `howItWorksPage.seekers.step1Title`; `blog.topic4Desc`; `helpCenter.costTransparency.a1`; `listings.roommateMetaDescription`.
+     - **T052:** `calculator.result.basisData`.
+     - **T053:** `costsSeo.buildingMetaDescriptionPartial` (new), `share.landingDataLabel`, `rentReport.anatomyMedian`, `rentReport.faqA2`.
+     - **T056:** `listings.demandCapture.removeEmailLink`; `unsubscribe.removeInterest.successTitle`, `successDesc`, `errorTitle`, `errorDesc`.
+     - **Not a draft:** T060 `emails.cityLaunch.body` / `.cta` is your copy (D47).
+     - **Bot, from T046's list** (`texts.ts`: T033, T034, T035, T037 incl. `COMMAND_MENU`; `deposit-texts.ts`: T040 `remindersOff`): see the T046 entry, "Bot draft copy".
+     - **T042, `deposit-texts.ts`:**
+       - RU drafts: `generalRuleNotLease`, `returnedAboveDeposit`.
+       - UK drafts: `generalRuleHeader`, `generalRuleContractFailed`, `generalRuleNotLease`, `disputedSum`, `returnedAboveDeposit`.
+       - RU `generalRuleHeader`, `generalRuleContractFailed` and `disputedSum` are your D26 text.
+     - **T043:** UK `btnWantLawyer`, `lawyerAck` (drafts); RU is your D27 text.
+     - **T054, `texts.ts`:**
+       - New: `figureSourceTenant`, `figureSourceAsking`, `districtRow`.
+       - Changed: `neighbourLine`, `districtTableHeader`, `districtTableFooter`, `districtThinPrompt`, the district and `/districts` lines of `CAPABILITIES_RU/UK` (start / help).
+     - **T061, the «ты» switch, RU and UK:** `generalRuleContractFailed`, `generalRuleNotLease`, `lawyerAck` and the `letterHowTo` correspondence line. Your D26 / D27 sentences now read in «ты»; check that the meaning is kept.
+     - **Copy left unchanged for you to decide:**
+       - T029: `calculator.metaTitle` "really costs"; "real costs" in `metadata.homeDescription`, `metadata.aboutDescription`, `landing.hero.costsCta`, `costsSeo.cityMetaTitle`, `costsSeo.districtMetaDescription`, `rentReport.lead`, `rentReport.metaDescription`; the unsourced "One in four" in `rentReport.kaucjaBody`.
+       - T052: `calculator.intro` and `calculator.disclaimer` ("tenant rent medians") are wrong where a district falls back to asking prices.
+       - T053: `rentReport.ogTitle` / `metaTitle` "real data", `rentReport.methodologyBody`.
+  2. **Assumption constants**, one place each:
+     - `src/lib/cost-figures.ts`: `SINGLE_NUMBER_MIN_N = 1` (T028) and `MIN_COMPARABLE_N = 5` (T022). The Q-3 block is Decided (D24), as are `MIN_AREA_REPORTS = 5` and `MIN_DEPOSIT_ANSWERS = 3`.
+     - `src/lib/cost-figures-query.ts`: `REVALIDATE_SECONDS = 300`, `REPORT_LIMIT = 5000` (T018).
+     - `src/lib/deposit-claim.ts`: `DEPOSIT_ROUNDING_STEP = 100`; tenant group only (T029).
+     - `src/lib/calculator-baseline.ts`: the czynsz anchor needs `TRUST_THRESHOLDS.reliableMin` (5) values, and the calculator stays on `all`. Landing district cards (`districts.tsx`) use the same gate of 5 (T052).
+     - `src/app/[locale]/blog/warsaw-rent-prices/page.tsx`: `EXAMPLE_MIN_GAP = 300` (T053).
+     - `src/lib/listing-interest-retention.ts`: `LISTING_INTEREST_RETENTION_MONTHS = 12`, counted from `createdAt` (T055).
+     - `src/lib/bot/deposit-flow.ts`: `disputedSum` in every general-rule case; returned above the deposit → `resolved` with an empty outcome (T042).
+     - `src/lib/analytics/page-context.ts`: the `page_type` map and the entry-page mechanism (T004, T005).
+     - `src/lib/analytics/building-events.ts`: the count properties (T009).
+     - `src/lib/analytics/interest-events.ts`: `API_ERROR_CODES` (T010).
+     - `src/lib/bot/start-payload.ts`: `ENTRY_SOURCE` (T031, T038).
+     - In docs only: the after-deploy FR-13 threshold, sessions with `$pageview` ≥ 90 % of sessions with `$web_vitals` (T002), and the Telegram address funnel window (T044), both in `docs/analytics/activation-funnels.md`.
+  3. **New cron:** `vercel.json` `/api/cron/cleanup-listing-interest` at `30 4 * * *` (T055). Its first production run deletes, in one `deleteMany`, every listings-interest row saved before 2025-11. The branch also adds `/api/cron/telegram-followups` at `0 9 * * *` (the bot, Sep–Oct 2026). That cron first runs `clearStaleLetterParties()` on `deposit_cases`, so it fails every day until migration 3 is applied. Both crons need `CRON_SECRET`, which also signs the remove-interest links (without it in production the save still works but shows no link).
+  4. **Tables and migrations:** no PRD 1 task added a table or a migration. `git diff main...HEAD -- prisma` shows only the four bot migrations of Sep–Oct 2026 plus their `schema.prisma` models.
+  5. **PostHog EU move** (`docs/ops/posthog-eu-migration.md`, D30), before the deploy:
+     1. Create the EU Cloud project (UTC) and copy its key.
+     2. Recreate the settings of §2, including the 5 internal-user filters and web vitals.
+     3. Recreate the flags of §3: `session-recording-sample` (20 %) before the deploy; the other four disabled with their rollout.
+     4. Set `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com` in Vercel Production (and Preview). They are inlined at build time, so they must be set before the build.
+     5. Deploy and note the move date.
+     6. In EU Live Events within the first hour: a landing `$pageview`, a server event, and `$feature_flag_called` for `session-recording-sample`. In the US project: no new events.
+     7. Re-authenticate the PostHog MCP server (`/mcp`) to the EU organisation and check `api_host`.
+     8. Keep the US project.
+  6. **Bot launch with the deploy (D29), in order:**
+     1. Apply the four migrations to production one by one, each with your explicit approval: `20260831120000_add_telegram_bot` (`telegram_chats`, `telegram_subscriptions`), `20261004120000_telegram_subscription_label` (`label` column), `20261005120000_deposit_cases` (`deposit_cases`), `20261005140000_deposit_contract` (contract columns on `deposit_cases`).
+     2. Switch RLS on by hand for **`telegram_chats`, `telegram_subscriptions` and `deposit_cases`**.
+     3. In Vercel set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (without it the webhook accepts every update), `GEOCODING_API_SERVER_KEY` (a server key, not the browser Places key), `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (shows the site's bot links) and `ANTHROPIC_API_KEY` (contract reading). Do this before the build.
+     4. After the deploy, run `npm run bot:webhook -- https://passflat.com` once with the production token. It registers the webhook and publishes the RU/UK command menu (T037, T054), and it refuses to run without the secret.
+     5. Then confirm the production status, so the bot README and `docs/architecture.md` can stop saying "not launched".
+  7. **Other owner actions:**
+     - After the deploy, the city-launch e-mail may be sent again (`POST /api/cron/city-launch`, manual). It is at most once per row (T058).
+     - Send `docs/legal-review/deposit-scenarios.md` to a Polish lawyer (A14, T041).
+     - Run each funnel query once and add the deploy date to `docs/analytics/activation-funnels.md` (T044).
+     - Read the two weeks after the release (E8, E9, E13).
+  8. **Still open for you (none blocks the deploy):**
+     - Does deleting an account also delete that e-mail's listings-interest rows (T055)?
+     - Should the privacy policy state the 12-month retention?
+     - Other e-mail distinct ids are still in PostHog: `contact_form_sent`, the auth `captureServerException` calls, and `identifyUser` person properties (T057).
+     - Old e-mail-keyed waitlist events remain in the US project.
+     - The display choices listed in T028, T042, T052, T053 and T054.
+  9. **Unverified:**
+     - The mobile flows by eye: costs overview map and cards, hub and district pages, calculator, home hero and featured building, blog report, share page, building page, checker and its map, roommate role selector, empty states, the remove-interest link. No task opened a real browser on data. City pages answer 500 in e2e, which has no DB.
+     - Every event in PostHog Live Events after the deploy, including the FR-13 ≥ 90 % check. PostHog is off locally; e2e checked posthog-js only against a fake host.
+     - The bot in production and in the dev bot: never started, no Telegram call; also how the long `btnWantLawyer` text wraps.
+     - The real e-mail: nothing was sent; the city-launch e-mail was rendered in Vitest only.
+     - Real rows: the cleanup cron and the remove-interest page deleted none, only in-memory fakes.
+     - The CI e2e job: nothing pushed.
+- Next: PRD 1 is complete. `ralph-start` (or the owner) marks PRD 1 Done in its PRD file, `roadmap.md` and the BRD stage table. Then the owner deploys with the handoff above. No PRD is queued (PRD 2 is On hold, D39).

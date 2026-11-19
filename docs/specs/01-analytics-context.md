@@ -72,8 +72,9 @@ FR-1, FR-2, FR-10 (**Decided**); mechanism **Assumption**.
   1.374 supports it): for every event, compute `getPageContext(window.location.pathname)` at send
   time and merge it under the event's own properties (an event's own property wins). This keeps
   context correct on client navigations and does not depend on when a component effect runs.
-- `entry_page_type` (FR-2): the page type of the session's entry page. While FR-13 is open the
-  landing `$pageview` is usually dropped, so the entry must not depend on it. Order of
+- `entry_page_type` (FR-2): the page type of the session's entry page. Before the FR-13 fix
+  (T002, unverified until deploy) the landing `$pageview` was usually dropped, so the entry must
+  not depend on it. Order of
   preference (check `node_modules/posthog-js` 1.374 first and name the choice in the progress
   entry):
   1. the SDK's own per-session initial pathname, if it exposes one on events or through its

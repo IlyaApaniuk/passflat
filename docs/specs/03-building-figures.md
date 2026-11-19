@@ -249,9 +249,9 @@ FR-29 (**Decided**: no overpay / saving verdict); comparability **Assumption**.
 - Surfaces and their data sources:
   - building page comparison section, `cheaperThanPercentile` and `district-position-bar.tsx`;
   - post-submit screen: the comparison is computed in `POST /api/cost-reports`
-    (`src/app/api/cost-reports/route.ts:718-781`, blended district median); the response
-    switches to the contract's area reference (tenant group, with N and level) and the client
-    shows it side by side with the user's own total;
+    (`src/app/api/cost-reports/route.ts:718-781`, a blended district median before T025); the
+    response switches to the contract's area reference (tenant group, with N and level) and the
+    client shows it side by side with the user's own total;
   - dashboard `CostReportsPanel` (`dashboard/page.tsx:129-131`, via `cost-baselines`): switches
     to `loadAreaReference`;
   - checker (§Checker);

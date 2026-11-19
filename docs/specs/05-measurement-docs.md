@@ -26,7 +26,8 @@ as it is (event names and properties checked with a search of `src/`, not copied
       navigation. The server `conversation_started` (user id) cannot be joined to client
       events. A contact click is a click, not an introduction, a reply or a move-in (FR-5).
    2. Address: entry into the checker (`checker_viewed`) or a building page (`$pageview` with
-      `page_type=building`; `location_score_viewed` as the fallback while FR-13 is open) →
+      `page_type=building`; `location_score_viewed` as the fallback for data from before the
+      FR-13 fix, T002, is verified after deploy) →
       answer by `answer_level` (`address_checked` without `outside_city`, or
       `building_detail_viewed`; spec 01 §Answer quality) → an action (`cost_form_started`,
       `telegram_bot_opened`, `checker_cta_clicked`). Starting a check and landing on a building
@@ -57,9 +58,9 @@ as it is (event names and properties checked with a search of `src/`, not copied
    `page_type` and `entry_page_type`, useful actions, saved requests (DB), sources (`ref`, UTM,
    referring domain) and errors (`listing_interest_failed` by `error_code`,
    `checker_check_failed`). Counts, not rates, while samples are small.
-6. **Limitations:** landing capture (FR-13) until the owner's fix is verified; memory mode drops
-   context and `ref`/UTM on a full reload; `entry_page_type` restarts on reload (spec 01); the
-   owner's anonymous visits cannot be excluded; numbers before 2026-07-28 are not comparable
+6. **Limitations:** landing capture (FR-13) until the T002 fix is verified after deploy; memory
+   mode drops context and `ref`/UTM on a full reload; `entry_page_type` restarts on reload
+   (spec 01); the owner's anonymous visits cannot be excluded; numbers before 2026-07-28 are not comparable
    (D10); PostHog moves to a new EU Cloud project with the PRD 1 deploy, history before the
    move stays in the US project (Q-11, D30, `docs/ops/posthog-eu-migration.md`); E8 and E9
    thresholds are in `docs/product/experiments.md` (Q-9, D28).
@@ -82,8 +83,8 @@ FR-49. One task at the end:
 - `node scripts/ralph-tasks.mjs summary` shows every non-blocked PRD 1 task done.
 - The requirement map in `README.md` marks each FR Done, Blocked (with the task) or Open.
 - `CLAUDE.md` "Cost data honesty" says that the building page, the checker and the bot show the
-  tenant and asking-price groups separately (PRD 1 package C), while single-number surfaces
-  follow D4 until Q-2 is answered.
+  tenant and asking-price groups separately (PRD 1 package C). (Done by T046. Since D23 and
+  T028 – T054 no surface blends the groups any more, and `CLAUDE.md` says so.)
 - The progress entry lists for the owner: all draft copy keys (website and bot), the
   Assumption constants applied, the blocked tasks with their questions, that no table and no
   migration were added, and what remains unverified (mobile flows by eye, Live Events after
