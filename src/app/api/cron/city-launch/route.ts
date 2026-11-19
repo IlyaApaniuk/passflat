@@ -29,8 +29,17 @@ export async function POST(request: NextRequest) {
   const cityNormalized = city.trim().toLowerCase();
   const slug = citySlug.trim();
 
+  // Only the city-launch class (spec 02): listings-interest rows carry a
+  // listingType and never get this e-mail. Rows saved before the classes were
+  // split are not relabelled, so a lost-type row stays selectable.
   const subscribers = await prisma.cityNotifySubscription.findMany({
-    where: { cityNormalized, notifiedAt: null },
+    where: {
+      cityNormalized,
+      listingType: '',
+      districtSlug: '',
+      consent: true,
+      notifiedAt: null,
+    },
   });
 
   let sent = 0;

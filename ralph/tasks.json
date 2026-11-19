@@ -180,14 +180,14 @@
       "title": "Send the city-launch e-mail only to city-launch rows",
       "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-mailing",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "/api/cron/city-launch selects cityNormalized, listingType '', districtSlug '', consent true, notifiedAt null; old rows are not relabelled",
         "A route test with mocked Prisma and sendEmail asserts the where clause, 401 without auth, and notifiedAt set only after a successful send; Resend is never called",
         "The progress entry records for the owner: overlapping manual runs can double-send and the e-mail links to the frozen /replacement page (Q-16)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

@@ -146,7 +146,7 @@ How each source is counted:
 | `/api/cron/expiring-listings`      | `0 8 * * *`   | Emails authors of listings expiring within 3 days                                                                                                                          |
 | `/api/cron/telegram-followups`     | `0 9 * * *`   | Clears stale `DepositCase.letterParties`, then sends due deposit follow-ups (skipped when the bot is unconfigured)                                                         |
 | `/api/cron/re-engage`              | `0 9 * * 1`   | Emails followers about new reports in followed buildings, and contributors whose newest report has gone stale                                                              |
-| `/api/cron/city-launch` (**POST**) | not scheduled | Manual: emails a city's `CityNotifySubscription` rows; body `{ city, citySlug, cityName }`                                                                                 |
+| `/api/cron/city-launch` (**POST**) | not scheduled | Manual: emails a city's city-launch rows (`listingType` and `districtSlug` empty, consent, not yet notified); body `{ city, citySlug, cityName }`                          |
 
 ## 5. Analytics
 
