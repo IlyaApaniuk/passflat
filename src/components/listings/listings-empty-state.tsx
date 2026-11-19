@@ -58,6 +58,8 @@ export function ListingsEmptyState({
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  // Absolute link to the page that deletes the saved row (spec 02 §Remove-interest link).
+  const [removeUrl, setRemoveUrl] = useState<string | null>(null);
 
   useEffect(() => {
     posthog?.capture('district_waitlist_viewed', {
@@ -72,6 +74,7 @@ export function ListingsEmptyState({
   const subscribe = async (withEmail: string | undefined) => {
     setStatus('loading');
     let outcome: Parameters<typeof interestOutcomeEvent>[0];
+    let savedRemoveUrl: string | null = null;
     const scope = { listingType, districtSlug, intent };
     try {
       const res = await fetch('/api/city-notify', {
@@ -86,9 +89,13 @@ export function ListingsEmptyState({
           locale,
         }),
       });
-      outcome = res.ok
-        ? { ...scope, status: res.status }
-        : { ...scope, status: res.status, code: await responseErrorCode(res) };
+      if (res.ok) {
+        const body = (await res.json().catch(() => null)) as { removeUrl?: unknown } | null;
+        if (typeof body?.removeUrl === 'string') savedRemoveUrl = body.removeUrl;
+        outcome = { ...scope, status: res.status };
+      } else {
+        outcome = { ...scope, status: res.status, code: await responseErrorCode(res) };
+      }
     } catch {
       outcome = { ...scope, networkError: true };
     }
@@ -96,6 +103,7 @@ export function ListingsEmptyState({
     const { event, properties } = interestOutcomeEvent(outcome);
     posthog?.capture(event, properties);
     if (event === 'listing_interest_saved') {
+      setRemoveUrl(savedRemoveUrl);
       setStatus('success');
       setEmail('');
       setConsent(false);
@@ -156,9 +164,21 @@ export function ListingsEmptyState({
           </p>
 
           {status === 'success' ? (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
-              <span className="font-medium">{t('listings.demandCapture.interestSaved')}</span>
+            <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                <span className="font-medium">{t('listings.demandCapture.interestSaved')}</span>
+              </div>
+              {removeUrl && (
+                // A plain <a>, not the prefetching Link: the target page deletes on load.
+                <a
+                  href={removeUrl}
+                  rel="nofollow"
+                  className="mt-1.5 inline-block pl-7 text-xs text-muted-foreground underline hover:text-foreground"
+                >
+                  {t('listings.demandCapture.removeEmailLink')}
+                </a>
+              )}
             </div>
           ) : isLoggedIn ? (
             <div className="mt-3 space-y-2">

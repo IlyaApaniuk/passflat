@@ -31,6 +31,8 @@ import { ListingsEmptyState } from './listings-empty-state';
 type Props = Parameters<typeof ListingsEmptyState>[0];
 type AnyElement = ReactElement<{
   children?: ReactNode;
+  href?: string;
+  rel?: string;
   onClick?: () => void;
   onSubmit?: (e: { preventDefault: () => void }) => void;
 }>;
@@ -190,6 +192,38 @@ describe('ListingsEmptyState interest events', () => {
     },
   );
 
+  it('keeps the removeUrl of the 2xx response for the success message', async () => {
+    const removeUrl = 'https://passflat.com/ru/email/remove-interest?token=row.sig';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ success: true, removeUrl })));
+    await clickSubscribe();
+    expect(setState).toHaveBeenCalledWith(removeUrl);
+    expect(setState).toHaveBeenCalledWith('success');
+  });
+
+  it('stores no link when the 2xx response has none', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ success: true })));
+    await clickSubscribe();
+    expect(setState).toHaveBeenCalledWith(null);
+    expect(setState).toHaveBeenCalledWith('success');
+  });
+
+  it('links the success message to the remove-interest page with a plain anchor', () => {
+    const removeUrl = 'https://passflat.com/ru/email/remove-interest?token=row.sig';
+    // useState call order: email, consent, consentError, status, removeUrl.
+    stateQueue.push('', false, false, 'success', removeUrl);
+    const tree = ListingsEmptyState(baseProps);
+    const link = findElement(tree, (el) => el.type === 'a');
+    expect(link?.props).toMatchObject({ href: removeUrl, rel: 'nofollow' });
+    expect(link?.props.children).toBe('listings.demandCapture.removeEmailLink');
+  });
+
+  it('shows the success message without a link when there is no removeUrl', () => {
+    stateQueue.push('', false, false, 'success', null);
+    const text = collectText(ListingsEmptyState(baseProps));
+    expect(text).toContain('listings.demandCapture.interestSaved');
+    expect(text).not.toContain('listings.demandCapture.removeEmailLink');
+  });
+
   it('sends the email to the API but never to the event (logged-out form)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ success: true }));
     vi.stubGlobal('fetch', fetchMock);
@@ -229,6 +263,10 @@ describe('honest interest copy in the locale files (spec 02 §Honest interest co
     expect(`${ru.listings.roommateCostsBridge} ${ru.listings.roommateCostsBridgeCta}`).toBe(
       'Нашёл вариант? Проверь адрес и известные расходы',
     );
+  });
+
+  it.each(['pl', 'en', 'ru', 'uk'])('has the remove-email link text (%s)', (locale) => {
+    expect(load(locale).listings.demandCapture.removeEmailLink).toBeTruthy();
   });
 
   it('uses the spec drafts for the button in PL, EN, UK and for the EN subtitle and success', () => {

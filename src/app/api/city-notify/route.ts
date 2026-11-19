@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
-import { resolveEmailLocale } from '@/lib/email/types';
+import { resolveEmailLocale, type EmailLocale } from '@/lib/email/types';
+import { makeInterestRemovalToken } from '@/lib/email/unsubscribe';
+import { localeUrl } from '@/lib/email/url';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -31,6 +33,23 @@ function errorResponse(status: number, code: ErrorCode, error: string) {
 function optionalTrimmed(value: unknown): string | null {
   if (value === undefined || value === null) return '';
   return typeof value === 'string' ? value.trim() : null;
+}
+
+/**
+ * `{ removeUrl }` for a listings-interest row (spec 02 §Remove-interest link): an absolute,
+ * locale-prefixed link to the page that deletes that one row. Empty when there is no row id
+ * or the token cannot be signed (no CRON_SECRET in production): the row is saved either way,
+ * so the save still succeeds, just without the link.
+ */
+function removeUrlField(rowId: string | undefined, locale: EmailLocale): { removeUrl?: string } {
+  if (!rowId) return {};
+  try {
+    const token = makeInterestRemovalToken(rowId);
+    return { removeUrl: localeUrl(locale, `/email/remove-interest?token=${token}`) };
+  } catch (err) {
+    console.error('[city-notify] Cannot sign the remove-interest link:', (err as Error).message);
+    return {};
+  }
 }
 
 // Logged-in one-tap subscribe: when the client sends no email (we already have
@@ -148,16 +167,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const uniqueKey = {
+    email_cityNormalized_districtSlug_listingType: {
+      email: normalizedEmail,
+      cityNormalized,
+      districtSlug: districtSlugClean,
+      listingType: listingTypeClean,
+    },
+  };
+  let row: { id: string };
   try {
-    await prisma.cityNotifySubscription.upsert({
-      where: {
-        email_cityNormalized_districtSlug_listingType: {
-          email: normalizedEmail,
-          cityNormalized,
-          districtSlug: districtSlugClean,
-          listingType: listingTypeClean,
-        },
-      },
+    row = await prisma.cityNotifySubscription.upsert({
+      where: uniqueKey,
+      select: { id: true },
       create: {
         email: normalizedEmail,
         city: cityName,
@@ -176,9 +198,18 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     // Two parallel identical submits can both try the insert; the loser hits the
     // unique key. The row exists and the winner tracks and confirms it, so this
-    // one just succeeds (no second event, no duplicate e-mail).
+    // one just succeeds (no second event, no duplicate e-mail). A listings row still
+    // gets its remove link, found by the same unique key.
     if (isPrismaUniqueConstraintError(err)) {
-      return NextResponse.json({ success: true }, { status: 200 });
+      const existing = isListingsInterest
+        ? await prisma.cityNotifySubscription
+            .findUnique({ where: uniqueKey, select: { id: true } })
+            .catch(() => null)
+        : null;
+      return NextResponse.json(
+        { success: true, ...removeUrlField(existing?.id, emailLocale) },
+        { status: 200 },
+      );
     }
     console.error('[city-notify] Failed to persist subscription:', err);
     captureServerException(err, {
@@ -223,5 +254,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true }, { status: 200 });
+  return NextResponse.json(
+    { success: true, ...(isListingsInterest ? removeUrlField(row.id, emailLocale) : {}) },
+    { status: 200 },
+  );
 }

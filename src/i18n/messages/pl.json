@@ -730,6 +730,7 @@
       "subtitleLoggedIn": "Zapiszemy Twoje zainteresowanie z e-mailem Twojego konta. Automatycznych powiadomień o nowych ofertach jeszcze nie ma.",
       "saveInterestButton": "Zapisz zainteresowanie",
       "interestSaved": "Zapisaliśmy Twoje zainteresowanie. Na razie nie wysyłamy automatycznych powiadomień o nowych ofertach.",
+      "removeEmailLink": "Usuń mój e-mail",
       "postOwnTitle": "Masz coś do dodania tutaj?",
       "postOwnButton": "Dodaj ogłoszenie",
       "searchCardTitle": "Szukasz mieszkania?",
@@ -2290,7 +2291,13 @@
     "successDesc": "Nie będziesz już otrzymywać e-maili o aktywności w budynkach ani przypomnień o raportach od Passflat.",
     "errorTitle": "Link nieprawidłowy",
     "errorDesc": "Ten link rezygnacji jest nieprawidłowy lub wygasł. E-mailami możesz zarządzać w panelu.",
-    "home": "Strona główna"
+    "home": "Strona główna",
+    "removeInterest": {
+      "successTitle": "E-mail usunięty",
+      "successDesc": "Usunęliśmy to zapisane zainteresowanie razem z adresem e-mail.",
+      "errorTitle": "Link nieprawidłowy lub już użyty",
+      "errorDesc": "Ten link jest nieprawidłowy albo to zainteresowanie zostało już usunięte."
+    }
   },
   "emails": {
     "common": {

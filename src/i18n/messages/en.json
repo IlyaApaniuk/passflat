@@ -730,6 +730,7 @@
       "subtitleLoggedIn": "We'll save your interest with your account email. There are no automatic notifications about new offers yet.",
       "saveInterestButton": "Save interest",
       "interestSaved": "Your interest is saved. We don't send automatic notifications about new offers yet.",
+      "removeEmailLink": "Remove my email",
       "postOwnTitle": "Have a place to list here?",
       "postOwnButton": "Post a listing",
       "searchCardTitle": "Looking for a place?",
@@ -2290,7 +2291,13 @@
     "successDesc": "You will no longer receive building-activity or report-reminder emails from Passflat.",
     "errorTitle": "Link expired or invalid",
     "errorDesc": "This unsubscribe link is not valid. You can manage your emails from your dashboard.",
-    "home": "Go to homepage"
+    "home": "Go to homepage",
+    "removeInterest": {
+      "successTitle": "Email removed",
+      "successDesc": "This saved interest and the email stored with it have been deleted.",
+      "errorTitle": "Link invalid or already used",
+      "errorDesc": "This link is not valid, or this saved interest has already been deleted."
+    }
   },
   "emails": {
     "common": {

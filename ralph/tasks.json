@@ -937,13 +937,13 @@
         "Draft copy in all four locale files in namespaces the components already receive; keys and namespaces named in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-14 option (a), D31, 2026-11-19. Where the link appears is an Assumption (spec).",
       "id": "T056",
       "milestone": "M6",
       "title": "Remove-interest link with a signed token for listings-interest rows",
       "spec": "docs/specs/02-roommate-and-waitlist.md#remove-interest-link",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": [],

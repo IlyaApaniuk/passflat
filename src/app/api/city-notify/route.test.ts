@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   cityFindUnique: vi.fn(),
   districtFindFirst: vi.fn(),
   upsert: vi.fn(),
+  findUnique: vi.fn(),
   sendEmail: vi.fn(),
   trackServerEvent: vi.fn(),
   flushPostHog: vi.fn(),
@@ -30,7 +31,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     city: { findUnique: h.cityFindUnique },
     district: { findFirst: h.districtFindFirst },
-    cityNotifySubscription: { upsert: h.upsert },
+    cityNotifySubscription: { upsert: h.upsert, findUnique: h.findUnique },
   },
 }));
 
@@ -44,9 +45,21 @@ vi.mock('@/lib/posthog-server', () => ({
 }));
 
 import { resetRateLimits } from '@/lib/rate-limit';
+import { verifyInterestRemovalToken } from '@/lib/email/unsubscribe';
 import { POST } from './route';
 
 const EMAIL = 'tenant@example.com';
+const ROW_ID = '4b6f2a1e-9c3d-4e8f-a7b2-1c0d9e8f7a6b';
+
+/** The row id signed into an absolute remove-interest link for `locale`, else a failure. */
+function removeUrlRowId(removeUrl: unknown, locale: string): string | null {
+  expect(typeof removeUrl).toBe('string');
+  const url = new URL(removeUrl as string);
+  expect(`${url.origin}${url.pathname}`).toBe(
+    `https://passflat.com/${locale}/email/remove-interest`,
+  );
+  return verifyInterestRemovalToken(url.searchParams.get('token'));
+}
 
 let ipCounter = 0;
 
@@ -96,7 +109,8 @@ beforeEach(() => {
   h.sessionEmail = null;
   h.cityFindUnique.mockReset().mockResolvedValue({ id: 'city-warsaw' });
   h.districtFindFirst.mockReset().mockResolvedValue({ id: 'district-mokotow' });
-  h.upsert.mockReset().mockResolvedValue({ id: 'sub-1' });
+  h.upsert.mockReset().mockResolvedValue({ id: ROW_ID });
+  h.findUnique.mockReset().mockResolvedValue({ id: ROW_ID });
   h.sendEmail.mockReset().mockResolvedValue(undefined);
   h.trackServerEvent.mockReset();
   h.flushPostHog.mockReset().mockResolvedValue(undefined);
@@ -222,6 +236,44 @@ describe('POST /api/city-notify · listings interest', () => {
     });
   });
 
+  it.each([
+    ['a whole-city', { listingType: 'roommate' }, 'ru'],
+    ['a district', { listingType: 'replacement', districtSlug: 'mokotow' }, 'ru'],
+    ['an English district', { listingType: 'sublet', districtSlug: 'wola', locale: 'en' }, 'en'],
+  ])('returns an absolute remove link for %s listings row', async (_label, extra, locale) => {
+    const res = await POST(req(listings(extra)));
+
+    expect(res.status).toBe(200);
+    expect(h.upsert.mock.calls[0][0].select).toEqual({ id: true });
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(removeUrlRowId(json.removeUrl, locale)).toBe(ROW_ID);
+    expect(h.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns no remove link for a city-launch row', async () => {
+    const res = await POST(req({ email: EMAIL, city: 'Kraków', consent: true, locale: 'ru' }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).not.toHaveProperty('removeUrl');
+  });
+
+  it('still saves a listings row without a link when the token cannot be signed', async () => {
+    vi.stubEnv('CRON_SECRET', '');
+    vi.stubEnv('NODE_ENV', 'production');
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await POST(req(listings({ listingType: 'roommate' })));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ success: true });
+      expect(h.upsert).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(errorLog.mock.calls)).not.toContain(EMAIL);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('rejects a whole-city listings request for an unknown city', async () => {
     h.cityFindUnique.mockResolvedValueOnce(null);
     const res = await POST(req(listings({ city: 'Kraków', listingType: 'roommate' })));
@@ -308,11 +360,43 @@ describe('POST /api/city-notify · repeats and races', () => {
     const res = await POST(req({ email: EMAIL, city: 'Kraków', consent: true }));
 
     expect(res.status).toBe(200);
+    // A city-launch row gets no remove link, so it is not looked up either.
     expect(await res.json()).toEqual({ success: true });
+    expect(h.findUnique).not.toHaveBeenCalled();
     expect(h.captureServerException).not.toHaveBeenCalled();
     // The winning request already tracked and confirmed this row.
     expect(h.sendEmail).not.toHaveBeenCalled();
     expect(h.trackServerEvent).not.toHaveBeenCalled();
+  });
+
+  it('still returns the remove link of a listings row after a P2002, found by its unique key', async () => {
+    h.upsert.mockRejectedValueOnce(
+      Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+    );
+
+    const res = await POST(req(listings({ listingType: 'roommate', districtSlug: 'mokotow' })));
+
+    expect(res.status).toBe(200);
+    expect(h.findUnique).toHaveBeenCalledWith({
+      where: uniqueKey('roommate', 'mokotow'),
+      select: { id: true },
+    });
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(removeUrlRowId(json.removeUrl, 'ru')).toBe(ROW_ID);
+    expect(h.captureServerException).not.toHaveBeenCalled();
+  });
+
+  it('answers a P2002 with plain success when the listings row cannot be found again', async () => {
+    h.upsert.mockRejectedValueOnce(
+      Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+    );
+    h.findUnique.mockResolvedValueOnce(null);
+
+    const res = await POST(req(listings({ listingType: 'sublet' })));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
   });
 
   it('answers any other database error with 500 server_error', async () => {
