@@ -318,7 +318,21 @@ required — plus the landlord type and the parties. Measured on a test lease:
 - Files are never stored: only Telegram file ids until reading, then cleared.
   Names and addresses are kept in `letter_parties` only until the letter is
   generated, and the daily cron clears any left after three days.
-- A failed read or a non-lease falls back to the verdict without the contract.
+- A failed read or a non-lease falls back to the verdict without the contract,
+  worded as the law's general rule (FR-43, below).
+
+### General-rule cases (FR-43)
+
+When the contract could not be read or is not a lease, or the reason is
+`other`, `renderVerdict` uses the header «Общее правило» / «Загальне правило»,
+leaves out the strength phrase of each rule (`strength*` keys; the `rule*`
+explanation stays), adds the "not a conclusion about your contract" sentence
+for an unread contract or a non-lease, and ends with the disputed-sums line
+(`disputedSum`: a lawyer or nieodpłatna pomoc prawna). A returned amount above
+the deposit gets no verdict and no letter: `returnedAboveDeposit` plus
+`disputedSum`, case `resolved` with no outcome. The deadline, the rules and the
+letter do not change, and `tg_deposit_verdict` still reports the rule's
+`strength`.
 
 Legal wording was checked against the consolidated statute texts (October
 2026); it should still be read by a Polish lawyer before wide promotion. The

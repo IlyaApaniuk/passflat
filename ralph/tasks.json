@@ -684,13 +684,13 @@
       "title": "Deposit flow wording for an unread contract, a non-lease and unsupported cases",
       "spec": "docs/specs/04-telegram-bot.md#deposit-helper-scope",
       "dependsOn": ["T041"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The texts and the verdict presentation for contractFailed, contractNotLease, unsupported files and the owner-defined unsupported cases follow the owner's wording (RU and UK), with no confident personal conclusion",
         "Tests cover each state's message"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-5. Approve the RU/UK wording when the lease was not read or is not a lease (general rule, not a conclusion about your contract), replacing the «Разбор» header and strength word there, what counts as an unsupported case, and how to point disputed cases to qualified help (drafts in the decision review).\nOwner answer: Q-5 approved (D26, 2026-11-19): RU wording verbatim from the decision review, UK drafted in the same sense; texts and rules in spec 04 §Deposit helper scope. A14 lawyer review still needed before wide promotion."
     },
     {

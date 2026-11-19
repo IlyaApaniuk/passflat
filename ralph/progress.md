@@ -87,6 +87,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Mount-time effects can be unit-tested in React's commit order (children before parents, re-run on changed deps) with the harness in `src/components/providers/posthog-provider.test.ts`.
 - Bulk copy edits across the four locale files: a scratchpad script that replaces `"<lastKey>": <JSON.stringify(old)>` exactly once per file keeps the formatting; it is idempotent, but a rewritten value equal to a sibling's reports "found 2 times" (harmless).
 - `src/i18n/honesty-copy.test.ts` fails on any en.json value matching "verified", "checked", "actually" or "in full"; a legitimate new match goes into its `ALLOWED_EN_MATCHES` with a reason.
+- Deposit verdict lines are a `strength*` phrase key plus a `rule*` explanation key, composed by `RULE_LINES` in `deposit-flow.ts`; a general-rule case (FR-43) shows the `rule*` key alone. `renderVerdict` and `processContract` are exported for tests (example: `src/lib/bot/deposit-general-rule.test.ts`).
 
 ## Log
 
@@ -1304,3 +1305,44 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: nothing new. The values are the ones D24 confirmed; no copy, tables, migrations or events.
 - Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`); T052 continues the single-number rule.
+
+### 2026-11-19 09:55 · T042 · done
+
+- Done (FR-43, D26; the rules in `deposit.ts`, the deadline and the letter are unchanged):
+  - `src/lib/bot/deposit-texts.ts` (RU and UK):
+    - The seven reason lines (`strongWear`, `mediumPaint`, `strongSilent`, `mediumDamage`, `weakDamage`, `lawfulBills`, `mediumOther`) are split into strength phrases (`strengthLikely`, `strengthOnYourSide`, `strengthSubtler`, `strengthGoodChances`, `strengthWeaker`, `strengthMaybeLawful`) and rule explanations (`ruleWear`, `rulePaint`, `ruleSilent`, `ruleDamage`, `ruleDamageNoProtocol`, `ruleBills`, `ruleOther`). The text itself is unchanged; a test pins the old full strings.
+    - New: `generalRuleHeader`, `generalRuleContractFailed`, `generalRuleNotLease`, `disputedSum`, `returnedAboveDeposit`.
+  - `src/lib/bot/deposit-flow.ts`:
+    - `renderVerdict` (now exported, new optional `contractIssue`): a general-rule case is a contract stored as `failed` or reason `other`. It gets the header «Общее правило» / «Загальне правило» and only the `rule*` text, with no phrase or mark. For an unread contract or a non-lease, the matching sentence goes right under the header. `disputedSum` goes before the disclaimer. The deadline line, `contractNote`, `noProtocolNote`, `companyNote`, the disclaimer and the letter button stay. `RULE_LINES` maps each rule to its phrase and explanation.
+    - `processContract` (now exported) passes `failed` / `not_lease` to `sendVerdict`. Both are still stored as `failed`.
+    - `saveReturned`: a returned amount above the deposit gets the reply `returnedAboveDeposit` + `disputedSum`, sets `resolved`, `step` null and no outcome, and gives no verdict or letter. A returned amount equal to the deposit keeps `nothingOwed` / `full`.
+  - Docs:
+    - `docs/legal-review/deposit-scenarios.md`: new section 2a (G1 – G4); R3 split into R3 (equal) and R4 (above); C2 / C3 point to the general-rule verdict; table S, V1 / V4, the statute table, the uncited statements and "Verdict texts" use the new keys. A note says the `deposit-flow.ts` / `deposit-texts.ts` lines have moved since `a5972fa` and T042 rows are cited by function and key. The "Not covered" FR-43 item is gone; FR-45 is still there.
+    - `src/lib/bot/README.md` (new §General-rule cases), `docs/architecture.md` (deposit flow line), `docs/specs/README.md` (FR-43 → Done).
+- Tests: `src/lib/bot/deposit-general-rule.test.ts` (new, 50 tests). In RU and UK:
+  - contract failed and not a lease, for each of the 7 reason/protocol combinations: header, the sentence at the top, no strength phrase (case-insensitive) and no ✅ / ⚠️ / ℹ️ mark, no «Разбор» / «Розбір», deadline line, rule explanation, disputed-sums line;
+  - a failed contract without the reading result; reason `other` with the contract skipped and with it read; `other` plus an unread contract;
+  - a normal verdict, unchanged;
+  - the old full strings of the six normal lines, byte for byte;
+  - returned above / equal / below the deposit through `handleDepositText`;
+  - `processContract` for not a lease and for a failed read (contract message, then the verdict, and `tg_deposit_contract` with the unchanged `result`).
+- Checks: `npx vitest run src/lib/bot/` 12 files / 307 tests. `npm run verify` exit 0: lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 81 files / 1062 tests, build OK. `next-env.d.ts` restored. Not tried in a real Telegram chat.
+- Did not work: the first `verify` failed typecheck, because TS does not narrow `reading` through a derived `const issue`. Fixed by branching on `reading` itself.
+- Owner review:
+  - **Copy (Q-8):**
+    - RU approved verbatim (D26): `generalRuleHeader`, `generalRuleContractFailed`, `disputedSum`.
+    - RU drafts from the spec: `generalRuleNotLease` (the approved sentence with its first clause adapted) and `returnedAboveDeposit`.
+    - UK drafts from the spec: all five keys.
+    - The split `strength*` / `rule*` keys keep the existing texts.
+    - Register: the approved sentences use «вы» / «ви», the rest of the flow «ты» / «ти». Kept verbatim, as the spec says.
+  - **Assumptions (spec):**
+    - `disputedSum` is shown in every general-rule case (placement in `renderVerdict`). The owner may widen it to every verdict where part of the deposit was withheld.
+    - Returned above the deposit: status `resolved`, outcome left empty (`saveReturned`).
+  - **Display choices to confirm:**
+    - The sentence is the verdict's first line under the header. The verdict follows the contract message, which is unchanged (`contractFailed` «😕 Не получилось прочитать договор — покажу разбор без него.»). The person reads "could not read the contract" twice, the first time with the word «разбор». Option: fold the approved sentence into `contractFailed` / `contractNotLease` (a copy change for the owner).
+    - Reason `other` loses its ⚖️ mark.
+    - `contractUnsupported` (wrong file type or size) is unchanged: the spec gives no wording, and it is a format prompt with no conclusion.
+  - **Events:** unchanged. `tg_deposit_verdict` still reports the rule's `strength` in general-rule cases. Returned-above-deposit sends no event, as before.
+  - **Legal:** the Polish lawyer review (BRD A14) is still needed before the deposit flow is promoted widely.
+  - No tables or migrations.
+- Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`); T043 (lawyer-interest texts) touches the same `deposit-texts.ts` and the F6 row / `lawyerAck` rows of `deposit-scenarios.md`.

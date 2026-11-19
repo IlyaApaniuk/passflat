@@ -174,19 +174,48 @@ function contractTermsOf(row: CaseRow): ContractTerms | null {
 
 type Quotes = { returnTerm?: string | null; renovation?: string | null; cleaning?: string | null };
 
-const STRENGTH_TEXT = {
-  wear: 'strongWear',
-  paint: 'mediumPaint',
-  silent: 'strongSilent',
-  bills: 'lawfulBills',
-  other: 'mediumOther',
-} as const;
+type TextKey = Parameters<typeof dt>[1];
 
-function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
+/**
+ * The verdict line of each rule without a contract clause: a strength phrase,
+ * then the rule's explanation. `other` has no strength phrase: it is always a
+ * general-rule case.
+ */
+const RULE_LINES: Record<
+  'wear' | 'paint' | 'silent' | 'damage' | 'damageNoProtocol' | 'bills' | 'other',
+  { strength: TextKey | null; rule: TextKey }
+> = {
+  wear: { strength: 'strengthLikely', rule: 'ruleWear' },
+  paint: { strength: 'strengthSubtler', rule: 'rulePaint' },
+  silent: { strength: 'strengthOnYourSide', rule: 'ruleSilent' },
+  damage: { strength: 'strengthGoodChances', rule: 'ruleDamage' },
+  damageNoProtocol: { strength: 'strengthWeaker', rule: 'ruleDamageNoProtocol' },
+  bills: { strength: 'strengthMaybeLawful', rule: 'ruleBills' },
+  other: { strength: null, rule: 'ruleOther' },
+};
+
+/** Why a shared contract gave no terms: it could not be read, or it is not a lease. */
+export type ContractIssue = 'failed' | 'not_lease';
+
+/**
+ * Renders the verdict message. In a general-rule case (the contract could not
+ * be read or is not a lease, or the reason is `other`) it shows the law's
+ * general rule with no strength phrase and points a disputed sum to qualified
+ * help (FR-43, D26). `contractIssue` comes from the reading that just failed;
+ * a failed contract without it reads as "could not be read".
+ */
+export function renderVerdict(
+  row: CaseRow,
+  locale: BotLocale,
+  today: Date,
+  contractIssue: ContractIssue | null = null,
+): string {
   const facts = factsOf(row)!;
   const verdict = assessDeposit(facts, today);
   const deadline = formatPolishDate(verdict.deadline);
   const contractRead = row.contractStatus === 'done';
+  const contractUnread = contractIssue != null || row.contractStatus === 'failed';
+  const generalRule = contractUnread || facts.reason === 'other';
   const quotes = (row.contractQuotes ?? {}) as Quotes;
   const quote = (text: string | null | undefined) =>
     text ? [dt(locale, 'contractQuote', { quote: escapeHtml(text) })] : [];
@@ -205,10 +234,19 @@ function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
       ? dt(locale, 'deadlineToday', { basis })
       : dt(locale, 'deadlineAhead', { deadline, days: String(verdict.days), basis });
 
+  const ruleLine = (key: keyof typeof RULE_LINES) => {
+    const { strength, rule } = RULE_LINES[key];
+    return generalRule || !strength
+      ? dt(locale, rule)
+      : `${dt(locale, strength)} ${dt(locale, rule)}`;
+  };
+
   // Where the contract has a say, its clause decides the wording and is quoted.
+  // A general-rule case never gets here with a contract clause: its contract
+  // was not read, or its reason (`other`) has no clause.
   let strengthLines: string[];
   if (facts.reason === 'damage') {
-    strengthLines = [dt(locale, verdict.strength === 'weak' ? 'weakDamage' : 'mediumDamage')];
+    strengthLines = [ruleLine(verdict.strength === 'weak' ? 'damageNoProtocol' : 'damage')];
   } else if (facts.reason === 'paint' && facts.contract?.renovation === 'tenant_exempt') {
     strengthLines = [dt(locale, 'strongPaintExempt'), ...quote(quotes.renovation)];
   } else if (facts.reason === 'paint' && facts.contract?.renovation === 'tenant_must_renew') {
@@ -216,7 +254,7 @@ function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
   } else if (facts.reason === 'wear' && facts.contract?.cleaning === 'cleaning_required') {
     strengthLines = [dt(locale, 'mediumCleaningContract'), ...quote(quotes.cleaning)];
   } else {
-    strengthLines = [dt(locale, STRENGTH_TEXT[facts.reason])];
+    strengthLines = [ruleLine(facts.reason)];
   }
 
   // "Wear" is only as solid as the record of the flat's condition: without a
@@ -229,9 +267,20 @@ function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
       ? quote(quotes.returnTerm)
       : [dt(locale, 'contractNoTerm')];
 
+  const generalRuleNote = !contractUnread
+    ? []
+    : [
+        dt(
+          locale,
+          contractIssue === 'not_lease' ? 'generalRuleNotLease' : 'generalRuleContractFailed',
+        ),
+        '',
+      ];
+
   return [
-    dt(locale, 'verdictHeader'),
+    dt(locale, generalRule ? 'generalRuleHeader' : 'verdictHeader'),
     '',
+    ...generalRuleNote,
     dt(locale, 'claimLine', { claim: money(verdict.claim) ?? '' }),
     deadlineLine,
     ...contractLines,
@@ -239,6 +288,7 @@ function renderVerdict(row: CaseRow, locale: BotLocale, today: Date): string {
     ...strengthLines,
     ...(caveat ? ['', dt(locale, 'noProtocolNote')] : []),
     ...(row.landlordKind === 'company' ? ['', dt(locale, 'companyNote')] : []),
+    ...(generalRule ? ['', dt(locale, 'disputedSum')] : []),
     '',
     dt(locale, 'disclaimer'),
   ].join('\n');
@@ -253,7 +303,13 @@ function verdictKeyboard(row: CaseRow, locale: BotLocale, today: Date): InlineKe
   return keyboard;
 }
 
-async function sendVerdict(api: Api, chatId: number, row: CaseRow, locale: BotLocale) {
+async function sendVerdict(
+  api: Api,
+  chatId: number,
+  row: CaseRow,
+  locale: BotLocale,
+  contractIssue: ContractIssue | null = null,
+) {
   const today = new Date();
   const facts = factsOf(row)!;
   const verdict = assessDeposit(facts, today);
@@ -266,7 +322,7 @@ async function sendVerdict(api: Api, chatId: number, row: CaseRow, locale: BotLo
     contract: row.contractStatus,
     deadline_source: verdict.deadlineSource,
   });
-  await api.sendMessage(chatId, renderVerdict(row, locale, today), {
+  await api.sendMessage(chatId, renderVerdict(row, locale, today, contractIssue), {
     parse_mode: 'HTML',
     reply_markup: verdictKeyboard(row, locale, today),
   });
@@ -294,7 +350,7 @@ async function downloadTelegramFile(api: Api, fileId: string): Promise<Buffer> {
  * verdict needs are kept; names and addresses wait in `letterParties` until the
  * letter is generated, and the files themselves are never stored.
  */
-async function processContract(api: Api, chatId: number, caseId: string, locale: BotLocale) {
+export async function processContract(api: Api, chatId: number, caseId: string, locale: BotLocale) {
   const row = await prisma.depositCase.findUnique({ where: { id: caseId } });
   if (!row) return;
 
@@ -311,13 +367,19 @@ async function processContract(api: Api, chatId: number, caseId: string, locale:
   }
 
   const data: Prisma.DepositCaseUpdateInput = { contractFiles: [], step: null, status: 'verdict' };
+  // Both are stored as `failed`; the verdict below still names which one it was.
+  let issue: ContractIssue | null = null;
   if (!reading || !reading.isLease) {
-    track(chatId, 'tg_deposit_contract', { result: reading ? 'not_lease' : 'failed' });
+    issue = reading ? 'not_lease' : 'failed';
+    track(chatId, 'tg_deposit_contract', { result: issue });
     await prisma.depositCase.update({
       where: { id: caseId },
       data: { ...data, contractStatus: 'failed' },
     });
-    await api.sendMessage(chatId, dt(locale, reading ? 'contractNotLease' : 'contractFailed'));
+    await api.sendMessage(
+      chatId,
+      dt(locale, issue === 'not_lease' ? 'contractNotLease' : 'contractFailed'),
+    );
   } else {
     track(chatId, 'tg_deposit_contract', {
       result: 'read',
@@ -346,7 +408,7 @@ async function processContract(api: Api, chatId: number, caseId: string, locale:
   }
 
   const updated = await prisma.depositCase.findUnique({ where: { id: caseId } });
-  if (updated) await sendVerdict(api, chatId, updated, locale);
+  if (updated) await sendVerdict(api, chatId, updated, locale, issue);
 }
 
 /** Starts reading once — a double tap on "done" must not read the contract twice. */
@@ -453,7 +515,17 @@ export async function handleDepositText(
 }
 
 async function saveReturned(ctx: Context, row: CaseRow, locale: BotLocale, returned: number) {
-  if (row.depositAmount != null && returned >= row.depositAmount) {
+  // More back than was paid: no claim, so no verdict and no letter (FR-43). The
+  // case closes without an outcome: it is not a "returned in full" answer.
+  if (row.depositAmount != null && returned > row.depositAmount) {
+    await prisma.depositCase.update({
+      where: { id: row.id },
+      data: { returnedAmount: returned, status: 'resolved', step: null },
+    });
+    await ctx.reply([dt(locale, 'returnedAboveDeposit'), dt(locale, 'disputedSum')].join('\n\n'));
+    return;
+  }
+  if (row.depositAmount != null && returned === row.depositAmount) {
     await prisma.depositCase.update({
       where: { id: row.id },
       data: { returnedAmount: returned, status: 'resolved', outcome: 'full', step: null },
