@@ -49,10 +49,9 @@ export interface LocationCheckerCostReport {
  * One blended number per building over every visible report, whatever its
  * source or completeness. Only for the single-number surfaces frozen by Q-2
  * (spec 03 §Single-number surfaces): the neighbour pins of the checker and the
- * bot, and the bot's building card until it reads the contract. Never labelled
- * as tenant figures.
+ * bot. Never labelled as tenant figures.
  */
-export interface BlendedBuildingCosts {
+interface BlendedBuildingCosts {
   totalMedian: number | null;
   rentMedian: number | null;
   expensesMedian: number | null;

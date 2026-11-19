@@ -1,13 +1,17 @@
 import { normalizeAddress } from '@/lib/address';
-import { getCityCostStats, getDistrictCostStats, type AreaStats } from '@/lib/cost-baselines';
-import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
+import { getDistrictCostStats } from '@/lib/cost-baselines';
+import type { AreaReference, DepositReturns, FigureSummary } from '@/lib/cost-figures';
+import {
+  loadAreaReference,
+  loadBuildingFigures,
+  loadDepositReturns,
+} from '@/lib/cost-figures-query';
 import { resolveDistrictByPoint } from '@/lib/geo/district';
 import {
   aggregateLocationCheckerCosts,
   isInsideCityBounds,
   LOCATION_CHECKER_CITY_SLUG,
   parseCityBounds,
-  type BlendedBuildingCosts,
 } from '@/lib/location-checker';
 import { haversineMeters } from '@/lib/location-score';
 import { prisma } from '@/lib/prisma';
@@ -22,6 +26,11 @@ import type { GeocodedAddress } from './geocode';
  * Warsaw, so an exact-building hit is the exception, not the rule. Every answer
  * therefore falls back a level — building → district → city — and the level it
  * landed on is reported so the message can be honest about it.
+ *
+ * Figures come from the shared contract's loaders (`cost-figures-query.ts`),
+ * the ones the website's checker and building page read, so the bot never
+ * aggregates reports itself (CLAUDE.md). The one exception is the neighbours'
+ * single blended number, frozen by Q-2 (spec 03 §Single-number surfaces).
  */
 
 type LookupLevel = 'building' | 'district' | 'city';
@@ -34,13 +43,11 @@ interface NeighbourSummary {
   reportCount: number;
 }
 
-export interface DepositFacts {
-  returned: number;
-  answered: number;
-  medianDeposit: number | null;
-}
-
 export interface AddressLookup {
+  /**
+   * 'building' when the building has a visible report; otherwise the level of
+   * `reference`: 'district' from MIN_AREA_REPORTS reports, else 'city'.
+   */
   level: LookupLevel;
   address: string;
   citySlug: string;
@@ -50,14 +57,17 @@ export interface AddressLookup {
   placeId: string | null;
   districtSlug: string | null;
   districtName: string | null;
-  /** Costs of the building itself; null unless level === 'building'. */
-  building: BlendedBuildingCosts | null;
-  area: AreaStats;
-  /** True when `area` had to widen from the district to the whole city. */
-  areaIsCity: boolean;
+  /** The building's own figures (`reportCount` 0 when nobody reported); null without a building row. */
+  building: FigureSummary | null;
+  /**
+   * The labelled area the address is set against: its district from
+   * MIN_AREA_REPORTS reports, otherwise the city; null when the city has none.
+   */
+  reference: AreaReference | null;
   /** Nearest buildings that do have reports — the substance of a district-level answer. */
   neighbours: NeighbourSummary[];
-  deposit: DepositFacts;
+  /** The deposit statistic of the reference's area (the city without a district reference). */
+  deposit: DepositReturns;
   /** True when Google matched a street but not a specific house number. */
   imprecise: boolean;
 }
@@ -66,11 +76,11 @@ const NEIGHBOUR_RADIUS_M = 1500;
 const NEIGHBOUR_LIMIT = 3;
 const NEIGHBOUR_BBOX_DEG = 0.02; // ~2.2 km latitude, a cheap prefilter before haversine
 
-const costReportSelect = {
+/** The fields the neighbours' blended number reads (Q-2), nothing else. */
+const neighbourReportSelect = {
   source: true,
   totalMonthlyAvg: true,
   rent: true,
-  depositReturned: true,
 } as const;
 
 export async function getCity(citySlug = LOCATION_CHECKER_CITY_SLUG) {
@@ -80,28 +90,19 @@ export async function getCity(citySlug = LOCATION_CHECKER_CITY_SLUG) {
   });
 }
 
-/** Deposit figures — the statistic nobody else in this market publishes. */
-async function getDepositFacts(where: Record<string, unknown>): Promise<DepositFacts> {
-  const reports = await prisma.costReport.findMany({
-    where: { ...where, isVisible: true },
-    select: { depositReturned: true, depositAmount: true },
-    take: 5000,
-  });
-
-  const deposits = reports
-    .map((report) => (report.depositAmount == null ? null : Number(report.depositAmount)))
-    .filter((value): value is number => value != null && Number.isFinite(value) && value > 0)
-    .sort((a, b) => a - b);
-
-  return {
-    returned: reports.filter((report) => report.depositReturned === true).length,
-    answered: reports.filter((report) => report.depositReturned != null).length,
-    medianDeposit: deposits.length
-      ? deposits.length % 2
-        ? deposits[(deposits.length - 1) / 2]
-        : Math.round((deposits[deposits.length / 2 - 1] + deposits[deposits.length / 2]) / 2)
-      : null,
-  };
+/**
+ * The area reference and the deposit statistic of the same area: the district
+ * when the district answers on its own (MIN_AREA_REPORTS), otherwise the city.
+ */
+async function loadAreaFacts(
+  districtId: string | null,
+  cityId: string,
+): Promise<{ reference: AreaReference | null; deposit: DepositReturns }> {
+  const reference = await loadAreaReference({ districtId, cityId });
+  const deposit = await loadDepositReturns(
+    reference?.level === 'district' && districtId ? { districtId } : { cityId },
+  );
+  return { reference, deposit };
 }
 
 async function findNeighbours(
@@ -123,7 +124,7 @@ async function findNeighbours(
       addressFull: true,
       lat: true,
       lng: true,
-      costReports: { where: { isVisible: true }, select: costReportSelect },
+      costReports: { where: { isVisible: true }, select: neighbourReportSelect },
     },
     take: 60,
   });
@@ -181,33 +182,27 @@ export async function lookupAddress(geo: GeocodedAddress): Promise<AddressLookup
       addressFull: true,
       districtId: true,
       district: { select: { slug: true, nameKey: true } },
-      costReports: { where: { isVisible: true }, select: costReportSelect },
     },
   });
 
-  const buildingCosts = building ? aggregateLocationCheckerCosts(building.costReports) : null;
-
+  // Two districts (Rembertów, Wesoła) hold no reports at all, and a thin one
+  // would answer with a median drawn from a couple of flats. The reference
+  // falls back to the city below MIN_AREA_REPORTS district reports (spec 03),
+  // which keeps the reply worth reading rather than technically correct and
+  // empty — the message says which level it is speaking at.
   const districtId = building?.districtId ?? district?.id ?? null;
-  const [districtStats, neighbours] = await Promise.all([
-    districtId ? getDistrictCostStats(districtId) : null,
+  const [figures, area, neighbours] = await Promise.all([
+    building ? loadBuildingFigures(building.id) : Promise.resolve(null),
+    loadAreaFacts(districtId, city.id),
     findNeighbours(city.id, geo.lat, geo.lng, building?.id ?? null),
   ]);
 
-  // Two districts (Rembertów, Wesoła) hold no reports at all, and a thin one
-  // would answer with a median drawn from a couple of flats. Falling back to
-  // the city keeps the reply worth reading rather than technically correct and
-  // empty — the message says which level it is speaking at.
-  const useCityStats = !districtStats || districtStats.count < MIN_AREA_REPORTS;
-  const [area, deposit] = await Promise.all([
-    useCityStats ? getCityCostStats(city.id) : Promise.resolve(districtStats),
-    getDepositFacts(
-      useCityStats || !districtId
-        ? { building: { cityId: city.id } }
-        : { building: { districtId } },
-    ),
-  ]);
-
-  const level: LookupLevel = buildingCosts ? 'building' : useCityStats ? 'city' : 'district';
+  const level: LookupLevel =
+    figures && figures.reportCount > 0
+      ? 'building'
+      : area.reference?.level === 'district'
+        ? 'district'
+        : 'city';
 
   return {
     level,
@@ -218,11 +213,10 @@ export async function lookupAddress(geo: GeocodedAddress): Promise<AddressLookup
     placeId: building?.placeId ?? geo.placeId,
     districtSlug: building?.district?.slug ?? district?.slug ?? null,
     districtName: building?.district?.nameKey ?? district?.nameKey ?? null,
-    building: buildingCosts,
-    area,
-    areaIsCity: useCityStats,
+    building: figures,
+    reference: area.reference,
     neighbours,
-    deposit,
+    deposit: area.deposit,
     imprecise: !geo.isPrecise,
   };
 }
@@ -270,19 +264,15 @@ export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKE
 
   const [stats, deposit] = await Promise.all([
     getDistrictCostStats(district.id),
-    getDepositFacts({ building: { districtId: district.id } }),
+    loadDepositReturns({ districtId: district.id }),
   ]);
 
   return { citySlug: city.slug, slug: district.slug, name: district.nameKey, stats, deposit };
 }
 
-/** City-wide deposit facts, for the standalone /deposit answer. */
+/** City-wide deposit statistic, for the standalone /deposit answer. */
 export async function getCityDepositFacts(citySlug = LOCATION_CHECKER_CITY_SLUG) {
   const city = await getCity(citySlug);
   if (!city) return null;
-  const [deposit, stats] = await Promise.all([
-    getDepositFacts({ building: { cityId: city.id } }),
-    getCityCostStats(city.id),
-  ]);
-  return { deposit, stats };
+  return { deposit: await loadDepositReturns({ cityId: city.id }) };
 }

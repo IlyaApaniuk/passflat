@@ -1,5 +1,12 @@
-import type { AddressLookup, DepositFacts, DistrictRow } from './lookup';
+import type { AddressLookup, DistrictRow } from './lookup';
 import type { AreaStats } from '@/lib/cost-baselines';
+import {
+  MIN_DEPOSIT_ANSWERS,
+  type DepositReturns,
+  type FigureGroupKey,
+  type FigureSummary,
+  type MetricFigure,
+} from '@/lib/cost-figures';
 import { reportsWord, t, tenanciesWord, type BotLocale } from './texts';
 
 /**
@@ -68,10 +75,10 @@ function verdict(value: number | null, baseline: number | null, locale: BotLocal
     : t(locale, 'verdictBelow', { pct: String(Math.abs(diff)) });
 }
 
-function depositLine(deposit: DepositFacts, area: string, locale: BotLocale): string | null {
-  const { returned, answered, medianDeposit } = deposit;
-  if (answered < 3) return null;
-  const pct = Math.round((returned / answered) * 100);
+function depositLine(deposit: DepositReturns, area: string, locale: BotLocale): string | null {
+  const { gotBack, answered, medianDeposit } = deposit;
+  if (answered < MIN_DEPOSIT_ANSWERS) return null;
+  const pct = Math.round((gotBack / answered) * 100);
   const amount = money(medianDeposit);
   return t(locale, 'depositLine', {
     area: escapeHtml(area),
@@ -82,13 +89,44 @@ function depositLine(deposit: DepositFacts, area: string, locale: BotLocale): st
   });
 }
 
+/** True when the reference is the whole city (or there is none), not the district. */
+function areaIsCity(lookup: AddressLookup): boolean {
+  return lookup.reference?.level !== 'district';
+}
+
+/**
+ * Interim single-number lines over the figure contract, in the old wording,
+ * until the cards render each group with its N (spec 04 §Cards on the shared
+ * contract): the tenant group, else the asking group; its complete total, else
+ * the known part. `count` is that group's report count.
+ */
+interface InterimFigures {
+  group: FigureGroupKey;
+  total: MetricFigure;
+  rent: number | null;
+  expenses: number | null;
+  count: number;
+}
+
+function interimFigures(summary: FigureSummary | null | undefined): InterimFigures | null {
+  const group = summary?.groups.tenant ?? summary?.groups.asking ?? null;
+  if (!group) return null;
+  return {
+    group: group.key,
+    total: group.completeTotal.n > 0 ? group.completeTotal : group.knownPartTotal,
+    rent: group.rent.median,
+    expenses: group.expenses.median,
+    count: group.reportCount,
+  };
+}
+
 /**
  * Deposit figures are never building-level, so the area is always named — under
  * a building card an unlabelled "88% returned" would read as this house's record.
  */
 function lookupDepositLine(lookup: AddressLookup, locale: BotLocale): string | null {
   const area =
-    lookup.areaIsCity || !lookup.districtName ? t(locale, 'cityNameIn') : lookup.districtName;
+    areaIsCity(lookup) || !lookup.districtName ? t(locale, 'cityNameIn') : lookup.districtName;
   return depositLine(lookup.deposit, area, locale);
 }
 
@@ -96,30 +134,29 @@ function lookupDepositLine(lookup: AddressLookup, locale: BotLocale): string | n
  * The building-level card: the case where we hold reports for this exact house.
  */
 function buildingCard(lookup: AddressLookup, locale: BotLocale): string {
-  const costs = lookup.building!;
+  const costs = interimFigures(lookup.building);
+  const area = interimFigures(lookup.reference?.summary);
   const lines: string[] = [`🏠 <b>${escapeHtml(lookup.address)}</b>`];
   if (lookup.districtName) lines.push(`<i>${escapeHtml(lookup.districtName)}</i>`);
   lines.push('');
 
-  const total = money(costs.totalMedian);
-  if (total) {
-    const v = verdict(costs.totalMedian, lookup.area.total.median, locale);
+  const total = money(costs?.total.median);
+  if (costs && total) {
+    // Only a figure of the same group is set against the building's.
+    const v =
+      area?.group === costs.group ? verdict(costs.total.median, area.total.median, locale) : null;
     lines.push(t(locale, 'totalLine', { total, verdict: v ? ` — ${v}` : '' }));
   }
 
-  const rent = money(costs.rentMedian);
-  const expenses = money(costs.expensesMedian);
+  const rent = money(costs?.rent);
+  const expenses = money(costs?.expenses);
   if (rent || expenses) {
     lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
   }
 
-  lines.push(
-    t(locale, 'basedOn', {
-      count: String(costs.reportCount),
-      word: reportsWord(locale, costs.reportCount),
-    }),
-  );
-  if (costs.reportCount < 2) lines.push(t(locale, 'thinBuilding'));
+  const count = costs?.count ?? 0;
+  lines.push(t(locale, 'basedOn', { count: String(count), word: reportsWord(locale, count) }));
+  if (count < 2) lines.push(t(locale, 'thinBuilding'));
 
   const deposit = lookupDepositLine(lookup, locale);
   if (deposit) lines.push('', deposit);
@@ -134,43 +171,36 @@ function buildingCard(lookup: AddressLookup, locale: BotLocale): string {
  * "is this a normal price for here?"
  */
 function districtCard(lookup: AddressLookup, locale: BotLocale): string {
-  const areaName = lookup.areaIsCity
-    ? t(locale, 'cityName')
-    : (lookup.districtName ?? t(locale, 'cityName'));
+  const isCity = areaIsCity(lookup);
+  const areaName = isCity ? t(locale, 'cityName') : (lookup.districtName ?? t(locale, 'cityName'));
   const lines: string[] = [`📍 <b>${escapeHtml(lookup.address)}</b>`];
 
   // Say which level the numbers come from before showing them. A median silently
   // widened from the district to the city would read as a district figure.
-  if (lookup.areaIsCity && lookup.districtName) {
+  if (isCity && lookup.districtName) {
     lines.push(t(locale, 'thinDistrict', { district: escapeHtml(lookup.districtName) }));
   } else {
     lines.push(lookup.imprecise ? t(locale, 'noHouseNumber') : t(locale, 'noBuildingData'));
   }
 
-  lines.push(
-    '',
-    t(locale, lookup.areaIsCity ? 'cityHeader' : 'areaHeader', { area: escapeHtml(areaName) }),
-  );
+  lines.push('', t(locale, isCity ? 'cityHeader' : 'areaHeader', { area: escapeHtml(areaName) }));
 
-  const total = money(lookup.area.total.median);
-  const rent = money(lookup.area.rentMedian);
-  const expenses = money(lookup.area.expensesMedian);
+  const area = interimFigures(lookup.reference?.summary);
+  const total = money(area?.total.median);
+  const rent = money(area?.rent);
+  const expenses = money(area?.expenses);
 
   if (total) lines.push(t(locale, 'areaTotal', { total }));
   if (rent || expenses) {
     lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
   }
   const band =
-    lookup.area.total.p25 != null && lookup.area.total.p75 != null
-      ? `${money(lookup.area.total.p25)} – ${money(lookup.area.total.p75)}`
+    area?.total.p25 != null && area.total.p75 != null
+      ? `${money(area.total.p25)} – ${money(area.total.p75)}`
       : null;
   if (band) lines.push(t(locale, 'areaBand', { band }));
-  lines.push(
-    t(locale, 'basedOn', {
-      count: String(lookup.area.count),
-      word: reportsWord(locale, lookup.area.count),
-    }),
-  );
+  const count = area?.count ?? 0;
+  lines.push(t(locale, 'basedOn', { count: String(count), word: reportsWord(locale, count) }));
 
   if (lookup.neighbours.length) {
     lines.push('', t(locale, 'neighboursHeader'));
@@ -216,7 +246,7 @@ export function renderDistrictTable(rows: DistrictRow[], locale: BotLocale): str
 export interface DistrictAnswer {
   name: string;
   stats: AreaStats;
-  deposit: DepositFacts;
+  deposit: DepositReturns;
   /** 1-based position in the cheapest-first league table, when it has one. */
   rank: { position: number; total: number } | null;
   /** Warsaw-wide median, the reference point when the district itself is thin. */

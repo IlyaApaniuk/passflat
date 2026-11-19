@@ -66,6 +66,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Shell redirects into the repo (`git show HEAD:<file> > src/...`) are denied; redirecting a log to the scratchpad works. To compare with the HEAD version of a module, write a copy with the Write tool, run a scratch test, then delete both with `node -e`.
 - `CostsMap` renders in Vitest with `react-map-gl` mocked (`Popup`/`Source` render children) and `react`'s `useState` mocked so `useState(null)` returns the open popup; `NEXT_PUBLIC_MAPBOX_TOKEN` is set in `vi.hoisted` (example: `src/components/map/CostsMap.test.ts`).
 - Bot handlers are tested by exporting the handler body from `bot.ts` and calling it with a fake `{ chat, from, message: { text }, reply }` cast to `CommandContext<Context>`; mock `./store`, `./analytics`, `./deposit-flow`, `./lookup` and `@/lib/cost-baselines` with every named import `bot.ts` uses (example: `src/lib/bot/bot.test.ts`). Top-level `await` fails typecheck in tests; import statically, `vi.mock` is hoisted.
+- The bot's data layer is tested with `@/lib/prisma` (city, district, building, costReport), `next/cache` (pass-through) and `@/lib/geo/district` mocked, and reports served by `where`; deposit queries are the `costReport.findMany` calls whose `select` has `depositReturned` (example: `src/lib/bot/lookup.test.ts`).
 
 ## Log
 
@@ -458,3 +459,39 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Behaviour change, invisible in practice: `d_<slug>` reaches the database only when the slug matches `[a-z0-9-]{1,48}`. All district slugs do, so a non-matching slug could never have been found.
   - No copy, tables or migrations. Analytics unchanged.
 - Next: T035 (open the building from `b_`) once T033 is done, and T036 (stop `d_` from subscribing; it depends only on T031). Both extend `handleStart` and `bot.test.ts`.
+
+### 2026-11-19 03:58 · T032 · done
+
+- Done:
+  - `src/lib/bot/lookup.ts`: `lookupAddress` reads `loadBuildingFigures` (only with a building row), `loadAreaReference` and the reference area's `loadDepositReturns` from `cost-figures-query.ts`. These run in parallel with the neighbours (deposit after the reference, in the private `loadAreaFacts`).
+  - `AddressLookup`: `building` is now a `FigureSummary` (`reportCount` 0 for a known building nobody reported on; null without a row). `area` + `areaIsCity` are replaced by `reference: AreaReference | null`, and `deposit` is now `DepositReturns`. `DepositFacts` and `getDepositFacts` are gone.
+  - The building query no longer selects reports. The level rule is the same: `building` with a visible report, otherwise the reference level (`district` from `MIN_AREA_REPORTS`, otherwise `city`, also when there is no reference).
+  - The only aggregation left in `lookup.ts` is the neighbours' blended number (Q-2, `aggregateLocationCheckerCosts`). Its select dropped the unused `depositReturned`.
+  - `getDistrictBySlug` and `getCityDepositFacts` also read deposits from `loadDepositReturns`. `getCityDepositFacts` no longer loads the `stats` nobody read.
+  - `format.ts` keeps the old wording through a private interim adapter, `interimFigures`. It takes the tenant group, else the asking group, and uses that group's complete total, else its known part, plus rent, expenses and report count. The verdict is kept until T033, but only against the reference's same group. `areaIsCity` is derived from `reference.level`. `depositLine` and `/deposit` use `gotBack` with the `MIN_DEPOSIT_ANSWERS` gate.
+  - `BlendedBuildingCosts` in `location-checker.ts` is now module-private: it had no importer left, and keeping it private avoids a new knip warning. Its comment was updated.
+  - Docs: `src/lib/bot/README.md` (intro: where the bot's numbers come from), and `docs/architecture.md` §3 (a new bot line; the `cost-baselines` remainder and the neighbour sentence updated).
+- Tests:
+  - New `src/lib/bot/lookup.test.ts` (10). It mocks Prisma, `next/cache` as a pass-through and `@/lib/geo/district`, and reuses the `serveReports` pattern. Cases:
+    - building level, with figures equal to `summarizeFigures` of the same reports, the district reference and district deposits (ended tenancies: 2 of 3, 1 full);
+    - the building query selects no reports;
+    - district level without a building row, and for a known building with 0 reports;
+    - city level when the district has 4 reports (city reference, city deposits);
+    - a reported building in a thin district (still building level, city reference);
+    - a point in no district;
+    - no reference at all;
+    - neighbours keep the blended number;
+    - outside the bounds or an inactive city → null with no report query.
+  - `format.test.ts` fixtures moved to the new shape (built with `summarizeFigures`), with 5 new cases: the reference's tenant group and its own N, no reference, the deposit gate, tenant over asking with a same-group-only verdict, and an asking-only building.
+- Checks: `npx vitest run src/lib/bot` passed (7 files / 133 tests). `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 63 files / 770 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started; no Telegram or Google call was made. Not checked against the local database.
+- Owner review:
+  - Visible bot changes until T033 rewrites the cards:
+    - (1) A building and an area are shown by one group (tenant, else asking) with that group's report count. Before, it was the blend of all reports. A district with 37 tenant reports and 200 listings now says "по 37 отчётам".
+    - (2) The "% дороже/дешевле района" verdict appears only when the building and the reference have the same group.
+    - (3) Totals of the complete reports are shown, else the known part, under the old "Всего в месяц" wording.
+    - (4) The deposit rate counts ended tenancies only (`summarizeDepositReturns`), also in `/deposit` and the typed-district answer.
+  - Bot figures are now cached 300 s under the `costs` tag, as on the website; a new report reaches the bot when `revalidateCostSurfaces()` runs.
+  - No copy, assumptions, tables or migrations. Analytics unchanged: `tg_address_checked.report_count` is still the building's visible report count.
+  - New task T049 (depends on T033): the typed-district answer (`renderDistrict`, `getDistrictBySlug` stats, `replyDistrict`'s city median) still reads `cost-baselines`. Spec 03 moves every bot consumer except the Q-2 rank and `/districts` table, and no task did this one.
+- Next: T033 renders the groups from `lookup.building` / `lookup.reference` and deletes `interimFigures` and `verdict` in `format.ts`. T035 can reuse `loadAreaFacts` and the select in `lookupAddress` for `lookupBuilding`. T038's `tg_district_checked` `source_kind`/`n` needs T049's district `FigureSummary`.

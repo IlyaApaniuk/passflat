@@ -514,7 +514,7 @@
       "title": "Bot lookup: read building figures and the area reference from the contract",
       "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
       "dependsOn": ["T018", "T023"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "lookupAddress gets building figures, the area reference and the deposit statistic from cost-figures-query; AddressLookup carries FigureSummary and the reference instead of LocationCheckerCosts/AreaStats; the level rule is unchanged",
         "No aggregation code stays in lookup.ts except neighbours (Q-2)",
@@ -522,7 +522,7 @@
         "format.ts compiles against the new shape with the old wording (rendering changes come in T033)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
@@ -801,6 +801,23 @@
       "milestone": "M3",
       "title": "Share page: drop the overpay framing of its description and how-it-works steps",
       "spec": "docs/specs/03-building-figures.md#comparisons",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T033"],
+      "acceptance": [
+        "getDistrictBySlug reads the district figures through loadAreaReference (district from MIN_AREA_REPORTS reports, else the city reference) instead of getDistrictCostStats; replyDistrict no longer calls getCityCostStats for the thin-district line",
+        "renderDistrict shows the groups with N and their labels as the T033 district card does; the cheapest-first rank line and the /districts table stay on cost-baselines (Q-2, spec 03 §Single-number surfaces)",
+        "tg_district_checked keeps report_count; names pass through escapeHtml",
+        "Tests with mocked Prisma and next/cache for getDistrictBySlug (district level, thin district → city); format tests for renderDistrict with mixed groups and the thin branch"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found in T032: spec 03 says every bot consumer except the Q-2 single-number surfaces moves to the contract, and spec 04 asks for district cards with groups and N, but no task moved the typed-district answer (renderDistrict, also used by T036). T038 adds source_kind/n/incomplete to tg_district_checked and needs this FigureSummary.",
+      "id": "T049",
+      "milestone": "M4",
+      "title": "Bot typed-district answer: read the district figures from the contract",
+      "spec": "docs/specs/04-telegram-bot.md#cards-on-the-shared-contract",
       "status": "todo"
     }
   ]

@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard, type CommandContext, type Context } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
-import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
+import { MIN_AREA_REPORTS, MIN_DEPOSIT_ANSWERS } from '@/lib/cost-figures';
 
 import { track } from './analytics';
 import {
@@ -270,11 +270,11 @@ export function createBot(token: string): Bot {
     const facts = await getCityDepositFacts();
     const lines = [t(locale, 'depositHeader'), ''];
 
-    if (facts && facts.deposit.answered >= 3) {
+    if (facts && facts.deposit.answered >= MIN_DEPOSIT_ANSWERS) {
       lines.push(
         t(locale, 'depositStats', {
           amount: money(facts.deposit.medianDeposit) ?? '—',
-          pct: String(Math.round((facts.deposit.returned / facts.deposit.answered) * 100)),
+          pct: String(Math.round((facts.deposit.gotBack / facts.deposit.answered) * 100)),
           answered: String(facts.deposit.answered),
         }),
       );
