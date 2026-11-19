@@ -1,12 +1,16 @@
 import type { RoommateProfile } from '@prisma/client';
 import { InlineKeyboard, type Bot, type Context } from 'grammy';
 
-import { countBand } from '@/lib/roommate/rules';
+import { countBand, INTEREST_DAILY_LIMIT } from '@/lib/roommate/rules';
 import {
+  countRecentInterests,
   findCompatible,
   findVisibleProfile,
+  formMutualMatch,
   loadRoommateEntry,
+  storeInterest,
   storeSkip,
+  telegramChatIdOf,
 } from '@/lib/roommate/store';
 import { isMatchingEnabled } from '@/lib/roommate/switch';
 
@@ -29,12 +33,14 @@ import type { BotLocale } from './texts';
 
 /**
  * Stage 2 of roommate matching in the bot (spec 07; spec 06 §Module layout): for now the cards
- * (§Cards, FR-25), one at a time with "Interested" (`rm:i:<id>`, T088), "Skip" (`rm:x:<id>`) and
- * "Report" (`rm:r:<id>`, T093), the username prompt before them (§Usernames) and "matching is
- * paused" while the switch is off (§Switch). Every handler reads the switch per tap.
+ * (§Cards, FR-25), one at a time with "Interested" (`rm:i:<id>`, §Interest and mutual match,
+ * FR-26, FR-28), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`, T093), the username prompt before
+ * them (§Usernames) and "matching is paused" while the switch is off (§Switch). Every handler
+ * reads the switch per tap.
  *
- * No card ever names gender, "live with", a name, a username or an id, and no event carries one;
- * the callback ids are checked against the visibility rule (`findVisibleProfile`), never trusted.
+ * No card ever names gender, "live with", a name, a username or an id, and no event carries one
+ * (nor a partner id or a match id); the callback ids are checked against the visibility rule
+ * (`findVisibleProfile`), never trusted.
  */
 
 /** `via` of `tg_roommate_cards_viewed` by the letter of `rm:show:<via>` (spec 07 §Cards, §Events). */
@@ -46,6 +52,7 @@ type CardsVia = (typeof CARDS_VIA)[keyof typeof CARDS_VIA];
  * `n` from "That's everyone". The bare `rm:show` (spec 06's short form) counts as the card's.
  */
 const SHOW_TAP = /^rm:show(?::([conp]))?$/;
+const INTEREST_TAP = /^rm:i:([^:]+)$/;
 const SKIP_TAP = /^rm:x:([^:]+)$/;
 const USERNAME_DONE = 'rm:u:done';
 
@@ -218,6 +225,42 @@ const handleSkipTap = roommateCallback(async (ctx, chat, locale) => {
 });
 
 /**
+ * `rm:i:<id>` ("Interested", spec 07 §Interest and mutual match): for a profile still visible to
+ * this person, under the daily limit (`INTEREST_DAILY_LIMIT` `interest` reactions in 24 hours;
+ * at the limit "that's the limit for today", nothing stored, no event), one `interest` reaction
+ * and `tg_roommate_interest_sent`. Then `formMutualMatch`: the request that formed the pair sends
+ * `tg_roommate_matched` with `role=completer` for this person and `role=waiting` for the other
+ * (whose reveal is §Reveal); no interest back yet sends nothing to the other person. Then the next
+ * card. A reaction already stored (a double tap) → "already answered" and the next card; the
+ * profile deleted since the check → "no longer available" and the next card.
+ */
+const handleInterestTap = roommateCallback(async (ctx, chat, locale) => {
+  const [targetId] = matchGroups(ctx);
+  const now = new Date();
+  const viewer = await browsingProfile(ctx, chat, locale, now);
+  if (!viewer) return;
+  const target = await cardTarget(ctx, viewer, targetId, locale, now);
+  if (!target) return;
+  if ((await countRecentInterests(viewer.id, now)) >= INTEREST_DAILY_LIMIT) {
+    await ctx.reply(rt(locale, 'interestLimit', { limit: String(INTEREST_DAILY_LIMIT) }));
+    return;
+  }
+  const stored = await storeInterest(viewer.id, target.id, now);
+  if (stored !== 'stored') {
+    await ctx.reply(rt(locale, stored === 'already' ? 'interestAlready' : 'browseUnavailable'));
+    await showNextCard(ctx, viewer, locale, now);
+    return;
+  }
+  track(ctx.chat!.id, 'tg_roommate_interest_sent');
+  if (await formMutualMatch(viewer.id, target.id, now)) {
+    track(ctx.chat!.id, 'tg_roommate_matched', { role: 'completer' });
+    const waitingChatId = await telegramChatIdOf(target.chatId);
+    if (waitingChatId !== null) track(waitingChatId, 'tg_roommate_matched', { role: 'waiting' });
+  }
+  await showNextCard(ctx, viewer, locale, now);
+});
+
+/**
  * `rm:u:done` (Done under the username prompt): the tap's own update carries the current username,
  * which `browsingProfile` stores. One found sends `tg_roommate_username_set` (context `browse`)
  * and the browsing continues with the next card; none found gets the prompt again.
@@ -232,6 +275,7 @@ const handleUsernameDone = roommateCallback(async (ctx, chat, locale) => {
 
 export function registerRoommateMatching(bot: Bot): void {
   bot.callbackQuery(SHOW_TAP, handleShowTap);
+  bot.callbackQuery(INTEREST_TAP, handleInterestTap);
   bot.callbackQuery(SKIP_TAP, handleSkipTap);
   bot.callbackQuery(USERNAME_DONE, handleUsernameDone);
 }

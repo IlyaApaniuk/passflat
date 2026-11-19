@@ -307,6 +307,92 @@ export async function storeSkip(fromProfileId: string, toProfileId: string): Pro
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The `interest` reactions `profileId` stored in the 24 hours before `now`, what the daily limit
+ * of "Interested" counts (spec 07 §Interest, `INTEREST_DAILY_LIMIT`).
+ */
+export async function countRecentInterests(profileId: string, now: Date): Promise<number> {
+  return prisma.roommateReaction.count({
+    where: {
+      fromProfileId: profileId,
+      kind: 'interest',
+      createdAt: { gt: new Date(now.getTime() - DAY_MS) },
+    },
+  });
+}
+
+/**
+ * Stores "Interested" (spec 07 §Interest): one `interest` reaction from `fromProfileId` to
+ * `toProfileId`, created at `now` (the clock the daily limit counts with). `already` when the pair
+ * already holds a reaction (the unique pair inserts nothing: a double tap), `gone` when the target
+ * was deleted since the visibility check.
+ */
+export async function storeInterest(
+  fromProfileId: string,
+  toProfileId: string,
+  now: Date,
+): Promise<'stored' | 'already' | 'gone'> {
+  try {
+    const { count } = await prisma.roommateReaction.createMany({
+      data: [{ fromProfileId, toProfileId, kind: 'interest', createdAt: now }],
+      skipDuplicates: true,
+    });
+    return count === 1 ? 'stored' : 'already';
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return 'gone';
+    }
+    throw error;
+  }
+}
+
+/**
+ * Forms the mutual match of two profiles (spec 07 §Interest and mutual match), in one statement:
+ * `matched_at = now` on both reactions of the pair, only when both rows exist, both are `interest`
+ * and both are unmatched. True only for the request whose statement changed the 2 rows (the
+ * completer).
+ *
+ * The CTE locks the pair's unmatched interest rows in id order (`FOR UPDATE`, so two concurrent
+ * statements wait for each other instead of deadlocking); a statement that waited re-checks
+ * `matched_at IS NULL` on the rows the other one committed, finds none, and changes 0 rows. So two
+ * concurrent taps form exactly one pair. A row missing (no interest back yet, a skip, a deleted
+ * profile) leaves fewer than 2 rows, and nothing changes.
+ */
+export async function formMutualMatch(
+  profileId: string,
+  otherProfileId: string,
+  now: Date,
+): Promise<boolean> {
+  const changed = await prisma.$executeRaw`
+    WITH pair AS (
+      SELECT id FROM roommate_reactions
+      WHERE kind = 'interest'
+        AND matched_at IS NULL
+        AND (
+          (from_profile_id = ${profileId}::uuid AND to_profile_id = ${otherProfileId}::uuid)
+          OR (from_profile_id = ${otherProfileId}::uuid AND to_profile_id = ${profileId}::uuid)
+        )
+      ORDER BY id
+      FOR UPDATE
+    )
+    UPDATE roommate_reactions
+    SET matched_at = ${now}
+    WHERE id IN (SELECT id FROM pair)
+      AND (SELECT count(*) FROM pair) = 2`;
+  return changed === 2;
+}
+
+/** The Telegram chat id of a chat row, for an event about another person (`tg_<chatId>`). */
+export async function telegramChatIdOf(chatDbId: string): Promise<number | null> {
+  const chat = await prisma.telegramChat.findUnique({
+    where: { id: chatDbId },
+    select: { chatId: true },
+  });
+  return chat ? Number(chat.chatId) : null;
+}
+
 /**
  * Stores a district pick while the profile is still at `step`, so an answer to a
  * step that has moved on changes nothing (spec 06 "Stale and repeated taps").

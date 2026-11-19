@@ -23,6 +23,7 @@ import { peopleWord } from './texts';
  * Stage 2 texts (spec 07) are added with their tasks; the cards' are here
  * (§Cards: the card, its buttons, "That's everyone", the username prompt, and
  * "matching is paused" of §Switch). The card reuses the own card's field labels.
+ * "Interested" (§Interest) adds the daily limit and "already answered".
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -256,6 +257,9 @@ const RU = {
   btnReport: '🚩 Пожаловаться',
   browseNoneLeft: 'Пока это все, кто тебе подходит.',
   browseUnavailable: 'Эта анкета больше недоступна.',
+  interestLimit:
+    'На сегодня это лимит: не больше {limit} отметок «Интересно» за 24 часа. Попробуй позже.',
+  interestAlready: 'Ответ на эту анкету уже сохранён.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -448,6 +452,9 @@ const UK: Record<Key, string> = {
   btnReport: '🚩 Поскаржитися',
   browseNoneLeft: 'Поки це всі, хто тобі підходить.',
   browseUnavailable: 'Ця анкета більше недоступна.',
+  interestLimit:
+    'На сьогодні це ліміт: не більше {limit} позначок «Цікаво» за 24 години. Спробуй пізніше.',
+  interestAlready: 'Відповідь на цю анкету вже збережено.',
 };
 
 const EN: Record<Key, string> = {
@@ -640,6 +647,9 @@ const EN: Record<Key, string> = {
   btnReport: '🚩 Report',
   browseNoneLeft: "That's everyone for now.",
   browseUnavailable: 'This profile is no longer available.',
+  interestLimit:
+    'That\'s the limit for today: up to {limit} "Interested" taps in 24 hours. Try again later.',
+  interestAlready: 'Your answer to this profile is already saved.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

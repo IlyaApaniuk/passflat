@@ -1,4 +1,4 @@
-import type { RoommateProfile } from '@prisma/client';
+import { Prisma, type RoommateProfile } from '@prisma/client';
 import type { Bot, Context } from 'grammy';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * switch on and off, the card's content and buttons, "That's everyone for now", Skip
  * (`rm:x:<id>`), a card button for a profile no longer visible, the username prompt and its Done
  * (`rm:u:done`), and the events `tg_roommate_cards_viewed`, `tg_roommate_username_prompted` and
- * `tg_roommate_username_set`. Taps go through the handlers `registerRoommateFlow` and
+ * `tg_roommate_username_set`. "Interested" (`rm:i:<id>`, spec 07 §Interest and mutual match,
+ * FR-26, FR-28): the daily limit, the stored interest and `tg_roommate_interest_sent`, the mutual
+ * match (`formMutualMatch`'s `$executeRaw`, applied in memory or its result mocked) and
+ * `tg_roommate_matched`. Taps go through the handlers `registerRoommateFlow` and
  * `registerRoommateMatching` register, over an in-memory Prisma fake whose reads apply their
  * `where` (the chat, reaction and report relations included) and return copies. The clock is
  * fake; nothing reaches Telegram, PostHog or a database.
@@ -62,9 +65,10 @@ const db = vi.hoisted(() => {
     state,
     prisma: {
       telegramChat: {
-        findUnique: vi.fn(async ({ where }: { where: { id: string } }) => {
+        findUnique: vi.fn(async ({ where, select }: { where: { id: string }; select?: Row }) => {
           const chat = state.chats.find((row) => row.id === where.id);
           if (!chat) return null;
+          if (select?.chatId) return { chatId: chat.chatId };
           const profile = state.profiles.find((row) => row.chatId === where.id);
           return {
             roommateBannedAt: chat.roommateBannedAt ?? null,
@@ -109,7 +113,31 @@ const db = vi.hoisted(() => {
           }
           return { count };
         }),
+        count: vi.fn(
+          async ({ where }: { where: Where }) =>
+            state.reactions.filter((row) => matches(row, where)).length,
+        ),
       },
+      /**
+       * The mutual-match statement (`formMutualMatch`), applied in memory: its values are the two
+       * profile ids twice and the time; both unmatched `interest` rows of the pair → both matched,
+       * 2 rows changed, else 0.
+       */
+      $executeRaw: vi.fn(
+        async (_sql: TemplateStringsArray, ...values: unknown[]): Promise<number> => {
+          const [a, b, , , at] = values as [string, string, string, string, Date];
+          const pair = state.reactions.filter(
+            (r) =>
+              r.kind === 'interest' &&
+              r.matchedAt == null &&
+              ((r.fromProfileId === a && r.toProfileId === b) ||
+                (r.fromProfileId === b && r.toProfileId === a)),
+          );
+          if (pair.length !== 2) return 0;
+          for (const r of pair) r.matchedAt = at;
+          return 2;
+        },
+      ),
     },
   };
 });
@@ -202,11 +230,19 @@ function person(id: string, daysAgo: number, fields: Partial<RoommateProfile> = 
   }) as unknown as Row;
 }
 
+/** The Telegram chat id of the chat of profile `id` (its `tg_<chatId>` identity). */
+const tgChatOf = (id: string) => 7000 + Number(id.slice(-4));
+
 /** The viewer's chat with its profile (none for null), and the other people with their chats. */
 function seed(own: Partial<RoommateProfile> | null, others: Row[] = []) {
   db.state.chats = [
-    { id: CHAT_ROW, blockedAt: null, roommateBannedAt: null },
-    ...others.map((row) => ({ id: row.chatId, blockedAt: null, roommateBannedAt: null })),
+    { id: CHAT_ROW, chatId: BigInt(CHAT_ID), blockedAt: null, roommateBannedAt: null },
+    ...others.map((row) => ({
+      id: row.chatId,
+      chatId: BigInt(tgChatOf(row.id as string)),
+      blockedAt: null,
+      roommateBannedAt: null,
+    })),
   ];
   db.state.profiles = [...others];
   if (own) db.state.profiles.push(profile(own) as unknown as Row);
@@ -562,6 +598,34 @@ describe('the username prompt (spec 07 §Usernames, context browse)', () => {
   });
 });
 
+/** A card's profile that a button tap must refuse (spec 07 §Cards, the visibility rule). */
+const TARGET = uid(40);
+const UNAVAILABLE: [string, (id: string) => void][] = [
+  ['a deleted profile', (id) => (db.state.profiles = db.state.profiles.filter((r) => r.id !== id))],
+  ['a hidden profile', (id) => Object.assign(row(id), { status: 'hidden' })],
+  ['an expired profile', (id) => Object.assign(row(id), { status: 'expired' })],
+  ['a profile past its hide date', (id) => Object.assign(row(id), { expiresAt: NOW })],
+  ['a blocked chat', (id) => (chatOfProfile(id).blockedAt = NOW)],
+  ['a banned chat', (id) => (chatOfProfile(id).roommateBannedAt = NOW)],
+  [
+    'a profile the viewer reported',
+    (id) => db.state.reports.push({ reporterProfileId: VIEWER, targetProfileId: id }),
+  ],
+  [
+    'a profile that reported the viewer',
+    (id) => db.state.reports.push({ reporterProfileId: id, targetProfileId: VIEWER }),
+  ],
+  [
+    'a profile the viewer is interested in',
+    (id) => db.state.reactions.push({ fromProfileId: VIEWER, toProfileId: id, kind: 'interest' }),
+  ],
+  [
+    'a profile that skipped the viewer',
+    (id) => db.state.reactions.push({ fromProfileId: id, toProfileId: VIEWER, kind: 'skip' }),
+  ],
+  ['a profile no longer compatible', (id) => Object.assign(row(id), { languages: ['pl'] })],
+];
+
 describe('Skip (rm:x:<id>)', () => {
   it('stores one skip reaction and sends the next card, with no event', async () => {
     seed({}, [person(A, 5), person(B, 1)]);
@@ -601,47 +665,25 @@ describe('Skip (rm:x:<id>)', () => {
     expect(db.prisma.roommateReaction.createMany).toHaveBeenCalledTimes(1);
   });
 
-  const TARGET = uid(40);
-  it.each<[string, (id: string) => void]>([
-    [
-      'a deleted profile',
-      (id) => (db.state.profiles = db.state.profiles.filter((r) => r.id !== id)),
-    ],
-    ['a hidden profile', (id) => Object.assign(row(id), { status: 'hidden' })],
-    ['an expired profile', (id) => Object.assign(row(id), { status: 'expired' })],
-    ['a profile past its hide date', (id) => Object.assign(row(id), { expiresAt: NOW })],
-    ['a blocked chat', (id) => (chatOfProfile(id).blockedAt = NOW)],
-    ['a banned chat', (id) => (chatOfProfile(id).roommateBannedAt = NOW)],
-    [
-      'a profile the viewer reported',
-      (id) => db.state.reports.push({ reporterProfileId: VIEWER, targetProfileId: id }),
-    ],
-    [
-      'a profile that reported the viewer',
-      (id) => db.state.reports.push({ reporterProfileId: id, targetProfileId: VIEWER }),
-    ],
-    [
-      'a profile the viewer is interested in',
-      (id) => db.state.reactions.push({ fromProfileId: VIEWER, toProfileId: id, kind: 'interest' }),
-    ],
-    [
-      'a profile that skipped the viewer',
-      (id) => db.state.reactions.push({ fromProfileId: id, toProfileId: VIEWER, kind: 'skip' }),
-    ],
-    ['a profile no longer compatible', (id) => Object.assign(row(id), { languages: ['pl'] })],
-  ])('for %s replies "no longer available" and the next card', async (_name, change) => {
-    seed({}, [person(A, 5), person(TARGET, 1)]);
-    change(TARGET);
-    const before = structuredClone(db.state.reactions);
+  it.each(UNAVAILABLE)(
+    'for %s replies "no longer available" and the next card',
+    async (_name, change) => {
+      seed({}, [person(A, 5), person(TARGET, 1)]);
+      change(TARGET);
+      const before = structuredClone(db.state.reactions);
 
-    const replies = await tap(`rm:x:${TARGET}`);
+      const replies = await tap(`rm:x:${TARGET}`);
 
-    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'browseUnavailable'), cardOf(A)]);
-    expect(replies[1].data).toEqual(cardButtons(A));
-    expect(db.state.reactions).toEqual(before);
-    expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
-    expect(mocks.track).not.toHaveBeenCalled();
-  });
+      expect(replies.map((reply) => reply.text)).toEqual([
+        rt('ru', 'browseUnavailable'),
+        cardOf(A),
+      ]);
+      expect(replies[1].data).toEqual(cardButtons(A));
+      expect(db.state.reactions).toEqual(before);
+      expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
+      expect(mocks.track).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ['an id of the wrong shape', 'not-a-uuid'],
@@ -667,6 +709,288 @@ describe('Skip (rm:x:<id>)', () => {
   });
 });
 
+describe('Interested (rm:i:<id>), the daily limit and the mutual match', () => {
+  const HOUR = 60 * 60 * 1000;
+  const interest = (from: string, to: string, createdAt = new Date(NOW.getTime() - HOUR)) => ({
+    fromProfileId: from,
+    toProfileId: to,
+    kind: 'interest',
+    createdAt,
+    matchedAt: null,
+  });
+  /** `n` interests of the viewer stored within the last 24 hours, to profiles not on any card. */
+  const recentInterests = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      interest(VIEWER, uid(100 + i), new Date(NOW.getTime() - (i + 1) * HOUR)),
+    );
+
+  it('stores a one-sided interest, sends tg_roommate_interest_sent and the next card', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(db.prisma.roommateReaction.createMany).toHaveBeenCalledWith({
+      data: [{ fromProfileId: VIEWER, toProfileId: B, kind: 'interest', createdAt: NOW }],
+      skipDuplicates: true,
+    });
+    expect(db.state.reactions).toEqual([
+      { fromProfileId: VIEWER, toProfileId: B, kind: 'interest', createdAt: NOW },
+    ]);
+    expect(db.prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_roommate_interest_sent']]);
+    // Nothing goes to the other person: one reply, to this chat, with the next card.
+    expect(replies.map((reply) => reply.text)).toEqual([cardOf(A)]);
+    expect(replies[0].data).toEqual(cardButtons(A));
+  });
+
+  it('runs one statement over the pair that matches only unmatched interests, both rows', async () => {
+    seed({}, [person(B, 1)]);
+    await tap(`rm:i:${B}`);
+
+    expect(db.prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    const [strings, ...values] = db.prisma.$executeRaw.mock.calls[0];
+    const sql = strings.join('?').replace(/\s+/g, ' ');
+    expect(values).toEqual([VIEWER, B, B, VIEWER, NOW]);
+    expect(sql).toContain("kind = 'interest'");
+    expect(sql).toContain('matched_at IS NULL');
+    expect(sql).toContain('FOR UPDATE');
+    expect(sql).toContain('SET matched_at = ?');
+    expect(sql).toContain('(SELECT count(*) FROM pair) = 2');
+  });
+
+  it('forms the pair: both reactions matched, completer for this person, waiting for the other', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.state.reactions.push(interest(B, VIEWER, new Date(NOW.getTime() - 3 * DAY)));
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(db.state.reactions).toEqual([
+      { ...interest(B, VIEWER, new Date(NOW.getTime() - 3 * DAY)), matchedAt: NOW },
+      { fromProfileId: VIEWER, toProfileId: B, kind: 'interest', createdAt: NOW, matchedAt: NOW },
+    ]);
+    expect(mocks.track.mock.calls).toEqual([
+      [CHAT_ID, 'tg_roommate_interest_sent'],
+      [CHAT_ID, 'tg_roommate_matched', { role: 'completer' }],
+      [tgChatOf(B), 'tg_roommate_matched', { role: 'waiting' }],
+    ]);
+    expect(replies.map((reply) => reply.text)).toEqual([cardOf(A)]);
+  });
+
+  it.each([0, 1])(
+    'a concurrent second completion (the statement changed %i rows) sends no second pair',
+    async (changed) => {
+      seed({}, [person(A, 5), person(B, 1)]);
+      db.state.reactions.push(interest(B, VIEWER));
+      db.prisma.$executeRaw.mockResolvedValueOnce(changed);
+
+      const replies = await tap(`rm:i:${B}`);
+
+      expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_roommate_interest_sent']]);
+      expect(db.prisma.telegramChat.findUnique).not.toHaveBeenCalledWith(
+        expect.objectContaining({ select: { chatId: true } }),
+      );
+      expect(replies.map((reply) => reply.text)).toEqual([cardOf(A)]);
+    },
+  );
+
+  it('forms no pair against a skip from the other person', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    // B skipped the viewer, so B is never on the viewer's cards; an old card's tap is refused.
+    db.state.reactions.push({ fromProfileId: B, toProfileId: VIEWER, kind: 'skip' });
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'browseUnavailable'), cardOf(A)]);
+    expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('stores the 20th interest within 24 hours', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.state.reactions.push(...recentInterests(19));
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(db.prisma.roommateReaction.count).toHaveBeenCalledWith({
+      where: {
+        fromProfileId: VIEWER,
+        kind: 'interest',
+        createdAt: { gt: new Date(NOW.getTime() - DAY) },
+      },
+    });
+    expect(db.state.reactions).toHaveLength(20);
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_roommate_interest_sent']]);
+    expect(replies.map((reply) => reply.text)).toEqual([cardOf(A)]);
+  });
+
+  it.each(LOCALES)(
+    'refuses the 21st within 24 hours: the limit reply, nothing stored, no event (%s)',
+    async (locale) => {
+      seed({}, [person(A, 5), person(B, 1)]);
+      db.state.reactions.push(...recentInterests(20));
+      const before = structuredClone(db.state.reactions);
+
+      const replies = await tap(`rm:i:${B}`, { locale });
+
+      expect(replies).toHaveLength(1);
+      expect(replies[0].text).toBe(rt(locale, 'interestLimit', { limit: '20' }));
+      expect(replies[0].text).toContain('20');
+      expect(replies[0].options).toBeUndefined();
+      expect(db.state.reactions).toEqual(before);
+      expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
+      expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
+      expect(mocks.track).not.toHaveBeenCalled();
+    },
+  );
+
+  it('counts neither interests older than 24 hours nor skips toward the limit', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.state.reactions.push(
+      ...recentInterests(19),
+      interest(VIEWER, uid(200), new Date(NOW.getTime() - DAY)),
+      interest(VIEWER, uid(201), new Date(NOW.getTime() - 2 * DAY)),
+      { fromProfileId: VIEWER, toProfileId: uid(202), kind: 'skip', createdAt: NOW },
+      // Interests the viewer received are the other people's taps.
+      interest(uid(203), VIEWER),
+    );
+
+    await tap(`rm:i:${B}`);
+
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_roommate_interest_sent']]);
+  });
+
+  it('a reaction stored meanwhile (a double tap) replies "already answered" and the next card', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    // The first tap stored its reaction after this one's visibility check: the unique pair
+    // inserts nothing.
+    db.prisma.roommateReaction.createMany.mockImplementationOnce(async () => {
+      db.state.reactions.push(interest(VIEWER, B, NOW));
+      return { count: 0 };
+    });
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'interestAlready'), cardOf(A)]);
+    expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('a profile deleted since the check replies "no longer available" and the next card', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.prisma.roommateReaction.createMany.mockImplementationOnce(async () => {
+      db.state.profiles = db.state.profiles.filter((r) => r.id !== B);
+      throw new Prisma.PrismaClientKnownRequestError('foreign key', {
+        code: 'P2003',
+        clientVersion: 'test',
+      });
+    });
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'browseUnavailable'), cardOf(A)]);
+    expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it.each(UNAVAILABLE)(
+    'for %s replies "no longer available" and the next card, storing nothing',
+    async (_name, change) => {
+      seed({}, [person(A, 5), person(TARGET, 1)]);
+      change(TARGET);
+      const before = structuredClone(db.state.reactions);
+
+      const replies = await tap(`rm:i:${TARGET}`);
+
+      expect(replies.map((reply) => reply.text)).toEqual([
+        rt('ru', 'browseUnavailable'),
+        cardOf(A),
+      ]);
+      expect(db.state.reactions).toEqual(before);
+      expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
+      expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
+      expect(mocks.track).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['an id of the wrong shape', 'not-a-uuid'],
+    ['the viewer itself', VIEWER],
+  ])('never trusts %s from the callback', async (_name, id) => {
+    seed({}, [person(A, 5)]);
+    const replies = await tap(`rm:i:${id}`);
+
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'browseUnavailable'), cardOf(A)]);
+    expect(db.prisma.roommateProfile.findFirst).not.toHaveBeenCalled();
+    expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
+  });
+
+  it('a second tap after the pair formed forms nothing again', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    db.state.reactions.push(interest(B, VIEWER));
+    await tap(`rm:i:${B}`);
+    mocks.track.mockClear();
+
+    const replies = await tap(`rm:i:${B}`);
+
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'browseUnavailable'), cardOf(A)]);
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('without a username stores the interest and asks for one instead of the next card', async () => {
+    seed({}, [person(A, 5), person(B, 1)]);
+    const replies = await tap(`rm:i:${B}`, { username: null });
+
+    expect(db.state.reactions).toHaveLength(1);
+    expect(replies.map((reply) => reply.text)).toEqual([rt('ru', 'usernamePromptBrowse')]);
+    expect(mocks.track.mock.calls).toEqual([
+      [CHAT_ID, 'tg_roommate_interest_sent'],
+      [CHAT_ID, 'tg_roommate_username_prompted', { context: 'browse' }],
+    ]);
+  });
+
+  it('no event carries a username, a partner id or a match id', async () => {
+    seed({}, [person(A, 5), person(B, 1), person(uid(5), 2)]);
+    db.state.reactions.push(interest(B, VIEWER));
+    // A one-sided interest, a formed pair, then the limit.
+    await tap(`rm:i:${uid(5)}`);
+    await tap(`rm:i:${B}`);
+    db.state.reactions.push(...recentInterests(18));
+    await tap(`rm:i:${A}`);
+
+    const calls = mocks.track.mock.calls as [number, string, Record<string, unknown>?][];
+    expect(calls.map(([, event]) => event)).toEqual([
+      'tg_roommate_interest_sent',
+      'tg_roommate_interest_sent',
+      'tg_roommate_matched',
+      'tg_roommate_matched',
+    ]);
+    const secrets = [
+      VIEWER,
+      A,
+      B,
+      uid(5),
+      CHAT_ROW,
+      `chat-${B}`,
+      'anna_w',
+      String(row(B).tgUsername),
+      String(row(uid(5)).tgUsername),
+      String(tgChatOf(B)),
+      String(CHAT_ID),
+    ];
+    for (const [chatId, event, properties = {}] of calls) {
+      // Each event goes to its own person's identity, never the partner's.
+      expect([CHAT_ID, tgChatOf(B)]).toContain(chatId);
+      expect(
+        Object.keys(properties).every((key) => key === 'role'),
+        event,
+      ).toBe(true);
+      const json = JSON.stringify(properties);
+      for (const secret of secrets) expect(json, `${event} ${secret}`).not.toContain(secret);
+    }
+    expect(calls.filter(([chatId]) => chatId === tgChatOf(B))).toEqual([
+      [tgChatOf(B), 'tg_roommate_matched', { role: 'waiting' }],
+    ]);
+  });
+});
+
 /** The stored row of profile `id`. */
 function row(id: string): Row {
   return db.state.profiles.find((profileRow) => profileRow.id === id)!;
@@ -679,7 +1003,7 @@ describe('the switch off', () => {
 
   it.each(
     LOCALES.flatMap((locale) =>
-      ['rm:show:c', 'rm:show:o', `rm:x:${A}`, 'rm:u:done'].map(
+      ['rm:show:c', 'rm:show:o', `rm:x:${A}`, `rm:i:${A}`, 'rm:u:done'].map(
         (data) => [data, locale] as [string, RoommateLocale],
       ),
     ),
@@ -694,5 +1018,7 @@ describe('the switch off', () => {
     expect(db.prisma.roommateProfile.findMany).not.toHaveBeenCalled();
     expect(db.prisma.roommateProfile.updateMany).not.toHaveBeenCalled();
     expect(db.prisma.roommateReaction.createMany).not.toHaveBeenCalled();
+    expect(db.prisma.roommateReaction.count).not.toHaveBeenCalled();
+    expect(db.prisma.$executeRaw).not.toHaveBeenCalled();
   });
 });

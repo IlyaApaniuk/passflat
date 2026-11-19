@@ -494,7 +494,7 @@
       "title": "Interested, the daily limit and the mutual match (FR-26 criteria 1 – 2, FR-28)",
       "spec": "docs/specs/07-roommate-matching.md#interest-and-mutual-match",
       "dependsOn": ["T087"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "rm:i:<id> checks visibility, refuses the 21st interest within 24 hours with no event, stores the reaction and sends tg_roommate_interest_sent",
         "One $executeRaw statement in store.ts sets matched_at on both reactions only when both are interest and unmatched; the request that changed 2 rows sends tg_roommate_matched role=completer for itself and role=waiting for the other",
@@ -502,7 +502,7 @@
         "Tests: the 20th and 21st tap, a one-sided interest, a formed pair, a concurrent second completion (mocked 0 rows) sending no second pair"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D68 (20 a day). The reveal itself is T089."
     },
     {

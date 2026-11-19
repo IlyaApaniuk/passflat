@@ -169,6 +169,21 @@ the migrations are missing (`docs/architecture.md` §9).
   refused before the query): otherwise "no longer available" and the next card.
   Skip stores one `skip` reaction (`storeSkip`, `createMany` with
   `skipDuplicates`) and sends the next card, no event.
+- **Interested** (spec 07 §Interest and mutual match, FR-26, FR-28;
+  `roommate-matching.ts`): `rm:i:<id>` checks the card's visibility as above, then
+  the daily limit (`INTEREST_DAILY_LIMIT` in `../roommate/rules.ts`: at that many
+  `interest` reactions created in the last 24 hours, `countRecentInterests`, it
+  replies "that's the limit for today", stores nothing and sends no event). Else
+  `storeInterest` inserts one `interest` reaction (a reaction already there →
+  "already answered"; the target deleted meanwhile → "no longer available") and
+  sends `tg_roommate_interest_sent`. Then `formMutualMatch` (`../roommate/store.ts`)
+  runs one `$executeRaw` statement: a CTE locks the pair's unmatched `interest`
+  rows in id order (`FOR UPDATE`) and the update sets `matched_at` on both only
+  when there are 2; the request whose statement changed 2 rows formed the pair, so
+  two concurrent taps form one. That request sends `tg_roommate_matched`
+  `role=completer` for the tapping chat and `role=waiting` for the other chat
+  (`telegramChatIdOf`); no event names a partner, a match or a username. Then the
+  next card; the reveal is spec 07 §Reveal.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -280,7 +295,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
-| `roommate-matching.ts`                           | Stage 2 (spec 07): cards one at a time, Skip, the username prompt  |
+| `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Skip, Interested, the username prompt    |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
