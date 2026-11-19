@@ -699,13 +699,13 @@
       "title": "wants_lawyer: explain before and after the tap that no service exists yet",
       "spec": "docs/specs/04-telegram-bot.md#lawyer-interest",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "btnWantLawyer and lawyerAck follow the owner's wording (RU and UK): no promise of a response time, a consultation or a future message",
         "tg_lawyer_interest unchanged and separate from any outcome event; a test covers the confirmation text"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-6. Approve the button text and confirmation for wants_lawyer (draft: interest recorded, no legal help through Passflat yet, no promise to write), or hide the button until a partner exists?\nOwner answer: Q-6 keep the button (D27, 2026-11-19): RU texts verbatim from the decision review, UK drafted in the same sense; texts in spec 04 §Lawyer interest."
     },
     {

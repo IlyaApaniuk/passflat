@@ -269,7 +269,10 @@ under `/deposit`, or the deep link `?start=dep` — the one to paste under
    the bank account, which the bot never asks for.
 4. Reminders and outcome questions (below). The outcome answers (full /
    partial / none) and `wants_lawyer` are the deposit statistic and the demand
-   signal for a lawyer partnership.
+   signal for a lawyer partnership. No legal service exists yet: the button
+   says so, and the confirmation (`lawyerAck`) promises no reply, date or
+   consultation (FR-45, D27). The tap sets `wantsLawyer` and sends
+   `tg_lawyer_interest`; it never changes the case's outcome.
 
 ### Reminders
 

@@ -1,5 +1,12 @@
 import { Prisma } from '@prisma/client';
-import { GrammyError, InlineKeyboard, type Api, type Bot, type Context } from 'grammy';
+import {
+  GrammyError,
+  InlineKeyboard,
+  type Api,
+  type Bot,
+  type CallbackQueryContext,
+  type Context,
+} from 'grammy';
 import { after } from 'next/server';
 
 import { flushPostHog } from '@/lib/posthog-server';
@@ -821,17 +828,27 @@ export function registerDepositFlow(bot: Bot) {
     });
   });
 
-  bot.callbackQuery(/^dep:lawyer:([0-9a-f-]{36})$/, async (ctx) => {
-    const { chat, locale } = await localeOf(ctx);
-    await ctx.answerCallbackQuery();
-    const row = await findOwnCase(chat.id, ctx.match![1]);
-    if (!row) return;
-    await prisma.depositCase.update({ where: { id: row.id }, data: { wantsLawyer: true } });
-    track(ctx.chat!.id, 'tg_lawyer_interest', {
-      claim: row.depositAmount != null ? row.depositAmount - (row.returnedAmount ?? 0) : null,
-    });
-    await ctx.reply(dt(locale, 'lawyerAck'));
+  bot.callbackQuery(LAWYER_CALLBACK, handleLawyerInterest);
+}
+
+export const LAWYER_CALLBACK = /^dep:lawyer:([0-9a-f-]{36})$/;
+
+/**
+ * The "I want a lawyer" tap (FR-45, D27): records the interest only. There is
+ * no legal service yet, so the confirmation promises no reply, date or
+ * consultation, and the case's outcome is left as it is.
+ */
+export async function handleLawyerInterest(ctx: CallbackQueryContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat!.id });
+  const locale = chat.locale as BotLocale;
+  await ctx.answerCallbackQuery();
+  const row = await findOwnCase(chat.id, ctx.match[1]);
+  if (!row) return;
+  await prisma.depositCase.update({ where: { id: row.id }, data: { wantsLawyer: true } });
+  track(ctx.chat!.id, 'tg_lawyer_interest', {
+    claim: row.depositAmount != null ? row.depositAmount - (row.returnedAmount ?? 0) : null,
   });
+  await ctx.reply(dt(locale, 'lawyerAck'));
 }
 
 /**

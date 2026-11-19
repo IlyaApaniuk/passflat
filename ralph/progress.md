@@ -1346,3 +1346,19 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Legal:** the Polish lawyer review (BRD A14) is still needed before the deposit flow is promoted widely.
   - No tables or migrations.
 - Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`); T043 (lawyer-interest texts) touches the same `deposit-texts.ts` and the F6 row / `lawyerAck` rows of `deposit-scenarios.md`.
+
+### 2026-11-19 10:05 · T043 · done
+
+- Done (FR-45, Q-6 / D27):
+  - `src/lib/bot/deposit-texts.ts`: `btnWantLawyer` and `lawyerAck` in RU (approved verbatim) and UK (draft from spec 04 §Lawyer interest). The old «Как только договоримся — напишу сюда первым» / «Щойно домовимося — напишу сюди першим» promise and the «мы ищем юристов» line are gone.
+  - `src/lib/bot/deposit-flow.ts`: the `dep:lawyer:<id>` callback body is now the exported `handleLawyerInterest(ctx)` with `LAWYER_CALLBACK`, registered in `registerDepositFlow`. Behaviour unchanged: it sets `wantsLawyer`, sends `tg_lawyer_interest` with the same `claim`, and replies `lawyerAck`. It never touches status or outcome.
+  - Docs: `docs/legal-review/deposit-scenarios.md` (F5 / F6 rows, new `btnWantLawyer` row, `lawyerAck` rendering, FR-45 item removed from "Not covered"), `src/lib/bot/README.md` (deposit flow step 4), `docs/specs/README.md` (FR-45 → Done).
+- Tests: `src/lib/bot/deposit-lawyer.test.ts` (new, 11). Exact RU / UK button and confirmation texts. No reply, date, consultation or partnership wording in either text. The handler, in RU and UK: one `update` with only `{ wantsLawyer: true }`, exactly one `track` (`tg_lawyer_interest`, `{ claim: 2500 }`) and no outcome event, then the reply. Also a null claim, another chat's case (nothing happens), and the callback regex.
+- Checks: `npx vitest run src/lib/bot/` 13 files / 318 tests. `npm run verify` exit 0: lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 82 files / 1073 tests, build OK. `next-env.d.ts` restored. Not tried in a real Telegram chat.
+- Did not work: nothing.
+- Owner review:
+  - **Copy (Q-8):** RU `btnWantLawyer` and `lawyerAck` approved verbatim (D27). UK `btnWantLawyer` «⚖️ Хочу допомогу юриста (сервісу поки немає — відзначимо інтерес)» and `lawyerAck` «Записав ваш інтерес. Юридичної допомоги через Passflat поки немає, і ми не обіцяємо, що напишемо про це. Якщо строк важливий, зверніться до юриста напряму.» are drafts from the spec; review before deploy.
+  - **Register:** the approved confirmation uses «вы» / «ви», the rest of the flow «ты» / «ти» (same as the T042 sentences).
+  - **Display:** the button text is long (about 55 characters); Telegram may wrap or cut it on narrow phones. Check it in the dev bot.
+  - Events unchanged (`tg_lawyer_interest`, `claim`). No tables or migrations.
+- Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`).
