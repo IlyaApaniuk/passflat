@@ -19,11 +19,20 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import {
+  addressCheckedProperties,
+  type SuccessfulCheckEvent,
+} from '@/lib/analytics/checker-events';
+import { answerProperties, type AnswerProperties } from '@/lib/cost-figures';
 import type { CityBounds } from '@/lib/listings-data';
 import type { LocationCheckerCosts } from '@/lib/location-checker';
 import type { CategoryResult } from '@/lib/location-score';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
+import {
+  CheckerAreaReference,
+  CheckerBuildingFigures,
+} from '@/components/buildings/checker-figures';
 import {
   LocationScoreBlock,
   LocationScoreSkeleton,
@@ -94,11 +103,10 @@ interface CheckerPayload {
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
 type LastAttempt = { kind: 'get'; placeId: string } | { kind: 'post'; place: PlaceResult };
 
-interface SuccessfulCheck {
+interface SuccessfulCheck extends SuccessfulCheckEvent {
   sequence: number;
-  buildingId: string;
-  hasData: boolean;
-  source: 'shared_url' | 'address_search';
+  /** Which level answered and how (spec 01 §Answer quality), from `answerProperties`. */
+  answer: AnswerProperties;
 }
 
 /** A check that ended in nothing. Reported so `checker_viewed` minus
@@ -299,12 +307,10 @@ export function CheckerClient({
       return;
     }
     capturedCheckSequenceRef.current = successfulCheck.sequence;
-    posthog.capture('address_checked', {
-      city: citySlug,
-      building_id: successfulCheck.buildingId,
-      has_data: successfulCheck.hasData,
-      source: successfulCheck.source,
-    });
+    posthog.capture(
+      'address_checked',
+      addressCheckedProperties(citySlug, successfulCheck, successfulCheck.answer),
+    );
   }, [citySlug, posthog, successfulCheck]);
 
   // Failures are deferred the same way and share the sequence counter with the
@@ -384,6 +390,7 @@ export function CheckerClient({
           buildingId: payload.building.id,
           hasData: payload.costs.building.reportCount > 0,
           source: attempt.kind === 'get' ? 'shared_url' : 'address_search',
+          answer: answerProperties(payload.costs.building, payload.costs.reference),
         });
       } catch {
         if (sequence !== requestSequenceRef.current) return;
@@ -458,10 +465,7 @@ export function CheckerClient({
   };
 
   /** The building itself has visible reports (the reference alone is not the building's data). */
-  const buildingGroups = result ? result.costs.building.groups : null;
   const hasBuildingData = (result?.costs.building.reportCount ?? 0) > 0;
-  const tenantCount = buildingGroups?.tenant?.reportCount ?? 0;
-  const askingCount = buildingGroups?.asking?.reportCount ?? 0;
 
   const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us' | 'telegram') => {
     posthog?.capture('checker_cta_clicked', {
@@ -606,11 +610,6 @@ export function CheckerClient({
             {hasBuildingData ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
                 <CardContent className="p-5 sm:p-6">
-                  {/* Interim (spec 03 §Checker): the figures by group, one
-                      observation, the labelled area reference and the deposit
-                      statistic in `result.costs` are not rendered here yet; the
-                      card names what exists and links to the building page,
-                      which shows them. */}
                   <div className="flex items-start gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <WalletCards className="h-5 w-5 text-primary" />
@@ -620,13 +619,17 @@ export function CheckerClient({
                     </div>
                   </div>
 
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {tenantCount > 0 && askingCount > 0
-                      ? t('costs.sourceMixed', { tenantCount, listingCount: askingCount })
-                      : tenantCount > 0
-                        ? t('costs.sourceTenant', { count: tenantCount })
-                        : t('costs.sourceScraped', { count: askingCount })}
-                  </p>
+                  {/* The building's groups with their N (spec 03 §Checker),
+                      then the labelled district or city figures beside them:
+                      values with labels and N, no cheaper/pricier verdict. */}
+                  <div className="mt-3">
+                    <CheckerBuildingFigures summary={result.costs.building} />
+                  </div>
+                  {result.costs.reference && (
+                    <div className="mt-4 border-t pt-4">
+                      <CheckerAreaReference costs={result.costs} cityName={cityName} />
+                    </div>
+                  )}
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button asChild className="w-full sm:w-auto">
@@ -690,6 +693,16 @@ export function CheckerClient({
                       <TelegramBotCta buildingId={result.building.id} source="empty" />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* No report for this building: the area's figures, labelled as
+                the district's or the city's and never as the building's (FR-33). */}
+            {!hasBuildingData && result.costs.reference && (
+              <Card>
+                <CardContent className="p-5 sm:p-6">
+                  <CheckerAreaReference costs={result.costs} cityName={cityName} />
                 </CardContent>
               </Card>
             )}

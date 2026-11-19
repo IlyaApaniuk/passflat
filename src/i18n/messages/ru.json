@@ -865,20 +865,11 @@
     },
     "costs": {
       "availableTitle": "У нас есть данные о ежемесячных расходах в этом доме",
-      "month": "мес.",
-      "rent": "Аренда",
-      "expenses": "Коммуналка и сборы",
-      "sourceTenant": "На основе {count, plural, one {# отчёта} other {# отчётов}} от жильцов",
-      "sourceMixed": "На основе {tenantCount, plural, one {# отчёта} other {# отчётов}} от жильцов и {listingCount, plural, one {# объявления} other {# объявлений}}",
-      "sourceScraped": "На основе {count, plural, one {# объявления} other {# объявлений}}",
       "viewBuilding": "Смотреть разбор по счетам",
       "emptyTitle": "По этому дому ещё никто не поделился расходами. Стань первым.",
       "emptyDescription": "Поделись своими расходами и открой детальные разбивки по всему городу {city}.",
       "contribute": "Поделиться расходами и открыть детали",
       "followHint": "Пока не готов делиться? Следи за обновлениями дома.",
-      "cheaperThanDistrict": "На {percent}% дешевле медианы по району {district}",
-      "pricierThanDistrict": "На {percent}% дороже медианы по району {district}",
-      "depositReturned": "депозит вернули {returned} из {answered}",
       "telegramCta": "Следить за этим домом в Telegram"
     },
     "nuisances": {
@@ -1407,6 +1398,7 @@
         "askingTitle": "Цены из объявлений",
         "nListings": "{count, plural, one {# объявление} few {# объявления} many {# объявлений} other {# объявления}}",
         "depositReturned": "{gotBack} из {answered} ответивших получили залог обратно — полностью или частично",
+        "depositReturnedArea": "{level, select, district {По району {area}} other {По городу {area}}}: {gotBack} из {answered} ответивших получили залог обратно — полностью или частично",
         "countOfTotal": "{count} из {total}",
         "oneObservation": "Одно наблюдение по этому адресу",
         "roomsValue": "Комнат: {count}",

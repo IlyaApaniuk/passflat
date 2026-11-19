@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { summarizeFigures, type FigureReport } from './cost-figures';
 import {
+  areaDepositMessage,
   breakdownHasFigures,
   breakdownNotes,
   breakdownRows,
@@ -805,5 +806,33 @@ describe('message keys', () => {
     expect(t('costs.building.estimateCaption', { count: 3 })).toBe(
       'Estimate based on 3 tenant reports',
     );
+  });
+});
+
+describe('areaDepositMessage', () => {
+  const returns = (answered: number, gotBack: number) => ({ answered, gotBack });
+
+  it('names the area and its level from MIN_DEPOSIT_ANSWERS (3) answers', () => {
+    const message = areaDepositMessage({ level: 'district', returns: returns(3, 2) }, 'Mokotów');
+    expect(message).toEqual({
+      key: 'costs.building.figures.depositReturnedArea',
+      values: { level: 'district', area: 'Mokotów', gotBack: 2, answered: 3 },
+    });
+    expect(translator('en')(message!.key, message!.values)).toBe(
+      'In the Mokotów district, 2 of 3 who answered got the deposit back, fully or partly',
+    );
+    expect(translator('ru')(message!.key, message!.values)).toBe(
+      'По району Mokotów: 2 из 3 ответивших получили залог обратно — полностью или частично',
+    );
+    const city = areaDepositMessage({ level: 'city', returns: returns(12, 9) }, 'Warszawa');
+    expect(translator('pl')(city!.key, city!.values)).toBe(
+      'W mieście Warszawa: 9 z 12 osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo',
+    );
+  });
+
+  it('is withheld below three answers and without an area', () => {
+    expect(areaDepositMessage({ level: 'district', returns: returns(2, 2) }, 'Mokotów')).toBeNull();
+    expect(areaDepositMessage({ level: 'city', returns: returns(0, 0) }, 'Warsaw')).toBeNull();
+    expect(areaDepositMessage(null, 'Warsaw')).toBeNull();
   });
 });

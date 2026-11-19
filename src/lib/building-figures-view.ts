@@ -4,8 +4,10 @@
 
 import {
   isComparable,
+  MIN_DEPOSIT_ANSWERS,
   TENANCY_ONGOING,
   type AreaReference,
+  type DepositReturns,
   type FigureGroup,
   type FigureGroupKey,
   type FigureSummary,
@@ -144,6 +146,30 @@ export function referenceGroupLabel(
 /** Says that the reference describes the district or the city, not this building. */
 export function referenceHintMessage(level: AreaReference['level']): FigureMessage {
   return { key: 'costs.building.figures.referenceHint', values: { level } };
+}
+
+/**
+ * The deposit statistic of the area a building is set against, with the area
+ * named: "In Mokotów, 2 of 3 who answered got the deposit back, fully or
+ * partly". Nothing below MIN_DEPOSIT_ANSWERS answers or without an area.
+ */
+export function areaDepositMessage(
+  deposit: {
+    level: AreaReference['level'];
+    returns: Pick<DepositReturns, 'answered' | 'gotBack'>;
+  } | null,
+  area: string,
+): FigureMessage | null {
+  if (!deposit || deposit.returns.answered < MIN_DEPOSIT_ANSWERS) return null;
+  return {
+    key: 'costs.building.figures.depositReturnedArea',
+    values: {
+      level: deposit.level,
+      area,
+      gotBack: deposit.returns.gotBack,
+      answered: deposit.returns.answered,
+    },
+  };
 }
 
 /** The groups that have reports, tenant first, then asking prices. */

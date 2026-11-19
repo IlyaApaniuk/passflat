@@ -865,20 +865,11 @@
     },
     "costs": {
       "availableTitle": "We have monthly cost data for this building",
-      "month": "month",
-      "rent": "Rent",
-      "expenses": "Utilities & charges",
-      "sourceTenant": "Based on {count, plural, one {# tenant report} other {# tenant reports}}",
-      "sourceMixed": "Based on {tenantCount, plural, one {# tenant report} other {# tenant reports}} and {listingCount, plural, one {# listing} other {# listings}}",
-      "sourceScraped": "Based on {count, plural, one {# listing} other {# listings}}",
       "viewBuilding": "See the bill-by-bill breakdown",
       "emptyTitle": "No one has shared costs for this building yet. Be the first.",
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
       "followHint": "Not ready to share? Follow the building for updates.",
-      "cheaperThanDistrict": "{percent}% below the {district} median",
-      "pricierThanDistrict": "{percent}% above the {district} median",
-      "depositReturned": "deposit returned to {returned} of {answered}",
       "telegramCta": "Follow this building on Telegram"
     },
     "nuisances": {
@@ -1407,6 +1398,7 @@
         "askingTitle": "Asking prices from listings",
         "nListings": "{count, plural, one {# listing} other {# listings}}",
         "depositReturned": "{gotBack} of {answered} who answered got the deposit back, fully or partly",
+        "depositReturnedArea": "{level, select, district {In the {area} district} other {In {area}}}, {gotBack} of {answered} who answered got the deposit back, fully or partly",
         "countOfTotal": "{count} of {total}",
         "oneObservation": "One observation at this address",
         "roomsValue": "Rooms: {count}",

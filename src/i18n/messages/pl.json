@@ -865,20 +865,11 @@
     },
     "costs": {
       "availableTitle": "Mamy dane o miesięcznych kosztach w tym budynku",
-      "month": "mies.",
-      "rent": "Czynsz najmu",
-      "expenses": "Media i opłaty",
-      "sourceTenant": "Na podstawie {count, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców",
-      "sourceMixed": "Na podstawie {tenantCount, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców i {listingCount, plural, one {# ogłoszenia} other {# ogłoszeń}}",
-      "sourceScraped": "Na podstawie {count, plural, one {# ogłoszenia} other {# ogłoszeń}}",
       "viewBuilding": "Zobacz rozbicie na rachunki",
       "emptyTitle": "Nikt jeszcze nie udostępnił kosztów tego budynku. Bądź pierwszy.",
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
-      "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
-      "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
-      "depositReturned": "kaucję zwrócono {returned} z {answered}",
       "telegramCta": "Śledź ten budynek na Telegramie"
     },
     "nuisances": {
@@ -1407,6 +1398,7 @@
         "askingTitle": "Ceny ofertowe z ogłoszeń",
         "nListings": "{count, plural, one {# ogłoszenie} few {# ogłoszenia} many {# ogłoszeń} other {# ogłoszenia}}",
         "depositReturned": "{gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
+        "depositReturnedArea": "{level, select, district {W dzielnicy {area}} other {W mieście {area}}}: {gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
         "countOfTotal": "{count} z {total}",
         "oneObservation": "Jedna obserwacja pod tym adresem",
         "roomsValue": "Pokoje: {count}",

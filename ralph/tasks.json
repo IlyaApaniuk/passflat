@@ -386,7 +386,7 @@
       "title": "Checker page: show groups, one observation and the labelled reference without verdicts",
       "spec": "docs/specs/03-building-figures.md#checker",
       "dependsOn": ["T023"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "check/client.tsx renders the groups with N, one observation, known part, the labelled district or city reference and the deposit statistic ('X of N who answered got it back, fully or partly', only when answered >= 3)",
         "cheaperThanDistrict / pricierThanDistrict conclusions are gone",
@@ -394,7 +394,7 @@
         "Draft copy keys listed; the checker namespace provider is checked"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
