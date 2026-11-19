@@ -88,9 +88,12 @@ in code is `warsaw`. The checker and review pages work only for `LOCATION_CHECKE
 |                   | `Subscription`                                       | **Unused**: no reads or writes, no subscription checkout                                                                                                                                                                                                                                                                                                                                          |
 | Moderation        | `Report`                                             | User flag; `/api/reports` accepts `targetType = 'listing'` only                                                                                                                                                                                                                                                                                                                                   |
 | Waitlist          | `CityNotifySubscription`                             | Email waitlist, three classes: city launch (`listingType = ''`, `districtSlug = ''`), listings whole city (type, `''`), listings district (type, slug); only city launch gets an email; listings rows are deleted 12 months after `createdAt` (`cleanup-listing-interest` cron); saving a listings row returns `removeUrl`, a signed link to `/email/remove-interest`, which deletes that one row |
-| Telegram          | `TelegramChat`                                       | One row per chat (`chatId` BigInt). Account-free; `startPayload` holds attribution                                                                                                                                                                                                                                                                                                                |
+| Telegram          | `TelegramChat`                                       | One row per chat (`chatId` BigInt). Account-free; `startPayload` holds attribution; `roommateBannedAt` marks a chat whose roommate profile moderation hid (PRD 3 FR-14)                                                                                                                                                                                                                           |
 |                   | `TelegramSubscription`                               | Chat watches `b:<uuid>`, `d:<slug>` or `c:<city>` (city waitlist)                                                                                                                                                                                                                                                                                                                                 |
 |                   | `DepositCase`                                        | Deposit flow state, verdict inputs, contract reading results, follow-up dates, outcome, `letterParties` (personal data, cleared after 3 days)                                                                                                                                                                                                                                                     |
+| Roommate matching | `RoommateProfile`                                    | At most one per chat (cascade with the chat): intake state, district choice, budget band, move-in month, languages, gender and "live with" (shown only to the person), short text, house rules, username, expiry, opt-in, push and moderation dates (PRD 3, spec 06 §Data model). Every column of both stages; no code reads it yet                                                               |
+|                   | `RoommateReaction`                                   | `interest` / `skip` of one profile to another, one per pair, deleted with either profile; `matchedAt`, `revealedAt`                                                                                                                                                                                                                                                                               |
+|                   | `RoommateReport`                                     | A report on a profile, one per reporter and target; a deleted profile nulls its references (`SET NULL`), the row stays until it is 6 months old (D55)                                                                                                                                                                                                                                             |
 
 **`CostReport.source`** is set in `src/app/api/cost-reports/route.ts:385-388`. The system author ids are in `src/lib/import-constants.ts`.
 
@@ -237,7 +240,7 @@ imported (`src/lib/stripe.ts`, `src/lib/email/client.ts`, `src/lib/supabase/broa
   - `npm run dev` runs `prisma generate && next dev` on port 3000.
   - `npm run db:migrate` (`prisma migrate dev`) and `npm run db:deploy` change a database. Run them only when the owner asks.
   - `npm run bot:dev` long-polls the bot locally.
-- **Migrations** (`prisma/migrations`, 23): `0_init`, `20260603115244_add_cost_periodic_charges_and_import`,
+- **Migrations** (`prisma/migrations`, 24): `0_init`, `20260603115244_add_cost_periodic_charges_and_import`,
   `20260604173403_add_building_location_score`, `20260604180056_add_perf_indexes`,
   `20260605150000_add_listing_periodic_charges`, `20260605170000_add_profile_email`,
   `20260608000000_add_deposit_returned_amount`, `20260608010000_add_utilities_complete`,
@@ -249,7 +252,10 @@ imported (`src/lib/stripe.ts`, `src/lib/email/client.ts`, `src/lib/supabase/broa
   `20260728140000_one_report_per_building`, and the four bot migrations:
   `20260831120000_add_telegram_bot`, `20261004120000_telegram_subscription_label`,
   `20261005120000_deposit_cases`, `20261005140000_deposit_contract`. These four were **not applied to production as of
-  2026-10-05 per `src/lib/bot/README.md`**.
+  2026-10-05 per `src/lib/bot/README.md`**. Then PRD 3's only migration, `20261119122602_roommate_matching`
+  (`roommate_profiles`, `roommate_reactions`, `roommate_reports`, `telegram_chats.roommate_banned_at`; D49), not
+  applied to production. `touchChat` (`src/lib/bot/store.ts`) updates a known chat without a `select`, so Prisma
+  reads `roommate_banned_at`: apply this migration together with the bot migrations before this code is deployed.
 - **RLS** is managed by hand in the Supabase dashboard.
   - No migration contains RLS or policies.
   - The anon key is public, so every new table needs RLS switched on by the owner.

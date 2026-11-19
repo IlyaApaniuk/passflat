@@ -84,7 +84,7 @@ people.
 
 | FR           | Requirement                                            | Spec                                                                                                                               | Tasks                  | Status  |
 | ------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------- |
-| FR-1         | Roommate tables in one migration                       | [06 §Data model](06-roommate-profiles.md#data-model)                                                                               | T062                   | Planned |
+| FR-1         | Roommate tables in one migration                       | [06 §Data model](06-roommate-profiles.md#data-model)                                                                               | T062                   | Done    |
 | FR-2         | `mate` deep links carry a source                       | [04 §Start payloads](04-telegram-bot.md#start-payloads), [06 §Entry](06-roommate-profiles.md#entry-and-routing)                    | T063, T069             | Planned |
 | FR-3         | Roommate entry inside the bot, capability list, menu   | [06 §Entry](06-roommate-profiles.md#entry-and-routing), [06 §Capability](06-roommate-profiles.md#capability-text-and-command-menu) | T069, T070             | Planned |
 | FR-4 – FR-6  | Districts, budget, move-in month steps                 | [06 §Intake steps](06-roommate-profiles.md#intake-steps), [06 §Warsaw calendar](06-roommate-profiles.md#warsaw-calendar)           | T065, T066, T071       | Planned |

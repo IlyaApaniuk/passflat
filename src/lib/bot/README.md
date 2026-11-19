@@ -99,11 +99,15 @@ the migrations are missing (`docs/architecture.md` §9).
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
 
-The production database needs four migrations, none applied to prod as of
-2026-10-05 — run them deliberately: `20260831120000_add_telegram_bot`
+The production database needs five migrations, none applied to prod (the
+first four as of 2026-10-05) — run them deliberately: `20260831120000_add_telegram_bot`
 (`telegram_chats`, `telegram_subscriptions`),
 `20261004120000_telegram_subscription_label`, `20261005120000_deposit_cases`
-and `20261005140000_deposit_contract`. Enable RLS on the new tables by hand.
+and `20261005140000_deposit_contract`, then PRD 3's `20261119122602_roommate_matching`
+(`roommate_profiles`, `roommate_reactions`, `roommate_reports`,
+`telegram_chats.roommate_banned_at`): `touchChat` updates a known chat without a
+`select`, so Prisma reads the new column and the bot fails without it. Enable
+RLS on the new tables by hand.
 The deposit flow's contract step also needs `ANTHROPIC_API_KEY`.
 
 ## Deep links

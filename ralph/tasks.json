@@ -12,7 +12,7 @@
       "title": "Roommate tables in one migration (FR-1)",
       "spec": "docs/specs/06-roommate-profiles.md#data-model",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "prisma/schema.prisma has RoommateProfile, RoommateReaction and RoommateReport with every column, default, index, unique key and foreign key (cascade or SET NULL) of spec 06 §Data model, snake_case through @map, and TelegramChat gets roommate_banned_at and the roommateProfile relation",
         "Exactly one new migration folder, created on the local stack with `npx prisma migrate dev --name roommate_matching`, sorting after 20261005140000_deposit_contract; never applied anywhere else",
@@ -20,7 +20,7 @@
         "The progress entry's Owner review names the migration folder and the three tables that need RLS (D9, D18)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The only PRD 3 migration (D49). Later tasks must not create a migration: a missing column is a reason to block with the finding, not to add a second migration."
     },
     {
