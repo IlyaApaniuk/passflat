@@ -1397,7 +1397,18 @@
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "типовий діапазон району",
       "legendMedian": "медіана",
-      "legendBuilding": "ця будівля"
+      "legendBuilding": "ця будівля",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# звіт орендаря} few {# звіти орендарів} many {# звітів орендарів} other {# звіту орендарів}}",
+        "sourceTenantWithImported": "{count, plural, one {# звіт орендаря} few {# звіти орендарів} many {# звітів орендарів} other {# звіту орендарів}} (з них внесено Passflat: {imported})",
+        "sourceImported": "{count, plural, one {# звіт внесено Passflat за відповідями орендарів} few {# звіти внесено Passflat за відповідями орендарів} many {# звітів внесено Passflat за відповідями орендарів} other {# звіту внесено Passflat за відповідями орендарів}}",
+        "sourceAsking": "{count, plural, one {# ціна з оголошення} few {# ціни з оголошень} many {# цін з оголошень} other {# ціни з оголошень}}",
+        "tenantTitle": "Звіти орендарів",
+        "askingTitle": "Ціни з оголошень",
+        "nListings": "{count, plural, one {# оголошення} few {# оголошення} many {# оголошень} other {# оголошення}}",
+        "depositReturned": "{gotBack} з {answered} тих, хто відповів, отримали заставу назад — повністю або частково",
+        "countOfTotal": "{count} з {total}"
+      }
     },
     "trust": {
       "reliable": "Популярна будівля",

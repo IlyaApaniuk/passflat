@@ -7,11 +7,11 @@ import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd, buildingPlaceJsonLd } from '@/lib/json-ld';
 import { formatAddressDisplay } from '@/lib/address';
-import { computeStats, median, monthsSince, perAreaValues, type CostStats } from '@/lib/cost-stats';
-import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
+import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
+import { loadBuildingFigures } from '@/lib/cost-figures-query';
+import { buildingTenantDetails } from '@/lib/building-tenant-details';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
-import { reportSourceCounts } from '@/lib/analytics/building-events';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -30,87 +30,34 @@ interface PageProps {
   params: Promise<{ locale: string; city: string; slug: string }>;
 }
 
-type NumericField =
-  | 'rent'
-  | 'adminFee'
-  | 'electricityAvg'
-  | 'electricityWinter'
-  | 'electricitySummer'
-  | 'gas'
-  | 'heating'
-  | 'heatingWinter'
-  | 'heatingSummer'
-  | 'water'
-  | 'internet'
-  | 'otherCosts'
-  | 'totalMonthlyAvg'
-  | 'depositAmount';
-
-type BoolField = 'electricityIncluded' | 'heatingIncluded' | 'waterIncluded';
-
-function statsForField(
-  reports: Array<Record<string, unknown>>,
-  field: NumericField,
-): CostStats | null {
-  return computeStats(
-    reports.map((r) => {
-      const v = r[field];
-      return v == null ? null : Number(v);
-    }),
-    { trimOutliers: true },
-  );
-}
-
-function statsPerM2(
-  reports: Array<Record<string, unknown>>,
-  field: NumericField,
-): CostStats | null {
-  return computeStats(
-    perAreaValues(
-      reports.map((r) => ({
-        value: r[field] as number | null,
-        areaM2: r.areaM2 as number | null,
-      })),
-    ),
-    { trimOutliers: true },
-  );
-}
-
 // ---------------------------------------------------------------------------
 // React cache() wrappers — deduplicate across generateMetadata & page render
 // ---------------------------------------------------------------------------
 
+// The page's figures come from the figure contract (`loadBuildingFigures`). Its
+// own reports feed only generateMetadata (frozen by Q-2), the items spec 03
+// keeps on the page (`buildingTenantDetails`) and the freshness badge.
 const costReportSelect = {
+  // generateMetadata
   rent: true,
-  adminFee: true,
-  electricityAvg: true,
+  totalMonthlyAvg: true,
+  // buildingTenantDetails
+  source: true,
   electricityWinter: true,
   electricitySummer: true,
-  electricityIncluded: true,
-  gas: true,
-  heating: true,
   heatingWinter: true,
   heatingSummer: true,
-  heatingIncluded: true,
-  water: true,
-  waterIncluded: true,
-  internet: true,
-  otherCosts: true,
-  totalMonthlyAvg: true,
   depositAmount: true,
   depositReturned: true,
   depositReturnedAmount: true,
-  depositReturnDays: true,
-  utilitiesComplete: true,
-  source: true,
   leaseType: true,
   isCurrentTenant: true,
   livedFrom: true,
   livedUntil: true,
-  areaM2: true,
+  periodicCharges: { select: { amount: true, frequency: true, category: true } },
+  // freshness badge
   createdAt: true,
   confirmedAt: true,
-  periodicCharges: { select: { amount: true, frequency: true, category: true } },
 } as const;
 
 const buildingQuery = {
@@ -399,178 +346,22 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   const t = await getTranslations();
 
   const reports = building.costReports;
-  const reportCount = reports.length;
 
-  const recs = reports as unknown as Array<Record<string, unknown>>;
-  function countIncluded(field: BoolField) {
-    return recs.filter((r) => r[field] === true).length;
-  }
+  // Parallel: the building's figures (the shared contract, tenant and asking
+  // groups apart) and the district + city baselines of the comparison. No auth
+  // read — the page is fully public; the detail gate is resolved on the client.
+  const [figures, cachedDistrict, cachedCity] = await Promise.all([
+    loadBuildingFigures(building.id),
+    building.districtId ? getDistrictBaseline(building.districtId) : Promise.resolve(null),
+    getCityBaseline(building.cityId),
+  ]);
+  const tenant = figures.groups.tenant;
 
-  const costs =
-    reportCount > 0
-      ? {
-          rent: statsForField(recs, 'rent'),
-          adminFee: statsForField(recs, 'adminFee'),
-          electricity: statsForField(recs, 'electricityAvg'),
-          electricityWinter: statsForField(recs, 'electricityWinter'),
-          electricitySummer: statsForField(recs, 'electricitySummer'),
-          gas: statsForField(recs, 'gas'),
-          heating: statsForField(recs, 'heating'),
-          heatingWinter: statsForField(recs, 'heatingWinter'),
-          heatingSummer: statsForField(recs, 'heatingSummer'),
-          water: statsForField(recs, 'water'),
-          internet: statsForField(recs, 'internet'),
-          otherCosts: statsForField(recs, 'otherCosts'),
-          periodic: computeStats(
-            reports.map((r) => {
-              const total = periodicChargesMonthlyTotal(r.periodicCharges);
-              return total > 0 ? total : null;
-            }),
-          ),
-          totalMonthlyAvg: statsForField(recs, 'totalMonthlyAvg'),
-          deposit: statsForField(recs, 'depositAmount'),
-          // Expenses = everything on top of rent (czynsz/komunalka + utilities +
-          // periodic). Computed per report, then median — never median-of-medians.
-          expenses: computeStats(
-            reports.map((r) => {
-              const total = r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg);
-              const rentVal = r.rent == null ? null : Number(r.rent);
-              if (total == null || rentVal == null) return null;
-              return Math.max(0, total - rentVal);
-            }),
-          ),
-        }
-      : null;
-
-  const perM2 =
-    reportCount > 0
-      ? {
-          rent: statsPerM2(recs, 'rent'),
-          total: statsPerM2(recs, 'totalMonthlyAvg'),
-          adminFee: statsPerM2(recs, 'adminFee'),
-          heating: statsPerM2(recs, 'heating'),
-        }
-      : null;
-
-  const includedCounts =
-    reportCount > 0
-      ? {
-          electricity: countIncluded('electricityIncluded'),
-          heating: countIncluded('heatingIncluded'),
-          water: countIncluded('waterIncluded'),
-          total: reportCount,
-        }
-      : null;
-
-  // Deposit-return reliability — a unique trust signal. Only past tenants who
-  // answered "did you get your deposit back?" count toward the rate.
-  const depositReturn = (() => {
-    const answered = reports.filter(
-      (r) => r.isCurrentTenant === false && r.depositReturned != null,
-    );
-    if (answered.length === 0) return null;
-    const returnedCount = answered.filter((r) => r.depositReturned === true).length;
-    const medianDays = median(
-      answered.map((r) => (r.depositReturnDays == null ? null : Number(r.depositReturnDays))),
-    );
-    // Average fraction of the deposit actually returned — captures partial
-    // withholds the binary rate hides. depositReturnedAmount holds the returned
-    // sum (full → deposit, partial → entered, none → 0); null on legacy reports
-    // (pre-migration), which then drop out → null when no report carries one.
-    const medianReturnedPct = median(
-      answered.map((r) => {
-        const dep = r.depositAmount == null ? null : Number(r.depositAmount);
-        const ret = r.depositReturnedAmount == null ? null : Number(r.depositReturnedAmount);
-        if (dep == null || ret == null || dep <= 0) return null;
-        return Math.min(100, Math.max(0, (ret / dep) * 100));
-      }),
-    );
-    return {
-      sampleSize: answered.length,
-      returnedRate: Math.round((returnedCount / answered.length) * 100),
-      medianDays,
-      medianReturnedPct,
-    };
-  })();
-
-  // Typical tenure — median months lived (move-in → move-out, or → now for
-  // current tenants). Built from livedFrom; reports without it are skipped.
-  const tenure = (() => {
-    const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
-    const months = reports
-      .map((r) => {
-        if (!r.livedFrom) return null;
-        // Past tenant: move-in → move-out. Current tenant (no livedUntil):
-        // move-in → now, via monthsSince (keeps Date.now out of render).
-        if (r.livedUntil) {
-          const fromMs = new Date(r.livedFrom).getTime();
-          const toMs = new Date(r.livedUntil).getTime();
-          if (Number.isNaN(fromMs) || Number.isNaN(toMs)) return null;
-          const m = (toMs - fromMs) / MS_PER_MONTH;
-          return m > 0 ? m : null;
-        }
-        const m = monthsSince(r.livedFrom);
-        return m != null && m > 0 ? m : null;
-      })
-      .filter((v): v is number => v != null);
-    if (months.length === 0) return null;
-    return { sampleSize: months.length, medianMonths: median(months) };
-  })();
-
-  // Deposit expressed in months of rent (typical deposit ÷ typical rent) — more
-  // comparable across price levels than an absolute zł figure. Kept off median()
-  // here so the ratio doesn't get rounded to a whole number.
-  const depositMonths =
-    costs?.deposit?.median != null && costs?.rent?.median != null && costs.rent.median > 0
-      ? costs.deposit.median / costs.rent.median
-      : null;
-
-  // Per-category breakdown of periodic charges (e.g. water billed quarterly):
-  // typical amount + most common frequency, across all reports' charges.
-  const periodicBreakdown = (() => {
-    const all = reports.flatMap((r) => r.periodicCharges);
-    if (all.length === 0) return null;
-    const rows: Array<{
-      category: string;
-      amount: number;
-      frequency: string | null;
-      count: number;
-    }> = [];
-    for (const category of PERIODIC_CATEGORIES) {
-      const ofCat = all.filter((c) => c.category === category);
-      if (ofCat.length === 0) continue;
-      const amount = median(ofCat.map((c) => Number(c.amount)));
-      if (amount == null) continue;
-      const freqCounts: Record<string, number> = {};
-      for (const c of ofCat) {
-        if (c.frequency) freqCounts[c.frequency] = (freqCounts[c.frequency] ?? 0) + 1;
-      }
-      const frequency = Object.entries(freqCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-      rows.push({ category, amount, frequency, count: ofCat.length });
-    }
-    return rows.length ? rows.sort((a, b) => b.count - a.count) : null;
-  })();
-
-  // "Total may understate utilities" chip — counts ONLY genuine tenant «не знаю»
-  // answers (source 'user'). Scraped imports carry utilitiesComplete=false as a
-  // provenance marker (rent+czynsz known, meters not captured), not a tenant
-  // answer, so they're excluded — otherwise an imported listing trips the chip
-  // even though no tenant ever said «не знаю».
-  const utilitiesUnknown = reports.filter(
-    (r) => r.source === 'user' && r.utilitiesComplete === false,
-  ).length;
-
-  // Most common meaningful lease type (excludes "unknown"). null → no badge.
-  const leaseTypeAgg = (() => {
-    const present = reports
-      .map((r) => r.leaseType)
-      .filter((v): v is string => v != null && v !== '' && v !== 'unknown');
-    if (present.length === 0) return null;
-    const counts: Record<string, number> = {};
-    for (const v of present) counts[v] = (counts[v] ?? 0) + 1;
-    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-    return { dominant, count: counts[dominant], total: reportCount };
-  })();
+  // The items spec 03 keeps on the page (winter/summer, periodic charges,
+  // deposit, tenure, lease type), over the tenant group's reports only.
+  const tenantDetails = tenant
+    ? buildingTenantDetails(reports, { tenantRentMedian: tenant.rent.median })
+    : null;
 
   // What tenants said about the building itself — the second pillar next to the
   // numbers. Which of those votes may be shown is a product+legal decision
@@ -583,14 +374,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
     return summarizeTagVotes(building.tags);
   })();
 
-  const buildingMedianTotal = costs?.totalMonthlyAvg?.median ?? null;
-
-  // Parallel: district + city baselines (independent of each other). No auth
-  // read — the page is fully public; the detail gate is resolved on the client.
-  const [cachedDistrict, cachedCity] = await Promise.all([
-    building.districtId ? getDistrictBaseline(building.districtId) : Promise.resolve(null),
-    getCityBaseline(building.cityId),
-  ]);
+  // The building side of the comparison is the tenant group (never a blend of
+  // tenant reports and asking prices); the comparison itself is reworked by
+  // spec 03 §Comparisons.
+  const buildingMedianTotal = tenant?.completeTotal.median ?? null;
 
   const districtBaseline: Baseline | null = cachedDistrict
     ? {
@@ -690,25 +477,18 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           city: t(building.city.nameKey),
           placeId: building.placeId,
         }}
-        reports={reportCount}
-        sourceCounts={reportSourceCounts(reports.map((r) => r.source))}
+        figures={figures}
+        tenantDetails={tenantDetails}
         lastUpdated={lastUpdated}
-        costs={costs}
         comparison={{
           thisBuilding: buildingMedianTotal,
-          thisBuildingRentPerM2: perM2?.rent?.median ?? null,
-          thisBuildingTotalPerM2: perM2?.total?.median ?? null,
-          thisBuildingExpenses: costs?.expenses?.median ?? null,
+          thisBuildingRent: tenant?.rent.median ?? null,
+          thisBuildingRentPerM2: tenant?.rentPerM2.median ?? null,
+          thisBuildingTotalPerM2: tenant?.completeTotalPerM2.median ?? null,
+          thisBuildingExpenses: tenant?.expenses.median ?? null,
           district: districtBaseline,
           city: cityBaseline,
         }}
-        includedCounts={includedCounts}
-        depositReturn={depositReturn}
-        tenure={tenure}
-        depositMonths={depositMonths}
-        periodicBreakdown={periodicBreakdown}
-        utilitiesUnknown={utilitiesUnknown}
-        leaseType={leaseTypeAgg}
         citySlug={citySlug}
         tenantTags={tenantTags}
         initialLocationScore={initialLocationScore}

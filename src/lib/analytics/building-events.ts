@@ -1,7 +1,8 @@
+import type { FigureSummary } from '@/lib/cost-figures';
+
 /**
  * How many visible reports stand behind a building page, in total and per source (spec 01
  * §Building view, FR-9). The property names are an Assumption of the spec and live here only.
- * Spec 03 later feeds these from the figure contract's `sourceCounts`.
  */
 export type ReportSourceCounts = {
   report_count: number;
@@ -11,23 +12,19 @@ export type ReportSourceCounts = {
 };
 
 /**
- * Counts the sources of a building's visible reports (`CostReport.source`: `user` | `import` |
- * `scraped`). `report_count` counts every report, so a report with any other source is in the
- * total but in none of the per-source counts.
+ * The counts from the figure contract's summary of the building (spec 03): `report_count` is
+ * the summary's `reportCount`, so a report whose source is not `user`, `import` or `scraped` is
+ * in no count, as it is in no figure group.
  */
-export function reportSourceCounts(sources: ReadonlyArray<string>): ReportSourceCounts {
-  const counts: ReportSourceCounts = {
-    report_count: sources.length,
-    user_count: 0,
-    import_count: 0,
-    scraped_count: 0,
+export function reportSourceCounts(
+  summary: Pick<FigureSummary, 'reportCount' | 'sourceCounts'>,
+): ReportSourceCounts {
+  return {
+    report_count: summary.reportCount,
+    user_count: summary.sourceCounts.user,
+    import_count: summary.sourceCounts.import,
+    scraped_count: summary.sourceCounts.scraped,
   };
-  for (const source of sources) {
-    if (source === 'user') counts.user_count += 1;
-    else if (source === 'import') counts.import_count += 1;
-    else if (source === 'scraped') counts.scraped_count += 1;
-  }
-  return counts;
 }
 
 /**

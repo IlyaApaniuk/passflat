@@ -210,7 +210,11 @@ function truncate(iso: string, precision: DatePrecision): string {
   return iso.slice(0, DATE_PRECISION_LENGTH[precision]);
 }
 
-function metric(values: Array<number | null>): MetricFigure {
+/**
+ * Median and range of a metric with its own N, as every figure of the contract
+ * (untrimmed: TRIM_OUTLIERS). Callers pass only usable values; null is unknown.
+ */
+export function metricFigure(values: Array<number | null>): MetricFigure {
   const stats = computeStats(values, { trimOutliers: TRIM_OUTLIERS });
   if (!stats) return { median: null, p25: null, p75: null, n: 0 };
   return { median: stats.median, p25: stats.p25, p75: stats.p75, n: stats.count };
@@ -228,6 +232,11 @@ function countSources(reports: Array<{ source: SourceKind }>): Record<SourceKind
 
 function isSourceKind(source: string): source is SourceKind {
   return (SOURCES as string[]).includes(source);
+}
+
+/** The group a report's source belongs to (SOURCE_GROUP), or null for an unknown source. */
+export function figureGroupOf(source: string): FigureGroupKey | null {
+  return isSourceKind(source) ? SOURCE_GROUP[source] : null;
 }
 
 function isComplete(report: FigureReport): boolean {
@@ -249,7 +258,7 @@ function utilityFigure(reports: FigureReport[], key: UtilityKey): UtilityFigure 
     if (value == null) unknownCount += 1;
     else values.push(value);
   }
-  return { value: metric(values), includedCount, unknownCount };
+  return { value: metricFigure(values), includedCount, unknownCount };
 }
 
 function roundedArea(value: NumericInput): number | null {
@@ -316,10 +325,10 @@ function summarizeGroup(
     sourceCounts: countSources(reports),
     // 'none' stays in the type for a headline-based rule; a group exists only with a report.
     observation: one ? 'one' : 'several',
-    completeTotal: metric(complete.map((report) => positive(report.totalMonthlyAvg))),
-    knownPartTotal: metric(notComplete.map((report) => positive(report.totalMonthlyAvg))),
-    rent: metric(reports.map((report) => positive(report.rent))),
-    rentPerM2: metric(
+    completeTotal: metricFigure(complete.map((report) => positive(report.totalMonthlyAvg))),
+    knownPartTotal: metricFigure(notComplete.map((report) => positive(report.totalMonthlyAvg))),
+    rent: metricFigure(reports.map((report) => positive(report.rent))),
+    rentPerM2: metricFigure(
       perAreaValues(
         reports.map((report) => ({
           value: positive(report.rent),
@@ -327,7 +336,7 @@ function summarizeGroup(
         })),
       ),
     ),
-    completeTotalPerM2: metric(
+    completeTotalPerM2: metricFigure(
       perAreaValues(
         complete.map((report) => ({
           value: positive(report.totalMonthlyAvg),
@@ -335,7 +344,7 @@ function summarizeGroup(
         })),
       ),
     ),
-    expenses: metric(
+    expenses: metricFigure(
       complete.map((report) => {
         const total = positive(report.totalMonthlyAvg);
         const rent = positive(report.rent);
@@ -350,7 +359,7 @@ function summarizeGroup(
           areaM2: roundedArea(reports[0].areaM2),
         }
       : null,
-    adminFee: metric(reports.map((report) => nonNegative(report.adminFee))),
+    adminFee: metricFigure(reports.map((report) => nonNegative(report.adminFee))),
     utilities,
     rentalTypeCounts,
     latestRecordedAt: latestRecordedAt(reports),

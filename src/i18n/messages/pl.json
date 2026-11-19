@@ -1397,7 +1397,18 @@
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "typowy zakres dzielnicy",
       "legendMedian": "mediana",
-      "legendBuilding": "ten budynek"
+      "legendBuilding": "ten budynek",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# raport od najemców} few {# raporty od najemców} many {# raportów od najemców} other {# raportu od najemców}}",
+        "sourceTenantWithImported": "{count, plural, one {# raport od najemców} few {# raporty od najemców} many {# raportów od najemców} other {# raportu od najemców}} (w tym wprowadzone przez Passflat: {imported})",
+        "sourceImported": "{count, plural, one {# raport wprowadzony przez Passflat z odpowiedzi najemców} few {# raporty wprowadzone przez Passflat z odpowiedzi najemców} many {# raportów wprowadzonych przez Passflat z odpowiedzi najemców} other {# raportu wprowadzonego przez Passflat z odpowiedzi najemców}}",
+        "sourceAsking": "{count, plural, one {# cena ofertowa z ogłoszeń} few {# ceny ofertowe z ogłoszeń} many {# cen ofertowych z ogłoszeń} other {# ceny ofertowej z ogłoszeń}}",
+        "tenantTitle": "Raporty od najemców",
+        "askingTitle": "Ceny ofertowe z ogłoszeń",
+        "nListings": "{count, plural, one {# ogłoszenie} few {# ogłoszenia} many {# ogłoszeń} other {# ogłoszenia}}",
+        "depositReturned": "{gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
+        "countOfTotal": "{count} z {total}"
+      }
     },
     "trust": {
       "reliable": "Popularny budynek",

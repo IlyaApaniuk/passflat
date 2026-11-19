@@ -1397,7 +1397,18 @@
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "district typical range",
       "legendMedian": "median",
-      "legendBuilding": "this building"
+      "legendBuilding": "this building",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# report from tenants} other {# reports from tenants}}",
+        "sourceTenantWithImported": "{count, plural, one {# report from tenants} other {# reports from tenants}} ({imported} entered by Passflat)",
+        "sourceImported": "{count, plural, one {# report entered by Passflat from tenants' answers} other {# reports entered by Passflat from tenants' answers}}",
+        "sourceAsking": "{count, plural, one {# asking price from listings} other {# asking prices from listings}}",
+        "tenantTitle": "Reports from tenants",
+        "askingTitle": "Asking prices from listings",
+        "nListings": "{count, plural, one {# listing} other {# listings}}",
+        "depositReturned": "{gotBack} of {answered} who answered got the deposit back, fully or partly",
+        "countOfTotal": "{count} of {total}"
+      }
     },
     "trust": {
       "reliable": "Popular building",

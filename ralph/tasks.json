@@ -298,7 +298,7 @@
       "title": "Building page: read figures from the contract and show tenant and asking groups separately",
       "spec": "docs/specs/03-building-figures.md#building-page",
       "dependsOn": ["T018", "T009"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "building/[slug]/page.tsx gets its figures from loadBuildingFigures (and the per-field breakdown over the tenant group as in the spec table); no second median code stays in the page except the items the table keeps",
         "The page shows a source line (reports from tenants, of them entered by Passflat, asking prices from listings, with counts) and the tenant group, then the asking group, each with its own figures and N; never one number over both",
@@ -307,7 +307,7 @@
         "Draft copy keys in all four files listed in the progress entry; the client namespace is checked and named"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Large page (client.tsx is over 1,000 lines): change only what this task needs; later tasks T020-T022 continue on the same page."
     },
     {

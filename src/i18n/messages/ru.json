@@ -1397,7 +1397,18 @@
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "типичный диапазон района",
       "legendMedian": "медиана",
-      "legendBuilding": "это здание"
+      "legendBuilding": "это здание",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# отчёт арендатора} few {# отчёта арендаторов} many {# отчётов арендаторов} other {# отчёта арендаторов}}",
+        "sourceTenantWithImported": "{count, plural, one {# отчёт арендатора} few {# отчёта арендаторов} many {# отчётов арендаторов} other {# отчёта арендаторов}} (из них внесено Passflat: {imported})",
+        "sourceImported": "{count, plural, one {# отчёт внесён Passflat по ответам арендаторов} few {# отчёта внесены Passflat по ответам арендаторов} many {# отчётов внесены Passflat по ответам арендаторов} other {# отчёта внесены Passflat по ответам арендаторов}}",
+        "sourceAsking": "{count, plural, one {# цена из объявления} few {# цены из объявлений} many {# цен из объявлений} other {# цены из объявлений}}",
+        "tenantTitle": "Отчёты арендаторов",
+        "askingTitle": "Цены из объявлений",
+        "nListings": "{count, plural, one {# объявление} few {# объявления} many {# объявлений} other {# объявления}}",
+        "depositReturned": "{gotBack} из {answered} ответивших получили залог обратно — полностью или частично",
+        "countOfTotal": "{count} из {total}"
+      }
     },
     "trust": {
       "reliable": "Популярное здание",
