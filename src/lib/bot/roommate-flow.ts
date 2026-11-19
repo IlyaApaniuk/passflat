@@ -85,7 +85,7 @@ import { matchDistrict } from './districts';
 import { escapeHtml, webLink } from './format';
 import { getCity } from './lookup';
 import { roomCostsReply } from './roommate-room-costs';
-import { rt, rtPeople } from './roommate-texts';
+import { rt, rtPeople, type RoommateLocale } from './roommate-texts';
 import { ROOMMATE_ENTRY_SOURCE, type RoommateEntrySource } from './start-payload';
 import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
@@ -110,7 +110,7 @@ import { normalizeLocale, type BotLocale } from './texts';
 /** How the person came in: a `mate` link's source and detail, or the bot menu. */
 export type RoommateEntry = { source: RoommateEntrySource; detail?: string };
 
-type District = { slug: string; nameKey: string };
+export type District = { slug: string; nameKey: string };
 
 /** Telegram's limit on callback data. */
 const MAX_CALLBACK_BYTES = 64;
@@ -129,7 +129,7 @@ const OPT_OUT_CALLBACK = 'rm:c:optout';
  * stored one (spec 07 §Usernames): the one helper every roommate handler calls.
  * The username is never logged and never put into an event.
  */
-async function rememberUsername(
+export async function rememberUsername(
   ctx: Context,
   profile: Pick<RoommateProfile, 'id' | 'tgUsername'>,
 ): Promise<void> {
@@ -152,7 +152,7 @@ function isMessageNotModified(error: unknown): boolean {
  * the callback query (with the handler's toast, e.g. "up to 3 districts", when it
  * returns one) and ignores "message is not modified" from an in-place edit.
  */
-function roommateCallback(
+export function roommateCallback(
   handler: (
     ctx: CallbackQueryContext<Context>,
     chat: TouchedChat,
@@ -175,7 +175,7 @@ function roommateCallback(
 }
 
 /** The checker city's districts by their Polish name, the order of the step's buttons. */
-async function cityDistricts(): Promise<District[]> {
+export async function cityDistricts(): Promise<District[]> {
   const city = await getCity();
   return [...(city?.districts ?? [])].sort((a, b) => a.nameKey.localeCompare(b.nameKey, 'pl'));
 }
@@ -236,7 +236,7 @@ function amount(value: number): string {
  * A band's label from the bounds in `BUDGET_BANDS`: "до 1 199 zł", "1 200 – 1 599 zł",
  * "2 500 zł и больше". A band runs up to the next band's `min` minus one złoty.
  */
-function budgetBandLabel(band: BudgetBand, locale: BotLocale): string {
+function budgetBandLabel(band: BudgetBand, locale: RoommateLocale): string {
   const index = BUDGET_BANDS.findIndex((b) => b.band === band);
   const next = BUDGET_BANDS[index + 1];
   if (index === 0) return rt(locale, 'bandUpTo', { max: amount(next.min - 1) });
@@ -528,18 +528,33 @@ function labelKey<M extends Record<string, string>>(
   return value !== null && Object.hasOwn(map, value) ? map[value as keyof M] : null;
 }
 
+/** The fields both cards show; the own card adds gender and "live with" (`privateLines`). */
+type CardFields = Pick<
+  RoommateProfile,
+  | 'districtSlugs'
+  | 'anyDistrict'
+  | 'budgetBand'
+  | 'moveInMonth'
+  | 'languages'
+  | 'about'
+  | 'smoking'
+  | 'pets'
+>;
+
 /**
- * The own card's text (spec 06 §Save and the own card): every field the person
- * chose (a skipped optional field has no line; own gender and "live with" are
- * shown here and nowhere else), the hide date in Warsaw time, and the opt-in
- * state with the switch off or the daily-message state with it on.
+ * The field lines of a card, in the order of the intake: districts (or "any"), the budget band,
+ * the move-in month, languages, then `privateLines` (the own card's gender and "live with"), the
+ * short text (escaped, under `aboutKey`) and the answered house rules. A skipped optional field
+ * has no line. The one place both the own card and the cards other people see (spec 07 §Cards)
+ * format a field, so the second shows exactly these fields and nothing else.
  */
-function ownCardText(
-  profile: RoommateProfile,
-  districts: District[],
-  locale: BotLocale,
-  matchingEnabled: boolean,
-): string {
+export function cardFieldLines(
+  profile: CardFields,
+  districts: readonly District[],
+  locale: RoommateLocale,
+  aboutKey: 'cardAbout' | 'browseAbout',
+  privateLines: readonly string[] = [],
+): string[] {
   const names = new Map(districts.map((district) => [district.slug, district.nameKey]));
   const fields = [
     profile.anyDistrict
@@ -564,19 +579,35 @@ function ownCardText(
       }),
     );
   }
-  fields.push(
+  fields.push(...privateLines);
+  if (profile.about) fields.push(rt(locale, aboutKey, { about: escapeHtml(profile.about) }));
+  const smoking = labelKey(SMOKING_LABEL, profile.smoking);
+  if (smoking) fields.push(rt(locale, 'cardSmoking', { value: rt(locale, smoking) }));
+  const pets = labelKey(PETS_LABEL, profile.pets);
+  if (pets) fields.push(rt(locale, 'cardPets', { value: rt(locale, pets) }));
+  return fields;
+}
+
+/**
+ * The own card's text (spec 06 §Save and the own card): every field the person
+ * chose (a skipped optional field has no line; own gender and "live with" are
+ * shown here and nowhere else), the hide date in Warsaw time, and the opt-in
+ * state with the switch off or the daily-message state with it on.
+ */
+function ownCardText(
+  profile: RoommateProfile,
+  districts: District[],
+  locale: BotLocale,
+  matchingEnabled: boolean,
+): string {
+  const fields = cardFieldLines(profile, districts, locale, 'cardAbout', [
     rt(locale, 'cardGender', {
       value: rt(locale, labelKey(GENDER_LABEL, profile.gender) ?? 'cardGenderNone'),
     }),
     rt(locale, 'cardPrefers', {
       value: rt(locale, labelKey(PREFERS_LABEL, profile.prefers) ?? 'btnPrefersAnyone'),
     }),
-  );
-  if (profile.about) fields.push(rt(locale, 'cardAbout', { about: escapeHtml(profile.about) }));
-  const smoking = labelKey(SMOKING_LABEL, profile.smoking);
-  if (smoking) fields.push(rt(locale, 'cardSmoking', { value: rt(locale, smoking) }));
-  const pets = labelKey(PETS_LABEL, profile.pets);
-  if (pets) fields.push(rt(locale, 'cardPets', { value: rt(locale, pets) }));
+  ]);
 
   const state: string[] = [];
   if (profile.status === 'expired' && profile.expiresAt) {
@@ -590,7 +621,7 @@ function ownCardText(
     state.push(rt(locale, 'cardExpires', { date: formatWarsawDate(profile.expiresAt, locale) }));
   }
   if (matchingEnabled) {
-    state.push(rt(locale, profile.pushOff ? 'cardPushOff' : 'cardPushOn'));
+    state.push(pushStateLine(profile, locale));
   } else {
     state.push(rt(locale, profile.notifyOnOpenAt ? 'cardOptInOn' : 'cardOptInOff'));
     state.push(rt(locale, 'cardHiddenUntilOpen'));
@@ -600,12 +631,24 @@ function ownCardText(
   return [rt(locale, 'cardHeader'), fields.join('\n'), state.join('\n')].join('\n\n');
 }
 
+/** The daily-message state (spec 07 §Daily push), on the own card and under "That's everyone". */
+export function pushStateLine(profile: Pick<RoommateProfile, 'pushOff'>, locale: BotLocale) {
+  return rt(locale, profile.pushOff ? 'cardPushOff' : 'cardPushOn');
+}
+
+/** The daily-message toggle (`rm:push:off` / `rm:push:on`, spec 07 §Daily push, T090). */
+export function pushToggleButton(profile: Pick<RoommateProfile, 'pushOff'>, locale: BotLocale) {
+  return profile.pushOff
+    ? InlineKeyboard.text(rt(locale, 'btnPushOn'), 'rm:push:on')
+    : InlineKeyboard.text(rt(locale, 'btnPushOff'), 'rm:push:off');
+}
+
 /**
  * The own card's buttons (spec 06 §Save and the own card): Renew only within
  * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
  * Delete; with the switch off "How many are looking?" and the opt-in toggle
- * (`rm:c:optin` / `rm:c:optout`), with it on "Show people" and the daily-message
- * toggle (spec 07). The stage 2 handlers come with their tasks.
+ * (`rm:c:optin` / `rm:c:optout`), with it on "Show people" (`rm:show:c`, spec 07
+ * §Cards) and the daily-message toggle (spec 07 §Daily push, T090).
  */
 function ownCardKeyboard(
   profile: RoommateProfile,
@@ -622,12 +665,8 @@ function ownCardKeyboard(
   ]);
   if (matchingEnabled) {
     rows.push(
-      [InlineKeyboard.text(rt(locale, 'btnShowPeople'), 'rm:show')],
-      [
-        profile.pushOff
-          ? InlineKeyboard.text(rt(locale, 'btnPushOn'), 'rm:push:on')
-          : InlineKeyboard.text(rt(locale, 'btnPushOff'), 'rm:push:off'),
-      ],
+      [InlineKeyboard.text(rt(locale, 'btnShowPeople'), 'rm:show:c')],
+      [pushToggleButton(profile, locale)],
     );
   } else {
     rows.push(
@@ -964,7 +1003,7 @@ export const BUDGET_TAP = /^rm:b:([^:]+)$/;
 export const MONTH_TAP = /^rm:m:([^:]+)$/;
 
 /** The capture groups of a regex-triggered callback. */
-function matchGroups(ctx: CallbackQueryContext<Context>): string[] {
+export function matchGroups(ctx: CallbackQueryContext<Context>): string[] {
   return typeof ctx.match === 'string' ? [] : [...ctx.match].slice(1);
 }
 

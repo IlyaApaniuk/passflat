@@ -20,8 +20,9 @@ import { peopleWord } from './texts';
  * short text, the privacy URL) through `escapeHtml` first: the texts are HTML.
  * District names are the Polish `nameKey` in every locale ("Mokotów").
  *
- * Not here yet, by design: the stage 2 texts (spec 07 tasks), each added with
- * its task.
+ * Stage 2 texts (spec 07) are added with their tasks; the cards' are here
+ * (§Cards: the card, its buttons, "That's everyone", the username prompt, and
+ * "matching is paused" of §Switch). The card reuses the own card's field labels.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -237,6 +238,24 @@ const RU = {
   /** Sent by the closing route after the profile is deleted (PRD 3 §8 verbatim). */
   closingMessage:
     'Подбор так и не откроется. Твоя анкета уже удалена. Спасибо, что попробовал(а) Passflat.',
+
+  // --- cards (spec 07 §Cards, FR-25), switch on only; the field lines are the own card's labels ---
+  /** A stage 2 button tapped while the switch is off (spec 07 §Switch). */
+  matchingPaused: 'Подбор сейчас на паузе.',
+  /** "Show people" without a profile; the intake follows (reciprocity). */
+  browseCreateFirst: 'Чтобы смотреть анкеты других, сначала создай свою.',
+  browseRenew: 'Срок твоей анкеты истёк. Продли её, чтобы смотреть анкеты дальше.',
+  /** The username prompt before the cards (context `browse`); its button is `btnDone`. */
+  usernamePromptBrowse:
+    'Чтобы смотреть анкеты, нужен username в Telegram: при взаимном интересе другой человек увидит его и сможет тебе написать. Задай его в настройках Telegram, потом нажми «Готово».',
+  browseCardHeader: '👤 <b>Анкета</b>',
+  browseAbout: 'О себе: {about}',
+  btnInterested: '👍 Интересно',
+  btnCardSkip: '⏭ Пропустить',
+  /** The reveal's safety line names this button («Пожаловаться»). */
+  btnReport: '🚩 Пожаловаться',
+  browseNoneLeft: 'Пока это все, кто тебе подходит.',
+  browseUnavailable: 'Эта анкета больше недоступна.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -416,6 +435,19 @@ const UK: Record<Key, string> = {
   optInClosing: 'Якщо підбір не відкриється, напишу про це й видалю анкету.',
   closingMessage:
     'Підбір так і не відкриється. Твою анкету вже видалено. Дякуємо, що спробував(-ла) Passflat.',
+
+  matchingPaused: 'Підбір зараз на паузі.',
+  browseCreateFirst: 'Щоб дивитися анкети інших, спершу створи свою.',
+  browseRenew: 'Строк твоєї анкети минув. Продовж її, щоб дивитися анкети далі.',
+  usernamePromptBrowse:
+    'Щоб дивитися анкети, потрібен username у Telegram: коли інтерес взаємний, інша людина побачить його й зможе тобі написати. Задай його в налаштуваннях Telegram, потім натисни «Готово».',
+  browseCardHeader: '👤 <b>Анкета</b>',
+  browseAbout: 'Про себе: {about}',
+  btnInterested: '👍 Цікаво',
+  btnCardSkip: '⏭ Пропустити',
+  btnReport: '🚩 Поскаржитися',
+  browseNoneLeft: 'Поки це всі, хто тобі підходить.',
+  browseUnavailable: 'Ця анкета більше недоступна.',
 };
 
 const EN: Record<Key, string> = {
@@ -595,6 +627,19 @@ const EN: Record<Key, string> = {
   optInClosing: "If matching does not open, we'll tell you and delete your profile.",
   closingMessage:
     'Matching will not open after all. Your profile is deleted now. Thanks for trying Passflat.',
+
+  matchingPaused: 'Matching is paused right now.',
+  browseCreateFirst: "To see other people's profiles, create yours first.",
+  browseRenew: 'Your profile has expired. Renew it to keep browsing.',
+  usernamePromptBrowse:
+    'To see profiles you need a Telegram username: when the interest is mutual, the other person sees it and can write to you. Set one in Telegram Settings, then tap Done.',
+  browseCardHeader: '👤 <b>Profile</b>',
+  browseAbout: 'About: {about}',
+  btnInterested: '👍 Interested',
+  btnCardSkip: '⏭ Skip',
+  btnReport: '🚩 Report',
+  browseNoneLeft: "That's everyone for now.",
+  browseUnavailable: 'This profile is no longer available.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

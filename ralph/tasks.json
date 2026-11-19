@@ -476,7 +476,7 @@
       "title": "Cards one at a time, Skip and the username prompt (FR-25)",
       "spec": "docs/specs/07-roommate-matching.md#cards",
       "dependsOn": ["T064", "T074", "T081"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "rm:show with the switch on follows spec 07 §Cards: no profile → intake; expired → renew; no username → prompt with rm:u:done; else one card from findCompatible with Interested, Skip and Report; none left → 'That's everyone for now'",
         "renderRoommateCard shows only the listed fields; a test of a profile with every field set finds no gender, live-with value, username or id in the output",
@@ -485,7 +485,7 @@
         "Stage 2 copy keys in ru, uk and en, listed for review"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49."
     },
     {

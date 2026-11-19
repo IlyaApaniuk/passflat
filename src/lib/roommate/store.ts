@@ -233,31 +233,78 @@ function freshness(profile: Pick<RoommateProfile, 'renewedAt' | 'activatedAt'>):
 }
 
 /**
+ * The candidates `profile` may be shown, before the compatibility rule: active at `now` by the
+ * counts' definition (so never hidden, expired, blocked or banned), not the profile itself, none
+ * `profile` has reacted to, none that skipped `profile` (no match is possible), no report between
+ * the two in either direction.
+ */
+function candidatesWhere(profile: Pick<RoommateProfile, 'id'>, now: Date) {
+  return {
+    ...activeProfilesWhere(now),
+    id: { not: profile.id },
+    reactionsGot: { none: { fromProfileId: profile.id } },
+    reactionsGiven: { none: { toProfileId: profile.id, kind: 'skip' } },
+    reportsReceived: { none: { reporterProfileId: profile.id } },
+    reportsMade: { none: { targetProfileId: profile.id } },
+  } satisfies Prisma.RoommateProfileWhereInput;
+}
+
+/**
  * The profiles `profile` may be shown (spec 07 §Compatibility, FR-24), newest first by
- * `coalesce(renewed_at, activated_at)` (ties by id). One query loads the candidates: active at
- * `now` by the counts' definition (so never hidden, expired, blocked or banned), not the profile
- * itself, none `profile` has reacted to, none that skipped `profile` (no match is possible), no
- * report between the two in either direction. They are then filtered in memory with the pure
- * `isCompatible`, so the result equals the rule by construction (**Assumption**: fine up to
- * 2,000 active profiles; above that the filter must move into SQL, see `src/lib/bot/README.md`).
+ * `coalesce(renewed_at, activated_at)` (ties by id). One query loads the candidates
+ * (`candidatesWhere`); they are then filtered in memory with the pure `isCompatible`, so the
+ * result equals the rule by construction (**Assumption**: fine up to 2,000 active profiles; above
+ * that the filter must move into SQL, see `src/lib/bot/README.md`).
  */
 export async function findCompatible(
   profile: CompatibilityProfile & Pick<RoommateProfile, 'id'>,
   now: Date,
 ): Promise<RoommateProfile[]> {
   const candidates = await prisma.roommateProfile.findMany({
-    where: {
-      ...activeProfilesWhere(now),
-      id: { not: profile.id },
-      reactionsGot: { none: { fromProfileId: profile.id } },
-      reactionsGiven: { none: { toProfileId: profile.id, kind: 'skip' } },
-      reportsReceived: { none: { reporterProfileId: profile.id } },
-      reportsMade: { none: { targetProfileId: profile.id } },
-    },
+    where: candidatesWhere(profile, now),
   });
   return candidates
     .filter((candidate) => isCompatible(profile, candidate))
     .sort((a, b) => freshness(b) - freshness(a) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/** A profile id as the database stores it; anything else in a callback names no profile. */
+const PROFILE_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The profile a card button names (`rm:x:<id>`, and the other card buttons of spec 07 §Cards)
+ * when `findCompatible(viewer, now)` would still return it, else null: gone, hidden, expired, its
+ * chat blocked or banned, reacted to, skipped the viewer, reported either way, no longer
+ * compatible, the viewer itself, or an id of the wrong shape. The id from the callback is checked
+ * here, never trusted.
+ */
+export async function findVisibleProfile(
+  viewer: CompatibilityProfile & Pick<RoommateProfile, 'id'>,
+  targetId: string,
+  now: Date,
+): Promise<RoommateProfile | null> {
+  if (!PROFILE_ID_SHAPE.test(targetId) || targetId === viewer.id) return null;
+  const target = await prisma.roommateProfile.findFirst({
+    where: { ...candidatesWhere(viewer, now), id: targetId },
+  });
+  return target && isCompatible(viewer, target) ? target : null;
+}
+
+/**
+ * Stores "Skip" (spec 07 §Cards): one `skip` reaction from `fromProfileId` to `toProfileId`. The
+ * pair is unique, so a repeat (a double tap) inserts nothing; a profile deleted since the
+ * visibility check leaves nothing to store.
+ */
+export async function storeSkip(fromProfileId: string, toProfileId: string): Promise<void> {
+  try {
+    await prisma.roommateReaction.createMany({
+      data: [{ fromProfileId, toProfileId, kind: 'skip' }],
+      skipDuplicates: true,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') return;
+    throw error;
+  }
 }
 
 /**

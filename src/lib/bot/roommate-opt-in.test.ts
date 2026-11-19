@@ -323,7 +323,7 @@ describe('with the switch on', () => {
     expect(db.prisma.roommateProfile.updateMany).not.toHaveBeenCalled();
     expect(replies).toHaveLength(1);
     expect(replies[0].text.startsWith(rt('ru', 'cardHeader'))).toBe(true);
-    expect(replies[0].data.flat()).toContain('rm:show');
+    expect(replies[0].data.flat()).toContain('rm:show:c');
   });
 });
 

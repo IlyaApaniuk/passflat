@@ -211,7 +211,7 @@ describe('the own card, switch off (stage 1)', () => {
   it('shows no stage 2 button or daily-message line', async () => {
     const card = await openCard(FULL);
 
-    expect(card.data.flat()).not.toContain('rm:show');
+    expect(card.data.flat().some((data) => data?.startsWith('rm:show'))).toBe(false);
     expect(card.data.flat().some((data) => data?.startsWith('rm:push:'))).toBe(false);
     expect(card.text).not.toContain(rt('ru', 'cardPushOn'));
   });
@@ -276,7 +276,7 @@ describe('the own card, switch on (stage 2 buttons are only rendered)', () => {
     expect(card.text).not.toContain(rt('ru', 'cardOptInOn'));
     expect(card.text).not.toContain(rt('ru', 'cardHiddenUntilOpen'));
     expect(card.text).toContain(rt('ru', 'cardPrivateNote'));
-    expect(card.data).toEqual([['rm:c:edit', 'rm:c:del'], ['rm:show'], ['rm:push:off']]);
+    expect(card.data).toEqual([['rm:c:edit', 'rm:c:del'], ['rm:show:c'], ['rm:push:off']]);
     expect(card.labels.slice(1)).toEqual([[rt('ru', 'btnShowPeople')], [rt('ru', 'btnPushOff')]]);
   });
 
@@ -284,7 +284,7 @@ describe('the own card, switch on (stage 2 buttons are only rendered)', () => {
     const card = await openCard({ pushOff: true });
 
     expect(card.text).toContain(rt('ru', 'cardPushOff'));
-    expect(card.data).toEqual([['rm:c:edit', 'rm:c:del'], ['rm:show'], ['rm:push:on']]);
+    expect(card.data).toEqual([['rm:c:edit', 'rm:c:del'], ['rm:show:c'], ['rm:push:on']]);
   });
 
   it('still shows own gender and "live with" to the owner', async () => {
@@ -319,7 +319,7 @@ describe('the Renew button (RENEWAL_REMINDER_DAYS = 3)', () => {
     expect(card.data).toEqual([
       ['rm:c:renew'],
       ['rm:c:edit', 'rm:c:del'],
-      ['rm:show'],
+      ['rm:show:c'],
       ['rm:push:off'],
     ]);
   });

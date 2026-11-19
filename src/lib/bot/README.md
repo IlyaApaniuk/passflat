@@ -96,8 +96,8 @@ the migrations are missing (`docs/architecture.md` §9).
   in Warsaw time and, by the switch, the opt-in or the daily-message state; its
   buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while
   expired, `showsRenew`), Edit, Delete, then "How many are looking?" and the
-  opt-in toggle (switch off) or "Show people" and the daily-message toggle
-  (switch on). The handlers of the stage 2 card buttons come with their tasks.
+  opt-in toggle (switch off) or "Show people" (`rm:show:c`, see **Cards**) and
+  the daily-message toggle (switch on; its handler comes with the daily push).
 - **Edit from the own card** (spec 06 §Save and the own card, Edit): Edit
   (`rm:c:edit`) sends a field picker (`rm:e:<field>` for `EDIT_FIELDS`, then Back
   `rm:e:back`, which closes an open edit step and sends the card). A field opens
@@ -149,6 +149,26 @@ the migrations are missing (`docs/architecture.md` §9).
   "Don't message me when matching opens" (`rm:c:optout`, `optOutOfOpenMessage`
   clears it and sends the card again; no event). An old opt-in button with the
   switch on stores nothing and gets the card.
+- **Cards** (spec 07 §Cards, FR-25; `roommate-matching.ts`): "Show people"
+  (`rm:show:<via>`: `c` the own card, `o` the one-time message, `p` the daily push,
+  `n` "That's everyone"; a bare `rm:show` counts as `c`). With the switch off every
+  card button replies "matching is paused" and reads nothing. With it on: no
+  profile → "create a profile first" and the intake (a banned chat, a hidden
+  profile, a draft get what `/mate` gives them); an expired profile (also one past
+  `expires_at` the cron has not marked) → "renew to keep browsing" with Renew; else
+  one `tg_roommate_cards_viewed` (`results_band` of `findCompatible` at that moment,
+  `via`), then without a Telegram username the prompt with Done (`rm:u:done`,
+  `tg_roommate_username_prompted` context `browse`), otherwise the first profile of
+  `findCompatible` as `renderRoommateCard` (the own card's `cardFieldLines` without
+  gender and "live with": never a name, username or id) with "Interested"
+  (`rm:i:<id>`), "Skip" (`rm:x:<id>`) and "Report" (`rm:r:<id>`), or "That's
+  everyone for now" with the daily-message state, `rm:show:n` and its toggle. Done
+  re-reads the username; one found sends `tg_roommate_username_set` and the next
+  card. A card button's id is checked by `findVisibleProfile` (what
+  `findCompatible` would still return; a wrong-shaped id or the viewer's own is
+  refused before the query): otherwise "no longer available" and the next card.
+  Skip stores one `skip` reaction (`storeSkip`, `createMany` with
+  `skipDuplicates`) and sends the next card, no event.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -260,6 +280,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
+| `roommate-matching.ts`                           | Stage 2 (spec 07): cards one at a time, Skip, the username prompt  |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |

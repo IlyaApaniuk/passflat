@@ -47,6 +47,7 @@ import {
   openRoommate,
   registerRoommateFlow,
 } from './roommate-flow';
+import { registerRoommateMatching } from './roommate-matching';
 import { rt } from './roommate-texts';
 import {
   addSubscription,
@@ -592,6 +593,7 @@ export function createBot(token: string): Bot {
 
   registerDepositFlow(bot);
   registerRoommateFlow(bot);
+  registerRoommateMatching(bot);
 
   bot.command('my', handleMy);
 
