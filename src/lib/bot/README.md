@@ -112,6 +112,19 @@ the migrations are missing (`docs/architecture.md` §9).
   (`rm:p:<prefers>:<gender>`, `rm:pt:<pets>:<smoking>`). A month edit keeps
   `expires_at` unless the new month ends earlier (`expiresAtAfterMonthEdit`).
   No field opens while the deposit questions are open.
+- **Delete** (spec 06 §Delete, FR-13): `rm:c:del` (the card, the FR-14 reply of a
+  hidden profile, the renewal reminder) asks with the PRD 3 §8 wording, "Yes,
+  delete" (`rm:c:delok`) or "Keep" (`rm:c:keep`). The confirm reads whether the
+  profile was in a matched pair (`hasMatchedReaction`), then `deleteProfile`
+  (`deleteMany where { id, status in [active, expired, hidden] }`; the foreign keys
+  cascade its reactions and null report references; the ban marker stays). Only
+  the delete that lands sends `tg_roommate_profile_deleted` (`reason=user`) and
+  the reply with the optional reasons (`rm:dr:here`, only after a match,
+  `rm:dr:elsewhere`, `rm:dr:other`); a second confirm gets "already deleted". The
+  reasons carry no id: a tap first removes the reply's buttons (a second tap is
+  refused by Telegram as "not modified" and sends nothing); "here" sends
+  `tg_roommate_outcome` (`outcome=renting_together`, `asked=delete`). The chat can
+  start a new profile at once unless banned.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the

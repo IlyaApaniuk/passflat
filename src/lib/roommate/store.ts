@@ -102,6 +102,35 @@ export async function deleteDraft(profileId: string): Promise<boolean> {
 }
 
 /**
+ * True when the profile is in a pair that matched: one of its reactions (either
+ * direction) has `matched_at` (spec 06 §Delete, read before the delete so the
+ * "Found someone here" reason is offered only then).
+ */
+export async function hasMatchedReaction(profileId: string): Promise<boolean> {
+  const count = await prisma.roommateReaction.count({
+    where: {
+      matchedAt: { not: null },
+      OR: [{ fromProfileId: profileId }, { toProfileId: profileId }],
+    },
+  });
+  return count > 0;
+}
+
+/**
+ * Deletes a saved (active or expired) or hidden profile on its owner's request,
+ * at once (FR-13). The foreign keys do the rest in the same statement: its
+ * reactions cascade, and reports keep their rows with the reference set to null
+ * (D55); the chat's ban marker is on `telegram_chats` and stays. A draft is never
+ * removed here (`deleteDraft`). True for exactly one of two overlapping confirms.
+ */
+export async function deleteProfile(profileId: string): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.deleteMany({
+    where: { id: profileId, status: { in: ['active', 'expired', 'hidden'] } },
+  });
+  return count === 1;
+}
+
+/**
  * Opens an edit step (`edit_<field>`) on a saved (active or expired) profile; the profile stays
  * active and counted (spec 06 §Save and the own card, Edit). An edit step already open is
  * replaced: the person picked another field.

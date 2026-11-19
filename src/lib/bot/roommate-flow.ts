@@ -43,7 +43,9 @@ import {
   clearEditStep,
   createDraft,
   deleteDraft,
+  deleteProfile,
   findRoommateProfile,
+  hasMatchedReaction,
   isStepOpen,
   loadRoommateEntry,
   openEditStep,
@@ -83,10 +85,10 @@ import { normalizeLocale, type BotLocale } from './texts';
 /**
  * The roommate conversation in the bot (spec 06): the entry and its routing, the
  * nine intake steps (districts, budget, move-in month, languages, own gender,
- * "live with", the short text, smoking and pets, 18+), the save, the own card
- * and its Edit (each field reuses its intake step as `edit_<field>`); delete,
- * renew, the counts reply and the opt-in (the handlers of the other card
- * buttons) are added here by their tasks.
+ * "live with", the short text, smoking and pets, 18+), the save, the own card,
+ * its Edit (each field reuses its intake step as `edit_<field>`) and its Delete
+ * (with the optional reason); renew, the counts reply and the opt-in (the
+ * handlers of the other card buttons) are added here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -1163,14 +1165,16 @@ function editPickerKeyboard(locale: BotLocale): InlineKeyboard {
 
 /**
  * The chat's saved (active or expired) profile for a card button. Otherwise
- * "already deleted" when there is none, the FR-14 reply for a hidden profile,
- * and for a draft (an old card of a profile deleted and started again) "this
- * step is done" with its current step; then null.
+ * "already deleted" when there is none, the FR-14 reply for a hidden profile
+ * (unless `allowHidden`: delete holds for every profile, D49), and for a draft
+ * (an old card of a profile deleted and started again) "this step is done" with
+ * its current step; then null.
  */
 async function savedProfileFor(
   ctx: Context,
   chatDbId: string,
   locale: BotLocale,
+  allowHidden = false,
 ): Promise<RoommateProfile | null> {
   const profile = await findRoommateProfile(chatDbId);
   if (!profile) {
@@ -1178,6 +1182,7 @@ async function savedProfileFor(
     return null;
   }
   if (profile.status === 'hidden') {
+    if (allowHidden) return profile;
     await replyRefused(ctx, locale, true);
     return null;
   }
@@ -1226,6 +1231,100 @@ const handleEditPick = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   await sendStep(ctx, { ...profile, step }, locale);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Delete at once, with the optional reason (FR-13; spec 06 §Delete)
+// ---------------------------------------------------------------------------------------------
+
+/** The optional reasons after a delete; "here" is offered only when the profile had a match. */
+const DELETE_REASONS = ['here', 'elsewhere', 'other'] as const;
+type DeleteReason = (typeof DELETE_REASONS)[number];
+
+const REASON_LABEL = {
+  here: 'reasonFoundHere',
+  elsewhere: 'reasonFoundElsewhere',
+  other: 'reasonOther',
+} as const satisfies Record<DeleteReason, string>;
+
+function isDeleteReason(value: string | undefined): value is DeleteReason {
+  return (DELETE_REASONS as readonly (string | undefined)[]).includes(value);
+}
+
+/** `rm:dr:<here|elsewhere|other>`: carries no id, so it works after the row is gone. */
+export const DELETE_REASON = /^rm:dr:([^:]+)$/;
+
+/**
+ * `rm:c:del` (the own card, the FR-14 reply, the renewal reminder): asks first, saying that the
+ * deletion is immediate and final and that a contact already revealed stays with the other person
+ * (PRD 3 §8 "Delete"), with "Yes, delete" (`rm:c:delok`) and "Keep" (`rm:c:keep`). A hidden
+ * profile can be deleted too (D49).
+ */
+const handleDeleteTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale, true);
+  if (!profile) return;
+  const keyboard = new InlineKeyboard()
+    .text(rt(locale, 'btnDeleteConfirm'), 'rm:c:delok')
+    .text(rt(locale, 'btnKeep'), 'rm:c:keep');
+  await ctx.reply(rt(locale, 'deleteConfirm'), { reply_markup: keyboard });
+});
+
+/**
+ * `rm:c:delok`: deletes the profile at once through `deleteProfile` (its reactions cascade,
+ * reports keep their rows with the reference nulled, the ban marker stays). Whether it was in a
+ * matched pair is read first, because the delete removes its reactions. Only the confirm whose
+ * delete lands sends one `tg_roommate_profile_deleted` (`reason=user`) and the reply with the
+ * optional reasons; a second confirm gets "already deleted" and sends nothing. The chat can start
+ * a new profile at once unless it is banned (`openRoommate`).
+ */
+const handleDeleteConfirm = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale, true);
+  if (!profile) return;
+
+  const matched = await hasMatchedReaction(profile.id);
+  if (!(await deleteProfile(profile.id))) {
+    await ctx.reply(rt(locale, 'alreadyDeleted'));
+    return;
+  }
+  track(ctx.chat!.id, 'tg_roommate_profile_deleted', { reason: 'user' });
+  // A used confirmation cannot delete a later profile of this chat; a failed edit changes nothing.
+  await ctx.editMessageReplyMarkup().catch(() => {});
+
+  const reasons = DELETE_REASONS.filter((reason) => reason !== 'here' || matched);
+  const keyboard = InlineKeyboard.from(
+    reasons.map((reason) => [
+      InlineKeyboard.text(rt(locale, REASON_LABEL[reason]), `rm:dr:${reason}`),
+    ]),
+  );
+  await ctx.reply(`${rt(locale, 'deleted')}\n\n${rt(locale, 'deleteReasonPrompt')}`, {
+    reply_markup: keyboard,
+  });
+});
+
+/** `rm:c:keep`: the profile stays as it was; the confirmation's buttons are removed. */
+const handleKeepTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale, true);
+  if (!profile) return;
+  await ctx.editMessageReplyMarkup().catch(() => {});
+  await ctx.reply(rt(locale, 'kept'));
+});
+
+/**
+ * `rm:dr:<here|elsewhere|other>`: the optional reason after a delete; nothing is stored (the
+ * profile is gone). The reply's buttons are removed first: on a second tap or a redelivered update
+ * Telegram refuses that edit ("message is not modified", which `roommateCallback` ignores), so
+ * nothing is sent twice. "Found someone here" sends `tg_roommate_outcome` with
+ * `outcome=renting_together`, `asked=delete`; the other two send nothing.
+ */
+const handleDeleteReason = roommateCallback(async (ctx, _chat, locale) => {
+  const [reason] = matchGroups(ctx);
+  if (!isDeleteReason(reason)) return;
+
+  await ctx.editMessageReplyMarkup();
+  if (reason === 'here') {
+    track(ctx.chat!.id, 'tg_roommate_outcome', { outcome: 'renting_together', asked: 'delete' });
+  }
+  await ctx.reply(rt(locale, 'reasonThanks'));
 });
 
 /**
@@ -1311,4 +1410,8 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:a:no', handleAdultNo);
   bot.callbackQuery('rm:c:edit', handleEditTap);
   bot.callbackQuery(EDIT_PICK, handleEditPick);
+  bot.callbackQuery(DELETE_CALLBACK, handleDeleteTap);
+  bot.callbackQuery('rm:c:delok', handleDeleteConfirm);
+  bot.callbackQuery('rm:c:keep', handleKeepTap);
+  bot.callbackQuery(DELETE_REASON, handleDeleteReason);
 }

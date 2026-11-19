@@ -261,7 +261,7 @@
       "title": "Delete a profile at once with an optional reason (FR-13)",
       "spec": "docs/specs/06-roommate-profiles.md#delete",
       "dependsOn": ["T074"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Delete asks for confirmation with the PRD 3 §8 wording; confirming deletes the profile and its reactions in the same request, keeps report rows with the reference nulled, replies, and sends tg_roommate_profile_deleted with reason=user once",
         "The optional reason buttons work after the row is gone; 'Found someone here' is offered only when the profile had a reaction with matched_at (read before the delete) and sends tg_roommate_outcome with outcome=renting_together and asked=delete; the reason buttons are removed after the first tap",
@@ -270,7 +270,7 @@
         "Tests for each listed case with mocked Prisma"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D55."
     },
     {
