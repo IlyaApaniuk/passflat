@@ -53,8 +53,18 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaFake }));
 vi.mock('./analytics', () => ({ track: vi.fn() }));
 vi.mock('./contract', () => ({ readContract: vi.fn() }));
 vi.mock('./store', () => ({ touchChat: vi.fn() }));
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: vi.fn(),
+}));
+vi.mock('@/lib/posthog-server', () => ({ flushPostHog: vi.fn(async () => {}) }));
 
-import { cancelDepositFlow, sendDueFollowUps } from './deposit-flow';
+import { after } from 'next/server';
+
+import { flushPostHog } from '@/lib/posthog-server';
+
+import { track } from './analytics';
+import { cancelDepositFlow, runInBackground, sendDueFollowUps } from './deposit-flow';
 
 const NOW = new Date('2026-11-20T09:00:00Z');
 const DUE = new Date('2026-11-20T00:00:00Z');
@@ -344,5 +354,67 @@ describe('cancelDepositFlow', () => {
     expect(reply).toHaveBeenCalledWith('Сейчас нечего отменять 🙂');
     expect(caseById('other-chat').followUpAt).toEqual(DUE);
     expect(caseById('resolved').status).toBe('resolved');
+  });
+});
+
+describe('runInBackground', () => {
+  /** The callback handed to `after()`, which Next would run after the response. */
+  function registeredCallback(): () => Promise<void> {
+    expect(after).toHaveBeenCalledTimes(1);
+    return vi.mocked(after).mock.calls[0][0] as () => Promise<void>;
+  }
+
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('flushes PostHog once the task settles, after the event it tracks at its end', async () => {
+    let finish!: () => void;
+    const task = vi.fn(async () => {
+      await new Promise<void>((resolve) => (finish = resolve));
+      track(TG_CHAT_ID, 'tg_deposit_contract', { result: 'read' });
+    });
+
+    runInBackground(task);
+    expect(task).not.toHaveBeenCalled();
+
+    const run = registeredCallback()();
+    await tick();
+    expect(task).toHaveBeenCalledTimes(1);
+    expect(flushPostHog).not.toHaveBeenCalled();
+
+    finish();
+    await run;
+
+    expect(track).toHaveBeenCalledWith(TG_CHAT_ID, 'tg_deposit_contract', { result: 'read' });
+    expect(flushPostHog).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(track).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(flushPostHog).mock.invocationCallOrder[0],
+    );
+  });
+
+  it('flushes also when the task rejects, and logs only the error message', async () => {
+    const error = telegramError(403, 'Forbidden: bot was blocked by the user');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    runInBackground(() => Promise.reject(error));
+    await expect(registeredCallback()()).resolves.toBeUndefined();
+
+    expect(flushPostHog).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith('[bot/deposit] background task failed', error.message);
+    expect(log.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(flushPostHog).mock.invocationCallOrder[0],
+    );
+    expect(JSON.stringify(log.mock.calls)).not.toContain(String(TG_CHAT_ID));
+  });
+
+  it('outside a request, runs the task detached and still flushes', async () => {
+    vi.mocked(after).mockImplementationOnce(() => {
+      throw new Error('`after` was called outside a request scope');
+    });
+    const task = vi.fn(async () => {});
+
+    runInBackground(task);
+
+    await vi.waitFor(() => expect(flushPostHog).toHaveBeenCalledTimes(1));
+    expect(task).toHaveBeenCalledTimes(1);
   });
 });

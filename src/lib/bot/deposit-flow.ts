@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { GrammyError, InlineKeyboard, type Api, type Bot, type Context } from 'grammy';
 import { after } from 'next/server';
 
+import { flushPostHog } from '@/lib/posthog-server';
 import { prisma } from '@/lib/prisma';
 
 import { track } from './analytics';
@@ -51,10 +52,25 @@ type ContractMediaType = (typeof SUPPORTED_DOCUMENTS)[number];
  * several seconds, and Telegram retries an update whose webhook is slow, so the
  * reply ("reading…") goes out first and the reading runs after the response.
  * Outside a request (the local polling runner) it simply runs detached.
+ *
+ * Next runs `after()` callbacks concurrently, so the webhook route's own flush
+ * does not wait for this task: events it tracks at its end (tg_deposit_contract)
+ * are flushed here once it settles. `flushPostHog` never throws.
  */
-function runInBackground(task: () => Promise<void>) {
-  const guarded = () =>
-    task().catch((error) => console.error('[bot/deposit] background task failed', error));
+export function runInBackground(task: () => Promise<void>) {
+  const guarded = async () => {
+    try {
+      await task();
+    } catch (error) {
+      // A GrammyError's payload holds the chat id: log the message only.
+      console.error(
+        '[bot/deposit] background task failed',
+        error instanceof Error ? error.message : error,
+      );
+    } finally {
+      await flushPostHog();
+    }
+  };
   try {
     after(guarded);
   } catch {

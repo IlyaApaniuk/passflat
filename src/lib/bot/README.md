@@ -238,10 +238,11 @@ No check event carries free text; `tg_address_not_found` and
 text or the chat id (which is only in the distinct id).
 
 Events are flushed before the function ends: the webhook route registers
-`flushPostHog` with `after()` and the follow-ups cron awaits it. Known gap
-(T050): the contract reading runs in its own `after()` task, concurrently with
-that flush, so the `tg_deposit_contract` and `tg_deposit_verdict` it tracks at
-its end can be lost.
+`flushPostHog` with `after()` and the follow-ups cron awaits it. The contract
+reading runs in its own `after()` task (`runInBackground` in `deposit-flow.ts`),
+concurrently with the route's flush, so that task awaits `flushPostHog` itself
+once it settles, also when it fails: the `tg_deposit_contract` and
+`tg_deposit_verdict` it tracks at its end are delivered.
 
 ## Not built yet
 

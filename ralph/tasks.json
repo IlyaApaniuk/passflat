@@ -833,13 +833,13 @@
         "No new event or property"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found in T038: Next runs after() callbacks concurrently (p-queue, no concurrency limit), so the webhook route after(flushPostHog) runs while the contract reading is still in progress; events the reading tracks at its end (tg_deposit_contract) are not covered by that flush.",
       "id": "T050",
       "milestone": "M4",
       "title": "Flush PostHog at the end of the deposit flow background task",
       "spec": "docs/specs/04-telegram-bot.md#bot-analytics",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T047"],

@@ -1055,3 +1055,18 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - `tg_district_checked.report_count` keeps its old value (the blended count); `source_kind` / `n` / `incomplete` describe the reference, as since T038.
   - No new copy, assumptions, tables or migrations.
 - Next: T050 (flush in `runInBackground`), T051, then T046 from a clean tree. T046's handoff: T049 removed four bot keys and changed no strings.
+
+### 2026-11-19 05:52 · T050 · done
+
+- Done:
+  - `src/lib/bot/deposit-flow.ts`: `runInBackground` is exported. Its guarded callback is now `try { await task() } catch { log } finally { await flushPostHog() }`. The flush runs once the contract reading settles, on success and on failure, in the `after()` path and in the detached path (polling runner). `tg_deposit_contract` / `tg_deposit_verdict`, tracked at the end of the reading, are delivered before the `after()` queue goes idle.
+  - The failure log now prints `error.message` instead of the error object, because a `GrammyError` payload holds the chat id (Learnings rule).
+  - Docs: the events paragraph in `src/lib/bot/README.md` and the bot identity bullet in `docs/architecture.md` describe the new flush; the "known gap (T050)" notes are gone.
+- Tests (`src/lib/bot/deposit-flow.test.ts`, new `runInBackground` describe, 3 tests; `next/server` `after` and `@/lib/posthog-server` `flushPostHog` mocked):
+  - The task runs only from the registered `after()` callback. The flush is not called while the task is pending, and it is called once after the task's end-of-task `track('tg_deposit_contract')` (call order checked).
+  - A rejecting task (`GrammyError` 403): the callback resolves, the flush is called once after the log, the log holds only the message and never the chat id.
+  - `after` throws (outside a request): the task runs detached and the flush still runs.
+- Checks: `npx vitest run src/lib/bot/deposit-flow.test.ts` 16/16 passed. `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 72 files / 938 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started; no Telegram or PostHog call was made.
+- Owner review: no new event or property, no copy, assumptions, tables or migrations. After deploy: send a contract to the bot and check that `tg_deposit_contract` and `tg_deposit_verdict` show up in PostHog Live Events.
+- Next: T051, then T046 from a clean tree. T046's handoff: T050 changed no copy.
