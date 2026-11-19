@@ -40,6 +40,7 @@ import {
   type DistrictPick,
   type RoommateEditField,
 } from '@/lib/roommate/rules';
+import { loadRoommateCounts, type DistrictCount, type RoommateCounts } from '@/lib/roommate/counts';
 import {
   advanceStep,
   clearEditStep,
@@ -81,7 +82,7 @@ import { hasOpenIntake } from './deposit-flow';
 import { matchDistrict } from './districts';
 import { escapeHtml, webLink } from './format';
 import { getCity } from './lookup';
-import { rt } from './roommate-texts';
+import { rt, rtPeople } from './roommate-texts';
 import { ROOMMATE_ENTRY_SOURCE, type RoommateEntrySource } from './start-payload';
 import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
@@ -92,12 +93,14 @@ import { normalizeLocale, type BotLocale } from './texts';
  * "live with", the short text, smoking and pets, 18+), the save, the own card,
  * its Edit (each field reuses its intake step as `edit_<field>`), its Delete
  * (with the optional reason) and Renew (with the move-in question as
- * `renew_month` when the month has passed or ends soon); the counts reply and the
- * opt-in (the handlers of the other card buttons) are added here by their tasks.
+ * `renew_month` when the month has passed or ends soon) and the counts reply
+ * (after the save and on "How many are looking?"); the opt-in is added here by
+ * its task.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
- * the webhook runs on serverless functions. Nothing here logs: a profile holds
- * personal data (spec 06 §Boundaries). Every value from data or from the person
+ * the webhook runs on serverless functions. A profile holds personal data, so
+ * the one log line here (a failed counts query) holds only the error's message
+ * (spec 06 §Boundaries). Every value from data or from the person
  * passes through `escapeHtml` before an HTML reply.
  */
 
@@ -593,7 +596,7 @@ function ownCardText(
  * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
  * Delete; with the switch off "How many are looking?" and the opt-in toggle,
  * with it on "Show people" and the daily-message toggle (spec 07). The handlers
- * of counts, opt-in and stage 2 come with their tasks.
+ * of opt-in and stage 2 come with their tasks.
  */
 function ownCardKeyboard(
   profile: RoommateProfile,
@@ -642,6 +645,91 @@ async function sendOwnCard(ctx: Context, profile: RoommateProfile, locale: BotLo
     parse_mode: 'HTML',
     reply_markup: ownCardKeyboard(profile, locale, new Date(), matchingEnabled),
   });
+}
+
+/**
+ * District items of the counts reply ("Mokotów — 2 человека, Wola — 1"): zero reads
+ * "nobody yet", and the first item with a number names the unit (PRD 3 §8 "Counts").
+ * Names are the Polish `nameKey` (a slug missing from the table stands for itself),
+ * escaped.
+ */
+function countItems(
+  items: readonly DistrictCount[],
+  names: ReadonlyMap<string, string>,
+  locale: BotLocale,
+): string[] {
+  let unitNamed = false;
+  return items.map(({ slug, count }) => {
+    const name = escapeHtml(names.get(slug) ?? slug);
+    if (count === 0) return rt(locale, 'countsItemNobody', { name });
+    const key = unitNamed ? 'countsItem' : 'countsItemPeople';
+    unitNamed = true;
+    return rt(locale, key, { name, count: String(count), people: rtPeople(locale, count) });
+  });
+}
+
+/**
+ * The counts reply's text (spec 06 §Counts, PRD 3 §8 "Counts"): for chosen districts
+ * each with its number, then those open to any district, then the Warsaw total; for
+ * "any" the Warsaw total and the most named districts; "nobody else yet" when the
+ * Warsaw total is 0. No sentence sums district numbers or names a percentage. The
+ * sentence that matching opens later is left out once the switch is on.
+ */
+function countsText(
+  counts: RoommateCounts,
+  districts: readonly District[],
+  locale: BotLocale,
+  matchingEnabled: boolean,
+): string {
+  const names = new Map(districts.map((district) => [district.slug, district.nameKey]));
+  const total = { count: String(counts.total), people: rtPeople(locale, counts.total) };
+  const sentences: string[] = [];
+  if (counts.total === 0) {
+    sentences.push(rt(locale, 'countsNobodyElse'));
+  } else if (counts.kind === 'districts') {
+    const items = countItems(counts.districts, names, locale);
+    items.push(
+      counts.anyDistrict > 0
+        ? rt(locale, 'countsAnyItem', { count: String(counts.anyDistrict) })
+        : rt(locale, 'countsAnyItemNobody'),
+    );
+    sentences.push(
+      rt(locale, 'countsLead', { items: items.join(', ') }),
+      rt(locale, 'countsTotal', total),
+    );
+  } else {
+    sentences.push(rt(locale, 'countsAnyLead', total));
+    if (counts.top.length > 0) {
+      sentences.push(
+        rt(locale, 'countsTop', { items: countItems(counts.top, names, locale).join(', ') }),
+      );
+    }
+  }
+  if (!matchingEnabled) sentences.push(rt(locale, 'countsOpensLater'));
+  return sentences.join(' ');
+}
+
+/**
+ * The counts reply (spec 06 §Counts) for the person's saved profile, which is never
+ * counted: after the save and on "How many are looking?" (`rm:c:counts`). A database
+ * error keeps the saved profile and says the counts are not available now; only the
+ * error's message is logged.
+ */
+async function sendCounts(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
+  let text: string;
+  try {
+    const counts = await loadRoommateCounts(profile);
+    const named = counts.kind === 'districts' ? counts.districts : counts.top;
+    const districts = counts.total > 0 && named.length > 0 ? await cityDistricts() : [];
+    text = countsText(counts, districts, locale, isMatchingEnabled());
+  } catch (error) {
+    console.error(
+      '[bot/roommate] counts failed',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    text = rt(locale, 'countsUnavailable');
+  }
+  await ctx.reply(text, { parse_mode: 'HTML' });
 }
 
 /**
@@ -1121,8 +1209,8 @@ const handlePetsTap = roommateCallback(async (ctx, chat, locale) => {
 /**
  * `rm:a:yes`: saves the draft through the conditional write of `saveProfile`.
  * Only the tap whose write lands sends `tg_roommate_profile_created` and the own
- * card, so a double tap gives one active row and one event; the other tap gets
- * "this step is done". The counts reply after the card comes with T079.
+ * card and the counts reply, so a double tap gives one active row and one event;
+ * the other tap gets "this step is done".
  */
 const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
   const profile = await profileAtStep(ctx, chat.id, locale, 'adult');
@@ -1147,6 +1235,7 @@ const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
   };
   track(ctx.chat!.id, 'tg_roommate_profile_created', profileCreatedProperties(saved, now));
   await sendOwnCard(ctx, saved, locale);
+  await sendCounts(ctx, saved, locale);
 });
 
 /** `rm:a:no`: deletes the draft at once and says that matching is for adults and nothing was saved. */
@@ -1216,6 +1305,16 @@ async function savedProfileFor(
   }
   return profile;
 }
+
+/**
+ * `rm:c:counts` ("How many are looking?" on the card of an active or expired profile): the
+ * counts reply for the profile as stored now. A hidden profile gets the FR-14 reply.
+ */
+const handleCountsTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+  await sendCounts(ctx, profile, locale);
+});
 
 /** `rm:c:edit`: the field picker under "What do you want to change?". Opens no step yet. */
 const handleEditTap = roommateCallback(async (ctx, chat, locale) => {
@@ -1515,6 +1614,7 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery(PETS_TAP, handlePetsTap);
   bot.callbackQuery('rm:a:yes', handleAdultYes);
   bot.callbackQuery('rm:a:no', handleAdultNo);
+  bot.callbackQuery('rm:c:counts', handleCountsTap);
   bot.callbackQuery('rm:c:edit', handleEditTap);
   bot.callbackQuery(EDIT_PICK, handleEditPick);
   bot.callbackQuery(DELETE_CALLBACK, handleDeleteTap);

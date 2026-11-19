@@ -313,7 +313,7 @@
       "title": "Honest counts per district: rule, loader and the bot reply (FR-16)",
       "spec": "docs/specs/06-roommate-profiles.md#counts",
       "dependsOn": ["T074"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "countRoommates(viewer, others) and loadRoommateCounts() in src/lib/roommate/counts.ts follow spec 06 §Counts (active by time, viewer excluded, 'any' on its own line, no sums, no combinations); the website variant gives the Warsaw total and the top 5 districts",
         "The golden case of PRD 3 §5 example 1 is a unit test for a district viewer and an 'any' viewer",
@@ -321,7 +321,7 @@
         "Tests for the reply in ru, uk and en"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D51."
     },
     {

@@ -125,6 +125,17 @@ the migrations are missing (`docs/architecture.md` §9).
   refused by Telegram as "not modified" and sends nothing); "here" sends
   `tg_roommate_outcome` (`outcome=renting_together`, `asked=delete`). The chat can
   start a new profile at once unless banned.
+- **Counts** (spec 06 §Counts, FR-16): after the save (under the card) and on
+  "How many are looking?" (`rm:c:counts`, an active or expired card; a hidden one
+  gets the FR-14 reply). `loadRoommateCounts(viewer)` (`../roommate/counts.ts`, also
+  the website's source) reads the district fields of profiles that are `active`
+  with `expires_at` in the future and whose chat is neither blocked nor banned, in
+  one query; `countRoommates` leaves the viewer out and gives each chosen district,
+  the number open to any district and the Warsaw total, or for "any" the Warsaw
+  total and the three most named districts (ties by slug). Never a sum of
+  districts, a percentage or a count combined with another field; zero is "nobody
+  yet", an empty Warsaw "nobody else yet". A database error keeps the saved profile
+  and replies that the counts are not available now. No event.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
@@ -189,6 +200,7 @@ the migrations are missing (`docs/architecture.md` §9).
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
+| `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |

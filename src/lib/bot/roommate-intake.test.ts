@@ -37,6 +37,12 @@ const db = vi.hoisted(() => {
         return row ? structuredClone(row) : null;
       }),
       create: vi.fn(),
+      /** The counts query after the save (spec 06 §Counts): this chat's row is the only one. */
+      findMany: vi.fn(async () =>
+        rows
+          .filter((row) => row.status === 'active')
+          .map(({ id, districtSlugs, anyDistrict }) => ({ id, districtSlugs, anyDistrict })),
+      ),
       updateMany: vi.fn(
         async ({ where, data }: { where: Record<string, unknown>; data: object }) => {
           const hits = rows.filter((row) => matches(row, where));
@@ -1459,11 +1465,13 @@ describe('step 9: 18+ and the save (FR-9, FR-12)', () => {
     expect(row().tgUsername).toBeNull();
   });
 
-  it('ends with the own card of the saved profile', async () => {
+  it('ends with the own card of the saved profile, then the counts reply', async () => {
     seed(READY);
     const { reply } = await tap('rm:a:yes');
 
-    expect(texts(reply)).toHaveLength(1);
+    expect(texts(reply)).toHaveLength(2);
+    // The person's own profile is never counted, so a first profile reads "nobody else yet".
+    expect(texts(reply)[1]).toBe(`${rt('ru', 'countsNobodyElse')} ${rt('ru', 'countsOpensLater')}`);
     const card = texts(reply)[0] as string;
     expect(card.startsWith(`${rt('ru', 'cardHeader')}\n\n`)).toBe(true);
     expect(card).toContain('Районы: Wola, Mokotów');
@@ -1477,7 +1485,7 @@ describe('step 9: 18+ and the save (FR-9, FR-12)', () => {
     ]);
   });
 
-  it('a double tap on "I\'m 18+" gives one active row, one event and one card', async () => {
+  it('a double tap on "I\'m 18+" gives one active row, one event, one card and one counts reply', async () => {
     seed(READY);
     const first = fakeCtx();
     const second = fakeCtx();
@@ -1487,8 +1495,9 @@ describe('step 9: 18+ and the save (FR-9, FR-12)', () => {
     expect(row()).toMatchObject({ status: 'active', step: null });
     expect(created()).toHaveLength(1);
     const replies = [...texts(first.reply), ...texts(second.reply)] as string[];
-    expect(replies).toHaveLength(2);
+    expect(replies).toHaveLength(3);
     expect(replies.filter((text) => text.startsWith(rt('ru', 'cardHeader')))).toHaveLength(1);
+    expect(replies.filter((text) => text.startsWith(rt('ru', 'countsNobodyElse')))).toHaveLength(1);
     expect(replies).toContain(rt('ru', 'stepDone'));
   });
 
