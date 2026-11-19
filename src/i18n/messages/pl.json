@@ -745,7 +745,7 @@
     "share": "Udostępnij",
     "copied": "Skopiowano link",
     "cardTitleGeneric": "Ile naprawdę kosztuje wynajem w Warszawie",
-    "cardDescription": "Sprawdź, czy nie przepłacasz za wynajem — Passflat",
+    "cardDescription": "Czynsz i opłaty miesięczne według dzielnic, ze zgłoszeń na Passflat",
     "landingHeading": "Zobacz, ile naprawdę płaci się w Twojej okolicy",
     "landingBody": "Ktoś porównał swój czynsz z dzielnicą i się tym podzielił. Sprawdź swój — za darmo, w dwie minuty.",
     "ctaCalculator": "Kalkulator kosztów",
@@ -757,11 +757,11 @@
     "ogMedianPerM2": "≈{amount} zł/m²",
     "landingRent": "Czynsz",
     "landingExpenses": "Opłaty",
-    "landingRange": "Najczęściej płaci się {from}–{to} zł",
+    "landingRange": "Połowa zgłoszeń mieści się między {from} a {to} zł",
     "landingHowTitle": "Jak to działa",
     "landingStep1": "Dodaj swoje koszty — to dwie minuty",
-    "landingStep2": "Porównaj je z medianą dzielnicy i miasta",
-    "landingStep3": "Sprawdź, czy nie przepłacasz za wynajem",
+    "landingStep2": "Zobacz je obok danych dla Twojej dzielnicy lub miasta",
+    "landingStep3": "Wyślij dane znajomym, którzy wynajmują",
     "ctaSubmit": "Porównaj swoje koszty"
   },
   "rentReport": {

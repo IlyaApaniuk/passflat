@@ -800,13 +800,13 @@
         "Draft keys listed in the progress entry for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found in T026: these keys render on /[city]/costs/share next to the neutral area card. Copy only, no logic. src/app/[locale]/[city]/costs/share/page.test.ts renders the page in all four locales.",
       "id": "T048",
       "milestone": "M3",
       "title": "Share page: drop the overpay framing of its description and how-it-works steps",
       "spec": "docs/specs/03-building-figures.md#comparisons",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T033"],

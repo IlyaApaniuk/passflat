@@ -745,7 +745,7 @@
     "share": "Share",
     "copied": "Link copied",
     "cardTitleGeneric": "What renting really costs across Warsaw",
-    "cardDescription": "Check if you're overpaying on rent — Passflat",
+    "cardDescription": "Monthly rent and expenses by district, from reports on Passflat",
     "landingHeading": "See what people really pay in your area",
     "landingBody": "Someone compared their rent to the area and shared it. Check yours — it's free and takes two minutes.",
     "ctaCalculator": "Cost calculator",
@@ -757,11 +757,11 @@
     "ogMedianPerM2": "≈{amount} zł/m²",
     "landingRent": "Rent",
     "landingExpenses": "Expenses",
-    "landingRange": "Most pay {from}–{to} zł",
+    "landingRange": "Half of the reports are between {from} and {to} zł",
     "landingHowTitle": "How it works",
     "landingStep1": "Add your costs — it takes a couple of minutes",
-    "landingStep2": "Compare them to the district and city median",
-    "landingStep3": "See whether you're overpaying on rent",
+    "landingStep2": "See them next to the figures for your district or city",
+    "landingStep3": "Share the figures with friends who rent",
     "ctaSubmit": "Compare your costs"
   },
   "rentReport": {

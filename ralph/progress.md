@@ -985,3 +985,27 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - EN `shareInviteDesc`: "Send it to friends who rent: they'll see the figures for this district and can add their own costs."
   - No assumptions, tables or migrations.
 - Next: T048 (share page copy), T049, T050, T051, then T046 from a clean tree. T046's handoff should add T047's two draft keys under website draft copy.
+
+### 2026-11-19 05:39 · T048 · done
+
+- Done (copy only, no logic):
+  - `src/i18n/messages/{pl,en,ru,uk}.json`, namespace `share`:
+    - `cardDescription` (page meta, OG description and the OG image subtitle) no longer asks whether the visitor overpays. It now says what the page holds: monthly rent and expenses by district, from reports.
+    - `landingStep2` no longer promises a comparison with the district and city median. It now says the visitor sees their costs next to the figures for their district or city (the post-submit `OwnCostsReference` sets the own report beside one labelled area, no verdict).
+    - `landingStep3` no longer promises an overpay answer. It now invites sharing the figures with friends who rent (the post-submit share invite; it appears only when the report has a district).
+    - `landingRange` no longer says "most pay" over p25–p75. It now says half of the reports fall in that band.
+    - `landingHeading` and `cardTitleArea` are unchanged (Q-4, T029).
+  - `costs/share/page.tsx`: one code comment on the range updated.
+  - `costs/share/page.test.ts`: two new cases. (1) In all four locales the meta and OG description are `cardDescription` and the three steps render; in EN the OG `subtitle` and "Half of the reports are between 3,600 and 4,400 zł" render. (2) In all four locales `cardDescription`, `landingStep2` and `landingStep3` contain no overpay, cheaper/pricier or "whether" wording, steps 2–3 contain no "median", and `landingRange` contains no "most pay" / "usually" wording and keeps `{from}` / `{to}`. Each assertion fails on the old copy.
+- Namespace: `share.*` is read with `getTranslations('share')` in the server page; no client provider involved.
+- Checks: `npx vitest run` on the share page test and `src/i18n/messages.test.ts`: 10/10 passed. `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 72 files / 926 tests, build OK. `next-env.d.ts` restored. Not checked in a real browser or a link-preview tool.
+- Did not work: nothing.
+- Owner review:
+  - Draft copy, all four locales: `share.cardDescription`, `share.landingStep2`, `share.landingStep3`, `share.landingRange`.
+    - EN: "Monthly rent and expenses by district, from reports on Passflat" / "See them next to the figures for your district or city" / "Share the figures with friends who rent" / "Half of the reports are between {from} and {to} zł".
+    - RU: «Аренда и расходы в месяц по районам — по отчётам на Passflat» / «Посмотри их рядом с цифрами по району или городу» / «Отправь цифры друзьям, которые снимают жильё» / «Половина отчётов — от {from} до {to} zł».
+    - PL: «Czynsz i opłaty miesięczne według dzielnic, ze zgłoszeń na Passflat» / «Zobacz je obok danych dla Twojej dzielnicy lub miasta» / «Wyślij dane znajomym, którzy wynajmują» / «Połowa zgłoszeń mieści się między {from} a {to} zł».
+    - UK: «Оренда й витрати на місяць за районами — за звітами на Passflat» / «Подивись їх поруч із цифрами по району чи місту» / «Надішли цифри друзям, які винаймають житло» / «Половина звітів — від {from} до {to} zł».
+  - Kept unchanged, outside this task: `share.landingBody` ("Someone compared their rent to the area…") and `share.ctaSubmit` ("Compare your costs"). Neither gives a verdict.
+  - No assumptions, tables or migrations. Analytics unchanged.
+- Next: T049, T050, T051, then T046 from a clean tree. T046's handoff should add T048's four draft keys under website draft copy.

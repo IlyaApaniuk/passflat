@@ -146,6 +146,49 @@ describe('share landing', () => {
     }
   });
 
+  it('the description, the steps and the range render and make no overpay promise', async () => {
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const page = await renderPage({ d: 'mokotow' });
+      const meta = await generateMetadata({
+        params,
+        searchParams: Promise.resolve({ d: 'mokotow' }),
+      });
+      expect(meta.description, locale).toBe(share(locale).cardDescription);
+      expect(meta.openGraph?.description, locale).toBe(share(locale).cardDescription);
+      for (const key of ['landingStep1', 'landingStep2', 'landingStep3'] as const) {
+        expect(page, `${locale} ${key}`).toContain(share(locale)[key]);
+      }
+    }
+    state.locale = 'en';
+    const { image } = await metadata({ d: 'mokotow' });
+    expect(image.searchParams.get('subtitle')).toBe(
+      'Monthly rent and expenses by district, from reports on Passflat',
+    );
+    const page = await renderPage({ d: 'mokotow' });
+    expect(page).toContain('Half of the reports are between 3,600 and 4,400 zł');
+  });
+
+  it('share copy asks no overpay question and promises no median comparison (FR-29)', () => {
+    // The post-submit screen sets the own report beside one labelled area with
+    // no verdict, and p25–p75 holds half of the reports, not "most".
+    const OVERPAY =
+      /overpa|cheaper|pricier|whether|przepłac|taniej|drożej|czy nie|переплач|дешевл|дешевш|дорож/i;
+    const MEDIAN = /median|медиан|медіан/i;
+    const MOST = /most pay|najczęściej|обычно|зазвичай/i;
+    for (const locale of LOCALES) {
+      const s = share(locale);
+      expect(s.cardDescription, locale).not.toMatch(OVERPAY);
+      for (const key of ['landingStep2', 'landingStep3'] as const) {
+        expect(s[key], `${locale} ${key}`).not.toMatch(OVERPAY);
+        expect(s[key], `${locale} ${key}`).not.toMatch(MEDIAN);
+      }
+      expect(s.landingRange, locale).not.toMatch(MOST);
+      expect(s.landingRange, locale).toContain('{from}');
+      expect(s.landingRange, locale).toContain('{to}');
+    }
+  });
+
   it('the brag keys are gone and no share text takes a percentage', () => {
     const removed = [
       'cardTitle',

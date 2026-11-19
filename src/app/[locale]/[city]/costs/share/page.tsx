@@ -118,7 +118,7 @@ export default async function CostShareLandingPage({ params, searchParams }: Pro
             </div>
           )}
 
-          {/* Typical p25–p75 range — "the data is alive" signal (dense districts). */}
+          {/* p25–p75 holds half of the reports, not "most" (dense districts only). */}
           {hasRange && (
             <p className="mt-2 text-sm text-muted-foreground">
               {t('landingRange', { from: p25.toLocaleString(), to: p75.toLocaleString() })}
