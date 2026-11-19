@@ -39,6 +39,9 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
   `entry_page_type` from the `before_send` hook (`src/lib/analytics/page-context.ts`); a capture
   call adds only its own properties (an own property overrides the hook's value).
 - posthog-js internals are readable in `node_modules/posthog-js/lib/src/*.js` (unminified).
+- A client component's capture call can be unit-tested without a DOM: `vi.mock` `next-intl` and
+  `posthog-js/react` (capture from `vi.hoisted`), call the component as a function and invoke
+  `element.props.onClick()` (example: `src/components/costs/telegram-bot-cta.test.ts`).
 
 ## Log
 
@@ -96,4 +99,12 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Checks: `npx vitest run src/lib/listings-filter.test.ts` passed (14/14). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 33 files / 381 tests, build OK); `next-env.d.ts` restored.
 - Did not work: nothing. The capture call itself has no component test (no React testing library in the repo; not added).
 - Owner review: nothing (no copy, assumptions, tables or migrations). After deploy: check in PostHog Live Events that `search_performed.results_count` changes with the filters (counted within the 50-listing server cap).
+- Next: the next `todo` task of M1 in `ralph/tasks.json`.
+
+### 2026-11-19 01:09 · T008 · done
+
+- Done: new `src/lib/analytics/telegram-events.ts` exports `TelegramBotSource` (`'checker' | 'empty'`, the one place PRD 2 adds `guide_deposit`) and the pure `telegramBotOpenedProperties(source, buildingId?)` → `{ source, has_building_context: Boolean(buildingId) }`. `src/components/costs/telegram-bot-cta.tsx` takes `source: TelegramBotSource`, calls `usePostHog()` before the early return and adds an `onClick` that captures `telegram_bot_opened` with those properties (no `preventDefault`; `href`, `target`, `rel`, payload unchanged; still `null` without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`). The checker's `onClickCapture` wrappers with `checker_cta_clicked {cta: 'telegram'}` in `check/client.tsx` are untouched, so a checker click fires both events. Tests: `src/lib/analytics/telegram-events.test.ts` (4) and `src/components/costs/telegram-bot-cta.test.ts` (5: renders null without the env, link unchanged with `b_<id>` and `web_<source>` payloads, one capture per click, no building → `false`). `docs/architecture.md` event table lists `telegram_bot_opened` in the Checker row (Prettier realigned the table).
+- Checks: `npx vitest run` on the two new files passed (9/9). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 35 files / 390 tests, build OK); `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: nothing (no copy, assumptions, tables or migrations). After deploy (with the bot username set): check in PostHog Live Events that a click on the checker's bot link sends `telegram_bot_opened` with `source` and `has_building_context` next to `checker_cta_clicked {cta: 'telegram'}`.
 - Next: the next `todo` task of M1 in `ralph/tasks.json`.

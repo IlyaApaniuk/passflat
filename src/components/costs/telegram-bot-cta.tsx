@@ -2,6 +2,12 @@
 
 import { Send } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
+
+import {
+  type TelegramBotSource,
+  telegramBotOpenedProperties,
+} from '@/lib/analytics/telegram-events';
 
 /**
  * Hands a checker result over to the Telegram bot.
@@ -16,10 +22,11 @@ export function TelegramBotCta({
   source,
 }: {
   buildingId?: string;
-  source: 'checker' | 'empty';
+  source: TelegramBotSource;
 }) {
   const t = useTranslations('checker');
   const locale = useLocale();
+  const posthog = usePostHog();
   const username = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
   if (!username) return null;
 
@@ -34,6 +41,10 @@ export function TelegramBotCta({
       rel="noopener noreferrer"
       className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       data-locale={locale}
+      // Fire-and-forget: no preventDefault, so the link opens exactly as before.
+      onClick={() =>
+        posthog?.capture('telegram_bot_opened', telegramBotOpenedProperties(source, buildingId))
+      }
     >
       <Send className="h-4 w-4" />
       {t('costs.telegramCta')}

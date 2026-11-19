@@ -112,7 +112,7 @@
       "title": "Fire telegram_bot_opened from the website's Telegram bot link",
       "spec": "docs/specs/01-analytics-context.md#telegram-link-click",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/components/costs/telegram-bot-cta.tsx fires one telegram_bot_opened per click with source (checker | empty, the existing prop) and has_building_context (buildingId present); the link still opens as before",
         "The source union type lives in one exported place so PRD 2 can add guide_deposit",
@@ -120,7 +120,7 @@
         "checker_cta_clicked {cta: 'telegram'} on the checker stays unchanged"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
