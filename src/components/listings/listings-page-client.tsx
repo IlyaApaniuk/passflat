@@ -358,6 +358,7 @@ function ListingsPageInner({
                     <ListingsNoMatch onClearFilters={clearFilters} />
                     {selectedDistrict && (
                       <ListingsEmptyState
+                        key={selectedDistrictSlug}
                         citySlug={citySlug}
                         listingType={listingType}
                         selectedDistrict={selectedDistrict}
@@ -370,6 +371,7 @@ function ListingsPageInner({
                   </>
                 ) : emptyKind === 'no_offers_in_city' ? (
                   <ListingsEmptyState
+                    key={selectedDistrictSlug}
                     citySlug={citySlug}
                     listingType={listingType}
                     selectedDistrict={selectedDistrict}

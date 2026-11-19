@@ -247,7 +247,7 @@
       "title": "Make the interest form and the checker link copy honest",
       "spec": "docs/specs/02-roommate-and-waitlist.md#honest-interest-copy",
       "dependsOn": ["T011", "T015"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The interest button reads Сохранить интерес (RU, given) with PL, EN, UK drafts; listings.demandCapture subtitles no longer promise an e-mail when listings appear; a new success key says the interest is saved and there are no automatic notifications yet (landing.cityNotify.success stays for the city-launch form)",
         "Applies to all three listing types; ListingsEmptyState is keyed by districtSlug so a success message does not survive a district change",
@@ -255,7 +255,7 @@
         "Consent checkbox and text unchanged; every draft key is listed in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

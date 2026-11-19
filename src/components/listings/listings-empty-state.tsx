@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Bell, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
+import { Bell, BookmarkPlus, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
 import {
   interestOutcomeEvent,
@@ -18,11 +18,13 @@ import {
 
 /**
  * Demand-capture for the empty listings state, organised as two intents:
- *   1. "Looking for a place?" → district-scoped notify waitlist (logged-in users
- *      get a one-tap subscribe; logged-out get the email form).
+ *   1. "Looking for a place?" → saves a district- or city-scoped interest (logged-in
+ *      users get a one-tap save; logged-out get the email form).
  *   2. "Renting out / passing on?" → post your own listing (supply hook).
- * Plus a subtle footer link into the open cost-data product. Honesty: we only
- * promise to email "when they appear" — no fake counts.
+ * Plus a subtle footer link into the open cost-data product. Honesty (spec 02 §Honest
+ * interest copy): no code sends an e-mail when listings appear, so the copy only says the
+ * interest is saved and that there are no automatic notifications yet — no fake counts.
+ * The parent keys it by `districtSlug`, so a success message does not survive a district change.
  */
 export function ListingsEmptyState({
   citySlug,
@@ -156,7 +158,7 @@ export function ListingsEmptyState({
           {status === 'success' ? (
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
               <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
-              <span className="font-medium">{t('landing.cityNotify.success')}</span>
+              <span className="font-medium">{t('listings.demandCapture.interestSaved')}</span>
             </div>
           ) : isLoggedIn ? (
             <div className="mt-3 space-y-2">
@@ -165,8 +167,8 @@ export function ListingsEmptyState({
                 disabled={status === 'loading'}
                 className="h-11 w-full"
               >
-                <Bell className="mr-2 h-4 w-4" />
-                {t('listings.demandCapture.notifyMeButton')}
+                <BookmarkPlus className="mr-2 h-4 w-4" />
+                {t('listings.demandCapture.saveInterestButton')}
               </Button>
               {status === 'error' && (
                 <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
@@ -214,7 +216,7 @@ export function ListingsEmptyState({
                 className="h-11 w-full"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {t('listings.demandCapture.notifyMeButton')}
+                {t('listings.demandCapture.saveInterestButton')}
               </Button>
               {status === 'error' && (
                 <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>

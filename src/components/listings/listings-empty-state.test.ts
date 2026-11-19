@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,6 +47,14 @@ function findElement(node: ReactNode, match: (el: AnyElement) => boolean): AnyEl
   const el = node as AnyElement;
   if (match(el)) return el;
   return findElement(el.props.children, match);
+}
+
+/** Every string leaf of the element tree (the mocked `t` returns the key itself). */
+function collectText(node: ReactNode): string[] {
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(collectText);
+  if (!node || typeof node !== 'object' || !('props' in node)) return [];
+  return collectText((node as AnyElement).props.children);
 }
 
 const baseProps: Props = {
@@ -149,6 +159,37 @@ describe('ListingsEmptyState interest events', () => {
     );
   });
 
+  it.each(['roommate', 'sublet', 'replacement'] as const)(
+    'labels both forms "save interest" and keeps the consent text (%s)',
+    (listingType) => {
+      for (const isLoggedIn of [true, false]) {
+        const text = collectText(ListingsEmptyState({ ...baseProps, listingType, isLoggedIn }));
+        expect(text).toContain('listings.demandCapture.saveInterestButton');
+        expect(text).toContain(
+          isLoggedIn
+            ? 'listings.demandCapture.subtitleLoggedIn'
+            : 'listings.demandCapture.subtitle',
+        );
+        expect(text).not.toContain('listings.demandCapture.notifyMeButton');
+        if (!isLoggedIn) {
+          expect(text).toContain('landing.cityNotify.consent');
+          expect(text).toContain('landing.cityNotify.privacyNote');
+        }
+      }
+    },
+  );
+
+  it.each(['roommate', 'sublet', 'replacement'] as const)(
+    'shows its own interest-saved message, not the city-launch one (%s)',
+    (listingType) => {
+      // useState call order: email, consent, consentError, status.
+      stateQueue.push('', false, false, 'success');
+      const text = collectText(ListingsEmptyState({ ...baseProps, listingType }));
+      expect(text).toContain('listings.demandCapture.interestSaved');
+      expect(text).not.toContain('landing.cityNotify.success');
+    },
+  );
+
   it('sends the email to the API but never to the event (logged-out form)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ success: true }));
     vi.stubGlobal('fetch', fetchMock);
@@ -167,4 +208,51 @@ describe('ListingsEmptyState interest events', () => {
     expect(capture).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(capture.mock.calls[0])).not.toContain('tenant@example.com');
   });
+});
+
+describe('honest interest copy in the locale files (spec 02 §Honest interest copy)', () => {
+  type Messages = {
+    listings: {
+      roommateCostsBridge: string;
+      roommateCostsBridgeCta: string;
+      demandCapture: Record<string, string>;
+    };
+    landing: { cityNotify: { success: string } };
+  };
+  const load = (locale: string): Messages =>
+    JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/messages', `${locale}.json`), 'utf8'));
+
+  it('uses the given RU button and checker-link copy', () => {
+    const ru = load('ru');
+    expect(ru.listings.demandCapture.saveInterestButton).toBe('Сохранить интерес');
+    // The bridge renders `roommateCostsBridge` + ' ' + the linked `roommateCostsBridgeCta`.
+    expect(`${ru.listings.roommateCostsBridge} ${ru.listings.roommateCostsBridgeCta}`).toBe(
+      'Нашёл вариант? Проверь адрес и известные расходы',
+    );
+  });
+
+  it('uses the spec drafts for the button in PL, EN, UK and for the EN subtitle and success', () => {
+    expect(load('pl').listings.demandCapture.saveInterestButton).toBe('Zapisz zainteresowanie');
+    expect(load('uk').listings.demandCapture.saveInterestButton).toBe('Зберегти інтерес');
+    const en = load('en').listings.demandCapture;
+    expect(en.saveInterestButton).toBe('Save interest');
+    expect(en.subtitle).toBe(
+      "Leave your email and we'll save your interest. There are no automatic notifications about new offers yet.",
+    );
+    expect(en.interestSaved).toBe(
+      "Your interest is saved. We don't send automatic notifications about new offers yet.",
+    );
+  });
+
+  it.each(['pl', 'en', 'ru', 'uk'])(
+    'keeps a success message separate from the city-launch one (%s)',
+    (locale) => {
+      const messages = load(locale);
+      expect(messages.listings.demandCapture.interestSaved).toBeTruthy();
+      expect(messages.listings.demandCapture.interestSaved).not.toBe(
+        messages.landing.cityNotify.success,
+      );
+      expect(messages.listings.demandCapture).not.toHaveProperty('notifyMeButton');
+    },
+  );
 });
