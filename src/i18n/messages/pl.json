@@ -1977,6 +1977,7 @@
       "intro": "Udostępniamy dane tylko w następujących, ograniczonych okolicznościach:",
       "item1": "Raporty kosztów są wyświetlane w formie zagregowanej i zanonimizowanej",
       "item2": "Dane kontaktowe z ogłoszenia są udostępniane tylko użytkownikom, którzy wyrażą zainteresowanie przez platformę",
+      "item3": "Dopasowywanie współlokatorów w bocie Telegram: po otwarciu dopasowywania osoby, których odpowiedzi pasują do Twoich, widzą kartę Twojego profilu, a przy wzajemnym zainteresowaniu obie osoby dostają nawzajem swoje nazwy użytkownika w Telegramie. Wiadomości bota dostarcza Telegram (szczegóły w sekcji „Dopasowywanie współlokatorów w bocie Telegram” poniżej).",
       "processors": {
         "title": "Podmioty przetwarzające dane",
         "supabase": "Supabase — hosting, baza danych i uwierzytelnianie",
@@ -1987,15 +1988,31 @@
         "mapbox": "Mapbox — renderowanie map (żadne dane osobowe nie są udostępniane)",
         "posthog": "PostHog — analityka produktowa (można zrezygnować)",
         "googleAnalytics": "Google Analytics 4 — analityka ruchu i odbiorców w sieci (na podstawie zgody, opt-in przez baner cookies)",
-        "deepl": "DeepL — automatyczne tłumaczenie treści ogłoszeń (siedziba w UE, Niemcy)"
+        "deepl": "DeepL — automatyczne tłumaczenie treści ogłoszeń (siedziba w UE, Niemcy)",
+        "telegram": "Telegram — komunikator, w którym działa bot Passflat (wiadomości bota, w tym pytania i odpowiedzi profilu współlokatora); Telegram przetwarza wiadomości na własnych zasadach, zgodnie ze swoją polityką prywatności"
       }
+    },
+    "roommateMatching": {
+      "title": "Dopasowywanie współlokatorów w bocie Telegram",
+      "intro": "Bot Passflat w Telegramie pomaga znaleźć osobę, z którą można wspólnie wynająć mieszkanie. Ta sekcja opisuje, jakie dane z profilu współlokatora przechowujemy, kto je widzi i jak długo je przechowujemy.",
+      "fields": "Co przechowujemy i po co: wybrane dzielnice (lub „dowolna dzielnica”), budżet na osobę jako przedział, miesiąc przeprowadzki, języki, którymi mówisz, krótki tekst o sobie do 280 znaków (opcjonalnie), zasady dotyczące palenia i zwierząt (opcjonalnie), moment potwierdzenia, że masz ukończone 18 lat, oraz Twoją nazwę użytkownika w Telegramie. Te dane służą do dopasowania Cię do osób, których odpowiedzi pasują do Twoich, do liczenia osób w dzielnicach i do przekazania kontaktu przy wzajemnym zainteresowaniu. Nigdy nie pytamy o imię, zdjęcie, datę urodzenia, wiek, numer telefonu, adres e-mail ani dokumenty.",
+      "gender": "Twoja płeć i „z kim chcesz mieszkać” (oba pola opcjonalne) służą tylko do wzajemnego dopasowania: każda z osób musi pasować drugiej. Nie pokazujemy ich nikomu poza Tobą, nie liczymy ich i nie przekazujemy do analityki.",
+      "channel": "Profil tworzy się i używa wyłącznie w bocie Passflat w Telegramie. Wiadomości bota dostarcza Telegram, który przetwarza je na własnych zasadach (polityka prywatności Telegrama).",
+      "recipients": "Kto co widzi: Twój profil wlicza się do liczb osób w dzielnicach, które inni widzą w bocie i na stronie; liczba nigdy nie pokazuje szczegółów o pojedynczej osobie. Dopóki dopasowywanie nie jest otwarte, samego profilu nie widzi nikt. Po otwarciu dopasowywania osoby, których odpowiedzi pasują do Twoich, widzą Twoją kartę: dzielnice, przedział budżetu, miesiąc przeprowadzki, języki, krótki tekst oraz zasady dotyczące palenia i zwierząt, jeśli je podano. Nazwę użytkownika w Telegramie przekazujemy tylko przy wzajemnym zainteresowaniu: obie osoby dostają wtedy nawzajem swoje nazwy. Tuż przed przekazaniem pobieramy z Telegrama Twoją aktualną nazwę.",
+      "lifetime": "Profil jest aktywny przez 30 dni od utworzenia lub odnowienia albo do końca miesiąca przeprowadzki, jeśli ten nastąpi wcześniej. Potem zostaje ukryty i przez 14 dni można go odnowić; następnie usuwamy go razem z oznaczeniami „Interesuje mnie” i „Pomiń”.",
+      "deletion": "Profil możesz w każdej chwili usunąć w bocie: usuwamy go od razu i na stałe. Nazwa użytkownika, którą osoba z wzajemnym zainteresowaniem już otrzymała, zostaje w jej czacie.",
+      "drafts": "Niedokończony profil usuwamy 7 dni po ostatniej odpowiedzi.",
+      "reports": "Zgłoszenia: powód i decyzję przechowujemy przez 6 miesięcy od zgłoszenia. Gdy profil zostaje usunięty, zgłoszenia przestają być z nim powiązane. Osoba zgłoszona nigdy nie dowiaduje się, kto ją zgłosił.",
+      "ban": "Profil ukryty po zgłoszeniach usuwamy 14 dni po dacie, w której by wygasł. Czat, którego profil ukryto, dostaje oznaczenie blokady, aby nie można było w nim utworzyć nowego profilu; oznaczenie zostaje, dopóki istnieje zapis tego czatu z botem.",
+      "analytics": "W analityce (PostHog) zdarzenia dotyczące dopasowywania są powiązane z pseudonimowym identyfikatorem Twojego czatu z botem. Profil pojawia się w nich tylko jako przedziały, liczby i wartości tak/nie — np. przedział budżetu, liczba wybranych dzielnic albo to, czy jest krótki tekst — obok działań takich jak utworzenie, edycja czy usunięcie profilu. Nazwa użytkownika, krótki tekst, dzielnice, płeć i „z kim chcesz mieszkać” nigdy nie trafiają do analityki."
     },
     "retention": {
       "title": "Przechowywanie danych",
       "account": "Dane konta: przechowywane do momentu usunięcia konta",
       "listings": "Ogłoszenia: aktywne przez 60 dni, następnie archiwizowane na 30 dni przed usunięciem",
       "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie. Po anonimizacji dane te nie stanowią już danych osobowych w rozumieniu RODO (motyw 26) i są utrzymywane w celu wsparcia bazy danych społeczności",
-      "importedEmail": "Adresy e-mail z zaimportowanych zgłoszeń są przechowywane do momentu powiązania zgłoszenia przy logowaniu lub do chwili, gdy zażądasz ich usunięcia."
+      "importedEmail": "Adresy e-mail z zaimportowanych zgłoszeń są przechowywane do momentu powiązania zgłoszenia przy logowaniu lub do chwili, gdy zażądasz ich usunięcia.",
+      "roommate": "Profile współlokatorów (bot Telegram): aktywne 30 dni od utworzenia lub odnowienia albo do końca miesiąca przeprowadzki, jeśli wcześniej; potem ukryte i przez 14 dni do odnowienia, następnie usuwane. Usuwane od razu na prośbę w bocie; niedokończone — po 7 dniach; profil ukryty po zgłoszeniach — 14 dni po dacie wygaśnięcia; zgłoszenia — po 6 miesiącach; oznaczenie blokady czatu — dopóki istnieje zapis czatu (szczegóły w sekcji „Dopasowywanie współlokatorów w bocie Telegram” powyżej)."
     },
     "rights": {
       "title": "Twoje prawa (RODO)",
@@ -2013,7 +2030,7 @@
     "transfers": {
       "title": "Transgraniczne przekazywanie danych",
       "description": "Niektórzy nasi podmioty przetwarzające dane mają siedzibę poza Unią Europejską / Europejskim Obszarem Gospodarczym (UE/EOG). Gdy Twoje dane są przekazywane poza UE/EOG, zapewniamy odpowiednie zabezpieczenia, w tym Standardowe Klauzule Umowne (SKU) zatwierdzone przez Komisję Europejską lub decyzje o adekwatności.",
-      "processors": "Następujące podmioty mogą przetwarzać dane poza UE/EOG: Vercel (USA), Resend (USA), Stripe (UE i USA), Google (USA, obejmuje zarówno Places API, jak i Google Analytics) i Mapbox (USA) — wszystkie działają na podstawie Standardowych Klauzul Umownych. Lokalizacja danych Supabase i PostHog zależy od konfiguracji instancji. DeepL ma siedzibę w UE (Niemcy)."
+      "processors": "Następujące podmioty mogą przetwarzać dane poza UE/EOG: Vercel (USA), Resend (USA), Stripe (UE i USA), Google (USA, obejmuje zarówno Places API, jak i Google Analytics) i Mapbox (USA) — wszystkie działają na podstawie Standardowych Klauzul Umownych. Lokalizacja danych Supabase i PostHog zależy od konfiguracji instancji. DeepL ma siedzibę w UE (Niemcy). Telegram, w którym działa bot Passflat, przetwarza wiadomości na własnej infrastrukturze, która może znajdować się poza UE/EOG, zgodnie ze swoją polityką prywatności."
     },
     "cookies": {
       "title": "Pliki cookies",
@@ -2048,7 +2065,7 @@
     },
     "automated": {
       "title": "Zautomatyzowane podejmowanie decyzji",
-      "description": "Passflat nie stosuje zautomatyzowanego podejmowania decyzji indywidualnych ani profilowania w rozumieniu art. 22 RODO. Ranking ogłoszeń opiera się wyłącznie na dacie dodania, a promowane ogłoszenia wyświetlane są na górze jako funkcja płatna."
+      "description": "Poza dopasowywaniem współlokatorów Passflat nie podejmuje zautomatyzowanych decyzji indywidualnych. W dopasowywaniu współlokatorów w bocie Telegram jedna decyzja zapada automatycznie: profil zostaje ukryty, a w tym czacie nie można utworzyć nowego, gdy zgłoszą go dwie różne osoby albo od razu po jednym zgłoszeniu „Wygląda na mniej niż 18 lat”. Otrzymujesz wtedy uzasadnienie decyzji i możesz się od niej odwołać (/appeal w bocie lub contact@passflat.com); odwołanie rozpatruje człowiek. Samo dopasowywanie porównuje tylko Twoje odpowiedzi (dzielnice, przedział budżetu, miesiąc przeprowadzki, języki, „z kim chcesz mieszkać”) według stałej reguły i nie ocenia Cię na podstawie Twojego zachowania. Ranking ogłoszeń opiera się wyłącznie na dacie dodania, a promowane ogłoszenia wyświetlane są na górze jako funkcja płatna."
     },
     "children": {
       "title": "Dane dzieci",
@@ -2168,17 +2185,29 @@
       "title": "11. Prawo właściwe",
       "text": "Niniejszy Regulamin podlega prawu Rzeczypospolitej Polskiej i jest interpretowany zgodnie z nim. Wszelkie spory wynikające z niniejszego regulaminu podlegają wyłącznej jurysdykcji sądów w Warszawie."
     },
+    "matching": {
+      "title": "12. Dopasowywanie współlokatorów w bocie Telegram",
+      "intro": "W bocie Passflat w Telegramie możesz utworzyć profil współlokatora: dzielnice, budżet na osobę, miesiąc przeprowadzki, języki i opcjonalne szczegóły. Gdy dopasowywanie jest otwarte, bot pokazuje po jednym profile osób, których odpowiedzi pasują do Twoich; gdy obie osoby wybiorą „Interesuje mnie”, każda dostaje nazwę użytkownika drugiej w Telegramie. Passflat nie sprawdza osób ani mieszkań i nie jest stroną żadnych ustaleń między Wami.",
+      "adults": "Dopasowywanie jest tylko dla osób pełnoletnich: przed zapisaniem profilu potwierdzasz, że masz ukończone 18 lat. Jeden czat może mieć jeden profil.",
+      "content": "Krótki tekst (do 280 znaków) nie może zawierać danych kontaktowych — linków, @nazw użytkowników, adresów e-mail, numerów telefonu ani numerów kont; bot je odrzuca, bo kontakt przekazujemy tylko przy wzajemnym zainteresowaniu. Nie może też zawierać treści obraźliwych, dyskryminujących ani nielegalnych ani informacji o zdrowiu, religii czy innych szczególnie osobistych sprawach. Profil ma opisywać Ciebie i być zgodny z prawdą.",
+      "money": "Nie proś nikogo przez dopasowywanie o pieniądze, kaucję ani „rezerwację”. Passflat nigdy nie prosi o pieniądze.",
+      "reports": "Pod każdą kartą i każdym przekazanym kontaktem jest przycisk „Zgłoś” z powodami: „Prosi o pieniądze lub kaucję”, „Fałszywy profil”, „Obraźliwe treści”, „Wygląda na mniej niż 18 lat”, „Inne”. Zgłoszony profil od razu znika dla osoby zgłaszającej. Osoba zgłoszona nie dowiaduje się, kto ją zgłosił.",
+      "hiding": "Profil jest ukrywany automatycznie, gdy zgłoszą go dwie różne osoby (z dowolnego powodu), albo od razu po jednym zgłoszeniu „Wygląda na mniej niż 18 lat”. Zgłoszenie liczy się, dopóki istnieje profil osoby zgłaszającej; zgłoszenia uchylone po odwołaniu przestają się liczyć. Ukrytego profilu nikt już nie widzi i nie jest on liczony, a w tym czacie nie można utworzyć nowego profilu. Decyzja zapada automatycznie: przed ukryciem nikt nie rozpatruje zgłoszeń. Osoby, które zgłosiły profil, dostają wiadomość, że został ukryty.",
+      "ranking": "Kolejność profili: profile osób, których odpowiedzi pasują do Twoich, pokazujemy od najnowszych — według daty utworzenia lub ostatniego odnowienia. Dopasowanie to stała reguła: co najmniej jedna wspólna dzielnica (lub „dowolna dzielnica”), przedziały budżetu różniące się najwyżej o jeden stopień, miesiące przeprowadzki oddalone najwyżej o miesiąc, co najmniej jeden wspólny język i wzajemna zgoda w polu „z kim chcesz mieszkać”. W dopasowywaniu nie ma płatnego wyróżniania ani innej personalizacji.",
+      "statement": "Gdy Twój profil zostanie ukryty, bot wysyła Ci uzasadnienie decyzji: co zostało ograniczone, ile było zgłoszeń i z jakich powodów (nigdy — kto zgłosił), że decyzja zapadła automatycznie, oraz regułę z tej sekcji, na której się opiera.",
+      "redress": "Możesz się odwołać: odpowiedz /appeal w bocie albo napisz na contact@passflat.com; odwołanie rozpatruje człowiek. Możesz też złożyć skargę do koordynatora do spraw usług cyfrowych — Prezesa Urzędu Komunikacji Elektronicznej (Prezes UKE) — albo dochodzić swoich praw przed sądem."
+    },
     "contact": {
-      "title": "12. Kontakt",
+      "title": "13. Kontakt",
       "text": "W razie pytań dotyczących niniejszego Regulaminu, skontaktuj się z nami:",
       "operator": "Passflat jest prowadzony przez Ilya Apaniuk, Warszawa, Polska."
     },
     "forceMajeure": {
-      "title": "13. Siła wyższa",
+      "title": "14. Siła wyższa",
       "text": "Passflat nie ponosi odpowiedzialności za niewykonanie lub opóźnienie w wykonaniu swoich zobowiązań z powodu okoliczności pozostających poza jego rozsądną kontrolą, w tym m.in. klęsk żywiołowych, wojny, terroryzmu, pandemii, przerw w dostawie prądu, awarii internetu, działań rządowych lub awarii usług podmiotów trzecich."
     },
     "changes": {
-      "title": "14. Zmiany w regulaminie",
+      "title": "15. Zmiany w regulaminie",
       "text": "Możemy aktualizować niniejszy Regulamin. O istotnych zmianach powiadomimy zarejestrowanych użytkowników e-mailem co najmniej 14 dni przed ich wejściem w życie. W przypadku istotnych zmian wpływających na Twoje prawa lub przetwarzanie danych, poprosimy o ponowną wyraźną akceptację przy następnym logowaniu. Jeśli nie zaakceptujesz zaktualizowanych warunków, możesz usunąć konto. Dalsze korzystanie z platformy po upływie okresu powiadomienia oznacza akceptację zaktualizowanego regulaminu."
     }
   },

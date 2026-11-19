@@ -142,6 +142,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Every default send-hour `runRoommateDaily` run also calls `roommateReport.findMany` (the hide-notice retry) and sends the statement of reasons to each `hidden` profile with `statementSentAt` null: a whole-run fake needs a report `findMany`, and a hidden fixture needs `statementSentAt` set unless the test wants that statement. A hide that lands now also sends through `ctx.api.sendMessage` (`roommate-hide-messages.ts`).
 - `vi.clearAllMocks()` keeps a `mockImplementation`: a test that makes `api.sendMessage` fail leaks into the next one unless `beforeEach` resets it (example: `roommate-hide.test.ts`).
 - `node scripts/ralph-tasks.mjs add` needs an explicit `id` (the next free `T…`; check `grep -o '"id": "T1[0-9][0-9]"' ralph/tasks.json`).
+- A page render test proves its keys exist and parse in every locale when the mocked `useTranslations(namespace)` passes `namespace` and `onError: (e) => { throw e }` to `createTranslator` (a missing key otherwise renders its path silently); example: `src/app/[locale]/terms/matching-sections.test.ts`.
 
 ## Log
 
@@ -2596,3 +2597,79 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Owner actions:** the review is yours. Run the SQL by hand in the Supabase SQL editor, log the minutes in the posting log, and call the police on a threat (D65). T109 (Q-16) still waits for your answer on how the person hears the decision.
   - No new event, constant, table or migration.
 - Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T113 or T097). T109 stays blocked on Q-16; its note names the code T096 left for it.
+
+### 2026-11-19 20:10 · T097 · done
+
+- Done:
+  - Copy (`src/i18n/messages/{pl,en,ru,uk}.json`, Polish written first, identical key sets; the site's formal «вы» / «ви»; report labels quoted as the bot's buttons):
+    - `privacy.roommateMatching` (new, placed after `privacy.dataSharing`).
+    - `termsPage.matching` (new, placed after `termsPage.law`).
+    - Redrafted existing keys: `privacy.automated.description`, `privacy.transfers.processors` (a Telegram sentence appended), `termsPage.contact.title`, `termsPage.forceMajeure.title`, `termsPage.changes.title` (renumbered 13 – 15).
+    - New items in existing blocks: `privacy.dataSharing.item3`, `privacy.dataSharing.processors.telegram`, `privacy.retention.roommate`.
+    - `lastUpdated` of both pages unchanged.
+  - `src/app/[locale]/privacy/client.tsx`:
+    - After the processors list of "Data sharing": `<h2 id="roommate-matching" class="scroll-mt-24">`, the intro and a list of the items in `ROOMMATE_MATCHING_ITEMS`.
+    - The new `item3`, `telegram` and `retention.roommate` list items.
+  - `src/app/[locale]/terms/client.tsx`: `<h2 id="matching" class="scroll-mt-24">` as section 12, after Governing Law and before Contact (13), Force Majeure (14) and Changes (15); the intro and the items in `MATCHING_ITEMS`.
+  - The anchors are on the `<h2>`s (the article's `[&>h2]` styles need a direct child); `scroll-mt-24` keeps the title below the fixed header. Both pages already get their whole namespace through the scoped provider (`privacy` / `termsPage`), so no provider change.
+  - `docs/specs/README.md`: FR-36 → Done.
+- Tests: `src/app/[locale]/terms/matching-sections.test.ts` (new, 30). Both pages are rendered in each of the four locales with the real locale files; a missing or unparsable key throws.
+  - Privacy: one `id="roommate-matching"` with the title; it sits between "Data sharing" and "Data retention"; every key of `privacy.roommateMatching` renders inside the section; the five redrafted or new keys render.
+  - Terms: one `id="matching"` with the title; the titles in page order are numbered 1 – 15 without a gap; the section follows Governing Law and precedes Contact and Changes; every key of `termsPage.matching` renders inside the section.
+  - Bot agreement: `roommate-flow.ts` links `/privacy#roommate-matching` and `roommate-hide-messages.ts` links `/terms#matching`. In RU / UK / EN, `termsPage.matching.reports` names the five reason buttons exactly as `rt` does, and `hiding` names `btnReportUnder18`.
+  - Mutation check: one item dropped from `ROOMMATE_MATCHING_ITEMS` plus the terms id renamed gave 12 failures; reverted.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 135 files / 2793 tests, build OK). `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review (agent drafts, D56; **none of this was reviewed by a lawyer**, D69):
+  - **When to approve:**
+    - `privacy.roommateMatching` and the privacy keys below: before the deploy (stage 1 launches only then).
+    - `termsPage.matching`: before the switch. It becomes visible with the deploy, though. If it is not approved by then, keep it out of the deploy or approve it with the privacy part.
+    - Then set `lastUpdated` on both pages.
+  - **Every key.** The English text is given here; PL / RU / UK say the same and are in the locale files (Polish first, then RU and UK).
+    - `privacy.roommateMatching`:
+      - `title` "Roommate Matching in the Telegram Bot".
+      - `intro` "The Passflat bot on Telegram helps you find someone to rent a flat with. This section describes what we store from a roommate profile, who sees it and how long we keep it."
+      - `fields`: what we store and why. Districts (or "any district"), the budget per person as a band, the move-in month, languages, the short text up to 280 characters (optional), smoking and pets (optional), the time of the 18+ confirmation, the Telegram username. They are used to match, to count people per district and to share contacts on mutual interest. Never a name, photo, date of birth, age, phone, e-mail or documents.
+      - `gender`: own gender and "live with" (optional) are used only for mutual matching. They are never shown to anyone but you, never counted, never in analytics.
+      - `channel`: the profile exists only in the bot; Telegram delivers the messages under its own privacy policy.
+      - `recipients`:
+        - your profile is included in the per-district numbers in the bot and on the website, and a number never shows a single person;
+        - nobody sees the profile until matching opens;
+        - then people whose answers fit see the card (districts, budget band, month, languages, short text, smoking and pets if answered);
+        - the username goes out only on mutual interest, to both people, read fresh from Telegram just before.
+      - `lifetime`: active for 30 days after creation or renewal, or to the end of the move-in month if earlier. Then hidden and renewable for 14 days, then deleted with its "Interested" and "Skip" marks.
+      - `deletion`: delete at any time, at once and for good; a username already sent stays in the other person's chat.
+      - `drafts`: an unfinished profile is deleted 7 days after the last answer.
+      - `reports`: the reason and decision are kept for 6 months; a deleted profile's reports no longer point to it; the reported person is never told who reported.
+      - `ban`: a profile hidden after reports is deleted 14 days after the date it would have expired. The chat keeps a ban marker so no new profile can be created, as long as the record of that chat with the bot exists.
+      - `analytics`: PostHog events are linked to a pseudonymous identifier of the chat. The profile appears there only as bands, counts and yes/no values, next to actions (create, edit, delete). Never the username, text, districts, gender or "live with".
+    - Redrafted privacy keys the new section contradicted (listed separately, as the spec asks):
+      - `privacy.automated.description`: "Outside roommate matching, Passflat makes no automated individual decisions." It then describes the one automated decision: the hide plus no new profile, at 2 different reporters or 1 "Looks under 18". Then the statement of reasons, the appeal (/appeal or e-mail, a person reviews it), and that matching compares only the answers by a fixed rule and does not assess behaviour. The listings ranking sentence is kept.
+      - `privacy.dataSharing.item3` (new): the matching recipients. Fitting people see the card; on mutual interest both get each other's username; Telegram delivers the messages.
+      - `privacy.dataSharing.processors.telegram` (new): "Telegram — the messenger the Passflat bot runs in (…); Telegram processes messages under its own rules, as its privacy policy describes".
+      - `privacy.retention.roommate` (new): the roommate periods in one line (30 days or month end, 14-day grace, at once on request, drafts 7 days, a hidden profile 14 days after its expiry date, reports 6 months, the ban marker).
+      - `privacy.transfers.processors`: the old text plus "Telegram, which the Passflat bot runs in, processes messages on its own infrastructure, which may be outside the EU/EEA, under its own privacy policy."
+    - `termsPage.matching`:
+      - `title` "12. Roommate Matching in the Telegram Bot".
+      - `intro`: what matching does. One card at a time to people whose answers fit; both tap "Interested" → each gets the other's username. Passflat does not vet people or flats and is not a party to their arrangement.
+      - `adults`: 18+ only, confirmed before saving; one profile per chat.
+      - `content`: the short text is up to 280 characters, with no contact details (the bot refuses them), no offensive, discriminatory or illegal content, and no health, religion or other sensitive details. The profile must be true and about you.
+      - `money`: never ask for money, a deposit or a "reservation"; Passflat never asks for money.
+      - `reports`: a Report button under every card and shared contact, with the five reasons (the bot's labels). The profile disappears for the reporter at once; the reported person is never told who.
+      - `hiding`: hidden at 2 different reporters (any reason) or at once at 1 "Looks under 18". A report counts while the reporter's profile exists; lifted reports no longer count. A hidden profile is not shown or counted and no new profile can be made. The decision is automated with no human review before it. Reporters are told.
+      - `ranking`: newest first by creation or last renewal. The fixed fit rule: a shared district or "any", budget bands at most one step apart, months at most one apart, a shared language, "live with" accepted on both sides. No paid placement or other personalization.
+      - `statement`: what the statement of reasons holds (the restriction, the number of reports and their reasons, never who; automated; the rule).
+      - `redress`: /appeal or contact@passflat.com, a person reviews it; a complaint to the Digital Services Coordinator, the President of UKE, or court.
+    - Renumbered terms titles (existing keys): `contact.title` 12 → 13, `forceMajeure.title` 13 → 14, `changes.title` 14 → 15, in all four locales. Nothing in the copy refers to those numbers ("see Section 9" is unchanged).
+  - **Agent's readings to confirm:**
+    1. **Telegram in the processors list** (as the spec asks), worded as a messenger that processes under its own policy. Whether Telegram is a processor or an independent controller is a lawyer question.
+    2. **Not redrafted: `privacy.transfers.description`.** It still says every transfer outside the EU/EEA has safeguards (SCCs or adequacy). I know of no such contract with Telegram, so this sentence may no longer hold for the bot: a lawyer question for the D69 list. I appended only a factual Telegram sentence to `transfers.processors`.
+    3. **Not redrafted: `privacy.howWeUse.legalBases`.** It already names "tenant matching" under contract (Art. 6(1)(b)) and security and fraud prevention under legitimate interest. I read the profile under the first and the reports and ban under the second, so I added no legal basis to the new section.
+    4. **The ban marker has no end date in practice.** Nothing deletes `telegram_chats` rows, so the marker stays until the chat row is removed by hand (for example on an erasure request). The text says "as long as the record of that chat with the bot exists".
+    5. **Analytics is described honestly.** Bot events are keyed `tg_<chatId>`, so the text says "a pseudonymous identifier of your chat", not "no chat id". Categorical properties such as `entry_source` or the report reason are covered by "next to actions".
+    6. **"A person reviews the appeal"** (privacy and terms) rests on D65 and matches T096's `appealReceived`.
+    7. **The Polish names of the bot's buttons** („Interesuje mnie”, „Pomiń”, „Zgłoś” and the reasons) are my translations: the bot has no Polish (D50).
+    8. **Section number 12.** The spec says "the next free number, before Changes and Contact", so matching takes 12 right after Governing Law and the three closing sections move up by one.
+    9. **`termsPage.dsa.ranking`** ("no other algorithmic personalization … to order search results") is about listing search and was left as it is; matching has its own ranking item.
+  - No new event, constant, table or migration.
+- Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T113, or T098 onwards). The two anchors are now `#roommate-matching` and `#matching`; `matching-sections.test.ts` fails if either moves.

@@ -1977,6 +1977,7 @@
       "intro": "We share data only in the following, limited circumstances:",
       "item1": "Cost reports are displayed in aggregated, anonymized form",
       "item2": "Listing contact details are shared only with users who express interest through the platform",
+      "item3": "Roommate matching in the Telegram bot: once matching opens, people whose answers fit yours see your profile card, and on mutual interest both people receive each other’s Telegram username. Telegram delivers the bot’s messages (details in “Roommate Matching in the Telegram Bot” below).",
       "processors": {
         "title": "Data Processors",
         "supabase": "Supabase — hosting, database, and authentication",
@@ -1987,15 +1988,31 @@
         "mapbox": "Mapbox — map rendering (no personal data shared)",
         "posthog": "PostHog — product analytics (opt-out available)",
         "googleAnalytics": "Google Analytics 4 — web traffic/audience analytics (consent-based, opt-in via cookie banner)",
-        "deepl": "DeepL — automated translation of listing content (EU-based, Germany)"
+        "deepl": "DeepL — automated translation of listing content (EU-based, Germany)",
+        "telegram": "Telegram — the messenger the Passflat bot runs in (the bot’s messages, including the roommate profile questions and answers); Telegram processes messages under its own rules, as its privacy policy describes"
       }
+    },
+    "roommateMatching": {
+      "title": "Roommate Matching in the Telegram Bot",
+      "intro": "The Passflat bot on Telegram helps you find someone to rent a flat with. This section describes what we store from a roommate profile, who sees it and how long we keep it.",
+      "fields": "What we store and why: the districts you chose (or “any district”), your budget per person as a band, the move-in month, the languages you speak, a short text about you of up to 280 characters (optional), smoking and pets (optional), the time you confirmed you are 18 or older, and your Telegram username. We use them to match you with people whose answers fit yours, to count people per district and to share contacts on mutual interest. We never ask for a name, photo, date of birth, age, phone number, e-mail address or documents.",
+      "gender": "Your own gender and “live with” (both optional) are used only for mutual matching: each person has to fit what the other accepts. They are never shown to anyone but you, never counted and never sent to analytics.",
+      "channel": "The profile is created and used only in the Passflat bot on Telegram. Telegram delivers the bot’s messages and processes them under its own rules (the Telegram privacy policy).",
+      "recipients": "Who sees what: your profile is included in the numbers of people per district that others see in the bot and on the website; a number never shows details of a single person. Until matching opens, nobody sees the profile itself. Once matching opens, people whose answers fit yours see your card: districts, budget band, move-in month, languages, the short text, and smoking and pets if you answered them. Your Telegram username is shared only on mutual interest, and then both people get each other’s username. We read your current username from Telegram just before sharing it.",
+      "lifetime": "A profile is active for 30 days after you create or renew it, or until the end of your move-in month if that comes first. It is then hidden and can be renewed for 14 days; after that we delete it together with its “Interested” and “Skip” marks.",
+      "deletion": "You can delete your profile in the bot at any time: it is deleted at once and for good. A username already sent to a matched person stays in that person’s chat.",
+      "drafts": "A profile that was never finished is deleted 7 days after the last answer.",
+      "reports": "Reports: we keep the reason and the decision for 6 months after the report. When a profile is deleted, its reports no longer point to it. A reported person is never told who reported them.",
+      "ban": "A profile hidden after reports is deleted 14 days after the date it would have expired. The chat whose profile was hidden keeps a ban marker so that no new profile can be created in it; the marker stays as long as the record of that chat with the bot exists.",
+      "analytics": "In our analytics (PostHog), matching events are linked to a pseudonymous identifier of your chat with the bot. Your profile appears in them only as bands, counts and yes/no values — for example the budget band, how many districts you chose or whether there is a short text — next to actions such as creating, editing or deleting a profile. Your username, short text, districts, gender and “live with” never go to analytics."
     },
     "retention": {
       "title": "Data Retention",
       "account": "Account data: retained until you delete your account",
       "listings": "Listings: active for 60 days, then archived for 30 days before deletion",
       "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form. Once anonymized, this data is no longer personal data under GDPR (Recital 26) and is maintained to support the community database",
-      "importedEmail": "Email addresses from imported submissions are retained until the submission is claimed at login or until you request removal."
+      "importedEmail": "Email addresses from imported submissions are retained until the submission is claimed at login or until you request removal.",
+      "roommate": "Roommate profiles (Telegram bot): active for 30 days after creation or renewal, or until the end of the move-in month if earlier; then hidden and renewable for 14 days, then deleted. Deleted at once on request in the bot; unfinished profiles after 7 days; a profile hidden after reports 14 days after its expiry date; reports after 6 months; a chat’s ban marker as long as the chat’s record exists (details in “Roommate Matching in the Telegram Bot” above)."
     },
     "rights": {
       "title": "Your Rights (GDPR)",
@@ -2013,7 +2030,7 @@
     "transfers": {
       "title": "Cross-Border Data Transfers",
       "description": "Some of our data processors are located outside the European Union / European Economic Area (EU/EEA). When your data is transferred outside the EU/EEA, we ensure appropriate safeguards are in place, including Standard Contractual Clauses (SCCs) approved by the European Commission, or adequacy decisions.",
-      "processors": "The following processors may process data outside the EU/EEA: Vercel (US), Resend (US), Stripe (EU and US), Google (US, covering both Places API and Google Analytics), and Mapbox (US) — all operating under Standard Contractual Clauses. Supabase and PostHog data locations depend on instance configuration. DeepL is EU-based (Germany)."
+      "processors": "The following processors may process data outside the EU/EEA: Vercel (US), Resend (US), Stripe (EU and US), Google (US, covering both Places API and Google Analytics), and Mapbox (US) — all operating under Standard Contractual Clauses. Supabase and PostHog data locations depend on instance configuration. DeepL is EU-based (Germany). Telegram, which the Passflat bot runs in, processes messages on its own infrastructure, which may be outside the EU/EEA, under its own privacy policy."
     },
     "cookies": {
       "title": "Cookies",
@@ -2048,7 +2065,7 @@
     },
     "automated": {
       "title": "Automated Decision-Making",
-      "description": "Passflat does not engage in automated individual decision-making or profiling as defined by GDPR Art. 22. Listing rankings are based solely on recency, with promoted listings displayed at the top as a paid feature."
+      "description": "Outside roommate matching, Passflat makes no automated individual decisions. In roommate matching in the Telegram bot one decision is automated: a profile is hidden, and no new profile can be created in that chat, when two different people report it, or at once after one “Looks under 18” report. You then receive a statement of reasons and can appeal (/appeal in the bot or contact@passflat.com); a person reviews the appeal. The matching itself compares only your answers (districts, budget band, move-in month, languages, “live with”) by a fixed rule and does not assess you from your behaviour. Listing rankings are based solely on recency, with promoted listings displayed at the top as a paid feature."
     },
     "children": {
       "title": "Children's Data",
@@ -2168,17 +2185,29 @@
       "title": "11. Governing Law",
       "text": "These Terms of Service are governed by and construed in accordance with the laws of the Republic of Poland. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts of Warsaw."
     },
+    "matching": {
+      "title": "12. Roommate Matching in the Telegram Bot",
+      "intro": "In the Passflat bot on Telegram you can create a roommate profile: districts, budget per person, move-in month, languages and optional details. Once matching is open, the bot shows you, one at a time, the profiles of people whose answers fit yours; when both people tap “Interested”, each receives the other’s Telegram username. Passflat does not vet people or flats and is not a party to any arrangement between you.",
+      "adults": "Matching is for adults only: before the profile is saved you confirm that you are 18 or older. One chat can hold one profile.",
+      "content": "The short text (up to 280 characters) must not contain contact details — links, @handles, e-mail addresses, phone or account numbers; the bot refuses them, because contacts are shared only on mutual interest. It must not contain offensive, discriminatory or illegal content, or details of your health, religion or other sensitive matters. Your profile must describe you and be true.",
+      "money": "Do not ask anyone for money, a deposit or a “reservation” through matching. Passflat never asks for money.",
+      "reports": "Every card and every shared contact has a Report button with the reasons “Asks for money or a deposit”, “Fake profile”, “Offensive”, “Looks under 18” and “Other”. A reported profile disappears for the reporter at once. The reported person is never told who reported them.",
+      "hiding": "A profile is hidden automatically when two different people report it, for any reason, or at once after one “Looks under 18” report. A report counts while the reporter’s profile exists; reports lifted after an appeal no longer count. A hidden profile is no longer shown or counted, and no new profile can be created in that chat. The decision is automated: no person reviews the reports before the hide. The people who reported the profile are told that it was hidden.",
+      "ranking": "Order of profiles: profiles whose answers fit yours are shown newest first, by the date they were created or last renewed. Whether answers fit is a fixed rule: at least one shared district (or “any district”), budget bands at most one step apart, move-in months at most one month apart, at least one shared language, and “live with” accepted on both sides. There is no paid placement and no other personalization in matching.",
+      "statement": "When your profile is hidden, the bot sends you a statement of reasons: what was restricted, how many reports there were and their reasons (never who reported), that the decision was automated, and the rule in this section it rests on.",
+      "redress": "You can appeal: reply /appeal in the bot or write to contact@passflat.com; a person reviews the appeal. You can also lodge a complaint with the Digital Services Coordinator, the President of UKE (Prezes Urzędu Komunikacji Elektronicznej), or go to court."
+    },
     "contact": {
-      "title": "12. Contact",
+      "title": "13. Contact",
       "text": "For questions about these Terms of Service, contact us:",
       "operator": "Passflat is operated by Ilya Apaniuk, Warsaw, Poland."
     },
     "forceMajeure": {
-      "title": "13. Force Majeure",
+      "title": "14. Force Majeure",
       "text": "Passflat shall not be liable for any failure or delay in performing its obligations due to circumstances beyond its reasonable control, including but not limited to natural disasters, war, terrorism, pandemics, power outages, internet disruptions, government actions, or third-party service failures."
     },
     "changes": {
-      "title": "14. Changes to Terms",
+      "title": "15. Changes to Terms",
       "text": "We may update these Terms of Service. We will notify registered users of significant changes via email at least 14 days before they take effect. For material changes affecting your rights or data processing, we will request your explicit re-acceptance upon next login. If you do not accept the updated terms, you may delete your account. Continued use of the platform after the notification period constitutes acceptance of the updated terms."
     }
   },

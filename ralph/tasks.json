@@ -643,7 +643,7 @@
       "title": "Privacy and terms drafts for matching in four locales (FR-36)",
       "spec": "docs/specs/07-roommate-matching.md#terms-and-privacy-drafts",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "privacy.roommateMatching and termsPage.matching keys with the content of spec 07 §Terms and privacy drafts in pl, en, ru and uk, Polish first, identical key sets",
         "The existing keys the new sections would contradict (privacy.automated.description, privacy.dataSharing, privacy.retention, the processors list) are redrafted in four locales and listed separately for the owner",
@@ -652,7 +652,7 @@
         "Tests: key parity and the two anchors rendering"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D56, D62, D69. The intake intro links to the privacy anchor (T069).\nFrom T095: the statement of reasons links webLink('/terms#matching', locale, 'roommate') and states the rule (two different people, or at once for 'Looks under 18') and the redress (/appeal, contact@passflat.com, Prezes UKE as the Digital Services Coordinator, court): the terms section must carry id=\"matching\" and say the same."
     },
     {
