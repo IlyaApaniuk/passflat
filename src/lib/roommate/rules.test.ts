@@ -21,10 +21,15 @@ import {
   countBand,
   isBudgetBand,
   isDistrictPickComplete,
+  isGender,
+  isLanguage,
+  isPrefers,
+  languageOfLocale,
   nextIntakeStep,
   profileCreatedProperties,
   profileEditedProperties,
   reduceDistrictPick,
+  setLanguage,
   type DistrictPick,
 } from './rules';
 
@@ -62,6 +67,49 @@ describe('value sets', () => {
   });
 });
 
+describe('value checks of the callback data', () => {
+  it('isLanguage accepts pl, en, ru and uk only', () => {
+    expect(LANGUAGES.every(isLanguage)).toBe(true);
+    expect(['de', 'RU', '', 'ru ', 'done'].some(isLanguage)).toBe(false);
+  });
+
+  it('isGender accepts woman and man only (skip is the button, not a value)', () => {
+    expect(GENDERS.every(isGender)).toBe(true);
+    expect(['skip', 'other', 'Woman', ''].some(isGender)).toBe(false);
+  });
+
+  it('isPrefers accepts anyone, women and men only', () => {
+    expect(PREFERS.every(isPrefers)).toBe(true);
+    expect(['skip', 'woman', 'all', ''].some(isPrefers)).toBe(false);
+  });
+});
+
+describe('languages step (FR-7)', () => {
+  it('ticks the chat bot language in advance: ru → ru, uk → uk, en → en', () => {
+    expect(languageOfLocale('ru')).toBe('ru');
+    expect(languageOfLocale('uk')).toBe('uk');
+    expect(languageOfLocale('en')).toBe('en');
+  });
+
+  it('sets the target state and keeps the button order of LANGUAGES', () => {
+    expect(setLanguage(['ru'], 'pl', true)).toEqual(['pl', 'ru']);
+    expect(setLanguage(['ru'], 'uk', true)).toEqual(['ru', 'uk']);
+    expect(setLanguage(['pl', 'ru'], 'ru', false)).toEqual(['pl']);
+    expect(setLanguage(['ru'], 'ru', false)).toEqual([]);
+  });
+
+  it('sets the same state on a repeated tap instead of flipping it back', () => {
+    expect(setLanguage(['pl', 'ru'], 'pl', true)).toEqual(['pl', 'ru']);
+    expect(setLanguage([], 'uk', false)).toEqual([]);
+  });
+
+  it('drops a stored code outside LANGUAGES and never mutates its input', () => {
+    const stored = Object.freeze(['uk', 'xx', 'ru']);
+    expect(setLanguage(stored, 'en', true)).toEqual(['en', 'ru', 'uk']);
+    expect(stored).toEqual(['uk', 'xx', 'ru']);
+  });
+});
+
 describe('INTAKE_STEPS and nextIntakeStep', () => {
   it('keeps the decided order of spec 06 §Intake steps (D54)', () => {
     expect(INTAKE_STEPS).toEqual([
@@ -82,6 +130,9 @@ describe('INTAKE_STEPS and nextIntakeStep', () => {
     expect(nextIntakeStep('districts')).toBe('budget');
     expect(nextIntakeStep('budget')).toBe('month');
     expect(nextIntakeStep('month')).toBe('languages');
+    expect(nextIntakeStep('languages')).toBe('gender');
+    expect(nextIntakeStep('gender')).toBe('prefers');
+    expect(nextIntakeStep('prefers')).toBe('about');
     expect(nextIntakeStep('adult')).toBeNull();
     expect(nextIntakeStep('edit_budget')).toBeNull();
   });

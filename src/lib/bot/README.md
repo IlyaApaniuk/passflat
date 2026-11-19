@@ -67,11 +67,15 @@ the migrations are missing (`docs/architecture.md` §9).
   it is answered as usual plus the "/cancel leaves the roommate questions" line.
   Every roommate handler stores the Telegram username on the profile when it
   changed.
-- **Roommate intake, steps 1 – 3** (spec 06 §Intake steps): districts
+- **Roommate intake, steps 1 – 6** (spec 06 §Intake steps): districts
   (`rm:d:<slug>:<1|0>` carries the target state and edits the keyboard in place,
   up to 3 or `rm:d:any`, then `rm:d:done`), budget per person (`rm:b:<b1..b5>` or
-  a typed amount through `bandForAmount`) and move-in month (four
-  `rm:m:<YYYY-MM>` buttons from `moveInMonthOptions`, Warsaw time). A button
+  a typed amount through `bandForAmount`), move-in month (four
+  `rm:m:<YYYY-MM>` buttons from `moveInMonthOptions`, Warsaw time), languages
+  (`rm:l:<pl|en|ru|uk>:<1|0>` like the districts, the chat's language ticked in
+  advance, `rm:l:done` needs one), own gender (`rm:g:<woman|man|skip>`, skip keeps
+  null) and "live with" (`rm:p:<anyone|women|men>`); gender and "live with" are
+  never put into an event. A button
   whose step has moved on gets "this step is done" and the current step; a step
   advances only through `advanceStep` (`updateMany where { id, step }`), so a
   double tap or a redelivered update moves it once. The intake order is

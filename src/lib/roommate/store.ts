@@ -126,6 +126,22 @@ export async function setDistrictPick(
 }
 
 /**
+ * Stores the ticked languages while the profile is still at `step` (the
+ * languages step's toggles, spec 06 "Stale and repeated taps").
+ */
+export async function setLanguages(
+  profileId: string,
+  step: string,
+  languages: readonly string[],
+): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, step },
+    data: { languages: [...languages] },
+  });
+  return count === 1;
+}
+
+/**
  * Stores a step's answer and moves the profile from step `from` to `to` in one
  * conditional write: false when the profile is no longer at `from` (a repeated
  * tap, a redelivered update, an older message), and then nothing changed (spec 06

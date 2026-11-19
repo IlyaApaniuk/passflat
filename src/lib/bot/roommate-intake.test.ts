@@ -3,8 +3,9 @@ import { GrammyError, type Bot, type CommandContext, type Context } from 'grammy
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Intake steps 1 – 3 (spec 06 §Intake steps: districts, budget, move-in month) with the
- * callback data of §Entry and routing and the "Stale and repeated taps" rule. Taps go through
+ * Intake steps 1 – 6 (spec 06 §Intake steps: districts, budget, move-in month, languages, own
+ * gender, "live with") with the callback data of §Entry and routing and the "Stale and repeated
+ * taps" rule. Taps go through
  * the handlers `registerRoommateFlow` registers, so the callback data is routed as in the bot.
  * Profiles live in an in-memory Prisma fake whose `updateMany` applies its `where`, so the
  * conditional step writes behave as in the database. Nothing reaches Telegram or a database.
@@ -62,7 +63,10 @@ vi.mock('./lookup', () => ({ getCity: mocks.getCity }));
 import {
   BUDGET_TAP,
   DISTRICT_TOGGLE,
+  GENDER_TAP,
+  LANGUAGE_TOGGLE,
   MONTH_TAP,
+  PREFERS_TAP,
   handleMate,
   handleRoommateText,
   registerRoommateFlow,
@@ -236,7 +240,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('callback data of spec 06 §Entry and routing, steps 1 – 3', () => {
+describe('callback data of spec 06 §Entry and routing, steps 1 – 6', () => {
   it.each([
     ['rm:start', 'rm:start'],
     ['rm:d:wola:1', DISTRICT_TOGGLE],
@@ -245,6 +249,13 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 3', () => {
     ['rm:d:done', 'rm:d:done'],
     ['rm:b:b3', BUDGET_TAP],
     ['rm:m:2026-12', MONTH_TAP],
+    ['rm:l:pl:1', LANGUAGE_TOGGLE],
+    ['rm:l:uk:0', LANGUAGE_TOGGLE],
+    ['rm:l:done', 'rm:l:done'],
+    ['rm:g:woman', GENDER_TAP],
+    ['rm:g:skip', GENDER_TAP],
+    ['rm:p:anyone', PREFERS_TAP],
+    ['rm:p:men', PREFERS_TAP],
   ])('%s reaches exactly one handler', (callbackData, trigger) => {
     const routes = routesFor(callbackData);
     expect(routes).toHaveLength(1);
@@ -266,6 +277,29 @@ describe('callback data of spec 06 §Entry and routing, steps 1 – 3', () => {
       ...replyKeyboard(month.reply).flat(),
     ];
     expect(buttons).toHaveLength(DISTRICTS.length + 2 + 5 + 4);
+    for (const button of buttons) {
+      expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
+      expect(routesFor(button.callback_data!)).toHaveLength(1);
+    }
+  });
+
+  it('every button of steps 4 – 6 fits the 64-byte limit and is routed', async () => {
+    seed({ step: 'month' });
+    const languages = await tap('rm:m:2027-01');
+    seed({ step: 'languages', languages: ['pl', 'en', 'ru', 'uk'] });
+    const allTicked = await tap('rm:l:pl:1');
+    seed({ step: 'languages', languages: ['ru'] });
+    const gender = await tap('rm:l:done');
+    seed({ step: 'gender' });
+    const prefers = await tap('rm:g:skip');
+
+    const buttons = [
+      ...replyKeyboard(languages.reply).flat(),
+      ...editedKeyboard(allTicked.editMessageReplyMarkup).flat(),
+      ...replyKeyboard(gender.reply).flat(),
+      ...replyKeyboard(prefers.reply).flat(),
+    ];
+    expect(buttons).toHaveLength(5 + 5 + 3 + 3);
     for (const button of buttons) {
       expect(Buffer.byteLength(button.callback_data!, 'utf8')).toBeLessThanOrEqual(64);
       expect(routesFor(button.callback_data!)).toHaveLength(1);
@@ -570,10 +604,11 @@ describe('step 3: move-in month', () => {
 
   it('a tap stores the first day of the month and moves on to the languages', async () => {
     seed({ step: 'month' });
-    await tap('rm:m:2027-01');
+    const { reply } = await tap('rm:m:2027-01');
 
     expect(row().moveInMonth?.toISOString()).toBe('2027-01-01T00:00:00.000Z');
     expect(row().step).toBe('languages');
+    expect(texts(reply)).toEqual([rt('ru', 'askLanguages')]);
   });
 
   it('a button for a month that has passed gets the step again with the current months', async () => {
@@ -628,8 +663,329 @@ describe('step 3: move-in month', () => {
   });
 });
 
-describe('steps 1 – 3 in one run', () => {
-  it('/mate, two districts, a typed budget and a month leave one draft at the languages step', async () => {
+describe('step 4: languages', () => {
+  it('opens with the chat language ticked, two per row, then "Done"', async () => {
+    seed({ step: 'month' });
+    const { reply } = await tap('rm:m:2027-01');
+
+    expect(row().languages).toEqual(['ru']);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([
+      ['Польский', 'Английский'],
+      ['✓ Русский', 'Украинский'],
+      ['Готово'],
+    ]);
+    expect(data(replyKeyboard(reply))).toEqual([
+      ['rm:l:pl:1', 'rm:l:en:1'],
+      ['rm:l:ru:0', 'rm:l:uk:1'],
+      ['rm:l:done'],
+    ]);
+  });
+
+  it.each([
+    [
+      'uk',
+      ['uk'],
+      [['Польська', 'Англійська'], ['Російська', '✓ Українська'], ['Готово']],
+      [['rm:l:pl:1', 'rm:l:en:1'], ['rm:l:ru:1', 'rm:l:uk:0'], ['rm:l:done']],
+    ],
+    [
+      'en',
+      ['en'],
+      [['Polish', '✓ English'], ['Russian', 'Ukrainian'], ['Done']],
+      [['rm:l:pl:1', 'rm:l:en:0'], ['rm:l:ru:1', 'rm:l:uk:1'], ['rm:l:done']],
+    ],
+  ])(
+    'a %s chat gets %j ticked in advance',
+    async (locale, ticked, expectedLabels, expectedData) => {
+      mocks.touchChat.mockResolvedValue({ ...CHAT, locale });
+      seed({ step: 'month' });
+      const { reply } = await tap('rm:m:2027-01');
+
+      expect(row().languages).toEqual(ticked);
+      expect(texts(reply)).toEqual([rt(locale as 'uk' | 'en', 'askLanguages')]);
+      expect(labels(replyKeyboard(reply))).toEqual(expectedLabels);
+      expect(data(replyKeyboard(reply))).toEqual(expectedData);
+    },
+  );
+
+  it('a draft that already holds languages keeps them when the step opens', async () => {
+    seed({ step: 'month', languages: ['pl'] });
+    await tap('rm:m:2027-01');
+    expect(row().languages).toEqual(['pl']);
+  });
+
+  it('a tap ticks the language in the same message, in button order', async () => {
+    seed({ step: 'languages', languages: ['ru'] });
+    const { reply, editMessageReplyMarkup, answerCallbackQuery } = await tap('rm:l:pl:1');
+
+    expect(row()).toMatchObject({ languages: ['pl', 'ru'], step: 'languages' });
+    expect(reply).not.toHaveBeenCalled();
+    expect(data(editedKeyboard(editMessageReplyMarkup))).toEqual([
+      ['rm:l:pl:0', 'rm:l:en:1'],
+      ['rm:l:ru:0', 'rm:l:uk:1'],
+      ['rm:l:done'],
+    ]);
+    expect(labels(editedKeyboard(editMessageReplyMarkup))[0]).toEqual(['✓ Польский', 'Английский']);
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(answerCallbackQuery).toHaveBeenCalledWith(undefined);
+  });
+
+  it('a repeated tap sets the same state instead of flipping it back', async () => {
+    seed({ step: 'languages', languages: ['ru'] });
+    await tap('rm:l:pl:1');
+    const second = fakeCtx();
+    second.editMessageReplyMarkup.mockRejectedValue(notModified());
+    await expect(tap('rm:l:pl:1', second)).resolves.toBeDefined();
+
+    expect(row().languages).toEqual(['pl', 'ru']);
+    expect(second.answerCallbackQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('the ✓ button (target state 0) unticks the language', async () => {
+    seed({ step: 'languages', languages: ['pl', 'ru'] });
+    const { editMessageReplyMarkup } = await tap('rm:l:ru:0');
+
+    expect(row().languages).toEqual(['pl']);
+    expect(editedKeyboard(editMessageReplyMarkup).flat()).toContainEqual({
+      text: 'Русский',
+      callback_data: 'rm:l:ru:1',
+    });
+  });
+
+  it('"Done" without a language asks for one as the toast and stays at the step', async () => {
+    seed({ step: 'languages', languages: ['ru'] });
+    await tap('rm:l:ru:0');
+    expect(row().languages).toEqual([]);
+
+    const { reply, answerCallbackQuery } = await tap('rm:l:done');
+    expect(answerCallbackQuery).toHaveBeenCalledWith({ text: rt('ru', 'languagesEmpty') });
+    expect(row().step).toBe('languages');
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('"Done" with a language moves on to the own gender', async () => {
+    seed({ step: 'languages', languages: ['pl', 'ru'] });
+    const { reply } = await tap('rm:l:done');
+
+    expect(row()).toMatchObject({ step: 'gender', languages: ['pl', 'ru'] });
+    expect(texts(reply)).toEqual([rt('ru', 'askGender')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([['Женщина', 'Мужчина'], ['Пропустить']]);
+    expect(data(replyKeyboard(reply))).toEqual([['rm:g:woman', 'rm:g:man'], ['rm:g:skip']]);
+  });
+
+  it('a code outside the four languages is ignored', async () => {
+    seed({ step: 'languages', languages: ['ru'] });
+    const { reply, editMessageReplyMarkup, answerCallbackQuery } = await tap('rm:l:de:1');
+
+    expect(row().languages).toEqual(['ru']);
+    expect(db.roommateProfile.updateMany).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    expect(editMessageReplyMarkup).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['rm:l:pl:1', 'rm:l:ru:0', 'rm:l:done'])(
+    '%s from an older message after the step moved on: "this step is done" and the current step',
+    async (callbackData) => {
+      seed({ step: 'gender', languages: ['ru'] });
+      const { reply, editMessageReplyMarkup } = await tap(callbackData);
+
+      expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askGender')]);
+      expect(row()).toMatchObject({ step: 'gender', languages: ['ru'] });
+      expect(editMessageReplyMarkup).not.toHaveBeenCalled();
+    },
+  );
+
+  it('a toggle that loses the race to "Done" changes nothing', async () => {
+    seed({ step: 'gender', languages: ['ru'] });
+    db.roommateProfile.findUnique.mockResolvedValueOnce(
+      profile({ step: 'languages', languages: ['ru'] }),
+    );
+    const { reply, editMessageReplyMarkup } = await tap('rm:l:pl:1');
+
+    expect(row()).toMatchObject({ step: 'gender', languages: ['ru'] });
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askGender')]);
+    expect(editMessageReplyMarkup).not.toHaveBeenCalled();
+  });
+
+  it('two "Done" taps at once advance the step once', async () => {
+    seed({ step: 'languages', languages: ['ru'] });
+    const first = fakeCtx();
+    const second = fakeCtx();
+    await Promise.all([tap('rm:l:done', first), tap('rm:l:done', second)]);
+
+    expect(row().step).toBe('gender');
+    expect([...texts(first.reply), ...texts(second.reply)].sort()).toEqual(
+      [rt('ru', 'askGender'), rt('ru', 'askGender'), rt('ru', 'stepDone')].sort(),
+    );
+  });
+
+  it('a draft reopened at the step shows its ticked languages', async () => {
+    seed({ step: 'languages', languages: ['en', 'uk'] });
+    const { ctx, reply } = fakeCtx();
+    await handleMate(ctx as CommandContext<Context>);
+
+    expect(texts(reply)).toEqual([rt('ru', 'askLanguages')]);
+    expect(data(replyKeyboard(reply))).toEqual([
+      ['rm:l:pl:1', 'rm:l:en:0'],
+      ['rm:l:ru:1', 'rm:l:uk:0'],
+      ['rm:l:done'],
+    ]);
+  });
+});
+
+describe('steps 5 and 6: own gender and "live with" (FR-8)', () => {
+  it.each([
+    ['ru', 'только для взаимного подбора и никому не показывается'],
+    ['uk', 'лише для взаємного підбору й нікому не показується'],
+    ['en', 'Used only for mutual matching and never shown to anyone'],
+  ] as const)(
+    'the %s wording says why both are asked and that they are never shown',
+    (locale, why) => {
+      expect(rt(locale, 'askGender')).toContain(why);
+      expect(rt(locale, 'askPrefers')).toContain(why);
+    },
+  );
+
+  it('the wording is the PRD 3 §8 draft split over the two steps', () => {
+    expect(rt('ru', 'askGender')).toContain(
+      'Необязательно. Кто ты: женщина / мужчина / пропустить.',
+    );
+    expect(rt('ru', 'askPrefers')).toContain(
+      'С кем готов(а) жить: с кем угодно / с женщинами / с мужчинами.',
+    );
+    expect(rt('uk', 'askGender')).toContain('Необовʼязково. Хто ти: жінка / чоловік / пропустити.');
+    expect(rt('uk', 'askPrefers')).toContain(
+      'З ким готовий(-а) жити: з ким завгодно / з жінками / з чоловіками.',
+    );
+    expect(rt('en', 'askGender')).toContain('Optional. You are: a woman / a man / skip.');
+    expect(rt('en', 'askPrefers')).toContain("Who you'd live with: anyone / women / men.");
+  });
+
+  it.each([
+    ['rm:g:woman', 'woman'],
+    ['rm:g:man', 'man'],
+    ['rm:g:skip', null],
+  ])('%s stores gender %j and moves on to "live with"', async (callbackData, gender) => {
+    seed({ step: 'gender', languages: ['ru'] });
+    const { reply } = await tap(callbackData);
+
+    expect(row()).toMatchObject({ gender, step: 'prefers', prefers: 'anyone' });
+    expect(texts(reply)).toEqual([rt('ru', 'askPrefers')]);
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(labels(replyKeyboard(reply))).toEqual([
+      ['С кем угодно'],
+      ['С женщинами', 'С мужчинами'],
+    ]);
+    expect(data(replyKeyboard(reply))).toEqual([['rm:p:anyone'], ['rm:p:women', 'rm:p:men']]);
+  });
+
+  it('writes the gender and "live with" buttons in the chat locale', async () => {
+    mocks.touchChat.mockResolvedValue({ ...CHAT, locale: 'uk' });
+    seed({ step: 'languages', languages: ['uk'] });
+    const gender = await tap('rm:l:done');
+    const prefers = await tap('rm:g:woman');
+
+    expect(texts(gender.reply)).toEqual([rt('uk', 'askGender')]);
+    expect(labels(replyKeyboard(gender.reply))).toEqual([['Жінка', 'Чоловік'], ['Пропустити']]);
+    expect(texts(prefers.reply)).toEqual([rt('uk', 'askPrefers')]);
+    expect(labels(replyKeyboard(prefers.reply))).toEqual([
+      ['З ким завгодно'],
+      ['З жінками', 'З чоловіками'],
+    ]);
+  });
+
+  it.each([
+    ['rm:p:anyone', 'anyone'],
+    ['rm:p:women', 'women'],
+    ['rm:p:men', 'men'],
+  ])('%s stores "live with" %j and moves on to the short text', async (callbackData, prefers) => {
+    seed({ step: 'prefers', gender: 'man' });
+    await tap(callbackData);
+    expect(row()).toMatchObject({ gender: 'man', prefers, step: 'about' });
+  });
+
+  it('"women" without an own gender is stored as chosen', async () => {
+    seed({ step: 'prefers', gender: null });
+    await tap('rm:p:women');
+    expect(row()).toMatchObject({ gender: null, prefers: 'women', step: 'about' });
+  });
+
+  it('skipping both stores gender=null and prefers=anyone', async () => {
+    seed({ step: 'gender', gender: 'woman', prefers: 'men' });
+    await tap('rm:g:skip');
+    await tap('rm:p:anyone');
+    expect(row()).toMatchObject({ gender: null, prefers: 'anyone', step: 'about' });
+  });
+
+  it.each([
+    ['rm:g:other', 'gender'],
+    ['rm:g:women', 'gender'],
+    ['rm:p:skip', 'prefers'],
+    ['rm:p:woman', 'prefers'],
+  ])('%s (not a value the step offers) is ignored', async (callbackData, step) => {
+    seed({ step });
+    const { reply, answerCallbackQuery } = await tap(callbackData);
+
+    expect(row()).toMatchObject({ step, gender: null, prefers: 'anyone' });
+    expect(db.roommateProfile.updateMany).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('a gender button after the step moved on changes nothing', async () => {
+    seed({ step: 'prefers', gender: 'woman' });
+    const { reply } = await tap('rm:g:man');
+
+    expect(texts(reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askPrefers')]);
+    expect(row()).toMatchObject({ step: 'prefers', gender: 'woman' });
+  });
+
+  it('a "live with" button after the step moved on changes nothing', async () => {
+    seed({ step: 'about', prefers: 'men' });
+    const { reply } = await tap('rm:p:women');
+
+    expect(texts(reply)[0]).toBe(rt('ru', 'stepDone'));
+    expect(row()).toMatchObject({ step: 'about', prefers: 'men' });
+  });
+
+  it('two gender taps at once store one answer and advance once', async () => {
+    seed({ step: 'gender' });
+    const first = fakeCtx();
+    const second = fakeCtx();
+    await Promise.all([tap('rm:g:woman', first), tap('rm:g:man', second)]);
+
+    expect(row().step).toBe('prefers');
+    expect(['woman', 'man']).toContain(row().gender);
+    expect([...texts(first.reply), ...texts(second.reply)].sort()).toEqual(
+      [rt('ru', 'askPrefers'), rt('ru', 'askPrefers'), rt('ru', 'stepDone')].sort(),
+    );
+  });
+
+  it.each(['languages', 'gender', 'prefers'])(
+    'typed text at the %s step passes on and the step stays open',
+    async (step) => {
+      seed({ step, languages: ['ru'] });
+      const { ctx, reply } = fakeCtx();
+
+      expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'женщина')).toBe('passed');
+      expect(row()).toMatchObject({ step, gender: null, prefers: 'anyone', languages: ['ru'] });
+      expect(reply).not.toHaveBeenCalled();
+    },
+  );
+
+  it('neither step sends an event', async () => {
+    seed({ step: 'gender' });
+    await tap('rm:g:woman');
+    await tap('rm:p:women');
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+});
+
+describe('steps 1 – 6 in one run', () => {
+  it('/mate through "live with" leaves one draft at the short text step', async () => {
     const start = fakeCtx();
     await handleMate(start.ctx as CommandContext<Context>);
     expect(texts(start.reply)[1]).toBe(askDistricts());
@@ -640,17 +996,29 @@ describe('steps 1 – 3 in one run', () => {
     const typed = fakeCtx();
     expect(await handleRoommateText(typed.ctx, 'chat-row', 'ru', '1 650 zł')).toBe('used');
     await tap('rm:m:2027-02');
+    expect(row()).toMatchObject({ step: 'languages', languages: ['ru'] });
+    await tap('rm:l:en:1');
+    await tap('rm:l:done');
+    await tap('rm:g:skip');
+    await tap('rm:p:women');
 
     expect(db.rows).toHaveLength(1);
     expect(row()).toMatchObject({
       status: 'draft',
-      step: 'languages',
+      step: 'about',
       districtSlugs: ['wola', 'mokotow'],
       anyDistrict: false,
       budgetBand: 'b3',
+      languages: ['en', 'ru'],
+      gender: null,
+      prefers: 'women',
     });
     expect(row().moveInMonth?.toISOString()).toBe('2027-02-01T00:00:00.000Z');
-    // The intake steps send no event; only the start of the flow does (spec 06 §Events).
+    // The intake steps send no event; only the start of the flow does (spec 06 §Events), and
+    // nothing about gender or "live with" reaches analytics (D51).
     expect(mocks.track.mock.calls.map(([, event]) => event)).toEqual(['tg_roommate_flow_started']);
+    expect(JSON.stringify(mocks.track.mock.calls)).not.toMatch(
+      /gender|prefers|wom[ae]n|\bm[ae]n\b/,
+    );
   });
 });

@@ -196,14 +196,14 @@
       "title": "Intake steps: languages, own gender and live with (FR-7, FR-8)",
       "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
       "dependsOn": ["T071"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Steps 4 – 6 of spec 06 §Intake steps: the language multi-select with the chat language ticked and Done needing one; own gender (woman, man, skip) and live with (anyone, women, men), with the PRD 3 §8 wording that says why and that it is never shown",
         "Skipping both stores gender=null and prefers=anyone; 'women' without an own gender is stored as chosen; language toggles carry the target state (rm:l:<code>:1|0) and steps advance through the conditional update of T071",
         "Tests for each step and the stale-button rule"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D51, D54."
     },
     {

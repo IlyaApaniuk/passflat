@@ -10,12 +10,18 @@ import {
 
 import {
   BUDGET_BANDS,
+  LANGUAGES,
   MAX_DISTRICTS,
   bandForAmount,
   isBudgetBand,
   isDistrictPickComplete,
+  isGender,
+  isLanguage,
+  isPrefers,
+  languageOfLocale,
   nextIntakeStep,
   reduceDistrictPick,
+  setLanguage,
   type BudgetBand,
   type DistrictPick,
 } from '@/lib/roommate/rules';
@@ -28,6 +34,7 @@ import {
   isStepOpen,
   loadRoommateEntry,
   setDistrictPick,
+  setLanguages,
   setRoommateUsername,
   type StepAnswer,
 } from '@/lib/roommate/store';
@@ -51,7 +58,8 @@ import { normalizeLocale, type BotLocale } from './texts';
 
 /**
  * The roommate conversation in the bot (spec 06): the entry and its routing and
- * the intake steps districts, budget and move-in month for now; the later steps,
+ * the intake steps districts, budget, move-in month, languages, own gender and
+ * "live with" for now; the later steps,
  * the own card, edit, delete, renew, the counts reply and the opt-in are added
  * here by their tasks.
  *
@@ -222,6 +230,59 @@ async function sendMonthStep(ctx: Context, locale: BotLocale, now: Date): Promis
   await ctx.reply(rt(locale, 'askMonth'), { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
+const LANGUAGE_LABEL = { pl: 'langPl', en: 'langEn', ru: 'langRu', uk: 'langUk' } as const;
+
+/**
+ * Step 4's buttons: the four languages two per row, each carrying its target
+ * state (`rm:l:<code>:1` to tick, `:0` to untick) and ✓ when ticked, then "Done".
+ */
+function languagesKeyboard(languages: readonly string[], locale: BotLocale): InlineKeyboard {
+  const buttons = LANGUAGES.map((code) => {
+    const name = rt(locale, LANGUAGE_LABEL[code]);
+    const ticked = languages.includes(code);
+    return InlineKeyboard.text(
+      ticked ? rt(locale, 'btnPicked', { name }) : name,
+      `rm:l:${code}:${ticked ? 0 : 1}`,
+    );
+  });
+  return InlineKeyboard.from([buttons]).toFlowed(2).row().text(rt(locale, 'btnDone'), 'rm:l:done');
+}
+
+async function sendLanguagesStep(
+  ctx: Context,
+  languages: readonly string[],
+  locale: BotLocale,
+): Promise<void> {
+  await ctx.reply(rt(locale, 'askLanguages'), {
+    parse_mode: 'HTML',
+    reply_markup: languagesKeyboard(languages, locale),
+  });
+}
+
+/** Step 5 (FR-8): "a woman / a man" in one row, "skip" below (`rm:g:<woman|man|skip>`). */
+async function sendGenderStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from([
+    [
+      InlineKeyboard.text(rt(locale, 'btnWoman'), 'rm:g:woman'),
+      InlineKeyboard.text(rt(locale, 'btnMan'), 'rm:g:man'),
+    ],
+    [InlineKeyboard.text(rt(locale, 'btnSkip'), 'rm:g:skip')],
+  ]);
+  await ctx.reply(rt(locale, 'askGender'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
+/** Step 6 (FR-8): "anyone" in one row, "women / men" below (`rm:p:<anyone|women|men>`). */
+async function sendPrefersStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from([
+    [InlineKeyboard.text(rt(locale, 'btnPrefersAnyone'), 'rm:p:anyone')],
+    [
+      InlineKeyboard.text(rt(locale, 'btnPrefersWomen'), 'rm:p:women'),
+      InlineKeyboard.text(rt(locale, 'btnPrefersMen'), 'rm:p:men'),
+    ],
+  ]);
+  await ctx.reply(rt(locale, 'askPrefers'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
 /** The question of the profile's open step, sent again (a draft reopened, a stale answer). */
 async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocale): Promise<void> {
   switch (profile.step) {
@@ -234,8 +295,17 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
     case 'month':
       await sendMonthStep(ctx, locale, new Date());
       return;
+    case 'languages':
+      await sendLanguagesStep(ctx, profile.languages, locale);
+      return;
+    case 'gender':
+      await sendGenderStep(ctx, locale);
+      return;
+    case 'prefers':
+      await sendPrefersStep(ctx, locale);
+      return;
     default:
-      // The later steps (T072 – T075) add their questions here.
+      // The later steps (T073 – T075) add their questions here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -538,7 +608,69 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   if (!moveInMonthOptions(now).some((option) => option.getTime() === month.getTime())) return;
-  await moveOn(ctx, profile, locale, { moveInMonth: month });
+  // FR-7: the languages step opens with the chat's bot language ticked in advance.
+  const languages = profile.languages.length > 0 ? profile.languages : [languageOfLocale(locale)];
+  await moveOn(ctx, profile, locale, { moveInMonth: month, languages });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Intake buttons, steps 4 – 6 (FR-7, FR-8)
+// ---------------------------------------------------------------------------------------------
+
+/** A language toggle carries its target state: `1` ticks, `0` unticks. */
+export const LANGUAGE_TOGGLE = /^rm:l:([^:]+):([01])$/;
+export const GENDER_TAP = /^rm:g:([^:]+)$/;
+export const PREFERS_TAP = /^rm:p:([^:]+)$/;
+
+/**
+ * `rm:l:<code>:<1|0>`: sets the language to the button's target state, so a
+ * repeated tap sets the same state; a code outside `LANGUAGES` is ignored. The
+ * keyboard is edited in place.
+ */
+const handleLanguageToggle = roommateCallback(async (ctx, chat, locale) => {
+  const [code, state] = matchGroups(ctx);
+  if (!isLanguage(code)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'languages');
+  if (!profile) return;
+
+  const languages = setLanguage(profile.languages, code, state === '1');
+  if (!(await setLanguages(profile.id, 'languages', languages))) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  await ctx.editMessageReplyMarkup({ reply_markup: languagesKeyboard(languages, locale) });
+});
+
+/** `rm:l:done`: moves on to the own gender with at least one language; with none, asks again. */
+const handleLanguagesDone = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'languages');
+  if (!profile) return;
+  if (profile.languages.length === 0) return rt(locale, 'languagesEmpty');
+  await moveOn(ctx, profile, locale);
+});
+
+/** `rm:g:<woman|man|skip>`: stores the own gender (skip keeps null) and moves on to "live with". */
+const handleGenderTap = roommateCallback(async (ctx, chat, locale) => {
+  const [value] = matchGroups(ctx);
+  if (value !== 'skip' && !isGender(value)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'gender');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { gender: value === 'skip' ? null : value });
+});
+
+/**
+ * `rm:p:<anyone|women|men>`: stores "live with" as chosen, also "women" or "men"
+ * without an own gender (FR-8 edge case), and moves on to the short text.
+ */
+const handlePrefersTap = roommateCallback(async (ctx, chat, locale) => {
+  const [value] = matchGroups(ctx);
+  if (!isPrefers(value)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'prefers');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { prefers: value });
 });
 
 /**
@@ -611,4 +743,8 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:d:done', handleDistrictsDone);
   bot.callbackQuery(BUDGET_TAP, handleBudgetTap);
   bot.callbackQuery(MONTH_TAP, handleMonthTap);
+  bot.callbackQuery(LANGUAGE_TOGGLE, handleLanguageToggle);
+  bot.callbackQuery('rm:l:done', handleLanguagesDone);
+  bot.callbackQuery(GENDER_TAP, handleGenderTap);
+  bot.callbackQuery(PREFERS_TAP, handlePrefersTap);
 }

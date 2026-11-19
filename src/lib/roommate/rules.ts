@@ -61,12 +61,41 @@ export function nextIntakeStep(step: string): IntakeStep | null {
 
 /** FR-7: the languages a person can pick, in button order. */
 export const LANGUAGES = ['pl', 'en', 'ru', 'uk'] as const;
+type Language = (typeof LANGUAGES)[number];
+
+/** True for a code of `LANGUAGES`: a language button's data is checked before it is stored. */
+export function isLanguage(value: string): value is Language {
+  return (LANGUAGES as readonly string[]).includes(value);
+}
+
+/** FR-7: the language ticked in advance on the languages step is the chat's bot language. */
+export function languageOfLocale(locale: 'ru' | 'uk' | 'en'): Language {
+  return locale;
+}
+
+/**
+ * A language toggle (`rm:l:<code>:1|0`) carries its target state, so a redelivered tap sets the
+ * same state instead of flipping it back. The result keeps the button order of `LANGUAGES`.
+ */
+export function setLanguage(languages: readonly string[], code: Language, on: boolean): Language[] {
+  return LANGUAGES.filter((language) => (language === code ? on : languages.includes(language)));
+}
 
 /** FR-8: own gender; skipping keeps `gender = null`. Never counted or sent in an event (D51). */
 export const GENDERS = ['woman', 'man'] as const;
+type Gender = (typeof GENDERS)[number];
+
+export function isGender(value: string): value is Gender {
+  return (GENDERS as readonly string[]).includes(value);
+}
 
 /** FR-8: "live with"; the default and the skip value is `anyone`. Never in an event (D51). */
 export const PREFERS = ['anyone', 'women', 'men'] as const;
+type Prefers = (typeof PREFERS)[number];
+
+export function isPrefers(value: string): value is Prefers {
+  return (PREFERS as readonly string[]).includes(value);
+}
 
 /** FR-11: smoking (no / outside only / fine); skip stores null. */
 export const SMOKING = ['no', 'outside', 'fine'] as const;
