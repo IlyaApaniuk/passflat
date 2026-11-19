@@ -12,6 +12,7 @@ import {
   isRoommateSendHour,
   monthKey,
   monthOffset,
+  monthsApart,
   moveInMonthOptions,
   parseMonthKey,
   renewalNeedsNewMonth,
@@ -25,6 +26,23 @@ const iso = (dates: Date[]) => dates.map((d) => d.toISOString());
 
 afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+describe('monthsApart (the compatibility rule, spec 07)', () => {
+  it('counts calendar months in either order, across a year end', () => {
+    expect(monthsApart(month('2027-02'), month('2027-02'))).toBe(0);
+    expect(monthsApart(month('2026-12'), month('2027-01'))).toBe(1);
+    expect(monthsApart(month('2027-01'), month('2026-12'))).toBe(1);
+    expect(monthsApart(month('2027-02'), month('2027-04'))).toBe(2);
+    expect(monthsApart(month('2026-11'), month('2027-11'))).toBe(12);
+  });
+
+  it('does not depend on the machine time zone', () => {
+    vi.stubEnv('TZ', 'UTC');
+    expect(monthsApart(month('2026-12'), month('2027-01'))).toBe(1);
+    vi.stubEnv('TZ', 'Pacific/Kiritimati');
+    expect(monthsApart(month('2026-12'), month('2027-01'))).toBe(1);
+  });
 });
 
 describe('monthKey and parseMonthKey (the move-in button data rm:m:<YYYY-MM>)', () => {

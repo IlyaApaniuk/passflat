@@ -347,14 +347,14 @@
       "title": "Compatibility rule and the candidate loader (FR-24)",
       "spec": "docs/specs/07-roommate-matching.md#compatibility",
       "dependsOn": ["T062", "T066"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "isCompatible(a, b) in src/lib/roommate/compatibility.ts implements the five rules of spec 07 §Compatibility; every golden row is a test, each also with the arguments swapped",
         "findCompatible(profile, now) in store.ts loads candidates in one query (active, not self, not hidden, not reacted by the profile, not having skipped the profile, no report either way) and filters them with isCompatible, newest first by coalesce(renewed_at, activated_at)",
         "A test with a mocked candidate list asserts the result equals the pure rule's, excludes reacted and reported profiles and keeps the order"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "FR-24 is PRD 3 M3; it is built here because the one-time message of FR-19 (T082) counts compatible people."
     },
     {

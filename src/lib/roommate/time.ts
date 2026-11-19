@@ -141,6 +141,14 @@ export function monthOffset(moveInMonth: Date, now: Date): number {
   return monthIndexOfMonth(moveInMonth) - warsawMonthIndex(now);
 }
 
+/**
+ * Calendar months between two month values, either order (December 2026 and January 2027 are 1
+ * apart). The compatibility rule's move-in tolerance reads it (spec 07 §Compatibility).
+ */
+export function monthsApart(a: Date, b: Date): number {
+  return Math.abs(monthIndexOfMonth(a) - monthIndexOfMonth(b));
+}
+
 /** True once the Warsaw calendar has left `moveInMonth` (a stale button, a renewal). */
 export function isMoveInMonthPast(moveInMonth: Date, now: Date): boolean {
   return monthOffset(moveInMonth, now) < 0;

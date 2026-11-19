@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -80,16 +82,17 @@ export function countRoommates(
 }
 
 /**
- * The profiles that count at `now`: `status=active` and `expires_at` still in the
- * future (by time, so a profile the daily cron has not marked expired yet is not
- * counted), the chat neither blocked nor banned.
+ * The profiles that are active at `now` (spec 06 §Counts, also the candidates of spec
+ * 07 §Compatibility): `status=active` and `expires_at` still in the future (by time,
+ * so a profile the daily cron has not marked expired yet is not counted), the chat
+ * neither blocked nor banned.
  */
-function countedProfilesWhere(now: Date) {
+export function activeProfilesWhere(now: Date) {
   return {
     status: 'active',
     expiresAt: { gt: now },
     chat: { blockedAt: null, roommateBannedAt: null },
-  };
+  } satisfies Prisma.RoommateProfileWhereInput;
 }
 
 /**
@@ -103,7 +106,7 @@ export async function loadRoommateCounts(
   now: Date = new Date(),
 ): Promise<RoommateCounts> {
   const others = await prisma.roommateProfile.findMany({
-    where: countedProfilesWhere(now),
+    where: activeProfilesWhere(now),
     select: { id: true, districtSlugs: true, anyDistrict: true },
   });
   return countRoommates(viewer, others);

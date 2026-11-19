@@ -2,6 +2,8 @@ import { Prisma, type RoommateProfile } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 
+import { isCompatible, type CompatibilityProfile } from './compatibility';
+import { activeProfilesWhere } from './counts';
 import { INTAKE_STEPS, type DistrictPick } from './rules';
 import { computeExpiresAt } from './time';
 
@@ -201,6 +203,39 @@ export async function clearEditStep(profileId: string, step: string): Promise<bo
     data: { step: null },
   });
   return count === 1;
+}
+
+/** The instant a profile last came up: `coalesce(renewed_at, activated_at)`. */
+function freshness(profile: Pick<RoommateProfile, 'renewedAt' | 'activatedAt'>): number {
+  return (profile.renewedAt ?? profile.activatedAt)?.getTime() ?? 0;
+}
+
+/**
+ * The profiles `profile` may be shown (spec 07 §Compatibility, FR-24), newest first by
+ * `coalesce(renewed_at, activated_at)` (ties by id). One query loads the candidates: active at
+ * `now` by the counts' definition (so never hidden, expired, blocked or banned), not the profile
+ * itself, none `profile` has reacted to, none that skipped `profile` (no match is possible), no
+ * report between the two in either direction. They are then filtered in memory with the pure
+ * `isCompatible`, so the result equals the rule by construction (**Assumption**: fine up to
+ * 2,000 active profiles; above that the filter must move into SQL, see `src/lib/bot/README.md`).
+ */
+export async function findCompatible(
+  profile: CompatibilityProfile & Pick<RoommateProfile, 'id'>,
+  now: Date,
+): Promise<RoommateProfile[]> {
+  const candidates = await prisma.roommateProfile.findMany({
+    where: {
+      ...activeProfilesWhere(now),
+      id: { not: profile.id },
+      reactionsGot: { none: { fromProfileId: profile.id } },
+      reactionsGiven: { none: { toProfileId: profile.id, kind: 'skip' } },
+      reportsReceived: { none: { reporterProfileId: profile.id } },
+      reportsMade: { none: { targetProfileId: profile.id } },
+    },
+  });
+  return candidates
+    .filter((candidate) => isCompatible(profile, candidate))
+    .sort((a, b) => freshness(b) - freshness(a) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 /**

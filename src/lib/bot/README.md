@@ -148,6 +148,17 @@ the migrations are missing (`docs/architecture.md` §9).
   half rounded half up to 10 zł; never a known part or asking prices). A loader
   error leaves only this part out; an English chat gets none until `texts.ts` has
   English (`hasBotTexts`).
+- **Compatibility** (spec 07 §Compatibility, FR-24; no handler uses it yet):
+  `isCompatible(a, b)` (`../roommate/compatibility.ts`, pure, symmetric) needs a
+  shared district (or "any" on either side), budget bands at most 1 apart, move-in
+  months at most 1 calendar month apart, a shared language and "live with" accepted
+  both ways (`women` / `men` only a stated gender). `findCompatible(profile, now)`
+  (`../roommate/store.ts`) loads in one query the profiles active by the counts'
+  definition, not the profile itself, not reacted to by it, not having skipped it,
+  with no report either way, then filters them with `isCompatible` and orders them
+  newest first by `coalesce(renewed_at, activated_at)` (ties by id). The filter and
+  the order run in memory, which is fine up to about 2,000 active profiles
+  (**Assumption**); above that they must move into SQL.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
@@ -215,6 +226,7 @@ the migrations are missing (`docs/architecture.md` §9).
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
 | `../roommate/room-costs.ts`                      | Room figures and the D61 per-person split per area (FR-17)         |
+| `../roommate/compatibility.ts`                   | The compatibility rule (FR-24); `findCompatible` is in `store.ts`  |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
