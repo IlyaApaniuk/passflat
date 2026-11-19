@@ -848,3 +848,32 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - (2) The command menu and the capability list still say «/cancel — выйти из вопросов о залоге». They do not mention reminders, because the spec did not ask for it.
   - No assumptions, tables, migrations or analytics changes.
 - Next: remaining M4 tasks per `ralph/tasks.json` (T049, T050 and the others).
+
+### 2026-11-19 05:08 · T041 · done
+
+- Done:
+  - New `docs/legal-review/deposit-scenarios.md` (English, Polish terms and the letter verbatim). The header says it describes the implementation at `a5972fa`, is not legal advice, has not been reviewed by a lawyer, and adds or changes no rule.
+  - Contents:
+    - the five questions and their accepted answers;
+    - scenario tables: R (returned amount), C (contract status, incl. unsupported file, 10-file cap, PDF starts reading at once), D (deadline source), T (before / on / after the deadline), S (12 strength rows: reason × protocol × contract clause), V (lines independent of the reason);
+    - the letter template with every Polish variant;
+    - reminders and outcomes (F1–F7);
+    - the statute references as written in the code, and the bot-copy statements that have no citation in code;
+    - known limits: contract read by a model, only three clauses used, partial reading, no case law;
+    - an English rendering of every verdict text.
+  - Every row cites a `file:line` or function.
+  - `src/lib/bot/README.md`: a pointer to the document, and a note to update it when a rule or a verdict text changes.
+- Checks:
+  - `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 71 files / 916 tests, build OK. `next-env.d.ts` restored.
+  - After verify, two sentences in section 2 of the document were corrected (markdown only); `npx prettier --check` passed on both files.
+  - No code changed, so no tests were added.
+- Did not work: nothing.
+- Owner review:
+  - No copy, assumptions, tables or migrations.
+  - Implementation facts the document lists under "Known limits" (stated, not changed; no rule was touched):
+    - (1) The deadline reminder is sent on the deadline day, which `assessDeposit` counts as not overdue, while `followUpDeadline` says the deadline "expired today".
+    - (2) The letter is offered for `bills` and before the deadline. It demands the whole unreturned amount, and its 7-day period ignores the remaining deadline.
+    - (3) `contractType` (okazjonalny / instytucjonalny) is read but unused.
+    - (4) The `outcomeLetterFailed` procedural claims (20 000 zł, fees, e-Sąd) have no citation in code.
+  - Owner action: send the document to a Polish lawyer. Line numbers go stale when `deposit.ts` / `deposit-flow.ts` / `deposit-texts.ts` change.
+- Next: remaining M4 tasks per `ralph/tasks.json`.

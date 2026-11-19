@@ -213,4 +213,8 @@ required — plus the landlord type and the parties. Measured on a test lease:
 - A failed read or a non-lease falls back to the verdict without the contract.
 
 Legal wording was checked against the consolidated statute texts (October
-2026); it should still be read by a Polish lawyer before wide promotion.
+2026); it should still be read by a Polish lawyer before wide promotion. The
+scenario list for that review, with every case the code distinguishes and the
+statute references as written in the code, is
+`docs/legal-review/deposit-scenarios.md`; update it when a rule or a verdict
+text changes.

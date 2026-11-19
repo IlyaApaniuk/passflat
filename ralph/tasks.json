@@ -665,14 +665,14 @@
       "title": "Write the deposit scenario list for a Polish lawyer's review",
       "spec": "docs/specs/04-telegram-bot.md#scenarios-for-a-lawyer",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "docs/legal-review/deposit-scenarios.md (English, Polish legal terms literal) lists every scenario the code distinguishes, what the bot says in each, the rules as implemented in src/lib/bot/deposit.ts with their statute references as written in the code, and the known limits",
         "It states at the top that it describes the implementation, is not legal advice and has not been reviewed by a lawyer; it adds and changes no rule",
         "Every scenario row cites the function or line it comes from"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
