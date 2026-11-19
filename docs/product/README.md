@@ -31,7 +31,8 @@ prd-rules.md                  how to write a PRD the loop can build without gues
   **Rejected**, **Parked** (with a trigger).
 - Experiment status: **Planned**, **Running**, **Done** (with result), **Stopped**.
 - PRD status: **Draft**, **Evaluated**, **Decided** (owner answered the decision review),
-  **In progress** (tasks in the loop), **Done**, then **Deployed** when the owner ships it.
+  **In progress** (tasks in the loop), **Done**, then **Deployed** when the owner ships it;
+  **On hold** (the owner paused it; its text is kept and it is not decomposed).
 - Requirement and spec marks: **Decided**, **Assumption**, **Open**.
 
 ## Precedence

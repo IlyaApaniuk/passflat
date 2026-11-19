@@ -979,35 +979,6 @@
       "status": "done"
     },
     {
-      "dependsOn": [
-        "T002",
-        "T029",
-        "T030",
-        "T042",
-        "T043",
-        "T054",
-        "T055",
-        "T056",
-        "T057",
-        "T058",
-        "T060"
-      ],
-      "acceptance": [
-        "npm run verify and npm run test:e2e pass; the summary shows no other PRD 1 task left to do",
-        "The requirement map in docs/specs/README.md marks every FR and owner follow-up Done or names what is left; no row is Blocked on Q-1 to Q-6",
-        "No document under docs/ (except dated reviews and decision records) or CLAUDE.md still says single-number surfaces blend sources, that Q-1 to Q-16 are open, or that waitlist events are keyed by e-mail",
-        "The progress entry is the owner handoff for the PRD 1 deploy as listed in spec 05 §Final check after the owner answers (draft copy keys, Assumption constants, the new cron, no table or migration, the PostHog EU checklist, the four bot migrations one by one, RLS on three tables, token, webhook, bot:webhook, what remains unverified)"
-      ],
-      "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
-      "notes": "Added in the day run of 2026-11-19 (D38).",
-      "id": "T059",
-      "milestone": "M5",
-      "title": "Final check of PRD 1 after the owner answers of 2026-11-19, with the deploy handoff",
-      "spec": "docs/specs/05-measurement-docs.md#final-check-after-the-owners-answers",
-      "status": "todo"
-    },
-    {
       "dependsOn": ["T058"],
       "acceptance": [
         "emails.cityLaunch.body and emails.cityLaunch.cta in all four locales (identical key sets) no longer promise browsing or posting listings and describe the costs page the button opens, in the wording the owner approves",
@@ -1021,6 +992,53 @@
       "title": "City-launch e-mail copy that matches the costs-page link",
       "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard",
       "status": "blocked"
+    },
+    {
+      "dependsOn": ["T033", "T034", "T035", "T037", "T040", "T042", "T043", "T049", "T054"],
+      "acceptance": [
+        "Every RU string in src/lib/bot/texts.ts and deposit-texts.ts that addresses the user uses «ты» forms and every UK string «ти» forms (pronouns and verbs), with the meaning unchanged (spec 04 §Address form «ты»)",
+        "contractFailed, contractNotLease, lawyerAck and the letter how-to line read as the drafts in spec 04 §Address form «ты» in RU and UK; the existing deposit-state and lawyerAck tests assert the new wording",
+        "A test walks every RU string of both text objects (functions called with sample arguments, the command menu included) and fails on the whole words вы, Вы, вас, вам, вами and on words starting with ваш / Ваш, with Unicode-aware word boundaries; the same check runs over the UK strings with ви, вас, вам, вами, ваш…; an allowlist, if any, names each key and its reason",
+        "docs/legal-review/deposit-scenarios.md and spec 04 §Deposit helper scope and §Lawyer interest quote the new texts; the deposit-texts.ts comments about the kept «вы» / «ви» cite D42; bot copy found outside the two files is listed in the progress entry, not changed; the changed keys are listed in the progress entry as draft copy for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Owner decision D42, 2026-11-19 (day run). Depends on every PRD 1 task that edited texts.ts or deposit-texts.ts (git log: T033, T034, T035, T037, T040, T042, T043, T049, T054).",
+      "id": "T061",
+      "milestone": "M6",
+      "title": "Bot texts address the user with «ты» (UK «ти») everywhere",
+      "spec": "docs/specs/04-telegram-bot.md#address-form-ты",
+      "status": "todo"
+    },
+    {
+      "dependsOn": [
+        "T002",
+        "T029",
+        "T030",
+        "T042",
+        "T043",
+        "T054",
+        "T055",
+        "T056",
+        "T057",
+        "T058",
+        "T060",
+        "T061"
+      ],
+      "acceptance": [
+        "npm run verify and npm run test:e2e pass; the summary shows no other PRD 1 task left to do",
+        "The requirement map in docs/specs/README.md marks every FR and owner follow-up Done or names what is left; no row is Blocked on Q-1 to Q-6",
+        "No document under docs/ (except dated reviews and decision records) or CLAUDE.md still says single-number surfaces blend sources, that Q-1 to Q-16 are open, or that waitlist events are keyed by e-mail",
+        "The progress entry is the owner handoff for the PRD 1 deploy as listed in spec 05 §Final check after the owner answers (draft copy keys, Assumption constants, the new cron, no table or migration, the PostHog EU checklist, the four bot migrations one by one, RLS on three tables, token, webhook, bot:webhook, what remains unverified)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Added in the day run of 2026-11-19 (D38).\nT061 added as a dependency and the task moved after T060 and T061 in the day run of 2026-11-19 (D42).",
+      "id": "T059",
+      "milestone": "M5",
+      "title": "Final check of PRD 1 after the owner answers of 2026-11-19, with the deploy handoff",
+      "spec": "docs/specs/05-measurement-docs.md#final-check-after-the-owners-answers",
+      "status": "todo"
     }
   ]
 }

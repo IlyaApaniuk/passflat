@@ -1,8 +1,10 @@
 # PRD 2: Deposit sprint — source-tagged deposit links, guide prompts and the sprint readout
 
 - **Version:** 0.2, 2026-11-19
-- **Status:** Decided, 2026-11-19 (the owner answered all 12 decisions of
-  `prd-2-decision-review.md`: D22, D29, D30, D34 – D37)
+- **Status:** On hold, 2026-11-19: the owner is reconsidering the main bet
+- **Before the hold:** Decided, 2026-11-19 (the owner answered all 12 decisions of
+  `prd-2-decision-review.md`: D22, D29, D30, D34 – D37). Put on hold the same day (D39) and not
+  decomposed; E10 was stopped before it started (D44). The text below is kept unchanged.
 - **Serves:** H9 through E10 (the main test); H11 through E12 (the guide prompt only). The
   landing-capture fix that was FR-1 moved into PRD 1 (FR-13, task T002, D22).
 - **BRD assumptions:** A3, A4, A6, A12, A14, A15; proposed new A20 (in

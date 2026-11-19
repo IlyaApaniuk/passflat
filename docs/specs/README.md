@@ -11,8 +11,12 @@ night run (D21) before the owner answered its decision review
 "Requirements (FR mapping)" table. The owner answered every question of the review on
 2026-11-19 (D22 – D33): the six blocked tasks are back in the queue, T028 is split into four
 slices (T028, T052 – T054), and milestone M6 "Owner follow-ups" holds T055 – T058 (Q-14 – Q-16),
-followed by a second final check (T059). Harness tasks of milestone M0 are archived in
-`../../ralph/archive/harness-tasks.json`.
+T060 (Q-17, blocked) and T061 (the bot's «ты», D42), followed by a second final check (T059).
+Harness tasks of milestone M0 are archived in `../../ralph/archive/harness-tasks.json`.
+
+**Next PRD:** none. PRD 2 (`../product/prd/prd-2-deposit-sprint.md`) is On hold since
+2026-11-19 (D39) and is not decomposed; the specs keep their "PRD 2 later adds" notes as
+history.
 
 ## How iterations work
 
@@ -116,6 +120,7 @@ tasks waited for answers Q-1 – Q-6, which the owner gave on 2026-11-19 (rows b
 | — (Q-15)             | No e-mail-keyed waitlist events; no typed text in bot address events     | [02](02-roommate-and-waitlist.md#waitlist-server-events), [04](04-telegram-bot.md#typed-text-in-bot-events) | T057                          | Done    |
 | — (Q-16)             | City-launch e-mail links to the costs page; claim before send            | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T058                          | Done    |
 | — (Q-17)             | City-launch e-mail copy matches the costs-page link                      | [02](02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard)                                    | T060                          | Blocked |
+| — (D42)              | The bot addresses the user with «ты» / «ти» everywhere                   | [04 §Address form «ты»](04-telegram-bot.md#address-form-ты)                                                 | T061                          | Planned |
 | FR-49                | Final check after the owner's answers                                    | [05](05-measurement-docs.md#final-check-after-the-owners-answers)                                           | T059                          | Planned |
 
 ## Related references

@@ -216,7 +216,7 @@ The Polish lawyer review (BRD A14) is still needed before the deposit flow is pr
   left empty). A returned amount equal to the deposit keeps `nothingOwed` as today.
 - **Register:** the approved RU sentences use «вы» while the rest of the flow uses «ты». They
   are kept verbatim; the UK drafts follow the approved RU. The progress entry names this for the
-  owner.
+  owner. Superseded by D42 (2026-11-19): §Address form «ты» (T061) switches them to «ты».
 - `docs/legal-review/deposit-scenarios.md` is updated to the new texts in the same task.
 - Tests: one per state (contract failed, not a lease, reason `other`, returned above the
   deposit, returned equal to the deposit) asserting the header, the absence of every strength
@@ -280,3 +280,48 @@ with `{ query, city }`, where `query` is the address the user typed.
 - Tests assert both property sets with a fake `track`.
 - `src/lib/bot/README.md` (event table and the note under it) and
   `docs/analytics/activation-funnels.md` stop saying these events carry the typed text.
+
+## Address form «ты»
+
+Owner follow-up (M6), **Decided** (D42, 2026-11-19): the bot addresses the user with «ты» in
+RU and «ти» in UK everywhere. The approved RU texts of Q-5 (D26) and Q-6 (D27) keep their
+meaning and switch only their address form; the UK texts follow the RU. Copy below is an
+**agent draft** of that switch; the owner reviews it with the other draft copy before the
+deploy (D29). Nothing else in the meaning, the rules (`deposit.ts`), the deadline or the Polish
+letter changes.
+
+- **Scope:** every RU and UK string in `src/lib/bot/texts.ts` and `deposit-texts.ts` that
+  addresses the user: pronouns (RU «вы», «вас», «вам», «вами», «ваш…»; UK «ви», «вас», «вам»,
+  «вами», «ваш…», any case) and verbs in the plural-polite form (RU «обратитесь», «напишите»;
+  UK «зверніться», «напишіть» and the like) become the «ты» / «ти» forms. A «вы» that means the
+  user together with someone else is reworded so that no «вы» is left (below). Text that is not
+  addressed to the user (Polish letter text, Polish legal terms, quoted statute) is out of scope.
+- **Known strings today** (a search on 2026-11-19; the task reads every text, not only these):
+  - `contractFailed` RU: «Договор прочитать не удалось, поэтому ниже — общее правило закона, а
+    не вывод по твоему договору. Срок в твоём договоре может быть другим.» UK: «Договір
+    прочитати не вдалося, тому нижче — загальне правило закону, а не висновок щодо твого
+    договору. Строк у твоєму договорі може бути іншим.»
+  - `contractNotLease` RU: «Это не похоже на договор аренды, поэтому ниже — общее правило
+    закона, а не вывод по твоему договору. Срок в твоём договоре может быть другим.» UK: «Це не
+    схоже на договір оренди, тому нижче — загальне правило закону, а не висновок щодо твого
+    договору. Строк у твоєму договорі може бути іншим.»
+  - `lawyerAck` RU: «Записал твой интерес. Юридической помощи через Passflat пока нет, и мы не
+    обещаем, что напишем об этом. Если срок важен, обратись к юристу напрямую.» UK: «Записав
+    твій інтерес. Юридичної допомоги через Passflat поки немає, і ми не обіцяємо, що напишемо про
+    це. Якщо строк важливий, звернися до юриста напряму.»
+  - The letter how-to line (RU «…копией на email или в мессенджер, где вы общались.», UK «…де
+    ви спілкувалися.»): RU «…копией на email или в мессенджер, где шла переписка с хозяином.»,
+    UK «…копією на email або в месенджер, де йшло листування з власником.»
+- The comments next to these texts in `deposit-texts.ts` that say «вы» / «ви» is kept verbatim
+  are updated to cite D42.
+- **Test** (`src/lib/bot/texts.test.ts` or a new `address-form.test.ts`): walks every RU string
+  of both text objects (including functions, called with sample arguments, and the command
+  menu) and fails on the whole words «вы», «Вы», «вас», «вам», «вами» and any word starting
+  with «ваш» / «Ваш» (Unicode-aware word boundaries, so «выйти», «выбери» and «вывод» pass). The
+  same check runs over the UK strings with «ви», «вас», «вам», «вами», «ваш…». An allowlist,
+  if one is needed, names each key and the reason and starts empty.
+- `docs/legal-review/deposit-scenarios.md`, spec 04 §Deposit helper scope and §Lawyer interest
+  quote the new texts; the existing RU/UK tests of the deposit states and of `lawyerAck` assert
+  the new wording.
+- Bot copy found outside these two files (a search of `src/lib/bot/` and
+  `scripts/tg-webhook.ts`) is listed in the progress entry, not changed.

@@ -1,8 +1,8 @@
 # PRD 1: Activation measurement and the Telegram bot
 
 - **Version:** 0.1 (draft), 2026-11-18
-- **Status:** In progress, 2026-11-19: 58 tasks (T002–T059) in `ralph/tasks.json`, none
-  blocked; specs in `docs/specs/01`–`05`. Evaluated 2026-11-19
+- **Status:** In progress, 2026-11-19: 60 tasks (T002–T061) in `ralph/tasks.json`, one
+  blocked (T060, Q-17); T061 aligns the bot to «ты» (D42); specs in `docs/specs/01`–`05`. Evaluated 2026-11-19
   (`prd-1-decision-review.md`: ready with assumptions, 16 decisions, 6 of them blocking a
   task); all 16 answered by the owner on 2026-11-19 (D22 – D33)
 - **Serves:** H2 and H3 (measurement for E8 and E9), H5 and H1 (bot handoff and honest promises before E5 and E6); BRD A5, A8, A16
@@ -27,7 +27,7 @@ This iteration does not make a final choice of a new business. Roommate search r
 - Reuse the existing forms, routes, events, localisation and components.
 - Keep the URLs of the building pages and the roommate search pages, canonical and hreflang. Do not change URLs for the sake of this iteration.
 - Website: support PL/EN/RU/UK. Bot: keep the existing RU/UK; postpone additional languages.
-- Do not build compatible-roommate matching, separate profiles for people who are searching, a new chat, a CRM, an agency rating, payments or a new city.
+- Do not build compatible-roommate matching, separate profiles for people who are searching, a new chat, a CRM, an agency rating, payments or a new city. (Note of 2026-11-19: the exclusion of matching and profiles was for PRD 1 only; roommate matching between seekers is the direction to research, D45.)
 - Do not add notifications about new listings/reports in this iteration. Remove promises of delivery that does not exist yet. Keep the existing deposit case reminders.
 - Do not do a global redesign; do not change the analytics consent model or the already configured exclusion of tests.
 - No new DB tables are required for this iteration. First check what the current schema can do; do not run production migrations or send anything to users as part of the local implementation.

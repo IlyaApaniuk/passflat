@@ -40,13 +40,13 @@ flow is built on branch `feat/tg-bot` and not in production.
 
 ## 3. For whom
 
-| Segment                                   | Who                                                                                  | Priority          | Assumptions  |
-| ----------------------------------------- | ------------------------------------------------------------------------------------ | ----------------- | ------------ |
-| RU/UA newcomers in Warsaw                 | Russian- and Ukrainian-speaking tenants, often new to Polish leases                  | Primary (D2)      | A4, A6       |
-| Tenants with a deposit dispute            | Any tenant in Poland whose landlord keeps the deposit; Polish law applies nationwide | Primary bet (D17) | A3, A12, A14 |
-| Flat and room seekers in Warsaw           | People checking an address or a district before signing; roommate seekers            | Entry traffic     | A1, A5, A8   |
-| Polish tenants, expats, students          | Same jobs, other languages                                                           | Secondary         | —            |
-| Agencies, PRS operators, relocation firms | Possible payers for data or verified cards                                           | Parked (D16)      | A13          |
+| Segment                                   | Who                                                                                  | Priority                                                | Assumptions  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------------ |
+| RU/UA newcomers in Warsaw                 | Russian- and Ukrainian-speaking tenants, often new to Polish leases                  | Primary (D2)                                            | A4, A6       |
+| Tenants with a deposit dispute            | Any tenant in Poland whose landlord keeps the deposit; Polish law applies nationwide | Free tool in the bot (D44); main bet under review (D39) | A3, A12, A14 |
+| Flat and room seekers in Warsaw           | People checking an address or a district before signing; roommate seekers            | Entry traffic; roommate matching under research (D45)   | A1, A5, A8   |
+| Polish tenants, expats, students          | Same jobs, other languages                                                           | Secondary                                               | —            |
+| Agencies, PRS operators, relocation firms | Possible payers for data or verified cards                                           | Parked (D16)                                            | A13          |
 
 ## 4. Value and difference
 
@@ -79,14 +79,14 @@ Facts as of their dates:
 
 Nothing earns yet. Options and their state:
 
-| Option                                   | State                                                                                                                                                                                    | Assumptions |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Affiliate offers in guides and results   | Wise link merged (#107); rates known: mBank 49 EUR, Millennium ~35 EUR CPA (MyLead), Wise ~47 zł, Rankomat CPL, Clicktrans 10 zł (research 2026-08-25); revenue not measured             | A11         |
-| Deposit recovery stack                   | Proposed 2026-10-07: free letter → paid self-serve checks → success fee via assignment of the claim (cesja, KC art. 509) or a lawyer partner within bar rules; awaiting the owner's pick | A3, A12     |
-| Paid cost-data access (7/30/90 days)     | Stripe prices exist; parked (D7)                                                                                                                                                         | A10         |
-| Verified cost cards for PRS and agencies | Parked (D16)                                                                                                                                                                             | A13         |
-| Agency reputation (pillar 2)             | Not built; trigger in D5                                                                                                                                                                 | —           |
-| Listing promotion                        | Parked with the listings freeze (D5)                                                                                                                                                     | —           |
+| Option                                   | State                                                                                                                                                                                                                                                                                     | Assumptions |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Affiliate offers in guides and results   | Wise link merged (#107); rates known: mBank 49 EUR, Millennium ~35 EUR CPA (MyLead), Wise ~47 zł, Rankomat CPL, Clicktrans 10 zł (research 2026-08-25); revenue not measured                                                                                                              | A11         |
+| Deposit recovery stack                   | Proposed 2026-10-07: free letter → paid self-serve checks → success fee via assignment of the claim (cesja, KC art. 509) or a lawyer partner within bar rules. On 2026-11-19 the deposit flow became a free tool with no paid step (D44); anything later must run without the owner (D39) | A3, A12     |
+| Paid cost-data access (7/30/90 days)     | Stripe prices exist; parked (D7)                                                                                                                                                                                                                                                          | A10         |
+| Verified cost cards for PRS and agencies | Parked (D16)                                                                                                                                                                                                                                                                              | A13         |
+| Agency reputation (pillar 2)             | Not built; trigger in D5                                                                                                                                                                                                                                                                  | —           |
+| Listing promotion                        | Parked with the listings freeze (D5)                                                                                                                                                                                                                                                      | —           |
 
 Constraints for the lawyer layer (research 2026-10-05, not reviewed by a lawyer): adwokaci may
 not pay for client referrals (KEA §23d ust. 2); for radcowie a fixed subscription not tied to
@@ -95,14 +95,15 @@ publishing a list of adwokaci without bar consent is an offence (Prawo o adwokat
 
 ## 7. Channels
 
-| Channel                       | What happened                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Threads                       | 2026-06: ~2,500–3,000 views → 19 visits → 3 form starts → 1 submission; view → click below 1 % (counted before D10, so the site numbers are not comparable) |
-| Paid posts in Telegram groups | 2026-07: 200 zł/week plus a 300 zł post gave ~1–2 visits a week and no form starts; stopped (D8)                                                            |
-| Replies under others' posts   | The only channel that converted repeatedly in June–July (demand capture)                                                                                    |
-| Search                        | ~28 Google clicks in three months (2026-08-25); in the rows shown on 2026-10-07, 10 of 13 clicks were roommate searches (not the share of all traffic)      |
-| Instagram                     | 2 posts, 3 followers (2026-07-29)                                                                                                                           |
-| Telegram bot                  | Not launched; dev bot only                                                                                                                                  |
+| Channel                                | What happened                                                                                                                                                              |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Threads                                | 2026-06: ~2,500–3,000 views → 19 visits → 3 form starts → 1 submission; view → click below 1 % (counted before D10, so the site numbers are not comparable)                |
+| Paid posts in Telegram groups          | 2026-07: 200 zł/week plus a 300 zł post gave ~1–2 visits a week and no form starts; stopped (D8)                                                                           |
+| Replies under others' posts            | The only channel that converted repeatedly in June–July (demand capture)                                                                                                   |
+| Search                                 | ~28 Google clicks in three months (2026-08-25); in the rows shown on 2026-10-07, 10 of 13 clicks were roommate searches (not the share of all traffic)                     |
+| Instagram                              | 2 posts, 3 followers (2026-07-29)                                                                                                                                          |
+| Telegram bot                           | Not launched; dev bot only                                                                                                                                                 |
+| Owner's link posts in chats and groups | **Commitment** of 2026-11-19 (D46): the owner posts links to the service in chats and groups in two 30-minute slots a day, about 7 hours a week; no personal help to users |
 
 Data on 2026-06-26 (production query by source): 16 `user` reports (2 the owner's, 2 anonymous
 from cold traffic, 12 from people asked directly), 19 `import`, 282 `scraped`; no district had
@@ -139,6 +140,9 @@ Kill and scale thresholds already decided: the bot (D14).
 
 - One founder; 10–15 hours a week and 300–500 zł a month of marketing budget were committed for
   July 2026 (current figures **unverified**).
+- Self-serve only (D39, 2026-11-19): the owner is a programmer, not a lawyer; no personal help
+  to users, no lawyer and no other staff now. Distribution time: about 7 hours a week (D46).
+- Decision date 2027-01-20: continue, shrink to content and affiliate, or stop (D43).
 - RODO: data in the EU; cookieless analytics on Art. 6(1)(f) (D10).
 - Production changes only with the owner's approval (D18, D19).
 
@@ -187,11 +191,11 @@ Numbers are never reused. Status: Confirmed, Partly, Testing, Untested, Contradi
 
 One PRD is one stage. It is closed when all of its tasks are closed.
 
-| PRD   | What                                                                                                                                                                 | Status                                                |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| PRD 1 | Activation measurement and the Telegram bot: separate funnels, roommate fixes, honest building figures, bot handoff and promises (`prd/prd-1-activation-and-bot.md`) | Draft; decomposition and build on 2026-11-18/19 (D21) |
-| PRD 2 | The first demand and revenue test, chosen from the direction review and the PostHog readout                                                                          | Not written                                           |
-| Later | Deposit recovery service, agency reputation, paid access, second city                                                                                                | Hypotheses                                            |
+| PRD   | What                                                                                                                                                                 | Status                                                             |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| PRD 1 | Activation measurement and the Telegram bot: separate funnels, roommate fixes, honest building figures, bot handoff and promises (`prd/prd-1-activation-and-bot.md`) | In progress, finishing (D21, D38)                                  |
+| PRD 2 | Deposit sprint (`prd/prd-2-deposit-sprint.md`)                                                                                                                       | On hold, 2026-11-19: the owner is reconsidering the main bet (D39) |
+| Later | Deposit recovery service, agency reputation, paid access, second city                                                                                                | Hypotheses                                                         |
 
 ## 12. Main risks
 
@@ -204,13 +208,14 @@ One PRD is one stage. It is closed when all of its tasks are closed.
 
 ## 13. Open business questions
 
-| Question                                                               | Who decides | What it blocks             |
-| ---------------------------------------------------------------------- | ----------- | -------------------------- |
-| Which bet to test first: deposit, roommate, address check or affiliate | Owner       | PRD 2                      |
-| Goals and thresholds for the next stage                                | Owner       | Section 8, PRD 2           |
-| Launch the bot in production (token, migrations, webhook)              | Owner       | A3, A6, D14 thresholds     |
-| A Polish lawyer review of the deposit rules and letter                 | Owner       | Promoting the deposit flow |
-| Weekly time and budget now                                             | Owner       | Channel plan               |
+| Question                                                                                         | Who decides                | What it blocks                               |
+| ------------------------------------------------------------------------------------------------ | -------------------------- | -------------------------------------------- |
+| The main bet: a new thesis is being agreed (D39); roommate matching is researched first (D45)    | Owner                      | The next PRD                                 |
+| Goals and thresholds for the next stage                                                          | Owner                      | Section 8, the next PRD                      |
+| Launch the bot in production (token, migrations, webhook)                                        | Owner                      | A3, A6, D14 thresholds                       |
+| A Polish lawyer review of the deposit rules and letter; the owner cannot hire a lawyer now (D39) | Owner                      | Promoting the deposit flow widely (D26, D44) |
+| Marketing budget now (time is set: about 7 hours a week, D46)                                    | Owner                      | Channel plan                                 |
+| Continue, shrink to content and affiliate, or stop                                               | Owner, on 2027-01-20 (D43) | Everything after that date                   |
 
 ## 14. How the documents work
 
@@ -220,3 +225,8 @@ See `README.md` in this folder.
 
 **v0.1, 2026-11-18.** First draft, compiled from `PROJECT.md`, the 2026-10-07 brief and the
 owner's sessions of June–October 2026. Registry A1–A17.
+
+**v0.1, 2026-11-19.** Owner decisions D39 – D46: the main bet is under review and PRD 2 is On
+hold; the deposit flow is a free tool; roommate matching is the direction to research; the
+owner's distribution commitment (§7); self-serve constraint and the 2027-01-20 decision date
+(§9); stages and open questions updated (§3, §6, §11, §13). No assumption changed status.
