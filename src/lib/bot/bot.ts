@@ -390,6 +390,47 @@ export async function handleSubscribe(ctx: CallbackQueryContext<Context>): Promi
   );
 }
 
+/**
+ * `/my`: the chat's saved interests, each with a remove button
+ * (`unsub:<targetKey>`). Exported so tests can call it with a fake context.
+ */
+export async function handleMy(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat.id });
+  const locale = chat.locale as BotLocale;
+  const subs = await listSubscriptions(ctx.chat.id);
+
+  if (!subs.length) {
+    await ctx.reply(t(locale, 'mySubsEmpty'));
+    return;
+  }
+
+  const keyboard = new InlineKeyboard();
+  const lines = [t(locale, 'mySubsHeader'), ''];
+  for (const sub of subs) {
+    lines.push(
+      sub.isWaitlist
+        ? `• ${escapeHtml(sub.name)} <i>(${t(locale, 'waitlistSuffix')})</i>`
+        : `• ${escapeHtml(sub.name)}`,
+    );
+    keyboard.text(`✖️ ${sub.name}`, `unsub:${sub.targetKey}`).row();
+  }
+
+  await ctx.reply(lines.join('\n'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
+/** Callback data of the remove buttons in `/my`. */
+export const UNSUBSCRIBE_CALLBACK = /^unsub:(.+)$/;
+
+/** A remove-button tap in `/my`: deletes that saved interest. */
+export async function handleUnsubscribe(ctx: CallbackQueryContext<Context>): Promise<void> {
+  const chatId = ctx.chat!.id;
+  const chat = await touchChat({ chatId });
+  await removeSubscription(chatId, ctx.match[1]);
+  await ctx.answerCallbackQuery();
+  track(chatId, 'tg_unsubscribed');
+  await ctx.reply(t(chat.locale as BotLocale, 'unsubscribed'));
+}
+
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
 
@@ -429,29 +470,7 @@ export function createBot(token: string): Bot {
 
   registerDepositFlow(bot);
 
-  bot.command('my', async (ctx) => {
-    const chat = await touchChat({ chatId: ctx.chat.id });
-    const locale = chat.locale as BotLocale;
-    const subs = await listSubscriptions(ctx.chat.id);
-
-    if (!subs.length) {
-      await ctx.reply(t(locale, 'mySubsEmpty'));
-      return;
-    }
-
-    const keyboard = new InlineKeyboard();
-    const lines = [t(locale, 'mySubsHeader'), ''];
-    for (const sub of subs) {
-      lines.push(
-        sub.isWaitlist
-          ? `• ${escapeHtml(sub.name)} <i>(${t(locale, 'waitlistSuffix')})</i>`
-          : `• ${escapeHtml(sub.name)}`,
-      );
-      keyboard.text(`✖️ ${sub.name}`, `unsub:${sub.targetKey}`).row();
-    }
-
-    await ctx.reply(lines.join('\n'), { parse_mode: 'HTML', reply_markup: keyboard });
-  });
+  bot.command('my', handleMy);
 
   bot.command('lang', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat.id });
@@ -506,14 +525,7 @@ export function createBot(token: string): Bot {
     );
   });
 
-  bot.callbackQuery(/^unsub:(.+)$/, async (ctx) => {
-    const chatId = ctx.chat!.id;
-    const chat = await touchChat({ chatId });
-    await removeSubscription(chatId, ctx.match![1]);
-    await ctx.answerCallbackQuery();
-    track(chatId, 'tg_unsubscribed');
-    await ctx.reply(t(chat.locale as BotLocale, 'unsubscribed'));
-  });
+  bot.callbackQuery(UNSUBSCRIBE_CALLBACK, handleUnsubscribe);
 
   // Anything else is treated as an address — the one thing the bot is for.
   bot.on('message:text', async (ctx) => {

@@ -6,13 +6,15 @@
  */
 import { Bot } from 'grammy';
 
-const COMMANDS = [
-  { command: 'districts', description: 'Районы Варшавы по расходам' },
-  { command: 'deposit', description: 'Залог: сколько и как часто возвращают' },
-  { command: 'my', description: 'Мои подписки' },
-  { command: 'lang', description: 'Язык / Мова' },
-  { command: 'help', description: 'Что умеет бот' },
-];
+import { COMMAND_MENU } from '../src/lib/bot/texts';
+
+/**
+ * The command menu, copy in `texts.ts`: RU is the default menu, UK is shown to
+ * Telegram clients with `language_code: 'uk'`. Adds /cancel, /my is "saved
+ * interests" (spec 04 §Promises and capabilities).
+ */
+const COMMANDS = COMMAND_MENU.ru;
+const COMMANDS_UK = COMMAND_MENU.uk;
 
 async function main() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -47,6 +49,7 @@ async function main() {
     allowed_updates: ['message', 'callback_query', 'my_chat_member'],
   });
   await bot.api.setMyCommands(COMMANDS);
+  await bot.api.setMyCommands(COMMANDS_UK, { language_code: 'uk' });
 
   const info = await bot.api.getWebhookInfo();
   console.log(`Webhook set: ${info.url}`);

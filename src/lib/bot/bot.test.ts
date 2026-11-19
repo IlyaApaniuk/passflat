@@ -9,7 +9,15 @@ import {
   type FigureReport,
 } from '@/lib/cost-figures';
 
-import { SUBSCRIBE_CALLBACK, handleDeposit, handleStart, handleSubscribe } from './bot';
+import {
+  SUBSCRIBE_CALLBACK,
+  UNSUBSCRIBE_CALLBACK,
+  handleDeposit,
+  handleMy,
+  handleStart,
+  handleSubscribe,
+  handleUnsubscribe,
+} from './bot';
 import { renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
 import { t } from './texts';
@@ -17,6 +25,8 @@ import { t } from './texts';
 const mocks = vi.hoisted(() => ({
   touchChat: vi.fn(),
   addSubscription: vi.fn(),
+  listSubscriptions: vi.fn(),
+  removeSubscription: vi.fn(),
   track: vi.fn(),
   startDepositFlow: vi.fn(),
   cancelDepositFlow: vi.fn(),
@@ -32,8 +42,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./store', () => ({
   touchChat: mocks.touchChat,
   addSubscription: mocks.addSubscription,
-  listSubscriptions: vi.fn(),
-  removeSubscription: vi.fn(),
+  listSubscriptions: mocks.listSubscriptions,
+  removeSubscription: mocks.removeSubscription,
   setChatLocale: vi.fn(),
 }));
 vi.mock('./analytics', () => ({ track: mocks.track }));
@@ -580,6 +590,76 @@ describe('handleSubscribe (save-interest buttons)', () => {
     await handleSubscribe(ctx);
 
     expect(replyKey(reply)).toBe(t('uk', 'subscribedDistrict', { name: 'Mokotów' }));
+  });
+
+  it('says the interest is saved and that nothing is sent automatically', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain('Сохранил интерес к району <b>Mokotów</b>');
+    expect(text).toContain('Автоматических уведомлений о новых данных пока нет');
+    expect(text).not.toMatch(/напишу|слежу/i);
+  });
+});
+
+describe('handleMy and the remove button', () => {
+  function fakeUnsubscribe(data: string) {
+    const reply = vi.fn();
+    const answerCallbackQuery = vi.fn();
+    const ctx = {
+      chat: { id: CHAT_ID },
+      match: data.match(UNSUBSCRIBE_CALLBACK),
+      answerCallbackQuery,
+      reply,
+    } as unknown as CallbackQueryContext<Context>;
+    return { ctx, reply, answerCallbackQuery };
+  }
+
+  it('lists saved interests under the new header with one remove button each', async () => {
+    mocks.listSubscriptions.mockResolvedValue([
+      { targetKey: 'b:building-1', name: 'Puławska 10', isWaitlist: false },
+      { targetKey: 'c:krakow', name: 'Kraków', isWaitlist: true },
+    ]);
+    const { ctx, reply } = fakeContext('/my');
+    await handleMy(ctx);
+
+    expect(replyKey(reply)).toBe(
+      `${t('ru', 'mySubsHeader')}\n\n• Puławska 10\n• Kraków <i>(${t('ru', 'waitlistSuffix')})</i>`,
+    );
+    expect(t('ru', 'mySubsHeader')).toContain('Сохранённые интересы');
+    expect(buttons(reply)).toEqual(['unsub:b:building-1', 'unsub:c:krakow']);
+    expect(mocks.listSubscriptions).toHaveBeenCalledWith(CHAT_ID);
+  });
+
+  it('answers an empty list without promising a message', async () => {
+    mocks.listSubscriptions.mockResolvedValue([]);
+    const { ctx, reply } = fakeContext('/my');
+    await handleMy(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'mySubsEmpty'));
+    expect(t('ru', 'mySubsEmpty')).not.toMatch(/напишу/i);
+  });
+
+  it('removes the tapped interest and confirms it', async () => {
+    const { ctx, reply, answerCallbackQuery } = fakeUnsubscribe('unsub:b:building-1');
+    await handleUnsubscribe(ctx);
+
+    expect(mocks.removeSubscription).toHaveBeenCalledWith(CHAT_ID, 'b:building-1');
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_unsubscribed');
+    expect(replyKey(reply)).toBe(t('ru', 'unsubscribed'));
+  });
+
+  it('removes a waitlisted city and answers in Ukrainian', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeUnsubscribe('unsub:c:krakow');
+    await handleUnsubscribe(ctx);
+
+    expect(mocks.removeSubscription).toHaveBeenCalledWith(CHAT_ID, 'c:krakow');
+    expect(replyKey(reply)).toBe(t('uk', 'unsubscribed'));
   });
 });
 

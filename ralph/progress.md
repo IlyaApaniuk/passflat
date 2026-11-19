@@ -70,6 +70,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Bot cards pick each group's headline with `groupFigureRows` (`building-figures-view.ts`, pure and importable by the bot), so web and bot agree; a module can be rendered for a visual check with `npx tsx --tsconfig tsconfig.json <scratchpad script>` (path aliases resolve).
 - Web-vs-bot consistency tests call `POST /api/location-score` and `lookupAddress` over one Prisma mock (example: `src/lib/bot/checker-consistency.test.ts`).
 - Bot callback handlers are tested the same way: export the body (e.g. `handleSubscribe`) and its regex, and fake `{ chat, match: data.match(REGEX), answerCallbackQuery, reply }` cast to `CallbackQueryContext<Context>` (example: `fakeCallback` in `src/lib/bot/bot.test.ts`).
+- The bot's capability list (`CAPABILITIES_RU/UK`) and command menu (`COMMAND_MENU`, published by `scripts/tg-webhook.ts`) live in `texts.ts`; a new command updates both, and `texts.test.ts` checks that they agree and that no text promises to write later.
 
 ## Log
 
@@ -684,3 +685,37 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Next:
   - T037 rewrites `subscribeBuilding`, `subscribeDistrict`, `subscribedBuilding` and `subscribedDistrict` in `texts.ts`. The handler already escapes the names.
   - T038 adds `entry_source` to `tg_district_checked`. `replyDistrict` is the single place that tracks it: pass `typed_district` from the `message:text` path and `link_district` from `handleStart`.
+
+### 2026-11-19 04:38 · T037 · done
+
+- Done:
+  - `src/lib/bot/texts.ts` (RU and UK):
+    - The six promises are rewritten. `subscribedBuilding` / `subscribedDistrict` now say «Сохранил интерес к дому/району <name>. Автоматических уведомлений о новых данных пока нет.» plus a pointer to /my. `cityWaitAdded` / `cityWaitAlready` now say «(Уже) записал, что ты ждёшь <city>. Автоматических сообщений о запуске пока нет.». `outsideCityNamed` now says «запишу, что ты ждёшь этот город». `mySubsEmpty` has no «напишу».
+    - Buttons: `subscribeBuilding` / `subscribeDistrict` → «📌 Сохранить интерес к дому / к району {district}». `btnCityWait`: 🔔 → 📌.
+    - Related saved-interest copy: `alreadySubscribed`, `unsubscribed`, `mySubsHeader` («📌 Сохранённые интересы:»).
+    - New private `CAPABILITIES_RU/UK`: one list (address, district, /districts, /deposit, /my, /lang, /cancel) shared by `start`, `startAfterPayload` and `help`.
+    - `help`: the «Напиши «залог»» line is kept word for word, outside the list. The data line no longer says «Данные — из отчётов жильцов»; it names tenant reports and asking prices, each with its N.
+    - New exports: `TEXT_KEYS` (for tests) and `COMMAND_MENU` (RU and UK).
+  - `scripts/tg-webhook.ts`: `COMMANDS` = `COMMAND_MENU.ru` (adds /cancel; /my is «Сохранённые интересы»; /deposit is «Залог: как часто возвращают и как вернуть свой»). It also publishes `COMMAND_MENU.uk` with `language_code: 'uk'`. The script was not run.
+  - `src/lib/bot/bot.ts`: the `/my` body and the `unsub:` callback are now the exported `handleMy` and `handleUnsubscribe` (plus `UNSUBSCRIBE_CALLBACK`). Behaviour is unchanged.
+  - `src/lib/bot/README.md`: a "Promises and capabilities" section, the command menu note, the waitlist wording, and the "Not built yet" sentence.
+  - `deposit-texts.ts` is untouched: the follow-ups stay, and `lawyerAck` is left for T043.
+- Tests:
+  - New `src/lib/bot/texts.test.ts` (10 tests):
+    - no RU or UK value of any `TEXT_KEYS` matches напишу, когда / напишу сюда / напишу, как только or the UK forms (коли / сюди / щойно);
+    - the six texts say "saved" and "no automatic notifications";
+    - the buttons read «Сохранить/Зберегти інтерес», without 🔔;
+    - start, startAfterPayload and help contain the same 7-bullet list, in the menu's order;
+    - no notification or roommate words;
+    - the RU and UK menus have the same commands (with cancel) and fit the Telegram limits;
+    - `remindSetAck` is unchanged.
+  - `bot.test.ts`, 5 new tests: the save reply has no «напишу/слежу»; `/my` lists the items with `unsub:` buttons; an empty `/my`; a remove tap calls `removeSubscription` and fires `tg_unsubscribed`; the UK reply.
+- Checks: `npx vitest run src/lib/bot src/i18n/messages.test.ts` passed (10 files / 205 tests). `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 65 files / 840 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot and `bot:webhook` were not run, and no Telegram call was made.
+- Owner review:
+  - Draft copy (RU and UK, `texts.ts`): `subscribeBuilding`, `subscribeDistrict`, `subscribedBuilding`, `subscribedDistrict`, `alreadySubscribed`, `unsubscribed`, `mySubsHeader`, `mySubsEmpty`, `outsideCityNamed`, `btnCityWait`, `cityWaitAdded`, `cityWaitAlready`, `start`, `startAfterPayload`, `help`, and `COMMAND_MENU` (RU and UK).
+  - The bot's «ты» is kept instead of the spec draft's «вы ждёте».
+  - `help` still says «разберу по закону» (unchanged; that wording belongs to Q-5).
+  - Owner action: run `npm run bot:webhook -- https://passflat.com` once after deploy to publish the new RU and UK menus.
+  - No assumptions, tables, migrations or analytics changes.
+- Next: T038 (`entry_source` and the answer properties on `tg_address_checked` / `tg_district_checked`; see the T035 and T036 entries for the single tracking places).

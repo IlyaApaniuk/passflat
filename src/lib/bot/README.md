@@ -24,7 +24,9 @@ maintaining an API between two deploys.
 ## Going live
 
 1. **BotFather** — `/newbot`, then keep the token. Set the description and
-   about text; the command menu is published by the webhook script.
+   about text; the command menu is published by the webhook script
+   (`COMMAND_MENU` in `texts.ts`: RU by default, UK for `language_code: 'uk'`).
+   A menu change takes effect only after `npm run bot:webhook` is run again.
 2. **Google key** — a _server_ Geocoding key. The existing
    `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` is referrer-restricted for the browser
    and will be rejected from a server call. Restrict the new one by IP/API to
@@ -46,10 +48,11 @@ RLS on the new tables by hand. The deposit flow's contract step also needs
 
 ## City waitlist
 
-An address outside Warsaw gets a one-tap "🔔 waiting for <city>" button instead
+An address outside Warsaw gets a one-tap "📌 waiting for <city>" button instead
 of a dead end. It is stored as a subscription with `targetKey = "c:<slug>"`
-(spellings collapse: Kraków / Краков / krakow → `krakow`), so the chat can be
-messaged when that city launches. Which city to open next:
+(spellings collapse: Kraków / Краков / krakow → `krakow`), so the demand is
+counted per city. The reply says there is no automatic launch message yet.
+Which city to open next:
 
 ```sql
 select city_slug, max(label) as city, count(*) as waiting
@@ -93,6 +96,17 @@ district card with its save-interest button (`sub:d:<slug>`). Opening the link
 saves nothing; a `TelegramSubscription` is created only by a button tap
 (`handleSubscribe`). An unknown slug gets the generic start reply.
 
+## Promises and capabilities
+
+The bot sends nothing on its own except the deposit follow-ups a person asked
+for. Building and district buttons save an interest (`TelegramSubscription`) and
+the reply says there are no automatic notifications; `/my` lists the saved
+interests with a remove button each (`unsub:<targetKey>`). `start`,
+`startAfterPayload` and `/help` share one capability list in `texts.ts`
+(address or district check, `/districts`, `/deposit`, `/my`, `/lang`,
+`/cancel`), and `COMMAND_MENU` names the same commands. `texts.test.ts` fails if
+a text in `texts.ts` promises to write later.
+
 ## Events
 
 `tg_bot_started` (with the `?start=` payload — the attribution for which post or
@@ -107,9 +121,9 @@ web funnels stay separate cohorts on purpose.
 
 Move-mode reminders (signed → protocol, moved in +3d → meters, +6w →
 rozliczenie), conversational cost submission, and the push notifier that reads
-`TelegramSubscription` and messages chats when new reports land. The
-subscriptions accumulate from day one so the notifier has something to send
-when it is written.
+`TelegramSubscription` and messages chats when new reports land. Saved
+interests accumulate meanwhile; the copy must change again if a notifier is
+ever built.
 
 ## Deposit recovery ("Верни залог")
 

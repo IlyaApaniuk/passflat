@@ -599,7 +599,7 @@
       "title": "Replace the bot's notification promises and align help, greeting and command menu",
       "spec": "docs/specs/04-telegram-bot.md#promises-and-capabilities",
       "dependsOn": ["T036"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "subscribedBuilding, subscribedDistrict, mySubsEmpty, outsideCityNamed, cityWaitAdded and cityWaitAlready say the interest is saved and there are no automatic notifications (RU and UK drafts); subscribe buttons read as saving interest; /my unsubscribe still works",
         "/help, start and startAfterPayload list the same real capabilities (address or district check, /districts, /deposit, /my, /lang, /cancel); no roommate search, no notifications; deposit follow-up texts unchanged",
@@ -607,7 +607,7 @@
         "A test asserts that no RU or UK text in texts.ts contains the removed promise phrases (напишу, когда / напишу сюда / напишу, как только) outside the deposit follow-up keys"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "lawyerAck is excluded here (blocked T043, Q-6)."
     },
     {
