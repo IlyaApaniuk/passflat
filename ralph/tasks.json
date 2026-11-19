@@ -920,13 +920,13 @@
         "Account deletion is unchanged (Open for the owner in the spec)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-14 option (a), D31, 2026-11-19.",
       "id": "T055",
       "milestone": "M6",
       "title": "Delete listings-interest rows older than 12 months with a daily cron",
       "spec": "docs/specs/02-roommate-and-waitlist.md#listings-interest-retention",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": [],

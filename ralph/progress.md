@@ -1485,3 +1485,20 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Event semantics:** `tg_district_checked.report_count` is now the size of the district's chosen group (was all-source reports with a total, 0 outside the table). `location_map_*` events unchanged (`has_median` always true, `report_count` = the neighbour's visible reports).
   - No assumption constants added; no tables, migrations or new events.
 - Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`). `docs/specs/05-measurement-docs.md` §T051 still says single-number surfaces "follow D4 until Q-2" (a done task's spec; T059 checks docs for this).
+
+### 2026-11-19 10:56 · T055 · done
+
+- Done:
+  - `src/lib/listing-interest-retention.ts` (new): `LISTING_INTEREST_RETENTION_MONTHS = 12` (the one constant), `listingInterestCutoff(now)` = date-fns `subMonths(now, 12)` (calendar months; 29 Feb → 28 Feb), `deleteExpiredListingInterest(now)` = one `cityNotifySubscription.deleteMany({ where: { listingType: { not: '' }, createdAt: { lt: cutoff } } })`, returns the count.
+  - `src/app/api/cron/cleanup-listing-interest/route.ts` (new): `GET`, `requireCronAuth` (401 without the secret), calls the library, `console.info` of the count only, responds `{ deletedCount }`.
+  - `vercel.json`: daily `30 4 * * *`. `docs/architecture.md`: cron table row and the `CityNotifySubscription` data-model row (Prettier re-padded both tables). `docs/specs/README.md`: the T055 row → Done.
+  - Account deletion (`src/app/api/account/route.ts`) unchanged (Open in the spec).
+- Tests: `src/app/api/cron/cleanup-listing-interest/route.test.ts` (4): the exact `where` for a fixed now (2026-11-19T04:30Z → cutoff 2025-11-19T04:30Z); an in-memory table where two old listings rows go, a row created exactly at the cutoff and an old city-launch row stay, the response is `{ deletedCount: 2 }` and neither the log nor the body holds an `@`; 401 for a missing and a wrong secret with no delete; the calendar-month cutoff. Passes under the local TZ and `TZ=UTC`.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 86 files / 1135 tests, build OK with `ƒ /api/cron/cleanup-listing-interest`). `next-env.d.ts` restored. The cron has not run anywhere: it starts after deploy.
+- Did not work: nothing.
+- Owner review:
+  - **Assumptions:** schedule `30 4 * * *` (`vercel.json`); retention counted from `createdAt`, so a re-save does not extend it (`listing-interest-retention.ts`).
+  - **On the first production run** the cron deletes every listings-interest row saved before 2025-11 at once (one `deleteMany`, no batch cap); the response gives the count.
+  - **Open, owner:** whether account deletion also deletes that e-mail's listings-interest rows; whether the privacy policy should state the 12-month retention (agents do not change it).
+  - No tables, migrations, copy or events.
+- Next: T056 (remove-interest link with a signed token, spec 02 §Remove-interest link).
