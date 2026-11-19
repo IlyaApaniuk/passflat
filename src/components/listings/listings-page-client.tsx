@@ -17,6 +17,7 @@ import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
 import { ListingsNoMatch } from '@/components/listings/listings-no-match';
 import { RoommateRoleSelector } from '@/components/listings/roommate-role-selector';
 import { FindFlatmateBlock } from '@/components/listings/find-flatmate-block';
+import { RoomMoneyBlock, type RoomMoneyFigures } from '@/components/listings/room-money-block';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 
@@ -44,7 +45,11 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import { filterListings } from '@/lib/listings-filter';
 import { listingsEmptyKind, serverListNarrowed } from '@/lib/listings-empty-kind';
-import { INITIAL_ROOMMATE_ROLE_STATE, showsFlatmateBlock } from '@/lib/roommate-roles';
+import {
+  INITIAL_ROOMMATE_ROLE_STATE,
+  showsFlatmateBlock,
+  showsRoomMoneyBlock,
+} from '@/lib/roommate-roles';
 import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
@@ -67,6 +72,11 @@ interface Props {
    * shows the block.
    */
   flatmateCounts?: FlatmateBlockCounts;
+  /**
+   * `/warsaw/roommate` only (spec 02 §Room money block): absent on every other page, which then
+   * never shows the block; null shows the block without its figures line.
+   */
+  roomMoney?: RoomMoneyFigures | null;
   isLoggedIn?: boolean;
 }
 
@@ -86,6 +96,7 @@ function ListingsPageInner({
   listingType,
   cityOfferCount,
   flatmateCounts,
+  roomMoney,
   isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
@@ -226,6 +237,12 @@ function ListingsPageInner({
         ? 'no_offers_in_city'
         : 'none';
 
+  // Spec 02 §Room money block: its address-check item replaces the bridge line while it shows.
+  const showRoomMoney =
+    listingType === 'roommate' &&
+    roomMoney !== undefined &&
+    showsRoomMoneyBlock(roleState, emptyKind);
+
   // The existing filter reset; when the server list was narrowed by URL params, fetch the
   // whole city again (the reset already dropped the params from the URL).
   const clearFilters = () => {
@@ -320,8 +337,9 @@ function ListingsPageInner({
           {/* Roommate search is where organic clicks actually land ("szukam
               współlokatora warszawa"), and it is a frozen part of the product —
               one line is what carries that visit into the cost data instead of
-              letting it end on a list of ten listings. */}
-          {listingType === 'roommate' && (
+              letting it end on a list of ten listings. The room money block's
+              address-check item takes its place while that block shows. */}
+          {listingType === 'roommate' && !showRoomMoney && (
             <div className="border-b bg-primary/5 px-4 py-2 text-sm">
               <Link
                 href={`/${citySlug}/check`}
@@ -366,6 +384,10 @@ function ListingsPageInner({
                     scrolls with the list; the list stays rendered below. */}
                 {listingType === 'roommate' && flatmateCounts && showsFlatmateBlock(roleState) && (
                   <FindFlatmateBlock counts={flatmateCounts} districts={districts} />
+                )}
+                {/* Spec 02 §Room money block: "I'm looking for a room" or no offer in the city. */}
+                {showRoomMoney && (
+                  <RoomMoneyBlock figures={roomMoney ?? null} citySlug={citySlug} />
                 )}
                 {emptyKind === 'no_match_for_filters' ? (
                   <>

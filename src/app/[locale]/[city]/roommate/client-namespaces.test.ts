@@ -92,6 +92,14 @@ describe('roommate page client tree', () => {
     expect(tree.has('src/components/listings/listings-map.tsx')).toBe(true);
   });
 
+  it('contains the room money block and the shared figure blocks, not the checker module', () => {
+    // Spec 02 §Room money block: the figures render through the checker's group blocks,
+    // shared in `figure-group-block.tsx`; `checker-figures.tsx` itself stays off this tree.
+    expect(tree.has('src/components/listings/room-money-block.tsx')).toBe(true);
+    expect(tree.has('src/components/buildings/figure-group-block.tsx')).toBe(true);
+    expect(tree.has('src/components/buildings/checker-figures.tsx')).toBe(false);
+  });
+
   it('no module of the tree reads the checker namespace', () => {
     const offenders = [...tree].filter(([, source]) => namespacesRead(source).has('checker'));
     expect(offenders.map(([path]) => path)).toEqual([]);

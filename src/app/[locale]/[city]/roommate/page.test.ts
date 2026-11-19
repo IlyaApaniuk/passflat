@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { findMany, getCityWithDistricts } = vi.hoisted(() => ({
+const { findMany, getCityWithDistricts, cityFindUnique, costReportFindMany } = vi.hoisted(() => ({
   findMany: vi.fn(),
   getCityWithDistricts: vi.fn(),
+  cityFindUnique: vi.fn(),
+  costReportFindMany: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
@@ -12,8 +14,17 @@ vi.mock('next/navigation', () => ({
     throw new Error('NEXT_NOT_FOUND');
   },
 }));
-vi.mock('next-intl/server', () => ({ getLocale: vi.fn(), getTranslations: vi.fn() }));
-vi.mock('@/lib/prisma', () => ({ prisma: { roommateProfile: { findMany } } }));
+vi.mock('next-intl/server', () => ({
+  getLocale: vi.fn(),
+  getTranslations: async () => (key: string) => (key === 'city.warsaw' ? 'Warsaw' : key),
+}));
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    roommateProfile: { findMany },
+    city: { findUnique: cityFindUnique },
+    costReport: { findMany: costReportFindMany },
+  },
+}));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
@@ -33,6 +44,10 @@ type ClientProps = {
   listingType: string;
   districts: { slug: string; name: string }[];
   flatmateCounts?: unknown;
+  roomMoney?: {
+    reference: { level: string; slug: string; name: string; summary: unknown };
+    areaName: string;
+  } | null;
 };
 
 function cityRecord(slug: string) {
@@ -59,6 +74,8 @@ async function render(city: string): Promise<ClientProps> {
 describe('/[city]/roommate page: the flatmate block counts (spec 02 §Find a flatmate)', () => {
   beforeEach(() => {
     findMany.mockReset();
+    cityFindUnique.mockResolvedValue({ slug: 'warsaw', nameKey: 'city.warsaw' });
+    costReportFindMany.mockResolvedValue([]);
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
   });
 
@@ -108,5 +125,78 @@ describe('/[city]/roommate page: the flatmate block counts (spec 02 §Find a fla
     const props = await render('warsaw');
     expect(findMany).not.toHaveBeenCalled();
     expect(props.flatmateCounts).toBeUndefined();
+  });
+});
+
+describe('/[city]/roommate page: the room money block figures (spec 02 §Room money block)', () => {
+  const room = (source: string, total: number) => ({
+    source,
+    rentalType: 'room',
+    totalMonthlyAvg: total,
+    utilitiesComplete: true,
+  });
+
+  beforeEach(() => {
+    findMany.mockReset();
+    findMany.mockResolvedValue([]);
+    cityFindUnique.mockReset();
+    cityFindUnique.mockResolvedValue({ slug: 'warsaw', nameKey: 'city.warsaw' });
+    costReportFindMany.mockReset();
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('warsaw: the city room reference with the city name rendered on the server', async () => {
+    costReportFindMany.mockResolvedValue([room('user', 1_600), room('user', 1_800)]);
+    const props = await render('warsaw');
+    expect(costReportFindMany).toHaveBeenCalledTimes(1);
+    expect(costReportFindMany.mock.calls[0][0].where).toEqual({
+      building: { cityId: 'city-warsaw' },
+      isVisible: true,
+      rentalType: 'room',
+    });
+    expect(cityFindUnique).toHaveBeenCalledWith({
+      where: { id: 'city-warsaw' },
+      select: { slug: true, nameKey: true },
+    });
+    expect(props.roomMoney?.areaName).toBe('Warsaw');
+    expect(props.roomMoney?.reference).toMatchObject({
+      level: 'city',
+      slug: 'warsaw',
+      name: 'city.warsaw',
+    });
+  });
+
+  it('warsaw without room reports: null, so the block shows without the figures line', async () => {
+    costReportFindMany.mockResolvedValue([]);
+    const props = await render('warsaw');
+    expect(props.roomMoney).toBeNull();
+  });
+
+  it('warsaw, database error in the figures: null and the page still renders with its counts', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    costReportFindMany.mockRejectedValue(new Error('timeout'));
+    const props = await render('warsaw');
+    expect(props.roomMoney).toBeNull();
+    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [] });
+  });
+
+  it('the room money block does not need the bot username', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    costReportFindMany.mockResolvedValue([room('user', 1_600)]);
+    const props = await render('warsaw');
+    expect(props.flatmateCounts).toBeUndefined();
+    expect(props.roomMoney?.reference.level).toBe('city');
+  });
+
+  it('another city: no figure query and no block', async () => {
+    const props = await render('krakow');
+    expect(costReportFindMany).not.toHaveBeenCalled();
+    expect(cityFindUnique).not.toHaveBeenCalled();
+    expect(props.roomMoney).toBeUndefined();
   });
 });

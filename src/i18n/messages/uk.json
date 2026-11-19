@@ -400,6 +400,21 @@
       "languages": "Бот говорить англійською, російською та українською.",
       "button": "Відкрити бота в Telegram"
     },
+    "roomMoney": {
+      "title": "Знайшов кімнату? Скільки вийде на людину і чи безпечно платити заставу?",
+      "figuresLead": "Кімната у Варшаві, на місяць:",
+      "oneObservation": "Поки що одне спостереження у Варшаві",
+      "checklistTitle": "Перш ніж платити:",
+      "checklistSee": "Подивися кімнату наживо, перш ніж щось платити.",
+      "checklistReservation": "Не плати за «бронювання» до перегляду й підписаного договору.",
+      "checklistIncludes": "Запитай, що входить у ціну: czynsz і media (комунальні платежі).",
+      "checklistProtocol": "Під час заселення попроси акт приймання-передачі (protokół zdawczo-odbiorczy).",
+      "checklistAddress": "Перевір адресу в Passflat.",
+      "linksTitle": "Кімнати на інших сайтах:",
+      "linkOlx": "OLX: кімнати у Варшаві",
+      "linkOtodom": "Otodom: кімнати у Варшаві",
+      "linkFacebook": "Facebook: групи з кімнатами у Варшаві"
+    },
     "titleSublet": "Тимчасова суборенда",
     "listingsInCity": "<b>{count}</b> {count, plural, one {оголошення} few {оголошення} many {оголошень} other {оголошень}}",
     "filters": {

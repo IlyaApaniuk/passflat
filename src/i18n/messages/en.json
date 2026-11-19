@@ -400,6 +400,21 @@
       "languages": "The bot speaks English, Russian and Ukrainian.",
       "button": "Open the bot in Telegram"
     },
+    "roomMoney": {
+      "title": "Found a room? What it will cost you per person, and is it safe to pay the deposit?",
+      "figuresLead": "A room in Warsaw, per month:",
+      "oneObservation": "One observation in Warsaw so far",
+      "checklistTitle": "Before you pay:",
+      "checklistSee": "See the room in person before you pay anything.",
+      "checklistReservation": "Never pay a “reservation” before a viewing and a signed contract.",
+      "checklistIncludes": "Ask what the price includes: czynsz and media (utilities).",
+      "checklistProtocol": "At move-in, ask for a handover protocol (protokół zdawczo-odbiorczy).",
+      "checklistAddress": "Check the address in Passflat.",
+      "linksTitle": "Rooms on other sites:",
+      "linkOlx": "OLX: rooms in Warsaw",
+      "linkOtodom": "Otodom: rooms in Warsaw",
+      "linkFacebook": "Facebook: Warsaw room groups"
+    },
     "titleSublet": "Temporary Sublets",
     "listingsInCity": "<b>{count}</b> {count, plural, one {listing} other {listings}}",
     "filters": {

@@ -1,4 +1,5 @@
 import type { RoommateIntent } from '@/lib/analytics/interest-events';
+import type { ListingsEmptyKind } from '@/lib/listings-empty-kind';
 
 /**
  * The role selector on `/[city]/roommate` (spec 02 §Role selector, FR-14, FR-3; the third
@@ -50,4 +51,16 @@ export function reopenRoommateRoles(state: RoommateRoleState): RoommateRoleState
 /** True when the "Looking for someone to rent with" block shows (the role is chosen). */
 export function showsFlatmateBlock(state: RoommateRoleState): boolean {
   return state.intent === 'find_flatmate';
+}
+
+/**
+ * True when the room money block shows (spec 02 §Room money block): the visitor chose "I'm
+ * looking for a room", or the city has no offer at all (`no_offers_in_city`, whatever the
+ * role). While it shows, its address-check item replaces the bridge line.
+ */
+export function showsRoomMoneyBlock(
+  state: RoommateRoleState,
+  emptyKind: ListingsEmptyKind,
+): boolean {
+  return state.intent === 'find_room' || emptyKind === 'no_offers_in_city';
 }

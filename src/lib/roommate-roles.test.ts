@@ -5,6 +5,7 @@ import {
   chooseRoommateRole,
   reopenRoommateRoles,
   showsFlatmateBlock,
+  showsRoomMoneyBlock,
 } from './roommate-roles';
 
 describe('roommate role selector logic', () => {
@@ -53,6 +54,25 @@ describe('roommate role selector logic', () => {
     const flatmate = chooseRoommateRole('find_flatmate').state;
     expect(showsFlatmateBlock(flatmate)).toBe(true);
     expect(showsFlatmateBlock(reopenRoommateRoles(flatmate))).toBe(true);
+  });
+
+  it('the room money block shows for find_room and on a city without offers, whatever the role', () => {
+    const findRoom = chooseRoommateRole('find_room').state;
+    expect(showsRoomMoneyBlock(findRoom, 'none')).toBe(true);
+    expect(showsRoomMoneyBlock(findRoom, 'no_match_for_filters')).toBe(true);
+    expect(showsRoomMoneyBlock(findRoom, 'no_offers_in_city')).toBe(true);
+    // The chip reopened keeps the intent, so the block stays.
+    expect(showsRoomMoneyBlock(reopenRoommateRoles(findRoom), 'none')).toBe(true);
+
+    for (const state of [
+      INITIAL_ROOMMATE_ROLE_STATE,
+      chooseRoommateRole('offer_room').state,
+      chooseRoommateRole('find_flatmate').state,
+    ]) {
+      expect(showsRoomMoneyBlock(state, 'none')).toBe(false);
+      expect(showsRoomMoneyBlock(state, 'no_match_for_filters')).toBe(false);
+      expect(showsRoomMoneyBlock(state, 'no_offers_in_city')).toBe(true);
+    }
   });
 
   it('the chip reopens the choices and keeps the chosen intent', () => {

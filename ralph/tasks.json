@@ -430,14 +430,14 @@
       "title": "Roommate page: the room money block (FR-22)",
       "spec": "docs/specs/02-roommate-and-waitlist.md#room-money-block",
       "dependsOn": ["T080", "T085"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The block shows for find_room and the no_offers_in_city empty state on /warsaw/roommate: the Warsaw room reference per group with N through the website's figure helpers, the 5-item checklist, the address-check link with cost_data_cta_clicked source=roommate_bridge, and the three links out with nofollow noopener and a new tab",
         "A test feeds one fixture to the block and to the bot reply of T080 and gets the same figures; no figures → no figures line",
         "Copy in four locales, Polish first, key parity; keys listed for review"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D41 (E11)."
     },
     {
@@ -864,7 +864,8 @@
         "T103",
         "T104",
         "T106",
-        "T111"
+        "T111",
+        "T112"
       ],
       "status": "todo",
       "acceptance": [
@@ -890,6 +891,23 @@
       "milestone": "M1",
       "title": "Save with a move-in month that passed while the draft was open (FR-6, FR-12 gap)",
       "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T086"],
+      "acceptance": [
+        "CheckerAreaReference (src/components/buildings/checker-figures.tsx) passes an area label to AreaReferenceGroups' oneObservationLabel, so a district or city reference group with one report no longer shows costs.building.figures.oneObservation ('One observation at this address', a building's wording) but names its area and level (district or city), the way listings.roomMoney.oneObservation does on the roommate page (T086)",
+        "Found in T086: a district reference is chosen by MIN_AREA_REPORTS reports over both groups, so its tenant group can hold one report (e.g. 1 tenant + 4 asking prices), and a city reference can rest on one report; today the checker then says 'at this address' under 'Reference: tenant reports in Mokotów (1)'",
+        "Copy (agent draft, four locales, key parity): a new key in a namespace the checker page receives, with an ICU select on the level; listed for review",
+        "Tests: checker-figures.test.ts renders a district and a city reference whose tenant group has one report and asserts the area wording and the absence of 'at this address'; the building's own one observation keeps 'One observation at this address'"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found by T086. The building page and the checker's building block keep the building wording. No figure or contract change.",
+      "id": "T112",
+      "milestone": "M2",
+      "title": "Checker area reference: a one-observation group says the area, not 'at this address' (FR-24 gap)",
+      "spec": "docs/specs/03-building-figures.md#checker",
       "status": "todo"
     }
   ]

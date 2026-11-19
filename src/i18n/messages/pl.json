@@ -400,6 +400,21 @@
       "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku.",
       "button": "Otwórz bota w Telegramie"
     },
+    "roomMoney": {
+      "title": "Masz pokój na oku? Ile zapłacisz na osobę i czy można bezpiecznie wpłacić kaucję?",
+      "figuresLead": "Pokój w Warszawie, za miesiąc:",
+      "oneObservation": "Na razie jedna obserwacja w Warszawie",
+      "checklistTitle": "Zanim zapłacisz:",
+      "checklistSee": "Obejrzyj pokój na miejscu, zanim cokolwiek zapłacisz.",
+      "checklistReservation": "Nie płać „rezerwacji” przed obejrzeniem pokoju i podpisaniem umowy.",
+      "checklistIncludes": "Zapytaj, co jest wliczone w cenę: czynsz i media.",
+      "checklistProtocol": "Przy wprowadzce poproś o protokół zdawczo-odbiorczy.",
+      "checklistAddress": "Sprawdź adres w Passflat.",
+      "linksTitle": "Pokoje na innych stronach:",
+      "linkOlx": "OLX: pokoje w Warszawie",
+      "linkOtodom": "Otodom: pokoje w Warszawie",
+      "linkFacebook": "Facebook: grupy z pokojami w Warszawie"
+    },
     "titleSublet": "Tymczasowy podnajem",
     "listingsInCity": "<b>{count}</b> {count, plural, one {oferta} few {oferty} many {ofert} other {ofert}}",
     "filters": {

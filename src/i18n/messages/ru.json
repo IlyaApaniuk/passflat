@@ -400,6 +400,21 @@
       "languages": "Бот говорит по-английски, по-русски и по-украински.",
       "button": "Открыть бота в Telegram"
     },
+    "roomMoney": {
+      "title": "Нашёл комнату? Сколько выйдет на человека и безопасно ли платить залог?",
+      "figuresLead": "Комната в Варшаве, в месяц:",
+      "oneObservation": "Пока одно наблюдение по Варшаве",
+      "checklistTitle": "Прежде чем платить:",
+      "checklistSee": "Посмотри комнату вживую, прежде чем что-либо платить.",
+      "checklistReservation": "Не плати за «бронь» до просмотра и подписанного договора.",
+      "checklistIncludes": "Спроси, что входит в цену: czynsz и media (коммунальные платежи).",
+      "checklistProtocol": "При заселении попроси акт приёма-передачи (protokół zdawczo-odbiorczy).",
+      "checklistAddress": "Проверь адрес в Passflat.",
+      "linksTitle": "Комнаты на других сайтах:",
+      "linkOlx": "OLX: комнаты в Варшаве",
+      "linkOtodom": "Otodom: комнаты в Варшаве",
+      "linkFacebook": "Facebook: группы с комнатами в Варшаве"
+    },
     "titleSublet": "Временная субаренда",
     "listingsInCity": "<b>{count}</b> {count, plural, one {объявление} few {объявления} many {объявлений} other {объявлений}}",
     "filters": {

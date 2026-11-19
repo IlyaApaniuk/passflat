@@ -14,6 +14,8 @@ import {
 } from '@/lib/listings-query';
 import type { CityBounds } from '@/lib/listings-data';
 import { loadFlatmateBlockCounts, pageHasFlatmateBlock } from '@/lib/roommate/website-counts';
+import { loadRoomMoneyReference, pageHasRoomMoneyBlock } from '@/lib/roommate/room-money';
+import type { RoomMoneyFigures } from '@/components/listings/room-money-block';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
@@ -56,13 +58,23 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   const parsed = parseSearchParams(search);
   // The count ignores the URL filters, so a reload with strict filters never reads as an
   // empty city (spec 02 §Empty states). The "Looking for someone to rent with" block's counts
-  // (spec 02 §Find a flatmate) are loaded only where the block can show.
-  const [listings, cityOfferCount, flatmateCounts] = await Promise.all([
+  // (spec 02 §Find a flatmate) and the room money block's city room reference (spec 02 §Room
+  // money block) are loaded only where those blocks can show.
+  const [listings, cityOfferCount, flatmateCounts, roomReference] = await Promise.all([
     queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
     countCityListings({ cityId: city.id, type: 'roommate' }),
     pageHasFlatmateBlock(citySlug) ? loadFlatmateBlockCounts() : undefined,
+    pageHasRoomMoneyBlock(citySlug) ? loadRoomMoneyReference(city.id) : undefined,
   ]);
   const serialized = listings.map(serializeListing);
+
+  // Absent → no block; null → the block without its figures line. The reference's name is the
+  // city's `nameKey`, rendered here because the `city` namespace never reaches the client.
+  let roomMoney: RoomMoneyFigures | null | undefined;
+  if (roomReference !== undefined) {
+    const t = await getTranslations();
+    roomMoney = roomReference && { reference: roomReference, areaName: t(roomReference.name) };
+  }
 
   const districts = city.districts.map((d) => ({
     slug: d.slug,
@@ -85,6 +97,7 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
       listingType="roommate"
       cityOfferCount={cityOfferCount}
       flatmateCounts={flatmateCounts}
+      roomMoney={roomMoney}
       isLoggedIn={!!user}
     />
   );
