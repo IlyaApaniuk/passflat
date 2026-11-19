@@ -2393,8 +2393,8 @@
       "subject": "We've launched in {city} — Passflat",
       "heading": "Passflat is now in {city}!",
       "intro": "Great news — Passflat is now live in {city}.",
-      "body": "You can now browse listings and post your own. Click below to get started.",
-      "cta": "Browse listings",
+      "body": "See what renting costs with utilities included, district by district.",
+      "cta": "See the costs",
       "footer": "You received this email because you signed up to be notified when Passflat launches in your city."
     },
     "listingExpiring": {

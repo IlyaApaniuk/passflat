@@ -2393,8 +2393,8 @@
       "subject": "Wystartowaliśmy w {city} — Passflat",
       "heading": "Passflat jest już w {city}!",
       "intro": "Mamy świetne wieści — Passflat działa teraz w mieście {city}.",
-      "body": "Możesz już przeglądać ogłoszenia i dodać własne. Kliknij poniżej, aby zacząć.",
-      "cta": "Zobacz ogłoszenia",
+      "body": "Zobacz, ile kosztuje najem razem z mediami w poszczególnych dzielnicach.",
+      "cta": "Zobacz koszty",
       "footer": "Otrzymujesz tę wiadomość, ponieważ zapisałeś się na powiadomienie o starcie Passflat w Twoim mieście."
     },
     "listingExpiring": {

@@ -94,6 +94,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A neighbour or any per-building pin reads `neighbourFigure` + `NEIGHBOUR_REPORT_SELECT` (`location-checker.ts`); pin text and colours come from `figurePinLabel` / `figurePinColors` (`map-style.ts`) and the legend from `figure-map-legend.tsx`. No blended median helper exists any more (`cost-baselines.ts` is deleted).
 - Bot copy addresses the user with «ты» / «ти» (D42); `src/lib/bot/address-form.test.ts` walks every RU/UK text for formal pronouns and plural imperatives. A noun it catches (like «сайте») goes into its `NOT_IMPERATIVES` with a reason. New deposit keys are covered via `DEPOSIT_TEXT_KEYS`.
 - A RegExp with the `g` flag keeps `lastIndex` between `toMatch` / `test` calls; keep shared patterns without `g` and build a `g` copy for `matchAll`.
+- An e-mail renders end-to-end in Vitest through the real `sendEmail`: mock `next-intl/server` (`getTranslations({ locale, namespace })` → `createTranslator`), `../client` (Resend `emails.send` records `{ subject, html }`) and `@/lib/posthog-server`; example: `src/lib/email/templates/CityLaunchEmail.test.ts`. Never type a literal U+00A0 in source (`no-irregular-whitespace`); `\s` matches it.
 - `toLocaleString('pl-PL')` does not group four-digit numbers ("4000", but "12 000" with a no-break space): match with `\s?`; rendered HTML keeps `&amp;`, so assert on text without `&`.
 
 ## Log
@@ -1570,3 +1571,18 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Not changed (outside scope): `docs/product/prd/prd-1-decision-review.md` Q-5 / Q-6 keep the original «вы» drafts as history.
   - No tables, migrations or events.
 - Next: the owner answers Q-17 (`ralph-answer` T060); then T060, then T059 (final check of PRD 1).
+
+### 2026-11-19 11:48 · T060 · done
+
+- Done:
+  - `src/i18n/messages/{ru,pl,en,uk}.json`: `emails.cityLaunch.body` and `.cta` are the owner's exact copy of spec 02 §City-launch e-mail link and send guard (D47), e.g. EN "See what renting costs with utilities included, district by district." / "See the costs". Subject, heading, intro and footer unchanged; key sets unchanged.
+  - `src/lib/email/templates/CityLaunchEmail.tsx`: `t('cityLaunch.body')` no longer passes `{ city }` (the body has no placeholder).
+  - Docs: `docs/specs/README.md` (T060 → Done, intro line), `docs/product/roadmap.md` (59 of 60 done, T059 left), `docs/product/prd/prd-1-activation-and-bot.md` (status: none blocked).
+- Tests: `src/lib/email/templates/CityLaunchEmail.test.ts` (new, 21): per locale the body and cta equal the approved copy, match none of «объявлен», «ogłosze», «listing», «оголошен», and the body has no `{`/`}`; a self-test that the pattern catches the old copy; the e-mail rendered through the real `sendEmail` (`next-intl/server` → `createTranslator` over the locale file, `../client` Resend mocked to record the message, `@/lib/posthog-server` mocked): the button anchor with the cta label has `href` = `localeUrl(locale, '/krakow/costs')` (`https://passflat.com/<locale>/krakow/costs`), no anchor points to `replacement`/`listings`, the visible text holds the body and no listings word, subject/heading/intro still name the city, footer present, no raw key. Proven to fail by temporarily putting "Browse listings" back into the EN cta (3 failures, reverted).
+- Checks: targeted Vitest (4 files, 36 tests) passed. `npm run verify` exit 0 on the second run (the first failed lint: `no-irregular-whitespace`, a literal U+00A0 in the test's regex, removed; `\s` covers it): lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 90 files / 1210 tests, build OK with `ƒ /api/cron/city-launch`. `next-env.d.ts` restored. No e-mail sent; nothing deployed.
+- Did not work: nothing.
+- Owner review:
+  - **Copy (owner-approved, D47, not a draft):** `emails.cityLaunch.body`, `emails.cityLaunch.cta` in four locales.
+  - **After deploy:** the city-launch e-mail may be sent again (`POST /api/cron/city-launch`, manual, `CRON_SECRET`); Q-17 no longer holds it.
+  - No tables, migrations or events.
+- Next: T059 (final check of PRD 1 with the deploy handoff, spec 05 §Final check after the owners' answers).

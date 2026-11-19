@@ -6,9 +6,7 @@ PRD changes status or an experiment ends.
 ## Now (2026-11-19 – 2026-11-30)
 
 - **PRD 1 finishing**, activation measurement and the Telegram bot, on `chore/agent-harness`:
-  60 tasks (T002 – T061), 57 done. Left: T061 (the bot addresses the user with «ты» / «ти»,
-  D42), T060 (city-launch e-mail copy, blocked on the owner's Q-17), then the final check and
-  deploy handoff T059.
+  60 tasks (T002 – T061), 59 done. Left: the final check and deploy handoff T059.
 - **The main bet is under review** (D39): the owner wants a self-serve service, with no
   personal help, lawyer or staff; a new thesis is being agreed in chat. PRD 2, the deposit
   sprint, is **On hold** since 2026-11-19 and is not decomposed; E10 is Stopped (D44).
