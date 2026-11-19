@@ -17,6 +17,7 @@ import { isMatchingEnabled } from '@/lib/roommate/switch';
 import { formatWarsawDate, isRoommateSendHour, isSameWarsawDay } from '@/lib/roommate/time';
 
 import { track } from './analytics';
+import { retryHideNotices, retryStatements } from './roommate-hide-messages';
 import { retryPendingReveals } from './roommate-reveal';
 import { roommateLocale, rt, rtPeople, type RoommateLocale } from './roommate-texts';
 import { plural } from './texts';
@@ -194,6 +195,13 @@ export type CronMessage = {
    * (`roommate-close.ts`) deletes every profile whether or not its chat can be written to.
    */
   claimWhenBlocked?: boolean;
+  /**
+   * A 403 releases the claim too, so the column stays null for a chat that blocked the bot: the
+   * statement of reasons (spec 07 §Statement of reasons: a blocked chat keeps `statement_sent_at`
+   * null, which the owner's SQL shows). The retry reads unblocked chats only, so it goes out once
+   * the person writes to the bot again.
+   */
+  releaseWhenBlocked?: boolean;
 };
 
 /** `taken`: another run (or the person) claimed the row first; nothing was sent. */
@@ -278,6 +286,7 @@ export function createCronSender(
           where: { chatId: message.chatId },
           data: { blockedAt: now },
         });
+        if (message.releaseWhenBlocked) await release(message);
         return 'blocked';
       }
       counts.failed += 1;
@@ -595,10 +604,12 @@ const sendDailyPushes: MessageJob = async (sender, now) => {
 
 /**
  * The send-hour jobs in the priority order of spec 06 §Daily cron step 2, so the important ones go
- * first when the cap or the time budget runs out. Each later task adds its job at its place:
- * 1. the retry of unsent statements of reasons (spec 07 FR-33, T095);
+ * first when the cap or the time budget runs out:
+ * 1. the retry of unsent statements of reasons (`retryStatements`, `roommate-hide-messages.ts`,
+ *    spec 07 FR-33);
  * 2. the retry of waiting reveals (`retryPendingReveals`, `roommate-reveal.ts`, spec 07 §Reveal);
- * 3. the retry of unsent hide notices to reporters (spec 07 §Automatic hiding, T095);
+ * 3. the retry of unsent hide notices to reporters (`retryHideNotices`,
+ *    `roommate-hide-messages.ts`, spec 07 §Automatic hiding);
  * 4. the renewal reminders (§Renewal, `sendRenewalReminders`);
  * 5. the outcome question (spec 07 FR-29, `sendOutcomeQuestions`);
  * 6. switch on only: the one-time message (§Matching is open, `sendMatchingOpenMessages`, T082);
@@ -606,7 +617,9 @@ const sendDailyPushes: MessageJob = async (sender, now) => {
  * The retries and the outcome question run with the switch on or off.
  */
 const MESSAGE_JOBS: readonly MessageJob[] = [
+  retryStatements,
   retryPendingReveals,
+  retryHideNotices,
   sendRenewalReminders,
   sendOutcomeQuestions,
   switchOnOnly(sendMatchingOpenMessages),

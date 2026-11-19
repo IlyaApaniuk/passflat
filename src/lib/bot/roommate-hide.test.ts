@@ -1,6 +1,6 @@
 import { Prisma, type RoommateProfile } from '@prisma/client';
-import type { Api, Bot, Context } from 'grammy';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GrammyError, type Api, type Bot, type Context } from 'grammy';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 /**
  * Automatic hiding and the ban marker (PRD 3 FR-32, FR-34, spec 07 §Automatic hiding, D62, D55):
@@ -16,7 +16,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * over one in-memory Prisma fake whose reads apply their `where` and return copies, and whose
  * deletes apply the foreign keys (reactions cascade, report references set to null). Nothing
  * reaches Telegram, PostHog or a database. The messages of a hide (the statement of reasons, the
- * notice to reporters) are T095.
+ * notice to reporters; spec 07 §Statement of reasons, FR-32 criterion 4, FR-33) are the last
+ * describe blocks.
  */
 
 type Row = Record<string, unknown>;
@@ -48,6 +49,8 @@ const db = vi.hoisted(() => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
       if (key === 'fromProfile') return matches(profileOf(row.fromProfileId), cond as Where);
       if (key === 'toProfile') return matches(profileOf(row.toProfileId), cond as Where);
+      if (key === 'reporterProfile')
+        return matches(profileOf(row.reporterProfileId), cond as Where);
       if (key in RELATIONS) {
         const { none, some, ...rest } = cond as { none?: Where; some?: Where };
         const filter = none ?? some;
@@ -81,12 +84,18 @@ const db = vi.hoisted(() => {
   }
 
   function project(row: Row, select: Row): Row {
+    const related = (key: string) =>
+      key === 'chat'
+        ? chatOf(row)
+        : key === 'reporterProfile'
+          ? profileOf(row.reporterProfileId)
+          : (row[key] as Row);
     return Object.fromEntries(
       Object.entries(select).map(([key, part]) => [
         key,
         part === true
           ? structuredClone(row[key])
-          : project(key === 'chat' ? chatOf(row) : (row[key] as Row), (part as Row).select as Row),
+          : project(related(key), (part as Row).select as Row),
       ]),
     );
   }
@@ -222,6 +231,10 @@ const db = vi.hoisted(() => {
       updateMany: vi.fn(async (args: { where: Where; data: Row }) =>
         updateMany(state.reports, args),
       ),
+      /** The statement's facts and the reporters' notices (`roommate-hide-messages.ts`). */
+      findMany: vi.fn(async (args: Read) =>
+        readMany(state.reports, args, (row) => structuredClone(row)),
+      ),
       deleteMany: vi.fn(async ({ where }: { where: Where }) => {
         const before = state.reports.length;
         state.reports = state.reports.filter((row) => !matches(row, where));
@@ -253,8 +266,10 @@ import { loadRoommateCounts } from '@/lib/roommate/counts';
 import { HIDE_AT_REPORTERS } from '@/lib/roommate/rules';
 import { deleteProfile, findCompatible } from '@/lib/roommate/store';
 
+import { escapeHtml, webLink } from './format';
 import { runRoommateDaily, type CronClock } from './roommate-daily';
 import { openRoommate, registerRoommateFlow } from './roommate-flow';
+import { statementText } from './roommate-hide-messages';
 import { registerRoommateMatching } from './roommate-matching';
 import { registerRoommateSafety } from './roommate-safety';
 import { rt, type RoommateLocale } from './roommate-texts';
@@ -405,6 +420,9 @@ const hideEvents = () => events().filter(([, event]) => event === 'tg_roommate_p
 /** The ban writes of a hide (a chat update that sets `roommate_banned_at`). */
 const banWrites = () =>
   db.prisma.telegramChat.updateMany.mock.calls.filter(([args]) => 'roommateBannedAt' in args.data);
+/** The decision writes of a hide (not the notice claims, which set `reporter_notified_at`). */
+const decisionWrites = () =>
+  db.prisma.roommateReport.updateMany.mock.calls.filter(([args]) => 'decision' in args.data);
 
 type Handler = (ctx: Context) => Promise<void>;
 type Route = [trigger: string | RegExp, handler: Handler];
@@ -425,10 +443,14 @@ const ROUTES: Route[] = [];
 
 type Who = { who?: string; locale?: RoommateLocale };
 
+/** The `reply` of the last fake context, to order a tap's receipt against the API's sends. */
+let lastReply: Mock = vi.fn();
+
 function fakeContext(data: string | null, { who = C, locale = 'ru' }: Who) {
   mocks.touchChat.mockResolvedValue({ id: `chat-${who}`, locale, isNew: false });
   const name = row(who)?.tgUsername as string | null | undefined;
   const reply = vi.fn().mockResolvedValue({});
+  lastReply = reply;
   const ctx = {
     chat: { id: tgChatOf(who) },
     from: name ? { id: tgChatOf(who), username: name } : { id: tgChatOf(who) },
@@ -511,6 +533,8 @@ async function hideXByReports() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // A failing send set by one test must not leak into the next (`clearAllMocks` keeps it).
+  api.sendMessage.mockImplementation(async () => ({}));
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   switchTo('true');
@@ -547,8 +571,9 @@ describe('the golden cases of spec 07 §Automatic hiding', () => {
       expect.objectContaining({ reporterProfileId: R1, reason: 'fake', decision: 'hidden' }),
       expect.objectContaining({ reporterProfileId: R2, reason: 'money', decision: 'hidden' }),
     ]);
+    // Both reporters were told (spec 07 §Automatic hiding; the notices are tested below).
     for (const decided of reportsOn(X)) {
-      expect(decided).toMatchObject({ automated: true, decidedAt: NOW, reporterNotifiedAt: null });
+      expect(decided).toMatchObject({ automated: true, decidedAt: NOW, reporterNotifiedAt: NOW });
     }
     expect(events()).toEqual([
       [tgChatOf(R1), 'tg_roommate_reported', { reason: 'fake' }],
@@ -580,7 +605,7 @@ describe('the golden cases of spec 07 §Automatic hiding', () => {
     expect(db.prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(row(X)).toMatchObject({ status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports' });
     expect(banWrites()).toHaveLength(1);
-    expect(db.prisma.roommateReport.updateMany).toHaveBeenCalledTimes(1);
+    expect(decisionWrites()).toHaveLength(1);
     expect(reportsOn(X).map((r) => r.decision)).toEqual(['hidden', 'hidden', 'hidden']);
     expect(hideEvents()).toEqual([[X_CHAT, 'tg_roommate_profile_hidden', { reason: 'reports' }]]);
   });
@@ -683,18 +708,22 @@ describe('what a hide writes', () => {
   it('one conditional update on hidden_at, the ban when null, and the decisions', async () => {
     await hideXByReports();
 
+    // `statement_sent_at` is cleared, so a hide after an owner's unhide gets its own statement.
     expect(db.prisma.roommateProfile.updateMany).toHaveBeenCalledWith({
       where: { id: X, hiddenAt: null },
-      data: { status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports' },
+      data: { status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports', statementSentAt: null },
     });
     expect(banWrites()).toEqual([
       [{ where: { id: `chat-${X}`, roommateBannedAt: null }, data: { roommateBannedAt: NOW } }],
     ]);
-    expect(db.prisma.roommateReport.updateMany).toHaveBeenCalledTimes(1);
-    expect(db.prisma.roommateReport.updateMany).toHaveBeenCalledWith({
-      where: { targetProfileId: X, decision: { not: 'lifted' } },
-      data: { decision: 'hidden', automated: true, decidedAt: NOW },
-    });
+    expect(decisionWrites()).toEqual([
+      [
+        {
+          where: { targetProfileId: X, decision: { not: 'lifted' } },
+          data: { decision: 'hidden', automated: true, decidedAt: NOW },
+        },
+      ],
+    ]);
   });
 
   it('an expired target is hidden too; a ban set earlier keeps its time', async () => {
@@ -837,5 +866,337 @@ describe('a hidden profile is not counted, shown or pushed', () => {
     expect(await mate({ who: X })).toEqual([{ text: rt('ru', 'banned'), data: [] }]);
     expect(await mateLink({ who: X })).toEqual([{ text: rt('ru', 'banned'), data: [] }]);
     expect(db.state.profiles.some((p) => p.chatId === `chat-${X}`)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// The messages of a hide (spec 07 §Statement of reasons, FR-33; §Automatic hiding, FR-32
+// criterion 4; DSA Art. 16(5) – (6), Art. 17)
+// ---------------------------------------------------------------------------------------------
+
+const NEXT_DAY = new Date(NOW.getTime() + DAY);
+const DAY_AFTER = new Date(NOW.getTime() + 2 * DAY);
+
+/** The API sends to the chat of profile `id`: `[text, options]`. */
+const sendsTo = (id: string) =>
+  api.sendMessage.mock.calls
+    .filter(([chatId]) => chatId === tgChatOf(id))
+    .map(([, text, options]) => [text, options] as const);
+const textsTo = (id: string) => sendsTo(id).map(([text]) => text);
+const notifiedAt = (id: string) => reportsOn(id).map((r) => r.reporterNotifiedAt);
+
+function grammyError(code: number, description: string): GrammyError {
+  return new GrammyError(
+    "Call to 'sendMessage' failed!",
+    { ok: false, error_code: code, description },
+    'sendMessage',
+    { chat_id: 500_000_001, text: 'roommate' },
+  );
+}
+
+/** Every send to the chat of a profile in `codes` fails with its error code; the others go through. */
+function failSends(codes: Record<string, number>) {
+  api.sendMessage.mockImplementation(async (chatId: number) => {
+    const id = Object.keys(codes).find((profileId) => tgChatOf(profileId) === chatId);
+    if (id) throw grammyError(codes[id], codes[id] === 403 ? 'Forbidden' : 'Bad Gateway');
+    return {};
+  });
+}
+
+/** Every send to the chat of one of `ids` fails with `code`; the others go through. */
+const failSendsTo = (code: number, ...ids: string[]) =>
+  failSends(Object.fromEntries(ids.map((id) => [id, code])));
+
+const quoted = (locale: RoommateLocale, key: Parameters<typeof rt>[1]) =>
+  locale === 'en' ? `'${rt(locale, key)}'` : `«${rt(locale, key)}»`;
+
+describe('the statement of reasons (spec 07 §Statement of reasons, FR-33)', () => {
+  it.each(LOCALES)(
+    '%s: the hide sends X one statement: restriction, counts and categories, automated, the ground with the terms link, redress',
+    async (locale) => {
+      seed(
+        [R1, R2, X, C].map((id) => profile(id)),
+        { [X]: locale },
+      );
+      await hideXByReports();
+
+      const termsUrl = escapeHtml(webLink('/terms#matching', locale, 'roommate'));
+      expect(sendsTo(X)).toEqual([
+        [
+          [
+            rt(locale, 'statementRestriction'),
+            rt(locale, 'statementFacts', {
+              count: '2',
+              // `REPORT_REASONS` order: money before fake.
+              reasons: `${quoted(locale, 'btnReportMoney')}, ${quoted(locale, 'btnReportFake')}`,
+            }),
+            rt(locale, 'statementGroundReports', { termsUrl }),
+            rt(locale, 'statementRedress'),
+          ].join('\n\n'),
+          { parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
+        ],
+      ]);
+      expect(row(X)!.statementSentAt).toEqual(NOW);
+    },
+  );
+
+  it('ru: every element as the spec names it', async () => {
+    await hideXByReports();
+    const [text] = textsTo(X);
+
+    expect(text).toContain('Твоя анкета для подбора соседей скрыта');
+    expect(text).toContain('в этом чате нельзя создать новую анкету');
+    expect(text).toContain(
+      'Жалоб на анкету: 2. Причины: «Просит деньги или залог», «Фейковая анкета».',
+    );
+    expect(text).toContain('Решение принято автоматически');
+    expect(text).toContain('два разных человека');
+    expect(text).toContain(
+      '<a href="https://passflat.com/ru/terms?utm_source=telegram&amp;utm_medium=bot&amp;utm_campaign=roommate#matching">',
+    );
+    expect(text).toContain('ответь /appeal');
+    expect(text).toContain('contact@passflat.com');
+    expect(text).toContain('координатору цифровых услуг — Prezes UKE');
+    expect(text).toContain('обратиться в суд');
+  });
+
+  it('names no reporter and no other profile: no id, username, chat id, link to a person', async () => {
+    revealed(R1, X);
+    revealed(R2, X);
+    await hideXByReports();
+    const [text] = textsTo(X);
+
+    for (const id of [R1, R2, C, Y, X]) {
+      expect(text).not.toContain(id);
+      expect(text).not.toContain(String(tgChatOf(id)));
+    }
+    expect(text).not.toMatch(/user_|chat-|t\.me|tg:\/\//);
+    // The only figure is the count of reports.
+    expect(text.match(/\d+/g)).toEqual(['2']);
+  });
+
+  it('"under_18": the facts and the at-once ground, with an earlier report too', async () => {
+    const termsUrl = escapeHtml(webLink('/terms#matching', 'ru', 'roommate'));
+    await report(R3, 'under_18', Y);
+    expect(textsTo(Y)).toEqual([statementText('ru', 'under_18', ['under_18'])]);
+    expect(textsTo(Y)[0]).toContain('Жалоб на анкету: 1. Причины: «Похоже, младше 18».');
+    expect(textsTo(Y)[0]).toContain(rt('ru', 'statementGroundUnder18', { termsUrl }));
+    expect(textsTo(Y)[0]).not.toContain('два разных человека');
+
+    await report(R1, 'fake', X);
+    await report(R2, 'under_18', X);
+    expect(textsTo(X)).toHaveLength(1);
+    expect(textsTo(X)[0]).toContain(
+      'Жалоб на анкету: 2. Причины: «Фейковая анкета», «Похоже, младше 18».',
+    );
+    expect(textsTo(X)[0]).toContain('сразу после жалобы «Похоже, младше 18»');
+  });
+
+  it('a statement with no decided report left says no count (never "0")', () => {
+    const text = statementText('ru', 'reports', []);
+    expect(text).not.toContain('Жалоб');
+    expect(text).toContain(rt('ru', 'statementRestriction'));
+    expect(text).toContain(rt('ru', 'statementRedress'));
+  });
+
+  it('sent once: two concurrent reports, a later report and two send-hour runs send no second one', async () => {
+    revealed(R4, X); // R4 got X's reveal, so its Report button still names X after the hide
+    await report(R1, 'fake', X);
+    await Promise.all([report(R2, 'money', X), report(R3, 'other', X)]);
+    expect(textsTo(X)).toHaveLength(1);
+
+    expect(await report(R4, 'offensive', X)).toEqual([rt('ru', 'reportReceiptHidden')]);
+    await runCron(NEXT_DAY);
+    await runCron(DAY_AFTER);
+    expect(textsTo(X)).toHaveLength(1);
+    expect(row(X)!.statementSentAt).toEqual(NOW);
+    // Each reporter whose report the hide decided was told once; R4's later report was not stored.
+    for (const id of [R1, R2, R3]) expect(textsTo(id)).toEqual([rt('ru', 'hideNotice')]);
+    expect(textsTo(R4)).toEqual([]);
+  });
+
+  it('a failed send other than a 403 releases the claim; the send-hour run sends it once, before the notices, with the switch off', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failSendsTo(502, X, R1, R2);
+    expect(await report(R1, 'fake', X)).toEqual([RECEIPT]);
+    expect(await report(R2, 'money', X)).toEqual([RECEIPT]);
+    expect(row(X)).toMatchObject({ status: 'hidden', statementSentAt: null });
+    expect(notifiedAt(X)).toEqual([null, null]);
+
+    api.sendMessage.mockImplementation(async () => ({}));
+    api.sendMessage.mockClear();
+    const eventsBefore = events().length;
+    switchTo('');
+    await runCron(NEXT_DAY);
+
+    expect(sent().map(({ chatId, text }) => [chatId, text])).toEqual([
+      [X_CHAT, statementText('ru', 'reports', ['fake', 'money'])],
+      [tgChatOf(R1), rt('ru', 'hideNotice')],
+      [tgChatOf(R2), rt('ru', 'hideNotice')],
+    ]);
+    expect(row(X)!.statementSentAt).toEqual(NEXT_DAY);
+    expect(notifiedAt(X)).toEqual([NEXT_DAY, NEXT_DAY]);
+
+    await runCron(DAY_AFTER);
+    expect(sent()).toHaveLength(3);
+    // The retries send no event (spec 07 §Events has none for a statement or a notice).
+    expect(events()).toHaveLength(eventsBefore);
+    quiet.mockRestore();
+  });
+
+  it('a 403: the chat is marked blocked and keeps statement_sent_at null; no retry while blocked; sent once the person writes again', async () => {
+    failSendsTo(403, X);
+    await hideXByReports();
+    expect(row(X)!.statementSentAt).toBeNull();
+    expect(chatRow(X).blockedAt).toEqual(NOW);
+    // The reporters are still told.
+    expect(notifiedAt(X)).toEqual([NOW, NOW]);
+
+    api.sendMessage.mockImplementation(async () => ({}));
+    api.sendMessage.mockClear();
+    await runCron(NEXT_DAY);
+    expect(textsTo(X)).toEqual([]);
+
+    chatRow(X).blockedAt = null; // the person wrote to the bot again (`touchChat`)
+    await runCron(DAY_AFTER);
+    expect(textsTo(X)).toEqual([statementText('ru', 'reports', ['fake', 'money'])]);
+    expect(row(X)!.statementSentAt).toEqual(DAY_AFTER);
+  });
+
+  it('a chat that blocked the bot before the hide gets nothing and keeps statement_sent_at null', async () => {
+    chatRow(X).blockedAt = new Date(NOW.getTime() - DAY);
+    // A blocked chat's profile is no card: R1 and R2 report it under the reveals they got.
+    revealed(R1, X);
+    revealed(R2, X);
+    await hideXByReports();
+    expect(textsTo(X)).toEqual([]);
+    expect(row(X)!.statementSentAt).toBeNull();
+    expect(notifiedAt(X)).toEqual([NOW, NOW]);
+  });
+
+  it("a hide after an owner's unhide sends a new statement; the earlier reporters are not told again", async () => {
+    await hideXByReports();
+    const LATER = new Date(NOW.getTime() + 2 * DAY);
+    vi.setSystemTime(LATER);
+    ownerUnhide(X, LATER);
+    api.sendMessage.mockClear();
+
+    await report(R3, 'other', X);
+    await report(R4, 'fake', X);
+
+    expect(sent().map(({ chatId, text }) => [chatId, text])).toEqual([
+      [X_CHAT, statementText('ru', 'reports', ['other', 'fake'])],
+      [tgChatOf(R3), rt('ru', 'hideNotice')],
+      [tgChatOf(R4), rt('ru', 'hideNotice')],
+    ]);
+    expect(textsTo(X)[0]).toContain('Жалоб на анкету: 2. Причины: «Фейковая анкета», «Другое».');
+    expect(row(X)!.statementSentAt).toEqual(LATER);
+  });
+});
+
+describe('the notice to reporters (spec 07 §Automatic hiding, FR-32 criterion 4)', () => {
+  it.each(LOCALES)(
+    '%s: every reporter is told once, in their language, that an automated decision hid it; the hiding reporter after the receipt',
+    async (locale) => {
+      seed(
+        [R1, R2, X, C].map((id) => profile(id)),
+        { [R1]: locale, [R2]: locale },
+      );
+      await report(R1, 'fake', X);
+      expect(api.sendMessage).not.toHaveBeenCalled();
+
+      expect(await report(R2, 'money', X)).toEqual([RECEIPT]);
+      const receiptAt = lastReply.mock.invocationCallOrder[0];
+
+      for (const id of [R1, R2]) {
+        expect(sendsTo(id)).toEqual([[rt(locale, 'hideNotice'), undefined]]);
+      }
+      const r2NoticeAt =
+        api.sendMessage.mock.invocationCallOrder[
+          api.sendMessage.mock.calls.findIndex(([chatId]) => chatId === tgChatOf(R2))
+        ];
+      expect(receiptAt).toBeLessThan(r2NoticeAt);
+      expect(notifiedAt(X)).toEqual([NOW, NOW]);
+      expect(rt(locale, 'hideNotice')).toMatch(
+        { ru: /автоматически/, uk: /автоматично/, en: /automatically/ }[locale],
+      );
+      // No event for a statement or a notice (spec 07 §Events has none).
+      expect(events().map(([, event]) => event)).toEqual([
+        'tg_roommate_reported',
+        'tg_roommate_reported',
+        'tg_roommate_profile_hidden',
+      ]);
+    },
+  );
+
+  it('the notice names nothing: no profile, reporter, reason or username', () => {
+    for (const locale of LOCALES) {
+      const notice = rt(locale, 'hideNotice');
+      expect(notice).not.toMatch(/\{|user_|@|\d/);
+      for (const key of ['btnReportMoney', 'btnReportFake', 'btnReportUnder18'] as const) {
+        expect(notice).not.toContain(rt(locale, key));
+      }
+    }
+  });
+
+  it('a failed notice other than a 403 is released and retried once by the send-hour run; a 403 keeps its claim', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failSends({ [R1]: 502, [R2]: 403 });
+    await report(R1, 'fake', X);
+    await report(R2, 'money', X);
+    expect(row(X)!.status).toBe('hidden');
+    expect(notifiedAt(X)).toEqual([null, NOW]);
+    expect(chatRow(R2).blockedAt).toEqual(NOW);
+
+    api.sendMessage.mockImplementation(async () => ({}));
+    api.sendMessage.mockClear();
+    chatRow(R2).blockedAt = null; // R2 unblocks: the 403's claim still stands
+    await runCron(NEXT_DAY);
+    expect(sent().map(({ chatId, text }) => [chatId, text])).toEqual([
+      [tgChatOf(R1), rt('ru', 'hideNotice')],
+    ]);
+    expect(notifiedAt(X)).toEqual([NEXT_DAY, NOW]);
+
+    await runCron(DAY_AFTER);
+    expect(sent()).toHaveLength(1);
+    quiet.mockRestore();
+  });
+
+  it('only reporters whose profile still exists, of reports a hide decided; a blocked chat waits until it writes again', async () => {
+    await report(R1, 'fake', X);
+    await deleteProfile(R1); // R1's report stays with a null reference: it does not count either
+    chatRow(R3).blockedAt = new Date(NOW.getTime() - DAY);
+    await report(R4, 'offensive', Y); // Y is not hidden: no notice
+    await report(R2, 'money', X);
+    await report(R3, 'other', X);
+    expect(row(X)!.status).toBe('hidden');
+
+    expect(textsTo(R1)).toEqual([]);
+    expect(textsTo(R2)).toEqual([rt('ru', 'hideNotice')]);
+    expect(textsTo(R3)).toEqual([]);
+    expect(textsTo(R4)).toEqual([]);
+
+    await runCron(NEXT_DAY);
+    expect(textsTo(R3)).toEqual([]);
+    chatRow(R3).blockedAt = null;
+    await runCron(DAY_AFTER);
+    expect(textsTo(R3)).toEqual([rt('ru', 'hideNotice')]);
+    expect(textsTo(R1)).toEqual([]);
+    expect(textsTo(R4)).toEqual([]);
+  });
+
+  it('reports the owner lifted get no notice from the retry', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failSendsTo(502, R1, R2);
+    await hideXByReports();
+    expect(notifiedAt(X)).toEqual([null, null]);
+    ownerUnhide(X, NOW);
+    api.sendMessage.mockImplementation(async () => ({}));
+    api.sendMessage.mockClear();
+
+    await runCron(NEXT_DAY);
+    expect(textsTo(R1)).toEqual([]);
+    expect(textsTo(R2)).toEqual([]);
+    quiet.mockRestore();
   });
 });

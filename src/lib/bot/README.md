@@ -279,8 +279,27 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   `tg_roommate_profile_hidden` (`reason` only) as the hidden person, so two reports
   at once hide once. From then on the profile is out of every count, card and push
   (`activeProfilesWhere`), `/mate` and `mate` links give the FR-14 reply, and the
-  daily cron deletes it 14 days after `expires_at` with the ban kept. The statement
-  of reasons and the notice to reporters are not sent yet (T095).
+  daily cron deletes it 14 days after `expires_at` with the ban kept. The hide also
+  clears `statement_sent_at`, so a hide after an owner's unhide gets its own
+  statement.
+- **Statement of reasons and the reporters' notice** (spec 07 §Statement of
+  reasons, FR-33, FR-32 criterion 4; `roommate-hide-messages.ts`): the request
+  whose report hid the profile replies the receipt first, then sends
+  (`sendHideMessages`, through `createCronSender`) the statement to the hidden
+  person and the notice "the profile you reported is now hidden from everyone,
+  decided automatically" (`hideNotice`) to every reporter of a report the hide
+  decided whose profile still exists. The statement (`statementText`, HTML, the
+  chat's language) says what is restricted, the number of decided reports and
+  their reasons as the Report buttons name them (never who reported, no other
+  profile), that the decision was automatic with its rule and the terms link
+  (`/terms#matching`), and the redress (`/appeal`, contact@passflat.com, Prezes
+  UKE, court). The statement is claimed on `statement_sent_at`, each notice on
+  its report's `reporter_notified_at`; any failure other than a 403 releases the
+  claim and the send-hour run retries it (`retryStatements`, `retryHideNotices`).
+  A 403 keeps a notice's claim but releases the statement's
+  (`releaseWhenBlocked`), so a blocked chat shows `statement_sent_at` null and
+  gets the statement once it writes to the bot again. No event; the switch is
+  not read.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -328,14 +347,16 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   and only with a bot configured, each through `createCronSender`: blocked chats
   skipped, the row claimed first, a 403 marks the chat blocked and keeps the
   claim, any other error releases it, a 429 releases it and stops the run, at
-  most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
-  `MESSAGE_JOBS`: the retry of waiting reveals (`retryPendingReveals`, see
-  **Reveal**), the renewal reminder (`sendRenewalReminders`), the outcome
-  question (`sendOutcomeQuestions`, see **Outcome question**) and, with the switch
-  on only (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`) and
-  the daily push (`sendDailyPushes`, see **Daily push**); statements add theirs in
-  the priority order of the spec. The response holds counts only;
-  PostHog is flushed before it.
+  most 25 a second and 1,000 a run, none started after 45 s. The jobs of
+  `MESSAGE_JOBS`, in the spec's priority order: the retry of unsent statements of
+  reasons (`retryStatements`), the retry of waiting reveals
+  (`retryPendingReveals`, see **Reveal**), the retry of unsent hide notices to
+  reporters (`retryHideNotices`; both retries see **Statement of reasons**), the
+  renewal reminder (`sendRenewalReminders`), the outcome question
+  (`sendOutcomeQuestions`, see **Outcome question**) and, with the switch on only
+  (`switchOnOnly`), the one-time message (`sendMatchingOpenMessages`) and the
+  daily push (`sendDailyPushes`, see **Daily push**). The response holds counts
+  only; PostHog is flushed before it.
 - **Matching is open** (spec 06 §Matching is open, FR-19): with the switch on,
   each active profile with `notify_on_open_at` set and `notified_open_at` null
   gets "Matching is open. N people fit you right now." once, N from
@@ -397,6 +418,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Interested, Done, steps, push, outcome   |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
 | `roommate-safety.ts`                             | Moderation (spec 07): Report (FR-31), automatic hiding (FR-32)     |
+| `roommate-hide-messages.ts`                      | A hide's statement of reasons and reporters' notices, the retries  |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |

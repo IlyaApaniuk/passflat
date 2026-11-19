@@ -25,6 +25,18 @@ const db = vi.hoisted(() => {
     reports: [] as Row[],
   };
   const chatOf = (row: Row) => state.chats.find((chat) => chat.id === row.chatId) ?? {};
+  const profileOf = (id: unknown) => state.profiles.find((row) => row.id === id) ?? {};
+
+  /** `select` with the `chat` and `reporterProfile` relations (the messages of a hide). */
+  function project(row: Row, select: Row): Row {
+    return Object.fromEntries(
+      Object.entries(select).map(([key, part]) => {
+        if (part === true) return [key, structuredClone(row[key])];
+        const related = key === 'chat' ? chatOf(row) : profileOf(row.reporterProfileId);
+        return [key, project(related, (part as Row).select as Row)];
+      }),
+    );
+  }
 
   /** `relation: { none | some: {...} }` on a profile: the table and the field that points at it. */
   const RELATIONS: Record<string, ['reactions' | 'reports', string]> = {
@@ -40,6 +52,8 @@ const db = vi.hoisted(() => {
     return Object.entries(where).every(([key, cond]) => {
       if (key === 'OR') return (cond as Where[]).some((part) => matches(row, part));
       if (key === 'chat') return matches(chatOf(row), cond as Where);
+      if (key === 'reporterProfile')
+        return matches(profileOf(row.reporterProfileId), cond as Where);
       if (key in RELATIONS) {
         const { none, some, ...rest } = cond as { none?: Where; some?: Where };
         const filter = none ?? some;
@@ -107,10 +121,7 @@ const db = vi.hoisted(() => {
         findMany: vi.fn(async ({ where, select }: { where: Where; select?: Row }) =>
           state.profiles
             .filter((row) => matches(row, where))
-            .map((row) =>
-              select ? Object.fromEntries(Object.keys(select).map((key) => [key, row[key]])) : row,
-            )
-            .map((row) => structuredClone(row)),
+            .map((row) => (select ? project(row, select) : structuredClone(row))),
         ),
         findFirst: vi.fn(async ({ where }: { where: Where }) => {
           const row = state.profiles.find((profile) => matches(profile, where));
@@ -175,9 +186,13 @@ const db = vi.hoisted(() => {
             return { count };
           },
         ),
-        /** The decisions of an automatic hide (`hideAfterReport`). */
+        /** The decisions of an automatic hide (`hideAfterReport`) and its notice claims. */
         updateMany: vi.fn(async (args: { where: Where; data: Row }) =>
           updateMany(state.reports, args),
+        ),
+        /** The statement's facts and the notices of a hide (`roommate-hide-messages.ts`). */
+        findMany: vi.fn(async ({ where, select }: { where: Where; select: Row }) =>
+          state.reports.filter((row) => matches(row, where)).map((row) => project(row, select)),
         ),
       },
     },

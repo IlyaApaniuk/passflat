@@ -63,9 +63,10 @@ const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
     'the closing route of FR-20: POST /api/cron/roommate-close, runRoommateClose, roommate-close.ts (T083)',
   // The report receipt (spec 07 §Report, FR-31): "I'll tell you when that
   // happens" is the notice to every reporter of a hidden profile (§Automatic
-  // hiding, FR-32 criterion 4, DSA Art. 16(6)); T095 builds that sender and adds
-  // its file and code to a backing map here.
-  reportReceipt: 'the hide notice to every reporter of spec 07 §Automatic hiding (T095)',
+  // hiding, FR-32 criterion 4, DSA Art. 16(6)), sent by the request that hid it
+  // and retried by the send-hour run.
+  reportReceipt:
+    'the hide notice to every reporter of spec 07 §Automatic hiding: sendHideMessages and retryHideNotices, roommate-hide-messages.ts (T095)',
 };
 
 /**
@@ -92,6 +93,27 @@ const DAILY_PUSH_PROMISE_BACKING: Record<string, { file: string; holds: string[]
       'switchOnOnly(sendDailyPushes)',
       'matchingOpenText(locale, count, !profile.pushOff)',
     ],
+  },
+};
+
+/** The report receipt's promise and the code that backs it (T095): the hide's sends and the retry. */
+const REPORT_RECEIPT_PROMISE_BACKING: Record<string, { file: string; holds: string[] }> = {
+  reportReceipt: {
+    file: 'src/lib/bot/roommate-hide-messages.ts',
+    holds: [
+      'export async function sendHideMessages(',
+      'await sendHideNotices(sender, now, { targetProfileId });',
+      "text: rt(roommateLocale(chat.locale), 'hideNotice'),",
+      'export const retryHideNotices: MessageJob',
+    ],
+  },
+  reportReceiptSender: {
+    file: 'src/lib/bot/roommate-safety.ts',
+    holds: ['await sendHideMessages('],
+  },
+  reportReceiptRetry: {
+    file: 'src/lib/bot/roommate-daily.ts',
+    holds: ['  retryHideNotices,\n'],
   },
 };
 
@@ -223,12 +245,14 @@ describe('bot texts: no notification promises', () => {
       'reportReceipt',
     ]);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.reportReceipt).toMatch(/§Automatic hiding/);
+    expect(ROOMMATE_PROMISE_EXCEPTIONS.reportReceipt).toMatch(/\bretryHideNotices\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInConfirm).toMatch(/\bsendMatchingOpenMessages\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.optInClosing).toMatch(/\/api\/cron\/roommate-close\b/);
     expect(ROOMMATE_PROMISE_EXCEPTIONS.openNobodyDaily).toMatch(/\bsendDailyPushes\b/);
     for (const [key, { file, holds }] of Object.entries({
       ...OPT_IN_PROMISE_BACKING,
       ...DAILY_PUSH_PROMISE_BACKING,
+      ...REPORT_RECEIPT_PROMISE_BACKING,
     })) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
       for (const code of holds) expect(source, `${key}: ${file}`).toContain(code);

@@ -159,7 +159,11 @@ const db = vi.hoisted(() => {
           return { count: hits.length };
         }),
       },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        /** No report here: the default run's hide-notice retry (`retryHideNotices`) finds none. */
+        findMany: vi.fn(async () => []),
+      },
       /** No pair is matched here: the default run's reveal retry (`dueRevealPairs`) finds none. */
       roommateReaction: { findMany: vi.fn(async () => []) },
     },
@@ -549,7 +553,7 @@ describe('the one-time message: who gets it', () => {
       notifyOnOpenAt: OPTED_IN,
       notifiedOpenAt: new Date(NOW.getTime() - 3 * DAY),
     });
-    seed('hidden', { status: 'hidden', notifyOnOpenAt: OPTED_IN });
+    seed('hidden', { status: 'hidden', statementSentAt: OPTED_IN, notifyOnOpenAt: OPTED_IN });
     seed('expired', {
       status: 'expired',
       notifyOnOpenAt: OPTED_IN,

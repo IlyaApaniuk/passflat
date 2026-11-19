@@ -164,7 +164,11 @@ const db = vi.hoisted(() => {
       },
       /** Every matched pair here is revealed already: the default run's reveal retry finds none. */
       roommateReaction: { findMany: vi.fn(async (args: Read) => readMany(state.reactions, args)) },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        /** No report here: the default run's hide-notice retry (`retryHideNotices`) finds none. */
+        findMany: vi.fn(async () => []),
+      },
     },
   };
 });
@@ -526,7 +530,15 @@ describe('the outcome question: who is asked, and when (FR-29)', () => {
   });
 
   it.each<[string, Partial<RoommateProfile>, Partial<ChatRow>]>([
-    ['a hidden profile', { status: 'hidden', hiddenAt: at('2027-01-01T10:00:00Z') }, {}],
+    [
+      'a hidden profile',
+      {
+        status: 'hidden',
+        hiddenAt: at('2027-01-01T10:00:00Z'),
+        statementSentAt: at('2027-01-01T10:00:00Z'),
+      },
+      {},
+    ],
     ['a blocked chat', {}, { blockedAt: at('2027-01-01T10:00:00Z') }],
     ['an answered one', { outcomeAskedAt: DUE, outcome: 'talking' }, {}],
   ])('never asks %s', async (_name, fields, chat) => {

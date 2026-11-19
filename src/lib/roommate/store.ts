@@ -426,7 +426,8 @@ function countingReportsWhere(targetProfileId: string) {
  * marker `roommate_banned_at` (when null; it stays, D55) and marks the target's reports
  * `decision=hidden`, `automated=true`, `decided_at=now`; reports the owner lifted keep their
  * decision. Returns the reason for that one request, null for every other (not hidden, or hidden
- * by another request).
+ * by another request); that request then sends the statement of reasons and the reporters'
+ * notices (`sendHideMessages`, `src/lib/bot/roommate-hide-messages.ts`).
  */
 export async function hideAfterReport(
   target: Pick<RoommateProfile, 'id' | 'chatId'>,
@@ -443,9 +444,11 @@ export async function hideAfterReport(
   if (!hiddenReason) return null;
 
   const hid = await prisma.$transaction(async (tx) => {
+    // `statement_sent_at` is cleared so this hide gets its own statement of reasons, also after an
+    // owner's unhide of an earlier one (spec 07 §Statement of reasons).
     const { count } = await tx.roommateProfile.updateMany({
       where: { id: target.id, hiddenAt: null },
-      data: { status: 'hidden', hiddenAt: now, hiddenReason },
+      data: { status: 'hidden', hiddenAt: now, hiddenReason, statementSentAt: null },
     });
     if (count !== 1) return false;
     await tx.telegramChat.updateMany({

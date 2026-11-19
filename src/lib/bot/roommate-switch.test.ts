@@ -203,6 +203,10 @@ const db = vi.hoisted(() => {
           async ({ where }: { where: Where }) =>
             state.reports.filter((row) => matches(row, where)).length,
         ),
+        /** No report here is decided (nothing is hidden): the hide-notice retry finds none. */
+        findMany: vi.fn(async ({ where }: { where: Where }) =>
+          state.reports.filter((row) => matches(row, where)),
+        ),
         /** One report per reporter and target (the unique pair; `skipDuplicates`). */
         createMany: vi.fn(async ({ data }: { data: Row[] }) => {
           let count = 0;

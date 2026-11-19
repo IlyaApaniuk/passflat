@@ -194,7 +194,11 @@ const db = vi.hoisted(() => {
           updateMany(state.reactions, args),
         ),
       },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        /** No report here: the default run's hide-notice retry (`retryHideNotices`) finds none. */
+        findMany: vi.fn(async () => []),
+      },
       /** `formMutualMatch`'s statement, applied in memory (as in `roommate-cards.test.ts`). */
       $executeRaw: vi.fn(
         async (_sql: TemplateStringsArray, ...values: unknown[]): Promise<number> => {
@@ -783,7 +787,10 @@ describe('retryPendingReveals in the send-hour run', () => {
     ['a banned chat', () => (chatOfProfile(B).roommateBannedAt = NOW)],
     ['an expired profile', () => Object.assign(row(B), { status: 'expired' })],
     ['a profile past its hide date', () => Object.assign(row(B), { expiresAt: NOW })],
-    ['a hidden profile', () => Object.assign(row(VIEWER), { status: 'hidden' })],
+    [
+      'a hidden profile',
+      () => Object.assign(row(VIEWER), { status: 'hidden', statementSentAt: NOW }),
+    ],
     ['a username missing', () => Object.assign(row(B), { tgUsername: null })],
     ['both already revealed', () => db.state.reactions.forEach((r) => (r.revealedAt = NOW))],
   ])('sends nothing for %s', async (_case, change) => {

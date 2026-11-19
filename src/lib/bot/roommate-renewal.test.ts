@@ -110,7 +110,11 @@ const db = vi.hoisted(() => {
           return { count: hits.length };
         }),
       },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        /** No report here: the default run's hide-notice retry (`retryHideNotices`) finds none. */
+        findMany: vi.fn(async () => []),
+      },
       /** No pair is matched here: the default run's reveal retry (`dueRevealPairs`) finds none. */
       roommateReaction: { findMany: vi.fn(async () => []) },
     },
@@ -546,7 +550,12 @@ describe('the reminder job (spec 06 §Renewal, criterion 4)', () => {
     seed({ id: 'later', expiresAt: at('2027-01-02T09:00:01Z') });
     seed({ id: 'reminded', renewalRemindedAt: at('2026-12-29T09:00:00Z') });
     seed({ id: 'expired', status: 'expired', expiredAt: at('2026-12-29T08:00:00Z') });
-    seed({ id: 'hidden', status: 'hidden', hiddenAt: at('2026-12-20T08:00:00Z') });
+    seed({
+      id: 'hidden',
+      status: 'hidden',
+      hiddenAt: at('2026-12-20T08:00:00Z'),
+      statementSentAt: at('2026-12-20T08:00:00Z'),
+    });
     seed({ id: 'draft', status: 'draft', step: 'budget', expiresAt: null, updatedAt: RUN });
     const { api, sendMessage } = fakeApi();
 

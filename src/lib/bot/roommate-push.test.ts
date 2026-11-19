@@ -164,7 +164,11 @@ const db = vi.hoisted(() => {
       },
       /** No pair is matched here: the default run's reveal retry finds none. */
       roommateReaction: { findMany: vi.fn(async (args: Read) => readMany(state.reactions, args)) },
-      roommateReport: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      roommateReport: {
+        deleteMany: vi.fn(async () => ({ count: 0 })),
+        /** No report here: the default run's hide-notice retry (`retryHideNotices`) finds none. */
+        findMany: vi.fn(async () => []),
+      },
     },
   };
 });
@@ -486,7 +490,7 @@ describe('the daily push: N = 0 sends nothing (criterion 2)', () => {
     const fresh = { activatedAt: new Date(LAST_PUSH.getTime() + 60 * MINUTE), pushOff: true };
     seed(uid(2), { ...fresh, languages: ['pl'] });
     seed(uid(3), { ...fresh, budgetBand: 'b5' });
-    seed(uid(4), { ...fresh, status: 'hidden' });
+    seed(uid(4), { ...fresh, status: 'hidden', statementSentAt: LAST_PUSH });
     seed(uid(5), { ...fresh, status: 'expired', expiredAt: new Date(NOW.getTime() - MINUTE) });
     seed(uid(6), { ...fresh, status: 'draft' });
     seed(uid(7), fresh, { blockedAt: new Date(NOW.getTime() - DAY) });
@@ -714,7 +718,16 @@ describe('the daily push: who gets it (edge cases)', () => {
 
   it.each<[string, Partial<RoommateProfile>, Partial<ChatRow>]>([
     ['the push off', { pushOff: true }, {}],
-    ['a hidden profile', { status: 'hidden', hiddenAt: LAST_PUSH, hiddenReason: 'reports' }, {}],
+    [
+      'a hidden profile',
+      {
+        status: 'hidden',
+        hiddenAt: LAST_PUSH,
+        hiddenReason: 'reports',
+        statementSentAt: LAST_PUSH,
+      },
+      {},
+    ],
     ['an expired profile', { status: 'expired', expiredAt: LAST_PUSH }, {}],
     ['a profile past its hide date', { expiresAt: new Date(NOW.getTime() - MINUTE) }, {}],
     ['a draft', { status: 'draft' }, {}],

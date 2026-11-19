@@ -28,7 +28,8 @@ import { peopleWord } from './texts';
  * reveal's username prompt and the three next steps. The daily push (§Daily push)
  * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages". The
  * outcome question (§Outcome question) adds the question and its four answers.
- * `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
+ * A hide (§Statement of reasons, §Automatic hiding) adds the statement's parts and
+ * the reporters' notice. `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
  * that nobody sees the profile until matching opens is replaced by who sees what.
  */
 
@@ -320,6 +321,23 @@ const RU = {
   /** A report on a profile already hidden: nothing is stored, so nothing more is promised. */
   reportReceiptHidden: 'Жалоба получена. Проверка автоматическая. Эта анкета уже скрыта от всех.',
   reportAlready: 'Жалоба на эту анкету уже отправлена.',
+
+  // --- the statement of reasons to the hidden person (spec 07 §Statement of reasons, FR-33, DSA
+  // Art. 17) and the notice to every reporter (§Automatic hiding, FR-32 criterion 4, DSA Art.
+  // 16(5) – (6)); agent drafts, D56. `statementText` (`roommate-hide-messages.ts`) composes the
+  // statement: what is restricted, the facts (counts and the reasons' button labels, never a
+  // reporter), the automated decision with its ground in the terms, the redress ---
+  statementRestriction:
+    'Твоя анкета для подбора соседей скрыта: другие люди её больше не видят, а в этом чате нельзя создать новую анкету.',
+  statementFacts: 'Жалоб на анкету: {count}. Причины: {reasons}.',
+  statementGroundReports:
+    'Решение принято автоматически: по правилам подбора анкету скрывают, когда на неё пожаловались два разных человека. Правила — в <a href="{termsUrl}">условиях использования</a>.',
+  statementGroundUnder18:
+    'Решение принято автоматически: по правилам подбора анкету скрывают сразу после жалобы «Похоже, младше 18» — подбор только для 18+. Правила — в <a href="{termsUrl}">условиях использования</a>.',
+  statementRedress:
+    'Обжаловать решение: ответь /appeal в этом чате или напиши на contact@passflat.com. Ещё можно подать жалобу координатору цифровых услуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — или обратиться в суд.',
+  hideNotice:
+    'Анкета, на которую поступила твоя жалоба, теперь скрыта от всех. Решение принято автоматически.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -551,6 +569,18 @@ const UK: Record<Key, string> = {
     'Скаргу отримано. Перевірка автоматична. Ця анкета тепер прихована від тебе. Від усіх вона сховається, коли поскаржиться ще одна людина, а з причини «Схоже, молодше 18» — одразу. Коли це станеться, напишу тобі.',
   reportReceiptHidden: 'Скаргу отримано. Перевірка автоматична. Ця анкета вже прихована від усіх.',
   reportAlready: 'Скаргу на цю анкету вже надіслано.',
+
+  statementRestriction:
+    'Твою анкету для підбору сусідів приховано: інші люди її більше не бачать, а в цьому чаті не можна створити нову анкету.',
+  statementFacts: 'Скарг на анкету: {count}. Причини: {reasons}.',
+  statementGroundReports:
+    'Рішення ухвалено автоматично: за правилами підбору анкету приховують, коли на неї поскаржилися дві різні людини. Правила — в <a href="{termsUrl}">умовах використання</a>.',
+  statementGroundUnder18:
+    'Рішення ухвалено автоматично: за правилами підбору анкету приховують одразу після скарги «Схоже, молодше 18» — підбір лише для 18+. Правила — в <a href="{termsUrl}">умовах використання</a>.',
+  statementRedress:
+    'Оскаржити рішення: відповідай /appeal у цьому чаті або напиши на contact@passflat.com. Також можна подати скаргу координатору цифрових послуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — або звернутися до суду.',
+  hideNotice:
+    'Анкету, на яку надійшла твоя скарга, тепер приховано від усіх. Рішення ухвалено автоматично.',
 };
 
 const EN: Record<Key, string> = {
@@ -782,6 +812,18 @@ const EN: Record<Key, string> = {
   reportReceiptHidden:
     'Report received. The check is automated. This profile is already hidden from everyone.',
   reportAlready: 'You already reported this profile.',
+
+  statementRestriction:
+    'Your roommate-matching profile is hidden: other people no longer see it, and no new profile can be created in this chat.',
+  statementFacts: 'Reports on the profile: {count}. Reasons: {reasons}.',
+  statementGroundReports:
+    'The decision was made automatically: under the matching rules a profile is hidden once two different people report it. The rules are in the <a href="{termsUrl}">terms of use</a>.',
+  statementGroundUnder18:
+    'The decision was made automatically: under the matching rules a profile is hidden at once after a \'Looks under 18\' report, as matching is for adults only. The rules are in the <a href="{termsUrl}">terms of use</a>.',
+  statementRedress:
+    'To appeal: reply /appeal in this chat or write to contact@passflat.com. You can also complain to the Digital Services Coordinator, the President of UKE (Prezes Urzędu Komunikacji Elektronicznej), or go to court.',
+  hideNotice:
+    'The profile you reported is now hidden from everyone. The decision was made automatically.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

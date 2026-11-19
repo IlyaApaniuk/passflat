@@ -610,7 +610,7 @@
       "title": "Statement of reasons to the hidden person and the notice to reporters (FR-33, FR-32 criterion 4)",
       "spec": "docs/specs/07-roommate-matching.md#statement-of-reasons",
       "dependsOn": ["T077", "T094"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A hide sends one statement of reasons with every element of spec 07 §Statement of reasons (restriction, counts and categories, automated, ground with the terms link, redress), claimed on statement_sent_at and retried by the send-hour cron after a non-403 failure",
         "Every reporter of the target is told once that it was hidden by an automated decision, claimed on that report's reporter_notified_at, released on a non-403 failure and retried by the send-hour cron",
@@ -618,7 +618,7 @@
         "The statement and notice copy in ru, uk and en is listed as drafts the owner approves before the switch (D56)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "DSA Art. 16(6), Art. 17; D56.\nFrom T093: the report receipt (reportReceipt, roommate-texts.ts) promises 'I'll tell you when that happens'; it is a ROOMMATE_PROMISE_EXCEPTIONS entry in src/lib/bot/texts.test.ts naming this notice. Once the notice sender exists, add its file and code strings to a backing map there (like DAILY_PUSH_PROMISE_BACKING) so a rename fails the check.\nFrom T094: send the statement and the notices from hideIfDue (src/lib/bot/roommate-safety.ts), after tg_roommate_profile_hidden: it runs only for the one request whose hideAfterReport (src/lib/roommate/store.ts) returned a reason, so a statement goes out once. roommate-hide.test.ts has a fake for taps plus whole default runs over profiles, chats, reactions and reports ($transaction, FK-applying deleteMany)."
     },
     {
@@ -635,7 +635,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "D65."
+      "notes": "D65.\nFrom T095: the statement of reasons (statementRedress, roommate-texts.ts) already tells the hidden person to reply /appeal; until this task an /appeal gets the bot's generic reply. The hide clears statement_sent_at (hideAfterReport), so the unhide SQL need not; appealed_at is not cleared by a hide, so after an owner's unhide and a second hide /appeal would answer 'already received' unless the unhide SQL (or the hide) clears appealed_at. The owner's read-only SQL should show statement_sent_at null for a chat that blocked the bot (releaseWhenBlocked, roommate-hide-messages.ts)."
     },
     {
       "id": "T097",
@@ -653,7 +653,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "D56, D62, D69. The intake intro links to the privacy anchor (T069)."
+      "notes": "D56, D62, D69. The intake intro links to the privacy anchor (T069).\nFrom T095: the statement of reasons links webLink('/terms#matching', locale, 'roommate') and states the rule (two different people, or at once for 'Looks under 18') and the redress (/appeal, contact@passflat.com, Prezes UKE as the Digital Services Coordinator, court): the terms section must carry id=\"matching\" and say the same."
     },
     {
       "id": "T109",
@@ -865,7 +865,8 @@
         "T104",
         "T106",
         "T111",
-        "T112"
+        "T112",
+        "T113"
       ],
       "status": "todo",
       "acceptance": [
@@ -908,6 +909,21 @@
       "milestone": "M2",
       "title": "Checker area reference: a one-observation group says the area, not 'at this address' (FR-24 gap)",
       "spec": "docs/specs/03-building-figures.md#checker",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T095"],
+      "acceptance": [
+        "A report inserted on a target that another request hid between this request's check (findReportableProfile) and its insert gets decision=hidden, automated=true, decided_at, and its reporter gets the hide notice once (claimed on reporter_notified_at), from that request or from the send-hour retry",
+        "Tests: two overlapping reports where the second is stored after the first one's hide committed: both reporters are told once, one statement of reasons"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "From T095: hideAfterReport (src/lib/roommate/store.ts) decides only the reports that exist when the hide commits. A report inserted just after it stays decision='none', so retryHideNotices (roommate-hide-messages.ts) never picks it up, although its receipt (reportReceipt) promised the notice. One way: when the conditional hide update finds the target already hidden, decide that target's decision='none' reports in the same transaction and run sendHideNotices for the target. The statement's facts count only decided reports, so its count is unchanged for a statement already sent.",
+      "id": "T113",
+      "milestone": "M4",
+      "title": "A report stored just after another request hid the same target is decided and its reporter told (FR-32 criterion 4)",
+      "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
       "status": "todo"
     }
   ]
