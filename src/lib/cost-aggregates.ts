@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { median, perAreaValues } from '@/lib/cost-stats';
+import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
+import type { BuildingTypeFigures } from '@/lib/costs-overview-filter';
 
 /**
  * Cost aggregation for the SEO surfaces (city hub + district pages). The mapping
@@ -27,7 +28,13 @@ export type BuildingCostData = {
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
+  /** Median total, median rent and report count over one rental type's reports only (the costs
+   *  overview's room / flat filter). The fields above stay over all reports: the SEO surfaces
+   *  and roll-ups read them (Q-2). */
+  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures };
 };
+
+const BUILDINGS_DATA_CACHE_KEY = 'cost-aggregates-buildings-by-type';
 
 // Buildings + their visible cost reports, reduced to per-building medians.
 // Keyed by the arguments (city + filters). Only visible reports count.
@@ -78,6 +85,15 @@ export const getBuildingsData = unstable_cache(
 
       const num = (v: unknown) => (v == null ? null : Number(v));
 
+      const typeFigures = (type: 'apartment' | 'room'): BuildingTypeFigures => {
+        const typed = reports.filter((r) => r.rentalType === type);
+        return {
+          medianTotal: computeStats(typed.map((r) => num(r.totalMonthlyAvg)))?.median ?? null,
+          medianRent: computeStats(typed.map((r) => num(r.rent)))?.median ?? null,
+          reports: typed.length,
+        };
+      };
+
       return {
         id: b.id,
         slug: b.slug,
@@ -111,10 +127,12 @@ export const getBuildingsData = unstable_cache(
         lat: b.lat ? Number(b.lat) : null,
         lng: b.lng ? Number(b.lng) : null,
         rentalType: dominantRentalType,
+        byType: { apartment: typeFigures('apartment'), room: typeFigures('room') },
       };
     });
   },
-  ['cost-aggregates-buildings'],
+  // Renamed when `byType` was added, so entries of the old shape are not served after deploy.
+  [BUILDINGS_DATA_CACHE_KEY],
   { revalidate: 300, tags: ['costs'] },
 );
 

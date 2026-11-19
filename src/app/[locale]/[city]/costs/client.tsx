@@ -14,6 +14,7 @@ import type { CostAccess } from '@/components/costs/cost-access-card';
 import { DistrictComparison, type DistrictStatsData } from '@/components/costs/district-comparison';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 import { median } from '@/lib/cost-stats';
+import { buildingsForRentalType, type BuildingTypeFigures } from '@/lib/costs-overview-filter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ interface BuildingData {
   lat: number | null;
   lng: number | null;
   rentalType: string | null;
+  byType: { apartment: BuildingTypeFigures; room: BuildingTypeFigures };
 }
 
 interface DistrictData {
@@ -179,20 +181,18 @@ export function CostsOverviewClient({
 
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(initialDistrict);
 
-  const searchAndTypeFiltered = useMemo(
-    () =>
-      buildings.filter((building) => {
-        const q = stripDiacritics(searchQuery.toLowerCase());
-        const matchesSearch =
-          q === '' ||
-          stripDiacritics(building.address.toLowerCase()).includes(q) ||
-          stripDiacritics(building.district.toLowerCase()).includes(q);
-        const matchesRentalType =
-          rentalTypeFilter === 'all' || building.rentalType === rentalTypeFilter;
-        return matchesSearch && matchesRentalType;
-      }),
-    [buildings, searchQuery, rentalTypeFilter],
-  );
+  // Under the room / flat filter each building carries that type's figures and report count
+  // only, and buildings without a report of that type drop out, so every count, card, map pin
+  // and district roll-up below follows the filter.
+  const searchAndTypeFiltered = useMemo(() => {
+    const q = stripDiacritics(searchQuery.toLowerCase());
+    return buildingsForRentalType(buildings, rentalTypeFilter).filter(
+      (building) =>
+        q === '' ||
+        stripDiacritics(building.address.toLowerCase()).includes(q) ||
+        stripDiacritics(building.district.toLowerCase()).includes(q),
+    );
+  }, [buildings, searchQuery, rentalTypeFilter]);
 
   const filteredBuildings = useMemo(
     () =>
@@ -209,6 +209,8 @@ export function CostsOverviewClient({
     [filteredBuildings],
   );
 
+  // A median of building medians, so it can differ from `loadAreaReference`'s median of
+  // reports for the same district: a single-number surface, accepted until Q-2 (spec 03).
   const computedDistrictStats = useMemo(
     () =>
       districtStats.map((ds) => {

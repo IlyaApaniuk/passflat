@@ -437,7 +437,7 @@
       "title": "Costs overview: restrict the room/flat filter to reports of that type",
       "spec": "docs/specs/03-building-figures.md#costs-overview-room--flat-filter",
       "dependsOn": ["T017"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "getBuildingsData keeps its existing fields byte-identical and adds byType.{apartment,room} with medianTotal, medianRent and reports computed over that type's reports only; the cache key is renamed",
         "The /[city]/costs filter uses byType of the selected type; buildings without a report of that type are hidden under the filter; counts follow the filter",
@@ -445,7 +445,7 @@
         "The divergence between the client district roll-up and loadAreaReference is noted in the progress entry as accepted until Q-2"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
