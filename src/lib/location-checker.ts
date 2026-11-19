@@ -1,5 +1,11 @@
 import { cleanStreet } from '@/lib/address';
-import { median } from '@/lib/cost-stats';
+import {
+  CLAMP_EXPENSES_AT_ZERO,
+  metricFigure,
+  type AreaReference,
+  type DepositReturns,
+  type FigureSummary,
+} from '@/lib/cost-figures';
 import { transliterate } from '@/lib/slugify';
 
 export const LOCATION_CHECK_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -37,30 +43,41 @@ export interface LocationCheckerCostReport {
   source: string;
   totalMonthlyAvg: unknown;
   rent: unknown;
-  /** null when the tenancy is still running, so it says nothing either way. */
-  depositReturned?: boolean | null;
 }
 
-export interface LocationCheckerCosts {
+/**
+ * One blended number per building over every visible report, whatever its
+ * source or completeness. Only for the single-number surfaces frozen by Q-2
+ * (spec 03 §Single-number surfaces): the neighbour pins of the checker and the
+ * bot, and the bot's building card until it reads the contract. Never labelled
+ * as tenant figures.
+ */
+export interface BlendedBuildingCosts {
   totalMedian: number | null;
-  /**
-   * The district's median, so the building's figure can be stated as a verdict
-   * rather than a number. "5 800 zł" answers nothing on its own; "12% above the
-   * district" is the thing a reader actually wanted to know.
-   */
-  districtMedian: number | null;
-  districtName: string | null;
   rentMedian: number | null;
   expensesMedian: number | null;
   reportCount: number;
-  tenantReportCount: number;
-  sourceKind: 'tenant' | 'mixed' | 'scraped';
+}
+
+/** The deposit statistic of the area a building is set against (spec 03 §Rules). */
+interface LocationCheckerDeposit {
+  /** The same level as `LocationCheckerCosts.reference`. */
+  level: AreaReference['level'];
+  /** Shown only when `answered >= MIN_DEPOSIT_ANSWERS`. */
+  returns: DepositReturns;
+}
+
+/** The checker's cost answer, read from the figure contract's loaders (spec 03 §Checker). */
+export interface LocationCheckerCosts {
+  /** The building's own figures; `reportCount` 0 when nobody has reported. */
+  building: FigureSummary;
   /**
-   * Deposits returned out of tenancies that ended. The single fact no listing
-   * will ever print, which is why it earns the one line the card can spare.
+   * The labelled area the building is set against: its district from
+   * MIN_AREA_REPORTS reports, otherwise the city; null when the city has none.
    */
-  depositReturned: number;
-  depositAnswered: number;
+  reference: AreaReference | null;
+  /** The reference area's deposit statistic; null without a reference. */
+  deposit: LocationCheckerDeposit | null;
 }
 
 /** A neighbour with known costs, for the map layer only its own pages can show. */
@@ -112,7 +129,7 @@ export interface LocationCheckerResponse {
     categories: unknown;
     computedAt: Date;
   };
-  costs: LocationCheckerCosts | null;
+  costs: LocationCheckerCosts;
   /**
    * Buildings nearby that already have cost reports. Almost every checked
    * address has none of its own, so without these the result would end on a
@@ -313,43 +330,38 @@ export function resetLocationCheckRateLimit(): void {
   ipTimestamps.clear();
 }
 
-function finiteNumber(value: unknown): number | null {
+/** Rent or a total as the contract uses it: finite and above zero. */
+function positiveAmount(value: unknown): number | null {
   if (value == null) return null;
   const number = Number(value);
-  return Number.isFinite(number) ? number : null;
+  return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-/** Public, source-aware cost teaser derived only from already-visible reports. */
+/**
+ * The blended per-building number of the Q-2 single-number surfaces, from
+ * already-visible reports supplied by the caller. A thin wrapper over the
+ * contract's `metricFigure` (untrimmed, rounded as every contract figure), so
+ * no second median code exists; the checker's own figures come from the
+ * loaders in `cost-figures-query.ts`.
+ */
 export function aggregateLocationCheckerCosts(
   reports: LocationCheckerCostReport[],
-): LocationCheckerCosts | null {
+): BlendedBuildingCosts | null {
   if (reports.length === 0) return null;
 
-  const tenantReportCount = reports.filter(
-    (report) => report.source === 'user' || report.source === 'import',
-  ).length;
-  const scrapedCount = reports.filter((report) => report.source === 'scraped').length;
-
-  const sourceKind: LocationCheckerCosts['sourceKind'] =
-    scrapedCount === reports.length ? 'scraped' : scrapedCount > 0 ? 'mixed' : 'tenant';
+  const totals = reports.map((report) => positiveAmount(report.totalMonthlyAvg));
+  const rents = reports.map((report) => positiveAmount(report.rent));
+  const expenses = totals.map((total, index) => {
+    const rent = rents[index];
+    if (total == null || rent == null) return null;
+    return CLAMP_EXPENSES_AT_ZERO ? Math.max(0, total - rent) : total - rent;
+  });
 
   return {
-    totalMedian: median(reports.map((report) => finiteNumber(report.totalMonthlyAvg))),
-    districtMedian: null,
-    districtName: null,
-    rentMedian: median(reports.map((report) => finiteNumber(report.rent))),
-    expensesMedian: median(
-      reports.map((report) => {
-        const total = finiteNumber(report.totalMonthlyAvg);
-        const rent = finiteNumber(report.rent);
-        return total != null && rent != null ? Math.max(0, total - rent) : null;
-      }),
-    ),
+    totalMedian: metricFigure(totals).median,
+    rentMedian: metricFigure(rents).median,
+    expensesMedian: metricFigure(expenses).median,
     reportCount: reports.length,
-    tenantReportCount,
-    sourceKind,
-    depositReturned: reports.filter((report) => report.depositReturned === true).length,
-    depositAnswered: reports.filter((report) => report.depositReturned != null).length,
   };
 }
 

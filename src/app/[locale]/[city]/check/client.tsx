@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import type { CityBounds } from '@/lib/listings-data';
+import type { LocationCheckerCosts } from '@/lib/location-checker';
 import type { CategoryResult } from '@/lib/location-score';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
@@ -80,18 +81,7 @@ interface CheckerPayload {
     categories: CategoryResult[];
     computedAt: string;
   };
-  costs: null | {
-    totalMedian: number | null;
-    districtMedian: number | null;
-    districtName: string | null;
-    rentMedian: number | null;
-    expensesMedian: number | null;
-    reportCount: number;
-    tenantReportCount: number;
-    sourceKind: 'tenant' | 'mixed' | 'scraped';
-    depositReturned: number;
-    depositAnswered: number;
-  };
+  costs: LocationCheckerCosts;
   neighbours?: Neighbour[];
   nuisances?: Nuisance[];
   tenantTags?: {
@@ -265,7 +255,6 @@ export function CheckerClient({
   initialPlaceId,
 }: CheckerClientProps) {
   const t = useTranslations('checker');
-  const locale = useLocale();
   // Shared with the location-score block, so a nuisance and a supermarket are
   // never a metre apart in how far away they read.
   const formatDistance = useDistanceFormatter();
@@ -393,7 +382,7 @@ export function CheckerClient({
         setSuccessfulCheck({
           sequence,
           buildingId: payload.building.id,
-          hasData: payload.costs !== null,
+          hasData: payload.costs.building.reportCount > 0,
           source: attempt.kind === 'get' ? 'shared_url' : 'address_search',
         });
       } catch {
@@ -468,12 +457,18 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
+  /** The building itself has visible reports (the reference alone is not the building's data). */
+  const buildingGroups = result ? result.costs.building.groups : null;
+  const hasBuildingData = (result?.costs.building.reportCount ?? 0) > 0;
+  const tenantCount = buildingGroups?.tenant?.reportCount ?? 0;
+  const askingCount = buildingGroups?.asking?.reportCount ?? 0;
+
   const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us' | 'telegram') => {
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
       city: citySlug,
       building_id: result?.building.id,
-      has_data: result?.costs !== null,
+      has_data: hasBuildingData,
       cta,
     });
   };
@@ -492,24 +487,6 @@ export function CheckerClient({
       toast.error(t('shareError'));
     }
   };
-
-  const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-
-  /**
-   * The building against its district, as a verdict. Withheld under 3% — at that
-   * distance "pricier" is noise dressed up as a finding.
-   */
-  const districtVerdict = (() => {
-    const costs = result?.costs;
-    if (!costs?.totalMedian || !costs.districtMedian || !costs.districtName) return null;
-    const delta = (costs.totalMedian - costs.districtMedian) / costs.districtMedian;
-    if (Math.abs(delta) < 0.03) return null;
-    return {
-      cheaper: delta < 0,
-      percent: Math.round(Math.abs(delta) * 100),
-      district: costs.districtName,
-    };
-  })();
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -626,86 +603,29 @@ export function CheckerClient({
               </CardContent>
             </Card>
 
-            {result.costs ? (
+            {hasBuildingData ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
                 <CardContent className="p-5 sm:p-6">
+                  {/* Interim (spec 03 §Checker): the figures by group, one
+                      observation, the labelled area reference and the deposit
+                      statistic in `result.costs` are not rendered here yet; the
+                      card names what exists and links to the building page,
+                      which shows them. */}
                   <div className="flex items-start gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <WalletCards className="h-5 w-5 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">{t('costs.availableTitle')}</p>
-                      {result.costs.totalMedian != null && (
-                        <p className="mt-2 text-3xl font-bold tabular-nums text-primary">
-                          ≈ {numberFormatter.format(result.costs.totalMedian)} zł
-                          <span className="ml-1 text-sm font-medium text-muted-foreground">
-                            / {t('costs.month')}
-                          </span>
-                        </p>
-                      )}
-                      {districtVerdict && (
-                        <p className="mt-1 text-sm font-medium">
-                          {districtVerdict.cheaper ? (
-                            <span className="text-emerald-600 dark:text-emerald-400">
-                              {t('costs.cheaperThanDistrict', {
-                                percent: districtVerdict.percent,
-                                district: districtVerdict.district,
-                              })}
-                            </span>
-                          ) : (
-                            <span className="text-amber-600 dark:text-amber-500">
-                              {t('costs.pricierThanDistrict', {
-                                percent: districtVerdict.percent,
-                                district: districtVerdict.district,
-                              })}
-                            </span>
-                          )}
-                        </p>
-                      )}
                     </div>
                   </div>
 
-                  {(result.costs.rentMedian != null || result.costs.expensesMedian != null) && (
-                    <div className="mt-5 grid grid-cols-2 gap-3">
-                      {result.costs.rentMedian != null && (
-                        <div className="rounded-xl border bg-background/70 p-3">
-                          <p className="text-xs text-muted-foreground">{t('costs.rent')}</p>
-                          <p className="mt-1 font-semibold tabular-nums">
-                            ≈ {numberFormatter.format(result.costs.rentMedian)} zł
-                          </p>
-                        </div>
-                      )}
-                      {result.costs.expensesMedian != null && (
-                        <div className="rounded-xl border bg-background/70 p-3">
-                          <p className="text-xs text-muted-foreground">{t('costs.expenses')}</p>
-                          <p className="mt-1 font-semibold tabular-nums">
-                            ≈ {numberFormatter.format(result.costs.expensesMedian)} zł
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {result.costs.sourceKind === 'tenant'
-                      ? t('costs.sourceTenant', { count: result.costs.tenantReportCount })
-                      : result.costs.sourceKind === 'mixed'
-                        ? t('costs.sourceMixed', {
-                            tenantCount: result.costs.tenantReportCount,
-                            listingCount: result.costs.reportCount - result.costs.tenantReportCount,
-                          })
-                        : t('costs.sourceScraped', { count: result.costs.reportCount })}
-                    {result.costs.depositAnswered > 0 && (
-                      <>
-                        {' · '}
-                        <span className="font-medium text-foreground">
-                          {t('costs.depositReturned', {
-                            returned: result.costs.depositReturned,
-                            answered: result.costs.depositAnswered,
-                          })}
-                        </span>
-                      </>
-                    )}
+                    {tenantCount > 0 && askingCount > 0
+                      ? t('costs.sourceMixed', { tenantCount, listingCount: askingCount })
+                      : tenantCount > 0
+                        ? t('costs.sourceTenant', { count: tenantCount })
+                        : t('costs.sourceScraped', { count: askingCount })}
                   </p>
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">

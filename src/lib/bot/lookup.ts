@@ -7,7 +7,7 @@ import {
   isInsideCityBounds,
   LOCATION_CHECKER_CITY_SLUG,
   parseCityBounds,
-  type LocationCheckerCosts,
+  type BlendedBuildingCosts,
 } from '@/lib/location-checker';
 import { haversineMeters } from '@/lib/location-score';
 import { prisma } from '@/lib/prisma';
@@ -51,7 +51,7 @@ export interface AddressLookup {
   districtSlug: string | null;
   districtName: string | null;
   /** Costs of the building itself; null unless level === 'building'. */
-  building: LocationCheckerCosts | null;
+  building: BlendedBuildingCosts | null;
   area: AreaStats;
   /** True when `area` had to widen from the district to the whole city. */
   areaIsCity: boolean;

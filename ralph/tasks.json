@@ -369,7 +369,7 @@
       "title": "Checker API: build the cost summary from the figure contract",
       "spec": "docs/specs/03-building-figures.md#checker",
       "dependsOn": ["T018"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/app/api/location-score/route.ts summariseCosts returns the building FigureSummary, the area reference (MIN_AREA_REPORTS rule, city fallback; no ungated district median) and the deposit statistic from the contract loaders",
         "aggregateLocationCheckerCosts is removed or becomes a thin wrapper over the contract; no second median code remains",
@@ -377,7 +377,7 @@
         "A consistency test feeds the same report fixture through the checker summary and loadBuildingFigures and gets the same median and N per group"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Neighbour medians stay as they are (Q-2)."
     },
     {

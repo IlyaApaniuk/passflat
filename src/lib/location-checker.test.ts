@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { metricFigure } from './cost-figures';
 import {
   aggregateLocationCheckerCosts,
   isInsideCityBounds,
@@ -101,46 +102,46 @@ describe('location checker rate limiter', () => {
   });
 });
 
-describe('aggregateLocationCheckerCosts', () => {
-  it('counts deposit outcomes only where the tenancy actually ended', () => {
-    // A running tenancy says nothing either way, so it must not dilute the ratio.
-    expect(
-      aggregateLocationCheckerCosts([
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: true },
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: false },
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000, depositReturned: null },
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_000 },
-      ]),
-    ).toMatchObject({ depositReturned: 1, depositAnswered: 2 });
-  });
-
-  it('returns source-aware medians from visible reports supplied by the caller', () => {
+describe('aggregateLocationCheckerCosts (Q-2 blended number)', () => {
+  it('blends every source into one number per building, as the neighbour pins show it', () => {
     expect(
       aggregateLocationCheckerCosts([
         { source: 'user', totalMonthlyAvg: 4_000, rent: 3_200 },
         { source: 'import', totalMonthlyAvg: '4200', rent: '3300' },
         { source: 'scraped', totalMonthlyAvg: 4_400, rent: 3_400 },
       ]),
-    ).toEqual({
-      totalMedian: 4_200,
-      // Filled in by the route, which knows the building's district.
-      districtMedian: null,
-      districtName: null,
-      rentMedian: 3_300,
-      expensesMedian: 900,
-      reportCount: 3,
-      tenantReportCount: 2,
-      sourceKind: 'mixed',
-      depositReturned: 0,
-      depositAnswered: 0,
-    });
+    ).toEqual({ totalMedian: 4_200, rentMedian: 3_300, expensesMedian: 900, reportCount: 3 });
   });
 
-  it('distinguishes scraped-only data and returns null for no reports', () => {
+  it('computes its medians with the contract (untrimmed, same rounding, values above zero)', () => {
+    const reports = [
+      { source: 'user', totalMonthlyAvg: 3_000, rent: 2_500 },
+      { source: 'user', totalMonthlyAvg: 3_101, rent: 2_600 },
+      { source: 'scraped', totalMonthlyAvg: 40_000, rent: 39_000 },
+      { source: 'scraped', totalMonthlyAvg: 0, rent: null },
+    ];
+    const totals = [3_000, 3_101, 40_000];
+    expect(aggregateLocationCheckerCosts(reports)).toEqual({
+      totalMedian: metricFigure(totals).median,
+      rentMedian: metricFigure([2_500, 2_600, 39_000]).median,
+      expensesMedian: metricFigure([500, 501, 1_000]).median,
+      reportCount: 4,
+    });
+    // The outlier is kept (no trimming) and the zero total is not a value.
+    expect(aggregateLocationCheckerCosts(reports)?.totalMedian).toBe(3_101);
+  });
+
+  it('clamps a rent above the total at zero expenses', () => {
     expect(
-      aggregateLocationCheckerCosts([{ source: 'scraped', totalMonthlyAvg: 4_000, rent: 3_200 }]),
-    ).toMatchObject({ sourceKind: 'scraped', tenantReportCount: 0 });
+      aggregateLocationCheckerCosts([{ source: 'user', totalMonthlyAvg: 3_000, rent: 3_200 }]),
+    ).toMatchObject({ expensesMedian: 0 });
+  });
+
+  it('returns null for no reports and null medians without usable values', () => {
     expect(aggregateLocationCheckerCosts([])).toBeNull();
+    expect(
+      aggregateLocationCheckerCosts([{ source: 'user', totalMonthlyAvg: null, rent: null }]),
+    ).toEqual({ totalMedian: null, rentMedian: null, expensesMedian: null, reportCount: 1 });
   });
 });
 

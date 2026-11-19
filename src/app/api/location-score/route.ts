@@ -18,12 +18,17 @@ import {
   parseCityBounds,
   parseLocationCheckerInput,
   placeIdSlugSuffix,
+  type LocationCheckerCosts,
   type LocationCheckerInput,
   type LocationCheckerResponse,
   type LocationCheckerTags,
 } from '@/lib/location-checker';
 import { summarizeTagVotes } from '@/lib/building-tags';
-import { getDistrictCostStats } from '@/lib/cost-baselines';
+import {
+  loadAreaReference,
+  loadBuildingFigures,
+  loadDepositReturns,
+} from '@/lib/cost-figures-query';
 import { haversineMeters, SCORE_VERSION, type LocationScoreResult } from '@/lib/location-score';
 import { findNuisances } from '@/lib/nuisances';
 import { boundingBoxAround, computeLocationScoreFromDb } from '@/lib/poi-lookup';
@@ -52,10 +57,6 @@ const checkerBuildingSelect = {
   district: { select: { slug: true, nameKey: true } },
   locationScore: {
     select: { overall: true, categories: true, computedAt: true, version: true },
-  },
-  costReports: {
-    where: { isVisible: true },
-    select: { source: true, totalMonthlyAvg: true, rent: true, depositReturned: true },
   },
 } satisfies Prisma.BuildingSelect;
 
@@ -368,7 +369,7 @@ async function findNeighboursWithCosts(
       lng: true,
       costReports: {
         where: { isVisible: true },
-        select: { source: true, totalMonthlyAvg: true, rent: true, depositReturned: true },
+        select: { source: true, totalMonthlyAvg: true, rent: true },
       },
     },
   });
@@ -381,6 +382,7 @@ async function findNeighboursWithCosts(
       // The box is a superset of the circle, so trim the corners.
       if (distanceM > NEIGHBOUR_RADIUS_M) return [];
 
+      // One blended number per pin: a single-number surface frozen by Q-2.
       const costs = aggregateLocationCheckerCosts(row.costReports);
       if (!costs || costs.totalMedian == null) return [];
 
@@ -410,17 +412,25 @@ async function findTenantTags(buildingId: string): Promise<LocationCheckerTags |
   return summarizeTagVotes(votes);
 }
 
-/** The building's own costs, placed against its district. */
-async function summariseCosts(building: CheckerBuilding) {
-  const costs = aggregateLocationCheckerCosts(building.costReports);
-  if (!costs || !building.districtId) return costs;
+/**
+ * The building's own figures, the labelled area it is set against (district
+ * from MIN_AREA_REPORTS reports, else the city) and that area's deposit
+ * statistic, read through the figure contract's loaders: the ones the building
+ * page reads and the bot moves to (spec 03 §Checker, FR-34).
+ */
+async function summariseCosts(building: CheckerBuilding): Promise<LocationCheckerCosts> {
+  const [figures, reference] = await Promise.all([
+    loadBuildingFigures(building.id),
+    loadAreaReference({ districtId: building.districtId, cityId: building.cityId }),
+  ]);
+  if (!reference) return { building: figures, reference: null, deposit: null };
 
-  const district = await getDistrictCostStats(building.districtId);
-  return {
-    ...costs,
-    districtMedian: district.total.median,
-    districtName: building.district?.nameKey ?? null,
-  };
+  const returns = await loadDepositReturns(
+    reference.level === 'district' && building.districtId
+      ? { districtId: building.districtId }
+      : { cityId: building.cityId },
+  );
+  return { building: figures, reference, deposit: { level: reference.level, returns } };
 }
 
 function toResponse(
@@ -447,7 +457,7 @@ function toResponse(
       categories: score.categories,
       computedAt: score.computedAt,
     },
-    costs: costs,
+    costs,
     neighbours,
     nuisances,
     tenantTags,
