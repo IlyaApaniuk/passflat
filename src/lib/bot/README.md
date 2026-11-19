@@ -136,6 +136,23 @@ the migrations are missing (`docs/architecture.md` §9).
   (`kicked`) and clears it when they unblock it (`member`); no event, no reply,
   no new row; group chats are ignored. A 403 on a send and any later message
   (`touchChat`) set and clear it too.
+- **Roommate daily cron** (spec 06 §Daily cron): `/api/cron/roommate-daily` at
+  08:00 and 09:00 UTC (`vercel.json`) runs `runRoommateDaily`
+  (`roommate-daily.ts`). Every run does the housekeeping: drafts untouched for 7
+  days are deleted, edit and renewal steps open for 24 hours are cleared, active
+  profiles past `expires_at` become `expired` (`tg_roommate_profile_expired`),
+  expired profiles 14 days after expiry and hidden ones 14 days after
+  `expires_at` are deleted (`tg_roommate_profile_deleted`, `reason=expired` /
+  `moderation`), reports older than 6 months are deleted. Every row is written
+  by its own conditional query and only a write that lands sends its event, so a
+  doubled run sends each once. Messages go out only in the run at 10:xx Warsaw
+  and only with a bot configured, each through `createCronSender`: blocked chats
+  skipped, the row claimed first, a 403 marks the chat blocked and keeps the
+  claim, any other error releases it, a 429 releases it and stops the run, at
+  most 25 a second and 1,000 a run, none started after 45 s. No message job is
+  built yet (renewal, reveals, statements, outcome, the one-time message and the
+  push add theirs in `MESSAGE_JOBS`, in the priority order of the spec). The
+  response holds counts only; PostHog is flushed before it.
 
 ## Layout
 
@@ -153,10 +170,12 @@ the migrations are missing (`docs/architecture.md` §9).
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
+| `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
+| `../../app/api/cron/roommate-daily/route.ts`     | Daily roommate housekeeping and messages                           |
 
 ## Going live
 

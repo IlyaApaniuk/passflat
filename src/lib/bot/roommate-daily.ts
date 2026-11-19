@@ -1,0 +1,339 @@
+import { GrammyError, type Api } from 'grammy';
+
+import { prisma } from '@/lib/prisma';
+import { DRAFT_LIFE_DAYS, GRACE_DAYS, REPORT_LIFE_MONTHS } from '@/lib/roommate/rules';
+import { isRoommateSendHour } from '@/lib/roommate/time';
+
+import { track } from './analytics';
+
+/**
+ * The jobs of the roommate daily cron (spec 06 §Daily cron; FR-15, FR-12 criterion 4, D55, D68):
+ * the housekeeping every run does, and the messages the send-hour run sends through one shared
+ * claim-send-release helper (`createCronSender`). `GET /api/cron/roommate-daily` delegates here.
+ *
+ * Nothing here logs a chat id, a username, a text or an error object: only an error's message.
+ */
+
+/** Messages one run sends at most; the rest wait for the next day (Assumption, spec 06). */
+export const MAX_MESSAGES_PER_RUN = 1000;
+
+/**
+ * No new send starts this long after the run began (Assumption, spec 06): the function has 60 s,
+ * and PostHog sends one request per event before the response.
+ */
+export const SEND_BUDGET_MS = 45_000;
+
+/** Messages a second at most, below Telegram's broadcast limit (Assumption, spec 06). */
+export const MESSAGES_PER_SECOND = 25;
+
+/** An edit or renewal step left open this long is cleared (spec 06 §Entry and routing). */
+const OPEN_STEP_LIFE_HOURS = 24;
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const MIN_SEND_INTERVAL_MS = 1000 / MESSAGES_PER_SECOND;
+
+// ---------------------------------------------------------------------------------------------
+// Housekeeping (spec 06 §Daily cron step 1, §Retention), every run
+// ---------------------------------------------------------------------------------------------
+
+export type HousekeepingCounts = {
+  draftsDeleted: number;
+  openStepsCleared: number;
+  expired: number;
+  deletedExpired: number;
+  deletedModeration: number;
+  reportsDeleted: number;
+};
+
+/** The instant `months` calendar months (UTC fields) before `now`. */
+function monthsBefore(now: Date, months: number): Date {
+  const cutoff = new Date(now.getTime());
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+  return cutoff;
+}
+
+const CHAT_ID_SELECT = { id: true, chat: { select: { chatId: true } } } as const;
+
+/**
+ * Deletes each due row of one kind through its own conditional `deleteMany({ id, status })`
+ * and sends one `tg_roommate_profile_deleted` per row whose delete landed, so a doubled run
+ * (Vercel can invoke a cron twice) sends each event once. Reactions cascade and report
+ * references are nulled by the foreign keys; the chat's ban marker stays (D55).
+ */
+async function deleteDue(
+  status: 'expired' | 'hidden',
+  dateWhere: { expiredAt: { lte: Date } } | { expiresAt: { lte: Date } },
+  reason: 'expired' | 'moderation',
+): Promise<number> {
+  const due = await prisma.roommateProfile.findMany({
+    where: { status, ...dateWhere },
+    select: CHAT_ID_SELECT,
+  });
+  let deleted = 0;
+  for (const row of due) {
+    const { count } = await prisma.roommateProfile.deleteMany({ where: { id: row.id, status } });
+    if (count !== 1) continue; // another run, a renewal or the owner's delete got there first
+    deleted += 1;
+    track(Number(row.chat.chatId), 'tg_roommate_profile_deleted', { reason });
+  }
+  return deleted;
+}
+
+/**
+ * Spec 06 §Daily cron step 1, idempotent: drafts untouched for `DRAFT_LIFE_DAYS`; edit and renewal
+ * steps of saved profiles untouched for 24 hours; active profiles past `expires_at` marked
+ * expired (one `tg_roommate_profile_expired` each); expired profiles past their grace and hidden
+ * profiles past `expires_at` + `GRACE_DAYS` deleted (one `tg_roommate_profile_deleted` each);
+ * reports older than `REPORT_LIFE_MONTHS`.
+ */
+export async function runRoommateHousekeeping(now: Date): Promise<HousekeepingCounts> {
+  const drafts = await prisma.roommateProfile.deleteMany({
+    where: {
+      status: 'draft',
+      updatedAt: { lte: new Date(now.getTime() - DRAFT_LIFE_DAYS * DAY_MS) },
+    },
+  });
+
+  // An expired profile can hold an edit or a renewal step too; left open it would keep the
+  // deposit questions from starting until the profile is deleted.
+  const openSteps = await prisma.roommateProfile.updateMany({
+    where: {
+      status: { in: ['active', 'expired'] },
+      step: { not: null },
+      updatedAt: { lte: new Date(now.getTime() - OPEN_STEP_LIFE_HOURS * HOUR_MS) },
+    },
+    data: { step: null },
+  });
+
+  const dueToExpire = await prisma.roommateProfile.findMany({
+    where: { status: 'active', expiresAt: { lte: now } },
+    select: CHAT_ID_SELECT,
+  });
+  let expired = 0;
+  for (const row of dueToExpire) {
+    // `expires_at` is checked again: a renewal between the read and this write moved it.
+    const { count } = await prisma.roommateProfile.updateMany({
+      where: { id: row.id, status: 'active', expiresAt: { lte: now } },
+      data: { status: 'expired', expiredAt: now },
+    });
+    if (count !== 1) continue;
+    expired += 1;
+    track(Number(row.chat.chatId), 'tg_roommate_profile_expired');
+  }
+
+  const graceCutoff = new Date(now.getTime() - GRACE_DAYS * DAY_MS);
+  const deletedExpired = await deleteDue('expired', { expiredAt: { lte: graceCutoff } }, 'expired');
+  const deletedModeration = await deleteDue(
+    'hidden',
+    { expiresAt: { lte: graceCutoff } },
+    'moderation',
+  );
+
+  const reports = await prisma.roommateReport.deleteMany({
+    where: { createdAt: { lte: monthsBefore(now, REPORT_LIFE_MONTHS) } },
+  });
+
+  return {
+    draftsDeleted: drafts.count,
+    openStepsCleared: openSteps.count,
+    expired,
+    deletedExpired,
+    deletedModeration,
+    reportsDeleted: reports.count,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The claim-send-release helper (spec 06 §Daily cron, "Rules for every message of the cron")
+// ---------------------------------------------------------------------------------------------
+
+/** Wall-clock time for the rate and the time budget; tests pass a fake one. */
+export type CronClock = {
+  now: () => number;
+  sleep: (ms: number) => Promise<void>;
+};
+
+const SYSTEM_CLOCK: CronClock = {
+  now: () => Date.now(),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+};
+
+/**
+ * One message of a cron job. `claim` is the conditional `updateMany` on the column the message
+ * sets and returns true only when it updated one row; `release` undoes it so the next day
+ * retries. `blockedAt` is the chat's `blocked_at` as the job read it.
+ */
+export type CronMessage = {
+  /** `telegram_chats.chat_id` of the recipient. */
+  chatId: bigint;
+  blockedAt: Date | null;
+  claim: () => Promise<boolean>;
+  release: () => Promise<void>;
+  text: string;
+  options?: Parameters<Api['sendMessage']>[2];
+  /** Runs once the message was delivered (its event, for example). */
+  onSent?: () => void;
+};
+
+/** `taken`: another run (or the person) claimed the row first; nothing was sent. */
+type SendOutcome = 'sent' | 'skipped' | 'taken' | 'blocked' | 'failed' | 'stopped';
+
+type StopReason = 'rate_limited' | 'message_cap' | 'time_budget';
+
+type CronSendCounts = {
+  sent: number;
+  blocked: number;
+  failed: number;
+  skipped: number;
+  stopped: StopReason | null;
+};
+
+export type CronSender = {
+  send: (message: CronMessage) => Promise<SendOutcome>;
+  /** Set once no further message may start in this run; a job stops iterating then. */
+  readonly stopped: StopReason | null;
+  counts: () => CronSendCounts;
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'unknown error';
+}
+
+/**
+ * The one helper every message of the roommate cron goes through: a chat already blocked (as
+ * read, or by a 403 earlier in this run) is skipped; the row is claimed before the send and sent
+ * only when the claim landed; a 403 marks the chat blocked and keeps the claim; any other error
+ * releases it, and a 429 also stops all sending for the run; messages go one by one, at most
+ * `MESSAGES_PER_SECOND` a second and `MAX_MESSAGES_PER_RUN` a run, and none starts after
+ * `SEND_BUDGET_MS` from `startedAt` (the start of the run).
+ */
+export function createCronSender(
+  api: Api,
+  { now, startedAt, clock = SYSTEM_CLOCK }: { now: Date; startedAt: number; clock?: CronClock },
+): CronSender {
+  const blockedChats = new Set<bigint>();
+  const counts = { sent: 0, blocked: 0, failed: 0, skipped: 0 };
+  let attempts = 0;
+  let lastSendAt: number | null = null;
+  let stopped: StopReason | null = null;
+
+  async function release(message: CronMessage) {
+    try {
+      await message.release();
+    } catch (error) {
+      console.error('[bot/roommate] cron claim release failed', errorMessage(error));
+    }
+  }
+
+  async function send(message: CronMessage): Promise<SendOutcome> {
+    if (!stopped && attempts >= MAX_MESSAGES_PER_RUN) stopped = 'message_cap';
+    if (!stopped && clock.now() - startedAt >= SEND_BUDGET_MS) stopped = 'time_budget';
+    if (stopped) return 'stopped';
+
+    if (message.blockedAt || blockedChats.has(message.chatId)) {
+      counts.skipped += 1;
+      return 'skipped';
+    }
+    if (!(await message.claim())) return 'taken';
+
+    if (lastSendAt !== null) {
+      const wait = lastSendAt + MIN_SEND_INTERVAL_MS - clock.now();
+      if (wait > 0) await clock.sleep(wait);
+    }
+    lastSendAt = clock.now();
+    attempts += 1;
+
+    try {
+      await api.sendMessage(Number(message.chatId), message.text, message.options);
+    } catch (error) {
+      if (error instanceof GrammyError && error.error_code === 403) {
+        // The person blocked the bot: no message to this chat until it writes again.
+        counts.blocked += 1;
+        blockedChats.add(message.chatId);
+        await prisma.telegramChat.updateMany({
+          where: { chatId: message.chatId },
+          data: { blockedAt: now },
+        });
+        return 'blocked';
+      }
+      counts.failed += 1;
+      await release(message);
+      if (error instanceof GrammyError && error.error_code === 429) {
+        stopped = 'rate_limited';
+        return 'stopped';
+      }
+      // The message only: a GrammyError's payload holds the chat id.
+      console.error('[bot/roommate] cron message failed', errorMessage(error));
+      return 'failed';
+    }
+
+    counts.sent += 1;
+    message.onSent?.();
+    return 'sent';
+  }
+
+  return {
+    send,
+    get stopped() {
+      return stopped;
+    },
+    counts: () => ({ ...counts, stopped }),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The run (spec 06 §Daily cron)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * One message job of the send-hour run: reads its due rows (chats with `blocked_at` null) and
+ * passes each to `sender.send`, stopping as soon as `sender.stopped` is set.
+ */
+export type MessageJob = (sender: CronSender, now: Date) => Promise<void>;
+
+/**
+ * The send-hour jobs in the priority order of spec 06 §Daily cron step 2, so the important ones go
+ * first when the cap or the time budget runs out. Each later task adds its job at its place:
+ * 1. the retry of unsent statements of reasons (spec 07 FR-33, T095);
+ * 2. the retry of waiting reveals (`retryPendingReveals`, spec 07 §Reveal, T089);
+ * 3. the retry of unsent hide notices to reporters (spec 07 §Automatic hiding, T095);
+ * 4. the renewal reminders (§Renewal, T078);
+ * 5. the outcome question (spec 07 FR-29, T091);
+ * 6. switch on only: the one-time message (§Matching is open, `sendMatchingOpenMessages`, T082);
+ * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`, T090).
+ * The retries and the outcome question run with the switch on or off.
+ */
+const MESSAGE_JOBS: readonly MessageJob[] = [];
+
+export type RoommateDailyResult = {
+  housekeeping: HousekeepingCounts;
+  messages: CronSendCounts | { skipped: 'bot not configured' | 'not the send hour' };
+};
+
+/**
+ * One cron run: housekeeping always; the message jobs only when a bot is configured and `now` is
+ * the send hour (10:xx Warsaw, `isRoommateSendHour`). The result holds counts only, never a chat
+ * id, a username or a text. The caller flushes PostHog before it answers.
+ */
+export async function runRoommateDaily(
+  api: Api | null,
+  now: Date,
+  {
+    jobs = MESSAGE_JOBS,
+    clock = SYSTEM_CLOCK,
+  }: { jobs?: readonly MessageJob[]; clock?: CronClock } = {},
+): Promise<RoommateDailyResult> {
+  const startedAt = clock.now();
+  const housekeeping = await runRoommateHousekeeping(now);
+
+  if (!api) return { housekeeping, messages: { skipped: 'bot not configured' } };
+  if (!isRoommateSendHour(now)) return { housekeeping, messages: { skipped: 'not the send hour' } };
+
+  const sender = createCronSender(api, { now, startedAt, clock });
+  for (const job of jobs) {
+    if (sender.stopped) break;
+    await job(sender, now);
+  }
+  return { housekeeping, messages: sender.counts() };
+}

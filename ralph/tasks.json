@@ -279,7 +279,7 @@
       "title": "Roommate daily cron: route, two schedules, the send hour and housekeeping (FR-15, FR-12 criterion 4, D55, D68)",
       "spec": "docs/specs/06-roommate-profiles.md#daily-cron",
       "dependsOn": ["T062", "T065", "T066"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "GET /api/cron/roommate-daily guarded by requireCronAuth (401 without it), with the two vercel.json entries 0 8 * * * and 0 9 * * *",
         "Every run does the housekeeping of spec 06 §Daily cron step 1: drafts after 7 days, edit steps after 24 hours, expiry with one tg_roommate_profile_expired, deletions with one tg_roommate_profile_deleted (reason expired or moderation), each per-row conditional so a doubled run sends each event once; messages run only when isRoommateSendHour(now), in the priority order of step 2; the response holds counts only and flushPostHog is awaited",
@@ -288,7 +288,7 @@
         "Tests with mocked Prisma, a fake api and a fixed now: 401, each housekeeping kind and its event, no message outside the send hour, the helper's claim-once, release and 403 paths, and the vercel.json entries"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "No message job yet: renewal (T078), the one-time message (T082), push (T090), outcome (T091) and the statement retry (T095) plug into this route."
     },
     {
