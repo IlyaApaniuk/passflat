@@ -986,12 +986,12 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Found in T058: the e-mail body says \"You can now browse listings and post your own\" and the button \"Browse listings\", but since D33 the button opens /<city>/costs and listings are frozen. Spec 02 does not allow draft copy for this e-mail.\nBlocked: Q-17 (owner): the city-launch e-mail button now opens /<city>/costs (D33), but emails.cityLaunch.body says \"You can now browse listings and post your own\" and the cta \"Browse listings\" (four locales). What should the body and button say, or may the agent draft them (RU/PL/EN/UK) for review? Until then do not send the city-launch e-mail.",
+      "notes": "Found in T058: the e-mail body says \"You can now browse listings and post your own\" and the button \"Browse listings\", but since D33 the button opens /<city>/costs and listings are frozen. Spec 02 does not allow draft copy for this e-mail.\nBlocked: Q-17 (owner): the city-launch e-mail button now opens /<city>/costs (D33), but emails.cityLaunch.body says \"You can now browse listings and post your own\" and the cta \"Browse listings\" (four locales). What should the body and button say, or may the agent draft them (RU/PL/EN/UK) for review? Until then do not send the city-launch e-mail.\nOwner answer: Q-17 answered (D47): use the exact four-locale body and cta copy in spec 02 §City-launch e-mail link and send guard; body without {city}; test that no body or cta mentions listings.",
       "id": "T060",
       "milestone": "M6",
       "title": "City-launch e-mail copy that matches the costs-page link",
       "spec": "docs/specs/02-roommate-and-waitlist.md#city-launch-e-mail-link-and-send-guard",
-      "status": "blocked"
+      "status": "todo"
     },
     {
       "dependsOn": ["T033", "T034", "T035", "T037", "T040", "T042", "T043", "T049", "T054"],

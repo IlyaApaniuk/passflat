@@ -240,7 +240,17 @@ reminders).
 - The selection of §City-launch mailing is unchanged. Tests never call Resend.
 - Route tests with mocked Prisma and `sendEmail`: the link, two runs over the same row send once,
   a failed send restores `notifiedAt`, 401 without auth.
-- **Open** (owner, Q-17, T060): the e-mail copy (`emails.cityLaunch.body` and `.cta`, four
-  locales) still promises browsing and posting listings while the button opens the costs page.
-  Agents do not draft it until the owner answers; the city-launch e-mail should not be sent
-  before then.
+- **Decided** (owner, Q-17, D47, T060): the e-mail copy matches the costs-page link. Only
+  `emails.cityLaunch.body` and `emails.cityLaunch.cta` change; subject, heading, intro and footer
+  stay. The body does not contain `{city}` (it is inserted in the nominative, which breaks Polish
+  and Russian grammar; the city is already in the subject, heading and intro). Exact copy:
+
+  | Locale | `body`                                                                     | `cta`               |
+  | ------ | -------------------------------------------------------------------------- | ------------------- |
+  | ru     | Посмотрите, во что обходится аренда вместе с коммуналкой в районах города. | Посмотреть расходы  |
+  | pl     | Zobacz, ile kosztuje najem razem z mediami w poszczególnych dzielnicach.   | Zobacz koszty       |
+  | en     | See what renting costs with utilities included, district by district.      | See the costs       |
+  | uk     | Подивіться, скільки коштує оренда разом із комуналкою в районах міста.     | Переглянути витрати |
+
+  A test asserts that no locale's `body` or `cta` mentions listings («объявлен», «ogłosze»,
+  «listing», «оголошен»).
