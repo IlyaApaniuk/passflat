@@ -7,16 +7,17 @@
   [funnel.md](2026-11-19-site-audit/funnel.md). Finding ids there (ST-, SE-, PE-, FU-) are mapped
   to the S-ids below.
 - **State of this run (2026-11-20, 00:30):** the audit is complete and merged below. Only the SEO
-  section reached the appendix folder: the sandbox denied copying files from the scratchpad into
-  the repository, and the three other agents hit the account's weekly API limit (resets 2026-11-21
-  21:00 Europe/Warsaw) before they could write their copies. Their full sections are in the
-  session scratchpad
-  (`/private/tmp/claude-501/-Users-iapaniuk-Documents-projects-passflat/12d12105-6c0e-456c-ae58-ac5440ac4195/scratchpad/audit/`:
-  `structure.md`, `performance.md`, `funnel.md`); the owner copies them into
-  `2026-11-19-site-audit/` if the folder still exists. Every finding of theirs is condensed in the
-  tables below, so nothing is lost for PRD 4. **PRD 4, its decision review, the specs and the
-  tasks were not written in this run** (budget and API limit); the "PRD 4" column below is the
-  proposed mapping for the next run, which starts from this file.
+  section reached the appendix folder in this run: the sandbox denied copying files from the
+  scratchpad into the repository, and the three other agents hit the account's weekly API limit
+  (resets 2026-11-21 21:00 Europe/Warsaw) before they could write their copies. Every finding of
+  theirs is condensed in the tables below, so nothing is lost for PRD 4. **PRD 4, its decision
+  review, the specs and the tasks were not written in this run** (budget and API limit); the
+  "PRD 4" column below is the proposed mapping for the next run, which starts from this file.
+- **Update (2026-11-20, second night run):** the three missing appendix sections (`structure.md`,
+  `funnel.md`, `performance.md`) were copied from the session scratchpad into
+  `2026-11-19-site-audit/`, so the appendix is complete. PRD 4 is written from this file:
+  `../prd/prd-4-site-improvements.md`, with `../prd/prd-4-decision-review.md`; the "PRD 4" column
+  below keeps the proposed mapping, and the PRD's own requirement table is the one that counts.
 - **What was audited:** branch `chore/agent-harness` as the future site (PRD 1 and PRD 3 built, not
   deployed) and https://passflat.com as it is today (pre-PRD-1 build, read-only GET). Every finding
   says which. The bot CTAs render only with `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, unset in
