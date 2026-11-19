@@ -7,19 +7,69 @@ contract's loaders (`@/lib/cost-figures-query`), the ones the checker and the
 building page read, and `format.ts` shows them by group with each figure's N,
 as the checker does. The neighbours' single number (`@/lib/location-checker`),
 the `/districts` table and the typed-district answer (`@/lib/cost-baselines`)
-stay as they are until Q-2. A split would mean either duplicating that logic or
-maintaining an API between two deploys.
+stay as they are until Q-2 (the district card moves to the contract in T049).
+A split would mean either duplicating that logic or maintaining an API between
+two deploys.
+
+## Production status
+
+Built, **not launched**. Do not describe the bot as live anywhere. As last
+recorded (2026-10-05), and unknown since then until the owner confirms:
+
+- the four bot migrations (see "Going live") are not applied to the
+  production database;
+- `TELEGRAM_BOT_TOKEN` is not set in production and the production webhook is
+  not registered (`npm run bot:webhook`);
+- whether `TELEGRAM_WEBHOOK_SECRET`, `GEOCODING_API_SERVER_KEY`,
+  `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` and `ANTHROPIC_API_KEY` are set in
+  Vercel is not recorded.
+
+What the code does in that state: without `TELEGRAM_BOT_TOKEN` the webhook
+route answers 503 and the follow-ups cron sends nothing; without
+`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` the website's bot link
+(`components/costs/telegram-bot-cta.tsx`) renders nothing. The cron still runs
+`clearStaleLetterParties()` on `deposit_cases` first, so it would fail while
+the migrations are missing (`docs/architecture.md` §9).
+
+## What is implemented
+
+- **Address check**: a typed address is geocoded (`geocode.ts`) and answered at
+  building, district or city level (see "Why the answer never says 'no
+  data'"). An address outside Warsaw offers the city waitlist.
+- **District check**: a typed district name (matched before geocoding,
+  `districts.ts`) or a `d_<slug>` link answers with the district card.
+- **Building link**: `b_<uuid>` opens that building's card, as if its address
+  had been typed.
+- **`/districts`**: the district table (cost-baselines, Q-2).
+- **Saved interests**: the building and district buttons and the city waitlist
+  button save a `TelegramSubscription`; `/my` lists them with remove buttons.
+  Saved interest sends nothing (see "Promises and capabilities").
+- **Deposit helper** ("Верни залог"): five questions, contract reading, a
+  rule-based verdict, a Polish demand letter, reminders and outcome questions
+  (see "Deposit recovery").
+- **`/cancel`**: leaves the deposit questions and turns off pending reminders.
+- **`/deposit`**, **`/help`**, **`/lang`** (RU / UK; `TelegramChat.locale`
+  defaults to `ru`).
+- A rate limit of 12 text messages per minute per chat (`bot.ts`), because
+  geocoding is paid.
 
 ## Layout
 
-| File                                      | Role                                                            |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| `bot.ts`                                  | grammY handlers: commands, buttons, rate limit, PostHog events  |
-| `lookup.ts`                               | Data: building → district → city fallback, neighbours, deposits |
-| `format.ts`                               | Message rendering, deep links with UTM                          |
-| `texts.ts`                                | RU/UK copy and Slavic plural agreement                          |
-| `store.ts`                                | `TelegramChat` / `TelegramSubscription` persistence             |
-| `../../app/api/telegram/webhook/route.ts` | Production entry point                                          |
+| File                                             | Role                                                               |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| `bot.ts`                                         | grammY handlers: commands, buttons, rate limit, PostHog events     |
+| `start-payload.ts`                               | `/start` payload parsing, `ENTRY_SOURCE` values                    |
+| `lookup.ts`                                      | Data: building → district → city fallback, neighbours, deposits    |
+| `geocode.ts`, `districts.ts`                     | Server geocoding of typed addresses; district-name matching        |
+| `format.ts`                                      | Message rendering, links to the website with UTM                   |
+| `texts.ts`                                       | RU/UK copy, capability list, command menu, Slavic plural agreement |
+| `store.ts`                                       | `TelegramChat` / `TelegramSubscription` persistence                |
+| `analytics.ts`, `check-events.ts`                | `track` (`tg_<chatId>`); check-event properties                    |
+| `deposit-flow.ts`                                | Deposit conversation, reminders (`sendDueFollowUps`), `/cancel`    |
+| `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
+| `contract.ts`                                    | Lease reading with Claude                                          |
+| `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
+| `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
 
 ## Going live
 
@@ -31,20 +81,57 @@ maintaining an API between two deploys.
    `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` is referrer-restricted for the browser
    and will be rejected from a server call. Restrict the new one by IP/API to
    Geocoding and set it as `GEOCODING_API_SERVER_KEY`.
-3. **Secret** — `openssl rand -hex 32` → `TELEGRAM_WEBHOOK_SECRET`. The webhook
-   route rejects any update that does not carry it.
+3. **Secret** — `openssl rand -hex 32` → `TELEGRAM_WEBHOOK_SECRET`. When it is
+   set, the webhook route rejects (403) any update whose
+   `x-telegram-bot-api-secret-token` header does not match. When it is unset
+   the route accepts every update (`if (secret && …)` in `route.ts`), so it
+   must be set in Vercel. `npm run bot:webhook` refuses to register the
+   webhook without it.
 4. **Local run** — put all three in `.env.local`, then `npm run bot:dev`
    (long polling, no tunnel needed).
 5. **Deploy** — set the same three plus `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` in
    Vercel, deploy, then `npm run bot:webhook -- https://passflat.com`.
    `npm run bot:webhook -- --delete` goes back to polling.
 
-The production database needs four migrations, none applied to prod yet —
-run them deliberately: `20260831120000_add_telegram_bot` (`telegram_chats`,
-`telegram_subscriptions`), `20261004120000_telegram_subscription_label`,
-`20261005120000_deposit_cases` and `20261005140000_deposit_contract`. Enable
-RLS on the new tables by hand. The deposit flow's contract step also needs
-`ANTHROPIC_API_KEY`.
+The production database needs four migrations, none applied to prod as of
+2026-10-05 — run them deliberately: `20260831120000_add_telegram_bot`
+(`telegram_chats`, `telegram_subscriptions`),
+`20261004120000_telegram_subscription_label`, `20261005120000_deposit_cases`
+and `20261005140000_deposit_contract`. Enable RLS on the new tables by hand.
+The deposit flow's contract step also needs `ANTHROPIC_API_KEY`.
+
+## Deep links
+
+`https://t.me/<bot>?start=<payload>`. Telegram allows at most 64 characters of
+`[A-Za-z0-9_-]`; anything else opens nothing (`parseStartPayload` in
+`start-payload.ts`).
+
+| Payload        | Sent by                                                | Opens                                                                          |
+| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| (none)         | a plain bot link                                       | the `start` reply with the capability list                                     |
+| `dep`          | posts under "they won't return my deposit"; share link | the deposit questions                                                          |
+| `b_<uuid>`     | the website checker, when it has a building            | that building's card; a malformed or unknown id gets "send its address"        |
+| `d_<slug>`     | hand-made links (posts, chats)                         | the district card; saves nothing; an unknown slug gets the `startAfterPayload` |
+| `web_<source>` | the website's bot link without a building              | the `startAfterPayload` reply; attribution only                                |
+| anything else  | campaign tags such as `thr_med`                        | the `startAfterPayload` reply; attribution only                                |
+
+The website sends `web_checker` and `web_empty` (`TelegramBotSource` in
+`src/lib/analytics/telegram-events.ts`). Every payload is attribution: the raw
+string is `tg_bot_started.payload`, and the first one a chat brings is kept in
+`TelegramChat.startPayload` (a later `/start` does not overwrite it).
+
+The building link `b_<uuid>` builds the same answer as typing that building's
+address: `lookupBuilding` and `lookupAddress` share one function in
+`lookup.ts`, read-only. A building without coordinates answers with the city
+reference. An unknown, deleted or out-of-city id, or a malformed one (never
+looked up), gets a short "send its address" reply; a database error gets
+`genericError`. An open deposit intake stays open, and the reply says `/cancel`
+leaves it.
+
+The district link `d_<slug>` answers like typing the district's name: the
+district card with its save-interest button (`sub:d:<slug>`). Opening the link
+saves nothing; a `TelegramSubscription` is created only by a button tap
+(`handleSubscribe`).
 
 ## City waitlist
 
@@ -64,9 +151,6 @@ order by waiting desc;
 
 Email requests from the landing form live separately in `city_notify_subscriptions`.
 
-Until `TELEGRAM_BOT_TOKEN` is set the webhook route answers 503 and the site's
-CTA renders nothing, so merging this changes nothing user-visible.
-
 ## Why the answer never says "no data"
 
 Coverage is ~300 buildings; an exact-house hit is the exception. `lookupAddress`
@@ -83,19 +167,6 @@ Every non-building answer ends with the "be the first report for this building"
 prompt, which is how an uncovered address feeds the north-star metric instead of
 being a dead end.
 
-The website checker's link `?start=b_<buildingId>` opens that building at once:
-`lookupBuilding` builds the same answer as typing its address (one shared
-function in `lookup.ts`, read-only). A building without coordinates answers with
-the city reference. An unknown, deleted or out-of-city id, or a malformed one
-(never looked up), gets a short "send its address" reply; a database error gets
-`genericError`. An open deposit intake stays open, and the reply says `/cancel`
-leaves it.
-
-A district link `?start=d_<slug>` answers like typing the district's name: the
-district card with its save-interest button (`sub:d:<slug>`). Opening the link
-saves nothing; a `TelegramSubscription` is created only by a button tap
-(`handleSubscribe`). An unknown slug gets the generic start reply.
-
 ## Links to the website
 
 Every link the bot sends carries `utm_source=telegram`, `utm_medium=bot` and a
@@ -105,14 +176,16 @@ form accepts as `cost_form_started`'s `source` (`src/lib/cost-submit-params.ts`)
 plus `b=<buildingId>` whenever the lookup found a building row (at any level)
 and `p=<placeId>` as before. The form prefills only from an existing building,
 `b` first, and the bot never creates one, so an address without a row opens the
-form empty.
+form empty. The district card's and `/deposit`'s cost-form buttons use
+`webLink` (UTM only, no `source`), so their `cost_form_started` says `direct`.
 
 ## Promises and capabilities
 
-The bot sends nothing on its own except the deposit follow-ups a person asked
-for. Building and district buttons save an interest (`TelegramSubscription`) and
-the reply says there are no automatic notifications; `/my` lists the saved
-interests with a remove button each (`unsub:<targetKey>`). `start`,
+The bot sends nothing on its own except the deposit reminders a person asked
+for. Saved interest sends nothing: the building and district buttons and the
+city waitlist button save a `TelegramSubscription`, the reply says there are no
+automatic notifications, and no code reads those rows to send a message (only
+`/my` lists them, with a remove button each, `unsub:<targetKey>`). `start`,
 `startAfterPayload` and `/help` share one capability list in `texts.ts`
 (address or district check, `/districts`, `/deposit`, `/my`, `/lang`,
 `/cancel`), and `COMMAND_MENU` names the same commands. `texts.test.ts` fails if
@@ -120,34 +193,54 @@ a text in `texts.ts` promises to write later.
 
 ## Events
 
-`tg_bot_started` (with the `?start=` payload — the attribution for which post or
-page sent the person), `tg_address_checked` (with `level`, so the district/city
-fallback rate is measurable), `tg_address_not_found`, `tg_subscribed`,
-`tg_unsubscribed`, `tg_districts_viewed`, `tg_deposit_viewed`.
+Every event goes through `track` (`analytics.ts`) to PostHog as a server event
+with distinct id `tg_<chatId>` and `source: 'telegram_bot'`, plus the
+properties below. The distinct id does not join to web identities: bot and web
+funnels stay separate cohorts on purpose. `docs/analytics/activation-funnels.md`
+holds the bot funnels.
+
+| Event                         | Sent when                                     | Properties                                                                                                                                                                                                         |
+| ----------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tg_bot_started`              | `/start`, with or without a payload           | `payload` (the raw payload or null), `is_new` (first time the chat is seen)                                                                                                                                        |
+| `tg_address_checked`          | an address card is sent (typed or `b_` link)  | `level` (`building` \| `district` \| `city`), `district` (slug), `has_building`, `report_count`, `entry_source` (`typed_address` \| `link_building`), `lookup_level` (= `level`), `source_kind`, `n`, `incomplete` |
+| `tg_address_not_found`        | geocoding found nothing                       | `query` (the typed text, Q-15)                                                                                                                                                                                     |
+| `tg_address_outside_city`     | the address is outside the checker city       | `query` (the typed text, Q-15), `city` (geocoded city name or null)                                                                                                                                                |
+| `tg_district_checked`         | a district card is sent (typed or `d_` link)  | `district` (slug), `report_count`, `entry_source` (`typed_district` \| `link_district`), `source_kind`, `n`, `incomplete`                                                                                          |
+| `tg_districts_viewed`         | `/districts`, or its button                   | `via: 'button'` from the button; none from the command                                                                                                                                                             |
+| `tg_city_requested`           | the city waitlist button                      | `city`, `city_key` (`c:<slug>`), `waiting` (chats waiting, this one included), `already`                                                                                                                           |
+| `tg_subscribed`               | a save-interest button                        | `target` (`building` \| `district`), `district` (slug, district only), `already`                                                                                                                                   |
+| `tg_unsubscribed`             | a remove button in `/my`                      | none                                                                                                                                                                                                               |
+| `tg_deposit_viewed`           | `/deposit`                                    | none                                                                                                                                                                                                               |
+| `tg_deposit_offered`          | a message names a deposit and holds no digits | none                                                                                                                                                                                                               |
+| `tg_deposit_flow_started`     | the deposit questions start                   | none                                                                                                                                                                                                               |
+| `tg_deposit_contract`         | a contract reading ends                       | `result` (`read` \| `not_lease` \| `failed`); on `read` also `pages`, `own_term`, `renovation`, `cleaning`, `landlord`, `type`                                                                                     |
+| `tg_deposit_verdict`          | the verdict is sent                           | `reason`, `protocol`, `strength` (`strong` \| `medium` \| `weak` \| `lawful`), `overdue`, `claim` (zł), `contract` (`skipped` \| `done` \| `failed`), `deadline_source`                                            |
+| `tg_deposit_letter_generated` | the letter button                             | `reason`, `filled` (the parties were read from the contract)                                                                                                                                                       |
+| `tg_deposit_letter_sent`      | the "I sent the letter" button                | none                                                                                                                                                                                                               |
+| `tg_deposit_reminder_set`     | the "remind me on the deadline" button        | none                                                                                                                                                                                                               |
+| `tg_deposit_outcome`          | an outcome button under a reminder            | `outcome` (`full` \| `partial` \| `none`), `after` (`deadline` \| `letter`)                                                                                                                                        |
+| `tg_lawyer_interest`          | the "I want a lawyer" button                  | `claim` (deposit minus returned, zł, or null)                                                                                                                                                                      |
 
 The check events say how the card was reached and how well it answered. Both are
 built by pure functions in `check-events.ts` over the shared `answerProperties`
-(the website's `address_checked` uses the same definition):
+(the website's `address_checked` uses the same definition): `source_kind` is
+`tenant` | `mixed` | `asking` | `none`, `n` is the headline metric's N (tenant
+group first) and `incomplete` says that headline is a known-part total.
+`replyCard` is the one place `tg_address_checked` is sent, so a `b_` link fires
+it once; `replyDistrict` is the one place for `tg_district_checked`, which
+describes the district's reference (the city's below `MIN_AREA_REPORTS`). The
+`entry_source` values are the `ENTRY_SOURCE` constant in `start-payload.ts`.
 
-- `tg_address_checked`: `level`, `district`, `has_building`, `report_count`,
-  `entry_source` (`typed_address` | `link_building`), `lookup_level` (= `level`),
-  `source_kind` (`tenant` | `mixed` | `asking` | `none`), `n` (the headline
-  metric's N, tenant group first) and `incomplete` (that headline is a known-part
-  total). `replyCard` is the one place it is sent, so a `b_` link fires it once.
-- `tg_district_checked`: `district`, `report_count` and `entry_source`
-  (`typed_district` | `link_district`), `source_kind`, `n`, `incomplete` of the
-  district's reference (the city's below `MIN_AREA_REPORTS`). Sent only by
-  `replyDistrict`.
-
-The `entry_source` values are the `ENTRY_SOURCE` constant in `start-payload.ts`.
 No check event carries free text; `tg_address_not_found` and
-`tg_address_outside_city` still send the typed `query` (Q-15).
+`tg_address_outside_city` still send the typed `query` (Q-15). Apart from
+`query`, no property holds free text, and none holds a person's name, contract
+text or the chat id (which is only in the distinct id).
 
 Events are flushed before the function ends: the webhook route registers
-`flushPostHog` with `after()` and the follow-ups cron awaits it.
-
-Distinct id is `tg_<chatId>`, which does not join to web identities — bot and
-web funnels stay separate cohorts on purpose.
+`flushPostHog` with `after()` and the follow-ups cron awaits it. Known gap
+(T050): the contract reading runs in its own `after()` task, concurrently with
+that flush, so the `tg_deposit_contract` and `tg_deposit_verdict` it tracks at
+its end can be lost.
 
 ## Not built yet
 
@@ -165,26 +258,39 @@ under `/deposit`, or the deep link `?start=dep` — the one to paste under
 
 1. Five questions (move-out date, deposit, returned, reason, handover
    protocol) — state in `DepositCase`, because webhook calls land on
-   different serverless instances.
+   different serverless instances. Starting again abandons the chat's open
+   cases and clears their reminder dates.
 2. A rule-based verdict (`deposit.ts`): the deadline counted per KC art. 112,
    ordinary wear per KC art. 675 § 1, unpaid bills as a lawful deduction.
    Deliberately not generated — same facts, same answer.
 3. A wezwanie do zapłaty in Polish with placeholders for names, addresses and
    the bank account, which the bot never asks for.
-4. Follow-ups from `/api/cron/telegram-followups` (daily, 09:00 UTC): on the
-   landlord's deadline, and 8 days after the letter. The outcome answers
-   (full / partial / none) and `wants_lawyer` are the deposit statistic and
-   the demand signal for a lawyer partnership.
+4. Reminders and outcome questions (below). The outcome answers (full /
+   partial / none) and `wants_lawyer` are the deposit statistic and the demand
+   signal for a lawyer partnership.
 
-Follow-ups are opt-in: a date is set only by the "remind me" or "I sent the
+### Reminders
+
+Two reminders work, both sent by `/api/cron/telegram-followups` (daily, 09:00
+UTC, `sendDueFollowUps`), each with the outcome buttons (full / partial /
+none):
+
+- **Deadline**: on the landlord's deadline. Offered under the verdict only
+  while at least one day is left before it.
+- **Letter**: 8 days after the "I sent the letter" tap (the letter's 7 days
+  plus one for delivery, `LETTER_FOLLOW_UP_DAYS`).
+
+Reminders are opt-in: a date is set only by the "remind me" or "I sent the
 letter" tap. `sendDueFollowUps` claims each due row before sending (clears
 `followUpAt` with a conditional `updateMany` on the value it read, and sends
 only when that updated one row), so overlapping cron runs send once. A failed
-send restores the date and the next run retries; a 403 marks the chat blocked.
-Delivery is at most once: a crash between the claim and the send loses that
-follow-up. `/cancel` abandons an open intake and clears `followUpAt` (not
-`followUpKind`, which the outcome buttons of sent follow-ups read) on the
-chat's `verdict` and `letter_sent` cases, replying `remindersOff`.
+send restores the date and the next run retries; a 403 marks the chat blocked,
+and the cron skips blocked chats (a later message from the chat clears the
+mark). Delivery is at most once: a crash between the
+claim and the send loses that reminder. `/cancel` abandons an open intake and
+clears `followUpAt` (not `followUpKind`, which the outcome buttons of sent
+reminders read) on the chat's `verdict` and `letter_sent` cases, replying
+`remindersOff`.
 
 Outcomes by reason:
 

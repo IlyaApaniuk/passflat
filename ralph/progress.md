@@ -75,6 +75,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A route that calls `after()` is testable by mocking `next/server` with `importOriginal` plus `after: vi.fn()` and running the recorded callbacks (example: `src/app/api/telegram/webhook/route.test.ts`). Next runs `after()` callbacks concurrently, so a flush registered there does not wait for another `after()` task.
 - Conditional writes (claims, races) are tested over an in-memory Prisma fake whose `findMany` returns copies and whose `updateMany` applies its `where`; overlapping runs are `Promise.all` of two calls (example: `src/lib/bot/deposit-flow.test.ts`).
 - Never `console.error` a `GrammyError` object: its `payload` holds `chat_id`. Log `error.message`.
+- The shell is zsh: quote globs in flags (`--include='*.ts'`), or the command fails with "no matches found".
 
 ## Log
 
@@ -922,3 +923,32 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Owner actions: run each query once on a short interval before relying on it (HogQL syntax was checked by reading only); fill in the PRD 1 deploy time in the date placeholders.
   - No copy, tables or migrations.
 - Next: T045 (bot README and the architecture bot rows), then the final check of M5.
+
+### 2026-11-19 05:31 · T045 · done
+
+- Done (documentation only, written from the code at `7f18160`):
+  - `src/lib/bot/README.md`:
+    - new "Production status": built, not launched. As last recorded (2026-10-05) the four migrations are not applied, the token is not set and the webhook is not registered; unknown until the owner confirms. Whether the secret, geocoding key, bot username and Anthropic key are set in Vercel is not recorded. What the code does in that state (503, cron sends nothing, CTA renders nothing, cron's `clearStaleLetterParties` would fail without the migrations).
+    - new "What is implemented" list and a full layout table (`start-payload.ts`, `check-events.ts`, `deposit*.ts`, `contract.ts`, `geocode.ts`, `districts.ts`, the cron route).
+    - new "Deep links": a payload table (none, `dep`, `b_<uuid>`, `d_<slug>`, `web_<source>`, anything else), the 64-char `[A-Za-z0-9_-]` rule, `web_checker` / `web_empty` from the site, first-touch `TelegramChat.startPayload`.
+    - "Going live" step 3 corrected: the route checks the secret only when it is set, accepts every update otherwise, and `bot:webhook` refuses to register without it.
+    - "Promises": saved interest sends nothing; no code reads `TelegramSubscription` to send (only `/my`).
+    - "Links to the website": the district card's and `/deposit`'s form buttons use `webLink` without `source`, so `cost_form_started` says `direct`.
+    - "Events": a table of all 19 bot events with when they fire and every property (with value sets), plus the T050 gap (`tg_deposit_contract` / `tg_deposit_verdict` after a reading can be lost).
+    - "Reminders" subsection: deadline (offered only with at least one day left) and letter (+8 days, `LETTER_FOLLOW_UP_DAYS`), daily cron 09:00 UTC, opt-in by tap, claim before send, retry, 403 → blocked chats skipped until they write again, at most once, `/cancel`.
+  - `docs/architecture.md`:
+    - §2: the bot row says "Built, not launched" and names the CTA's `b_<id>` / `web_<source>` links; bullets for the production status, deep links, saved interests that send nothing, the two reminders (at most once, `/cancel`), and the typed-district card on `cost-baselines` until T049 (`/districts` until Q-2).
+    - §4: the rate-limit reference is `isRateLimited` in `bot.ts` (the old line numbers were stale).
+    - §5: the bot identity line notes the T050 gap; the "README event list is incomplete" note now points to the full list; the bot events row lists all 19 names and points to the README for properties (the old partial property lists were dropped).
+    - §9 item 12: states the secret behaviour and that the README now matches it.
+- Event list built from `grep -rnE "track\(|'tg_" src/lib/bot src/app/api/telegram src/app/api/cron/telegram-followups --include='*.ts' --exclude='*.test.ts'` and reading each call; value sets from `deposit.ts`, `contract.ts`, `check-events.ts`, `start-payload.ts` and `prisma/schema.prisma`.
+- Checks:
+  - `npm run verify` exit 0 twice (before and after a final one-line markdown edit): lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 71 files / 916 tests, build OK. `next-env.d.ts` restored.
+  - `npx prettier --check` on both files passed.
+  - No code changed, so no tests were added.
+- Did not work: nothing.
+- Owner review:
+  - Please confirm the bot's production status (migrations, `TELEGRAM_BOT_TOKEN`, webhook, and which of `TELEGRAM_WEBHOOK_SECRET`, `GEOCODING_API_SERVER_KEY`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `ANTHROPIC_API_KEY` are set in Vercel); the README says "unknown" until then.
+  - Facts stated, not changed: without `TELEGRAM_WEBHOOK_SECRET` the webhook accepts every update; the district card's and `/deposit`'s form buttons carry no `source=tgbot` (already noted in T039).
+  - No copy, assumptions, tables or migrations.
+- Next: T049 / T050 update the README lines that name them (district card, contract-reading flush) when they ship; then the M5 final check.

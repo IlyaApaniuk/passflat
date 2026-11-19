@@ -727,13 +727,13 @@
       "title": "Update the bot README and the architecture bot rows",
       "spec": "docs/specs/05-measurement-docs.md#bot-readme",
       "dependsOn": ["T035", "T036", "T037", "T038", "T040"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/bot/README.md covers the implemented features, saved interest that sends nothing, the working reminders (opt-in by tap, /cancel, at-most-once), deep-link formats, the full event list with properties, and the production status as unknown or not launched",
         "docs/architecture.md §2 and §5 bot rows match the code; the webhook-secret note (architecture §9 item 12) is kept accurate"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
