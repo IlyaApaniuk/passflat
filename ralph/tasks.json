@@ -128,7 +128,7 @@
       "title": "Roommate entry: /mate, the start button, mate links, bans, one open intake and usernames (FR-2 handler, FR-3, FR-14)",
       "spec": "docs/specs/06-roommate-profiles.md#entry-and-routing",
       "dependsOn": ["T062", "T063", "T066", "T068"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "openRoommate(ctx, chat, locale, entry) implements the six cases of spec 06 §Entry and routing in that order; /mate, the rm:start button (added to the start and startAfterPayload replies) and handleStart's { kind: 'roommate' } all call it",
         "A new draft sends one tg_roommate_flow_started with entry_source (bot_menu for /mate and rm:start) and entry_detail only when present, the intro with the privacy link and the districts step; an existing draft resends its step without a second event",
@@ -139,7 +139,7 @@
         "Tests for every case listed under 'Tests' in spec 06 §Entry and routing, with a fake context and mocked Prisma; a banned chat sends no roommate event"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

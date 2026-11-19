@@ -11,6 +11,7 @@ import { after } from 'next/server';
 
 import { flushPostHog } from '@/lib/posthog-server';
 import { prisma } from '@/lib/prisma';
+import { hasOpenRoommateStep } from '@/lib/roommate/store';
 
 import { track } from './analytics';
 import { readContract, type ContractFile, type ContractReading } from './contract';
@@ -30,6 +31,7 @@ import {
 } from './deposit';
 import { dt } from './deposit-texts';
 import { escapeHtml, money, submitLink } from './format';
+import { rt } from './roommate-texts';
 import { touchChat } from './store';
 import type { BotLocale } from './texts';
 
@@ -436,8 +438,19 @@ async function startContractReading(ctx: Context, row: CaseRow, locale: BotLocal
   runInBackground(() => processContract(api, chatId, row.id, locale));
 }
 
+/**
+ * Every way into the intake (the `dep` link, the `dep:start` button under
+ * `/deposit` and under the keyword offer) starts here. One intake is open per
+ * chat (spec 06 §Entry and routing): while the roommate questions are open the
+ * deposit questions do not start, and the reply says how to leave them.
+ */
 export async function startDepositFlow(ctx: Context, chatDbId: string, locale: BotLocale) {
   const chatId = ctx.chat!.id;
+
+  if (await hasOpenRoommateStep(chatDbId)) {
+    await ctx.reply(rt(locale, 'roommateQuestionsOpen'));
+    return;
+  }
 
   // One open case per chat: starting again abandons the previous one rather
   // than leaving two conversations competing for the same text answers.
@@ -550,9 +563,22 @@ async function saveReturned(ctx: Context, row: CaseRow, locale: BotLocale, retur
   });
 }
 
-/** Offers the flow when a message mentions a deposit but is not an address. */
-export async function maybeOfferDeposit(ctx: Context, locale: BotLocale, text: string) {
+/**
+ * Offers the flow when a message mentions a deposit but is not an address.
+ * While the roommate questions are open (`roommateOpen`, read by the caller)
+ * the offer is not made: the reply says how to leave them instead.
+ */
+export async function maybeOfferDeposit(
+  ctx: Context,
+  locale: BotLocale,
+  text: string,
+  roommateOpen = false,
+) {
   if (!KEYWORDS.test(text) || /\d/.test(text)) return false;
+  if (roommateOpen) {
+    await ctx.reply(rt(locale, 'roommateQuestionsOpen'));
+    return true;
+  }
   track(ctx.chat!.id, 'tg_deposit_offered');
   await ctx.reply(dt(locale, 'keywordOffer'), {
     reply_markup: new InlineKeyboard().text(dt(locale, 'btnStartFlow'), 'dep:start'),

@@ -1,6 +1,7 @@
 import {
   Bot,
   InlineKeyboard,
+  type BotError,
   type CallbackQueryContext,
   type CommandContext,
   type Context,
@@ -38,6 +39,13 @@ import {
   lookupBuilding,
   type AddressLookup,
 } from './lookup';
+import {
+  cancelRoommate,
+  handleRoommateText,
+  openRoommate,
+  registerRoommateFlow,
+} from './roommate-flow';
+import { rt } from './roommate-texts';
 import {
   addSubscription,
   listSubscriptions,
@@ -301,6 +309,12 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
     return;
   }
 
+  // "mate…": the roommate flow, with the link's source (spec 06 §Entry and routing).
+  if (start.kind === 'roommate') {
+    await openRoommate(ctx, chat, locale, { source: start.source, detail: start.detail });
+    return;
+  }
+
   // "b_<uuid>": the website checker's link opens that building.
   if (start.kind === 'building' || start.kind === 'invalid_building') {
     await replyBuildingLink(
@@ -325,6 +339,7 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
   await ctx.reply(t(locale, start.kind === 'none' ? 'start' : 'startAfterPayload'), {
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
+    reply_markup: new InlineKeyboard().text(rt(locale, 'btnStart'), 'rm:start'),
   });
 }
 
@@ -452,8 +467,8 @@ export async function handleUnsubscribe(ctx: CallbackQueryContext<Context>): Pro
 }
 
 /**
- * A text message that is not a command: a deposit-flow answer, a district name
- * or an address. Exported so tests can call it with a fake context.
+ * A text message that is not a command: a roommate or deposit-flow answer, a
+ * district name or an address. Exported so tests can call it with a fake context.
  */
 export async function handleText(ctx: Filter<Context, 'message:text'>): Promise<void> {
   const text = ctx.message.text.trim();
@@ -465,10 +480,17 @@ export async function handleText(ctx: Filter<Context, 'message:text'>): Promise<
   });
   const locale = chat.locale as BotLocale;
 
-  // An answer to a deposit-flow question ("12.09", "4000") comes first, so it
-  // is never mistaken for an address.
-  if (await handleDepositText(ctx, chat.id, locale, text)) return;
-  if (await maybeOfferDeposit(ctx, locale, text)) return;
+  // An open roommate step that takes text ("Mokotów" at the districts step) is
+  // asked first. At a button-only step the text is answered as usual below, with
+  // a line saying how to leave the roommate questions (spec 06 §Entry and routing).
+  const roommate = await handleRoommateText(ctx, chat.id, locale, text);
+  if (roommate === 'used') return;
+  const roommateOpen = roommate === 'passed';
+
+  // An answer to a deposit-flow question ("12.09", "4000") comes next, so it is
+  // never mistaken for an address. One intake is open at a time.
+  if (!roommateOpen && (await handleDepositText(ctx, chat.id, locale, text))) return;
+  if (await maybeOfferDeposit(ctx, locale, text, roommateOpen)) return;
 
   // A district name has no single point to geocode, so it is caught before
   // Google sees it — otherwise "Мокотов" came back as "address not found".
@@ -476,10 +498,38 @@ export async function handleText(ctx: Filter<Context, 'message:text'>): Promise<
   const districtSlug = city ? matchDistrict(text, city.districts) : null;
   if (districtSlug) {
     await replyDistrict(ctx, locale, districtSlug, ENTRY_SOURCE.typedDistrict);
-    return;
+  } else {
+    await replyLookup(ctx, locale, text);
   }
 
-  await replyLookup(ctx, locale, text);
+  if (roommateOpen) await ctx.reply(rt(locale, 'roommateQuestionsOpen'));
+}
+
+/**
+ * `/cancel`: leaves an open roommate draft or edit step; without one, the
+ * deposit behaviour (the intake questions and pending reminders). Exported so
+ * tests can call it with a fake context.
+ */
+export async function handleCancel(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat.id });
+  const locale = chat.locale as BotLocale;
+  if (await cancelRoommate(ctx, chat.id, locale)) return;
+  await cancelDepositFlow(ctx, chat.id, locale);
+}
+
+/**
+ * `bot.catch`: the error's message and the update's type, nothing else. A
+ * `BotError` carries the context, whose update holds the chat id and the typed
+ * text, and a `GrammyError`'s payload holds the chat id (spec 06 §Boundaries).
+ */
+export function logBotError(error: BotError): void {
+  const updateType = Object.keys(error.ctx.update).find((key) => key !== 'update_id') ?? 'unknown';
+  const inner = error.error;
+  console.error(
+    '[bot] unhandled error',
+    updateType,
+    inner instanceof Error ? inner.message : typeof inner,
+  );
 }
 
 export function createBot(token: string): Bot {
@@ -514,12 +564,10 @@ export function createBot(token: string): Bot {
 
   bot.command('deposit', handleDeposit);
 
-  bot.command('cancel', async (ctx) => {
-    const chat = await touchChat({ chatId: ctx.chat.id });
-    await cancelDepositFlow(ctx, chat.id, chat.locale as BotLocale);
-  });
+  bot.command('cancel', handleCancel);
 
   registerDepositFlow(bot);
+  registerRoommateFlow(bot);
 
   bot.command('my', handleMy);
 
@@ -581,9 +629,7 @@ export function createBot(token: string): Bot {
   // Anything else is treated as an address — the one thing the bot is for.
   bot.on('message:text', handleText);
 
-  bot.catch((error) => {
-    console.error('[bot] unhandled error', error);
-  });
+  bot.catch(logBotError);
 
   return bot;
 }

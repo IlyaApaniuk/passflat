@@ -53,7 +53,21 @@ the migrations are missing (`docs/architecture.md` §9).
 - **Deposit helper** ("Верни залог"): five questions, contract reading, a
   rule-based verdict, a Polish demand letter, reminders and outcome questions
   (see "Deposit recovery").
-- **`/cancel`**: leaves the deposit questions and turns off pending reminders.
+- **Roommate entry** (PRD 3, spec 06): `/mate`, the "Find someone to rent with"
+  button (`rm:start`) under the `start` and `startAfterPayload` replies, and `mate`
+  links all call `openRoommate` (`roommate-flow.ts`): a banned chat or a hidden
+  profile gets the FR-14 reply (with "Delete my profile" while the profile
+  exists), a saved profile its own card, a draft its current step again, an open
+  deposit intake a "/cancel" line; otherwise a new draft, one
+  `tg_roommate_flow_started`, the intro and the districts step. One intake is open
+  per chat: the deposit questions do not start while a roommate draft or edit
+  step is open, and the other way round. Typed text goes to an open roommate
+  step that takes text first (a district name at the districts step); at a
+  button-only step it is answered as usual plus the "/cancel leaves the roommate
+  questions" line. Every roommate handler stores the Telegram username on the
+  profile when it changed.
+- **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
+  leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`**, **`/lang`** (RU / UK; `TelegramChat.locale`
   defaults to `ru`).
 - A rate limit of 12 text messages per minute per chat (`bot.ts`), because
@@ -74,6 +88,8 @@ the migrations are missing (`docs/architecture.md` §9).
 | `deposit-flow.ts`                                | Deposit conversation, reminders (`sendDueFollowUps`), `/cancel`    |
 | `deposit.ts`, `deposit-texts.ts`                 | Deposit rules, verdict and Polish letter; RU/UK deposit copy       |
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
+| `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
+| `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
@@ -142,8 +158,9 @@ anything else can only be text typed after `/start` and is recorded as
 `invalid` (`recordedStartPayload` in `start-payload.ts`).
 
 `parseStartPayload` also reads PRD 3's `mate` links (`mate`, `mate_<source>`,
-`mate_<source>_<detail>`; sources in `ROOMMATE_ENTRY_SOURCE`). Until the
-roommate entry is built they get the `startAfterPayload` reply.
+`mate_<source>_<detail>`; sources in `ROOMMATE_ENTRY_SOURCE`). They open the
+roommate flow (`openRoommate`) with that source and detail; `/mate` and the
+`rm:start` button give `bot_menu`.
 
 The building link `b_<uuid>` builds the same answer as typing that building's
 address: `lookupBuilding` and `lookupAddress` share one function in

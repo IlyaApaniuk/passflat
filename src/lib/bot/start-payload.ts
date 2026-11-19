@@ -21,7 +21,8 @@ export const ROOMMATE_ENTRY_SOURCE = {
   other: 'other',
 } as const;
 
-type RoommateEntrySource = (typeof ROOMMATE_ENTRY_SOURCE)[keyof typeof ROOMMATE_ENTRY_SOURCE];
+export type RoommateEntrySource =
+  (typeof ROOMMATE_ENTRY_SOURCE)[keyof typeof ROOMMATE_ENTRY_SOURCE];
 
 export type StartPayload =
   | { kind: 'none' }

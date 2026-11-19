@@ -1,4 +1,10 @@
-import type { CallbackQueryContext, CommandContext, Context } from 'grammy';
+import {
+  BotError,
+  GrammyError,
+  type CallbackQueryContext,
+  type CommandContext,
+  type Context,
+} from 'grammy';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -11,15 +17,18 @@ import {
 import {
   SUBSCRIBE_CALLBACK,
   UNSUBSCRIBE_CALLBACK,
+  handleCancel,
   handleDeposit,
   handleMy,
   handleStart,
   handleSubscribe,
   handleText,
   handleUnsubscribe,
+  logBotError,
 } from './bot';
 import { renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
+import { rt } from './roommate-texts';
 import { t } from './texts';
 
 const mocks = vi.hoisted(() => ({
@@ -40,6 +49,9 @@ const mocks = vi.hoisted(() => ({
   geocodeAddress: vi.fn(),
   handleDepositText: vi.fn(),
   maybeOfferDeposit: vi.fn(),
+  openRoommate: vi.fn(),
+  handleRoommateText: vi.fn(),
+  cancelRoommate: vi.fn(),
 }));
 
 vi.mock('./store', () => ({
@@ -57,6 +69,12 @@ vi.mock('./deposit-flow', () => ({
   handleDepositText: mocks.handleDepositText,
   maybeOfferDeposit: mocks.maybeOfferDeposit,
   registerDepositFlow: vi.fn(),
+}));
+vi.mock('./roommate-flow', () => ({
+  openRoommate: mocks.openRoommate,
+  handleRoommateText: mocks.handleRoommateText,
+  cancelRoommate: mocks.cancelRoommate,
+  registerRoommateFlow: vi.fn(),
 }));
 vi.mock('./lookup', () => ({
   getDistrictBySlug: mocks.getDistrictBySlug,
@@ -150,6 +168,8 @@ beforeEach(() => {
   mocks.lookupBuilding.mockResolvedValue(null);
   mocks.getDistrictTable.mockResolvedValue([]);
   mocks.getCity.mockResolvedValue(null);
+  mocks.handleRoommateText.mockResolvedValue('none');
+  mocks.cancelRoommate.mockResolvedValue(false);
 });
 
 describe('handleStart', () => {
@@ -240,6 +260,49 @@ describe('handleStart', () => {
       payload: 'mate_fb_wawapolki2',
       is_new: true,
     });
+  });
+
+  it('opens the roommate flow for a mate link, with its source and detail', async () => {
+    const { ctx, reply } = fakeContext('/start mate_fb_wawapolki2');
+    await handleStart(ctx);
+
+    expect(mocks.openRoommate).toHaveBeenCalledTimes(1);
+    expect(mocks.openRoommate).toHaveBeenCalledWith(
+      ctx,
+      { id: 'chat-row', locale: 'ru', isNew: true },
+      'ru',
+      { source: 'fb', detail: 'wawapolki2' },
+    );
+    expect(reply).not.toHaveBeenCalled();
+    expect(mocks.startDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['mate', { source: 'direct', detail: undefined }],
+    ['mate_tg', { source: 'tg', detail: undefined }],
+    ['mate_unknown_x', { source: 'other', detail: undefined }],
+  ])('opens the roommate flow for %s', async (payload, entry) => {
+    const { ctx } = fakeContext(`/start ${payload}`);
+    await handleStart(ctx);
+
+    expect(mocks.openRoommate).toHaveBeenCalledWith(ctx, expect.anything(), 'ru', entry);
+  });
+
+  it.each([
+    ['start', '/start'],
+    ['startAfterPayload', '/start web_checker'],
+  ] as const)('offers the roommate start button under %s', async (key, text) => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeContext(text);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(t('uk', key));
+    expect(buttons(reply)).toEqual(['rm:start']);
+    const markup = reply.mock.calls[0][1].reply_markup as {
+      inline_keyboard: { text: string }[][];
+    };
+    expect(markup.inline_keyboard[0][0].text).toBe(rt('uk', 'btnStart'));
+    expect(mocks.openRoommate).not.toHaveBeenCalled();
   });
 
   // Spec 04 §Start payloads, privacy fix: text that is not a deep link's shape
@@ -708,6 +771,164 @@ describe('handleText (typed address or district)', () => {
 
     expect(replyKey(reply)).toBe(t('ru', 'addressNotFound'));
     expect(mocks.track).not.toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', expect.anything());
+  });
+});
+
+describe('handleText while a roommate step is open (spec 06 §Entry and routing)', () => {
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({
+      id: 'city-1',
+      slug: 'warsaw',
+      districts: [{ id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' }],
+    });
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+  });
+
+  it('asks the roommate flow first, with the chat row and the text', async () => {
+    const { ctx } = fakeText('  Mokotów ');
+    await handleText(ctx);
+
+    expect(mocks.handleRoommateText).toHaveBeenCalledWith(ctx, 'chat-row', 'ru', 'Mokotów');
+  });
+
+  it('stops at a step that took the text: no deposit flow, district check or lookup', async () => {
+    mocks.handleRoommateText.mockResolvedValue('used');
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).not.toHaveBeenCalled();
+    expect(mocks.maybeOfferDeposit).not.toHaveBeenCalled();
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('at a button step answers an address as usual, then says /cancel leaves the questions', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-1', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeText('Puławska 10');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).not.toHaveBeenCalled();
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'Puławska 10', true);
+    expect(reply).toHaveBeenCalledTimes(2);
+    expect(reply.mock.calls[0][0]).toBe(renderLookup(buildingLookup(), 'ru'));
+    expect(reply.mock.calls[1][0]).toBe(rt('ru', 'roommateQuestionsOpen'));
+    expect(rt('ru', 'roommateQuestionsOpen')).toContain('/cancel');
+  });
+
+  it('at a button step answers a district name with its card, then the /cancel line', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(reply).toHaveBeenCalledTimes(2);
+    expect(reply.mock.calls[1][0]).toBe(rt('ru', 'roommateQuestionsOpen'));
+  });
+
+  it('lets the deposit keyword reply stand alone at a button step', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    mocks.maybeOfferDeposit.mockResolvedValue(true);
+    const { ctx, reply } = fakeText('как вернуть залог');
+    await handleText(ctx);
+
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'как вернуть залог', true);
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('adds no roommate line without an open roommate step', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText('Nowhere 999');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).toHaveBeenCalledWith(ctx, 'chat-row', 'ru', 'Nowhere 999');
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'Nowhere 999', false);
+    expect(replyKey(reply)).toBe(t('ru', 'addressNotFound'));
+  });
+});
+
+describe('handleCancel (/cancel)', () => {
+  it('closes an open roommate draft or edit step and leaves the deposit cases alone', async () => {
+    mocks.cancelRoommate.mockResolvedValue(true);
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+    expect(mocks.cancelDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it('runs the deposit behaviour of today without an open roommate step', async () => {
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+    expect(mocks.cancelDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+  });
+});
+
+describe('logBotError (bot.catch, spec 06 §Boundaries)', () => {
+  const TG_CHAT_ID = 987_654_321;
+  const TEXT = 'Puławska 10 m. 5, Jan Kowalski';
+
+  function botError(error: unknown, update: Record<string, unknown>) {
+    return new BotError(error, { update } as unknown as Context);
+  }
+
+  function logged(spy: ReturnType<typeof vi.spyOn>): string {
+    return JSON.stringify(spy.mock.calls);
+  }
+
+  it('logs only the message and the update type, never the chat id or the text', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logBotError(
+      botError(new Error('boom'), {
+        update_id: 1,
+        message: { chat: { id: TG_CHAT_ID }, from: { id: TG_CHAT_ID }, text: TEXT },
+      }),
+    );
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('[bot] unhandled error', 'message', 'boom');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    expect(logged(spy)).not.toContain('Puławska');
+    expect(logged(spy)).not.toContain('Kowalski');
+    spy.mockRestore();
+  });
+
+  it('keeps a failed call’s payload (it holds chat_id) out of the log', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new GrammyError(
+      "Call to 'sendMessage' failed!",
+      { ok: false, error_code: 400, description: 'Bad Request: chat not found' },
+      'sendMessage',
+      { chat_id: TG_CHAT_ID, text: TEXT },
+    );
+    logBotError(
+      botError(error, {
+        update_id: 2,
+        callback_query: { from: { id: TG_CHAT_ID }, data: 'rm:start' },
+      }),
+    );
+
+    expect(spy.mock.calls[0][1]).toBe('callback_query');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    expect(logged(spy)).not.toContain('Kowalski');
+    spy.mockRestore();
+  });
+
+  it('logs only the kind of a thrown non-error', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logBotError(botError({ chatId: TG_CHAT_ID }, { update_id: 3, message: { text: TEXT } }));
+
+    expect(spy).toHaveBeenCalledWith('[bot] unhandled error', 'message', 'object');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    spy.mockRestore();
   });
 });
 
