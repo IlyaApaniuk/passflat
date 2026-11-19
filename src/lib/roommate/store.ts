@@ -444,11 +444,18 @@ export async function hideAfterReport(
   if (!hiddenReason) return null;
 
   const hid = await prisma.$transaction(async (tx) => {
-    // `statement_sent_at` is cleared so this hide gets its own statement of reasons, also after an
-    // owner's unhide of an earlier one (spec 07 §Statement of reasons).
+    // `statement_sent_at` and `appealed_at` are cleared so this hide gets its own statement of
+    // reasons and its own `/appeal`, also after an owner's unhide of an earlier one (spec 07
+    // §Statement of reasons, §Appeals and the owner's review).
     const { count } = await tx.roommateProfile.updateMany({
       where: { id: target.id, hiddenAt: null },
-      data: { status: 'hidden', hiddenAt: now, hiddenReason, statementSentAt: null },
+      data: {
+        status: 'hidden',
+        hiddenAt: now,
+        hiddenReason,
+        statementSentAt: null,
+        appealedAt: null,
+      },
     });
     if (count !== 1) return false;
     await tx.telegramChat.updateMany({
@@ -462,6 +469,20 @@ export async function hideAfterReport(
     return true;
   });
   return hid ? hiddenReason : null;
+}
+
+/**
+ * `/appeal` of a hidden profile (spec 07 §Appeals and the owner's review, FR-35): one conditional
+ * update from `appealed_at` null, so a second `/appeal`, or two at once, records nothing more.
+ * True only for the request that recorded it. The owner reviews appeals by hand
+ * (`src/lib/bot/README.md` §Owner review).
+ */
+export async function recordAppeal(profileId: string, now: Date): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: 'hidden', appealedAt: null },
+    data: { appealedAt: now },
+  });
+  return count === 1;
 }
 
 /**

@@ -1,11 +1,13 @@
 import type { RoommateProfile } from '@prisma/client';
-import { InlineKeyboard, type Bot, type Context } from 'grammy';
+import { InlineKeyboard, type Bot, type CommandContext, type Context } from 'grammy';
 
 import { REPORT_REASONS, type ReportReason } from '@/lib/roommate/rules';
 import {
   findReportableProfile,
   findRoommateProfile,
   hideAfterReport,
+  loadRoommateEntry,
+  recordAppeal,
   storeReport,
   telegramChatIdOf,
   type ReportableProfile,
@@ -15,18 +17,18 @@ import { track } from './analytics';
 import { createCronSender } from './roommate-daily';
 import { matchGroups, rememberUsername, roommateCallback } from './roommate-flow';
 import { REPORT_REASON_LABEL, sendHideMessages } from './roommate-hide-messages';
-import { rt } from './roommate-texts';
-import type { TouchedChat } from './store';
-import type { BotLocale } from './texts';
+import { roommateLocale, rt } from './roommate-texts';
+import { touchChat, type TouchedChat } from './store';
+import { normalizeLocale, type BotLocale } from './texts';
 
 /**
  * Moderation of roommate matching in the bot (spec 07 §Report – §Appeals; spec 06 §Module
- * layout): for now "Report" (`rm:r:<id>`, under every card and every reveal) and its reasons
- * (`rm:rr:<reason>:<id>`, §Report, FR-31), and the automatic hide a stored report may trigger
+ * layout): "Report" (`rm:r:<id>`, under every card and every reveal) and its reasons
+ * (`rm:rr:<reason>:<id>`, §Report, FR-31), the automatic hide a stored report may trigger
  * (§Automatic hiding, FR-32, FR-34) with its statement of reasons and the reporters' notices
- * (§Statement of reasons, FR-33; `roommate-hide-messages.ts`). The switch is not read: moderation
- * keeps working with it off (§Switch), so a Report under a card or a reveal sent before a
- * switch-off still works.
+ * (§Statement of reasons, FR-33; `roommate-hide-messages.ts`), and `/appeal` (§Appeals and the
+ * owner's review, FR-35). The switch is not read: moderation keeps working with it off (§Switch),
+ * so a Report under a card or a reveal sent before a switch-off still works.
  *
  * Who may report whom is `findReportableProfile` (a reaction to the target, a reveal of it, or a
  * card it may show now), never the callback id alone. No event carries a reporter, a target, a
@@ -149,7 +151,35 @@ async function hideIfDue(
   return true;
 }
 
+/**
+ * `/appeal` (spec 07 §Appeals and the owner's review, FR-35): named in the statement of reasons
+ * only, never in `COMMAND_MENU`. A hidden profile with `appealed_at` null → `recordAppeal` and the
+ * acknowledgement (the e-mail address, no time promised); appealed already, or the second of two
+ * at once → "already received", nothing changes; a banned chat without a hidden profile (deleted
+ * 14 days after `expires_at`, or unhidden by the owner with the ban kept) → the e-mail address;
+ * any other chat → "nothing to appeal". The username is stored like every roommate handler's. No
+ * event; the switch is not read. The owner reviews appeals by hand (`README.md` §Owner review).
+ */
+export async function handleAppeal(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({
+    chatId: ctx.chat.id,
+    locale: normalizeLocale(ctx.from?.language_code),
+  });
+  const locale = roommateLocale(chat.locale);
+  const entry = await loadRoommateEntry(chat.id);
+  const profile = entry?.roommateProfile ?? null;
+  if (profile) await rememberUsername(ctx, profile);
+
+  if (profile?.status === 'hidden') {
+    const recorded = profile.appealedAt === null && (await recordAppeal(profile.id, new Date()));
+    await ctx.reply(rt(locale, recorded ? 'appealReceived' : 'appealAlready'));
+    return;
+  }
+  await ctx.reply(rt(locale, entry?.roommateBannedAt ? 'appealByEmail' : 'appealNothing'));
+}
+
 export function registerRoommateSafety(bot: Bot): void {
+  bot.command('appeal', handleAppeal);
   bot.callbackQuery(REPORT_TAP, handleReportTap);
   bot.callbackQuery(REPORT_REASON_TAP, handleReportReason);
 }

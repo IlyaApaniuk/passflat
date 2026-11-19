@@ -300,6 +300,19 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   (`releaseWhenBlocked`), so a blocked chat shows `statement_sent_at` null and
   gets the statement once it writes to the bot again. No event; the switch is
   not read.
+- **`/appeal`** (spec 07 §Appeals and the owner's review, FR-35, D65;
+  `handleAppeal` in `roommate-safety.ts`): named in the statement of reasons
+  only, not in `COMMAND_MENU`. A hidden profile with `appealed_at` null →
+  `recordAppeal` (`../roommate/store.ts`, one conditional update from null) and
+  `appealReceived` (a person reviews it; contact@passflat.com; no time promised);
+  appealed already, or the second of two at once → `appealAlready`, nothing
+  changes; a banned chat without a hidden profile (deleted 14 days after
+  `expires_at`, or unhidden with the ban kept) → `appealByEmail`; any other chat
+  → `appealNothing`. The username is stored; no event; the switch is not read.
+  A hide clears `appealed_at`, so a hide after an owner's unhide can be appealed
+  again. The bot does not tell the person the owner's decision (PRD 3 Q-16,
+  T109, blocked). The review itself is the owner's, by hand: see
+  [Owner review](#owner-review).
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -417,7 +430,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Interested, Done, steps, push, outcome   |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
-| `roommate-safety.ts`                             | Moderation (spec 07): Report (FR-31), automatic hiding (FR-32)     |
+| `roommate-safety.ts`                             | Moderation (spec 07): Report, automatic hiding, `/appeal`          |
 | `roommate-hide-messages.ts`                      | A hide's statement of reasons and reporters' notices, the retries  |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
@@ -474,9 +487,97 @@ moment in the posting log and as a PostHog annotation (spec 07 §Switch).
 With it off, `/mate` shows the stage 1 intro and card, and every stage 2 button
 (`rm:show*`, `rm:i:*`, `rm:x:*`, `rm:u:done`, `rm:push:on`) replies "matching is
 paused". Turning it off again keeps stored reactions and sent reveals; the next
-steps, "Stop daily messages", Report (`rm:r:*`, `rm:rr:*`), the outcome question
-and its answers, and the send-hour retry of waiting reveals keep working
-(`roommate-switch.test.ts`).
+steps, "Stop daily messages", Report (`rm:r:*`, `rm:rr:*`), `/appeal`, the
+outcome question and its answers, and the send-hour retry of waiting reveals keep
+working (`roommate-switch.test.ts`).
+
+## Owner review
+
+Spec 07 §Appeals and the owner's review, FR-35, D65. Hiding is automatic and
+immediate; the owner's review can only lift a hide and a ban. Nothing here is
+automated, and the build loop runs none of it: the owner runs the SQL by hand in
+the Supabase SQL editor of the production project.
+
+- **Time:** up to 10 minutes a week, inside the 30-minute weekly cap of manual
+  handling (D52). Log the minutes as manual-handling minutes in the posting log
+  (`docs/marketing/roommate-posting-log.md`, spec 05 §Posting kit); a week
+  without an entry counts as "missing" in the readout.
+- **Police (DSA Art. 18):** when a report, a profile's short text or an appeal
+  suggests a threat to the life or safety of a person, inform the police. The bot
+  never decides this and sends nothing to anyone about it.
+- **Telling the person the decision** is not built (PRD 3 Q-16, T109, blocked):
+  the unhide below is silent. Answer an appeal that came by e-mail by e-mail.
+
+**1. Hidden profiles (read-only).** One row per hidden profile, oldest hide
+first: the hide reason, the reports with their reasons and how many still count
+toward the 2 of D62, whether the person appealed and whether the statement of
+reasons was delivered. `statement_sent_at` null with `blocked_at` set is a chat
+that blocked the bot: it gets the statement once it writes to the bot again.
+`about` is the profile's short text, the only free text a profile holds.
+
+```sql
+select p.id,
+       p.hidden_at,
+       p.hidden_reason,
+       p.expires_at,
+       p.appealed_at,
+       p.statement_sent_at,
+       c.blocked_at,
+       c.roommate_banned_at,
+       p.about,
+       (select count(*) from roommate_reports r
+         where r.target_profile_id = p.id) as reports,
+       (select count(*) from roommate_reports r
+         where r.target_profile_id = p.id
+           and r.reporter_profile_id is not null
+           and r.decision <> 'lifted') as counting_reports,
+       (select string_agg(s.reason || ': ' || s.n, ', ' order by s.reason)
+          from (select r.reason, count(*) as n from roommate_reports r
+                 where r.target_profile_id = p.id
+                 group by r.reason) s) as reasons
+  from roommate_profiles p
+  join telegram_chats c on c.id = p.chat_id
+ where p.status = 'hidden'
+ order by p.hidden_at;
+```
+
+**2. Unhide one profile.** Replace `<profile id>` with the `id` from query 1.
+The profile goes back to `active` while `expires_at` is in the future, else to
+`expired` (with `expired_at`, so the daily cron still deletes it 14 days after
+expiry); the hide fields are cleared and every report on it becomes
+`decision='lifted'` (decided by a person), so those reports never count toward a
+hide again. `appealed_at` is kept as the record of the appeal; the next hide
+clears it. The ban stays until step 3.
+
+```sql
+begin;
+update roommate_profiles
+   set status = case when expires_at > now() then 'active' else 'expired' end,
+       expired_at = case when expires_at > now() then expired_at
+                         else coalesce(expired_at, expires_at) end,
+       hidden_at = null,
+       hidden_reason = null
+ where id = '<profile id>'
+   and status = 'hidden';
+update roommate_reports
+   set decision = 'lifted',
+       automated = false,
+       decided_at = now()
+ where target_profile_id = '<profile id>';
+commit;
+```
+
+**3. Clear the chat's ban.** Run it after step 2 to lift the ban too (D55 keeps
+it otherwise; while it stays, `/mate` gives the FR-14 reply even to an unhidden
+profile). It finds the chat through the profile, so run it while the profile
+still exists: once the daily cron has deleted the profile (14 days after
+`expires_at`) nothing in the database links the ban to a person.
+
+```sql
+update telegram_chats
+   set roommate_banned_at = null
+ where id = (select chat_id from roommate_profiles where id = '<profile id>');
+```
 
 ## Deep links
 

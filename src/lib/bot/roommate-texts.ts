@@ -29,7 +29,7 @@ import { peopleWord } from './texts';
  * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages". The
  * outcome question (§Outcome question) adds the question and its four answers.
  * A hide (§Statement of reasons, §Automatic hiding) adds the statement's parts and
- * the reporters' notice. `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
+ * the reporters' notice; `/appeal` (§Appeals) its four replies. `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
  * that nobody sees the profile until matching opens is replaced by who sees what.
  */
 
@@ -338,6 +338,15 @@ const RU = {
     'Обжаловать решение: ответь /appeal в этом чате или напиши на contact@passflat.com. Ещё можно подать жалобу координатору цифровых услуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — или обратиться в суд.',
   hideNotice:
     'Анкета, на которую поступила твоя жалоба, теперь скрыта от всех. Решение принято автоматически.',
+
+  // --- `/appeal` (spec 07 §Appeals and the owner's review, FR-35; agent drafts, D56): the
+  // acknowledgement names the e-mail address and promises no time; the owner reviews by hand ---
+  appealReceived:
+    'Обжалование получено. Его рассмотрит человек, а не автоматика. Если хочешь что-то объяснить или добавить, напиши на contact@passflat.com.',
+  appealAlready:
+    'Обжалование уже получено. Если хочешь что-то добавить, напиши на contact@passflat.com.',
+  appealByEmail: 'Обжаловать решение по подбору соседей можно письмом на contact@passflat.com.',
+  appealNothing: 'Обжаловать нечего: по этому чату нет решений о подборе соседей.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -581,6 +590,12 @@ const UK: Record<Key, string> = {
     'Оскаржити рішення: відповідай /appeal у цьому чаті або напиши на contact@passflat.com. Також можна подати скаргу координатору цифрових послуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — або звернутися до суду.',
   hideNotice:
     'Анкету, на яку надійшла твоя скарга, тепер приховано від усіх. Рішення ухвалено автоматично.',
+
+  appealReceived:
+    'Оскарження отримано. Його розгляне людина, а не автоматика. Якщо хочеш щось пояснити чи додати, напиши на contact@passflat.com.',
+  appealAlready: 'Оскарження вже отримано. Якщо хочеш щось додати, напиши на contact@passflat.com.',
+  appealByEmail: 'Оскаржити рішення щодо підбору сусідів можна листом на contact@passflat.com.',
+  appealNothing: 'Оскаржувати нічого: щодо цього чату немає рішень про підбір сусідів.',
 };
 
 const EN: Record<Key, string> = {
@@ -824,6 +839,13 @@ const EN: Record<Key, string> = {
     'To appeal: reply /appeal in this chat or write to contact@passflat.com. You can also complain to the Digital Services Coordinator, the President of UKE (Prezes Urzędu Komunikacji Elektronicznej), or go to court.',
   hideNotice:
     'The profile you reported is now hidden from everyone. The decision was made automatically.',
+
+  appealReceived:
+    'Appeal received. A person reviews it, not an automated check. If you want to explain or add anything, write to contact@passflat.com.',
+  appealAlready:
+    'Your appeal has already been received. If you want to add anything, write to contact@passflat.com.',
+  appealByEmail: 'To appeal the matching decision, write to contact@passflat.com.',
+  appealNothing: "There's nothing to appeal: this chat has no matching decision.",
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

@@ -383,17 +383,22 @@ const snapshot = () => structuredClone(db.state);
 const switchTo = (value: string) => vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
 
 /**
- * The owner's unhide of `bot/README.md` §Owner review, applied in memory: back to active (or
- * expired), the hide fields cleared, the target's reports lifted, the chat's ban cleared.
+ * The owner's unhide and unban of `bot/README.md` §Owner review (steps 2 and 3), applied in
+ * memory: back to active (or expired, with `expired_at`), the hide fields cleared, the target's
+ * reports lifted by a person, the chat's ban cleared; `appealed_at` kept.
  */
 function ownerUnhide(id: string, now: Date) {
   const target = row(id)!;
+  const live = (target.expiresAt as Date).getTime() > now.getTime();
   Object.assign(target, {
-    status: (target.expiresAt as Date).getTime() > now.getTime() ? 'active' : 'expired',
+    status: live ? 'active' : 'expired',
+    expiredAt: live ? target.expiredAt : (target.expiredAt ?? target.expiresAt),
     hiddenAt: null,
     hiddenReason: null,
   });
-  for (const report of reportsOn(id)) report.decision = 'lifted';
+  for (const report of reportsOn(id)) {
+    Object.assign(report, { decision: 'lifted', automated: false, decidedAt: now });
+  }
   chatRow(id).roommateBannedAt = null;
 }
 
@@ -494,6 +499,13 @@ async function mate(who: Who = {}) {
   const { ctx, replies } = fakeContext(null, who);
   await COMMANDS.get('mate')!(ctx as unknown as Context);
   return replies();
+}
+
+/** `/appeal` from the person of profile `who` (`handleAppeal`, registered by the safety module). */
+async function appeal(who: Who = {}) {
+  const { ctx, replies } = fakeContext(null, who);
+  await COMMANDS.get('appeal')!(ctx as unknown as Context);
+  return replies().map((r) => r.text);
 }
 
 /** A `mate` deep link (`/start mate_tg`) from the person of profile `who`: `openRoommate`. */
@@ -673,11 +685,13 @@ describe('which reports count toward the 2', () => {
     expect(row(X)).toMatchObject({ status: 'hidden', hiddenAt: LATER, hiddenReason: 'reports' });
     expect(chatRow(X).roommateBannedAt).toEqual(LATER);
     // The owner's decisions stay; the two new reports are decided now.
-    expect(reportsOn(X).map((r) => [r.reporterProfileId, r.decision, r.decidedAt])).toEqual([
-      [R1, 'lifted', NOW],
-      [R2, 'lifted', NOW],
-      [R3, 'hidden', LATER],
-      [R4, 'hidden', LATER],
+    expect(
+      reportsOn(X).map((r) => [r.reporterProfileId, r.decision, r.automated, r.decidedAt]),
+    ).toEqual([
+      [R1, 'lifted', false, LATER],
+      [R2, 'lifted', false, LATER],
+      [R3, 'hidden', true, LATER],
+      [R4, 'hidden', true, LATER],
     ]);
     expect(hideEvents()).toEqual([[X_CHAT, 'tg_roommate_profile_hidden', { reason: 'reports' }]]);
   });
@@ -708,10 +722,17 @@ describe('what a hide writes', () => {
   it('one conditional update on hidden_at, the ban when null, and the decisions', async () => {
     await hideXByReports();
 
-    // `statement_sent_at` is cleared, so a hide after an owner's unhide gets its own statement.
+    // `statement_sent_at` and `appealed_at` are cleared, so a hide after an owner's unhide gets
+    // its own statement and its own `/appeal`.
     expect(db.prisma.roommateProfile.updateMany).toHaveBeenCalledWith({
       where: { id: X, hiddenAt: null },
-      data: { status: 'hidden', hiddenAt: NOW, hiddenReason: 'reports', statementSentAt: null },
+      data: {
+        status: 'hidden',
+        hiddenAt: NOW,
+        hiddenReason: 'reports',
+        statementSentAt: null,
+        appealedAt: null,
+      },
     });
     expect(banWrites()).toEqual([
       [{ where: { id: `chat-${X}`, roommateBannedAt: null }, data: { roommateBannedAt: NOW } }],
@@ -1198,5 +1219,52 @@ describe('the notice to reporters (spec 07 §Automatic hiding, FR-32 criterion 4
     expect(textsTo(R1)).toEqual([]);
     expect(textsTo(R2)).toEqual([]);
     quiet.mockRestore();
+  });
+});
+
+describe("/appeal after a real hide (spec 07 §Appeals and the owner's review, FR-35)", () => {
+  it('the hidden person appeals once; after an unhide nothing is left; a re-hide can be appealed again', async () => {
+    await hideXByReports();
+    vi.clearAllMocks();
+
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealReceived')]);
+    expect(row(X)).toMatchObject({ status: 'hidden', appealedAt: NOW });
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealAlready')]);
+    expect(row(X)!.appealedAt).toEqual(NOW);
+    // Nobody else has anything to appeal, the reporters included.
+    expect(await appeal({ who: R1 })).toEqual([rt('ru', 'appealNothing')]);
+    expect(events()).toEqual([]);
+
+    const LATER = new Date(NOW.getTime() + 2 * DAY);
+    vi.setSystemTime(LATER);
+    ownerUnhide(X, LATER);
+    expect(row(X)).toMatchObject({ status: 'active', appealedAt: NOW });
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealNothing')]);
+
+    await report(R3, 'other', X);
+    await report(R4, 'fake', X);
+    expect(row(X)).toMatchObject({ status: 'hidden', hiddenAt: LATER, appealedAt: null });
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealReceived')]);
+    expect(row(X)!.appealedAt).toEqual(LATER);
+  });
+
+  it('once the cron deletes the hidden profile, the banned chat gets the e-mail address', async () => {
+    await hideXByReports();
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealReceived')]);
+
+    await runCron(new Date(EXPIRES.getTime() + 14 * DAY));
+    expect(row(X)).toBeUndefined();
+    expect(chatRow(X).roommateBannedAt).toEqual(NOW);
+
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealByEmail')]);
+  });
+
+  it('an unhide that keeps the ban: the e-mail address, as /mate is still refused', async () => {
+    await hideXByReports();
+    ownerUnhide(X, NOW);
+    chatRow(X).roommateBannedAt = NOW;
+
+    expect(await appeal({ who: X })).toEqual([rt('ru', 'appealByEmail')]);
+    expect((await mate({ who: X })).map((r) => r.text)).toEqual([rt('ru', 'banned')]);
   });
 });

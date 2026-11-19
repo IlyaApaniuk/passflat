@@ -2544,3 +2544,55 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     7. **Known gap, T113:** a report inserted in the instant after another request's hide stays `decision=none`, so its reporter gets the receipt's promise but no notice.
   - No new event, constant, table or migration.
 - Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T096 `/appeal` and the owner's review section, or T113). The statement's redress names `/appeal`; the owner's read-only SQL can show `statement_sent_at` null for blocked chats.
+
+### 2026-11-19 19:54 · T096 · done
+
+- Done:
+  - `src/lib/bot/roommate-safety.ts`: `handleAppeal` (`/appeal`), registered by `registerRoommateSafety` as `bot.command('appeal', …)`; not in `COMMAND_MENU`.
+    - A hidden profile with `appealed_at` null → `recordAppeal` → `appealReceived`.
+    - Appealed already, or the second of two at once → `appealAlready`, nothing changes.
+    - A banned chat without a hidden profile → `appealByEmail`.
+    - Any other chat → `appealNothing`.
+    - It stores the username, sends no event and does not read the switch. Locale: `roommateLocale(chat.locale)`, with `touchChat` given the sender's language for a new chat.
+  - `src/lib/roommate/store.ts`: `recordAppeal(profileId, now)`, one conditional `updateMany where { id, status: 'hidden', appealedAt: null }`. `hideAfterReport` also clears `appealedAt`, so a hide after an owner's unhide can be appealed again (the T095 note).
+  - Copy (`roommate-texts.ts`, RU / UK / EN): `appealReceived`, `appealAlready`, `appealByEmail`, `appealNothing`.
+  - `src/lib/bot/README.md`: a new **`/appeal`** bullet, `/appeal` in the switch-off list, the file table row, and a new **Owner review** section. It holds the 10 minutes a week logged as manual minutes in `docs/marketing/roommate-posting-log.md` (D52 cap, D65), the police step (DSA Art. 18), and a note that telling the person the decision is T109 (blocked). Then three SQL blocks:
+    1. read-only, hidden profiles with `hidden_reason`, reports, counting reports, reasons with counts, `appealed_at`, `statement_sent_at`, `blocked_at`, the ban and `about`;
+    2. the unhide, in one transaction: status `active` / `expired` by `expires_at`, `expired_at` set when expired, the hide fields null, and that target's reports `decision='lifted'`, `automated=false`, `decided_at=now()`;
+    3. the unban, through the profile id.
+  - `docs/specs/README.md` FR-35 → Done. `ralph/tasks.json`: a T109 note.
+- Tests:
+  - `src/lib/bot/roommate-appeal.test.ts` (new, 26) covers the four cases:
+    - received in RU / UK / EN, with the exact `updateMany`;
+    - expired-and-hidden, and hidden without a ban;
+    - the username stored, no event, switch off (`''`, `false`, `TRUE`);
+    - "already received" in three locales with the DB unchanged; right after the first; two at once → one recorded;
+    - `recordAppeal` only on a hidden profile not appealed yet;
+    - e-mail in three locales for a deleted profile, and for an unhide that kept the ban;
+    - nothing to appeal: no profile, active, expired, draft, unhidden after an appeal, unknown chat;
+    - `/appeal` not in `COMMAND_MENU` (RU, UK); the statement names `/appeal`; the ack names contact@passflat.com and holds no digit or time word.
+  - `roommate-hide.test.ts` +3, end to end over the real hide:
+    - appeal → already → unhide → nothing → re-hide → `appealed_at` null → received again;
+    - after the cron deletes the profile → e-mail;
+    - an unhide that keeps the ban → e-mail, `/mate` refused.
+    - `ownerUnhide` now mirrors README steps 2 – 3, and two expectations were updated (the hide's data has `appealedAt: null`; lifted reports have `automated=false` and the lift time).
+  - Mutation check: no `appealedAt: null` in `recordAppeal`'s `where` and none in the hide's data → 7 failures; reverted.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 134 files / 2761 tests, build OK). `next-env.d.ts` restored. No SQL was run, not even locally (the acceptance says the loop runs none), so the README SQL is checked by reading only. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (roommate-texts.ts; approve before the switch, D56; not reviewed by a lawyer):**
+    - `appealReceived`: RU «Обжалование получено. Его рассмотрит человек, а не автоматика. Если хочешь что-то объяснить или добавить, напиши на contact@passflat.com.» UK «Оскарження отримано. Його розгляне людина, а не автоматика. Якщо хочеш щось пояснити чи додати, напиши на contact@passflat.com.» EN "Appeal received. A person reviews it, not an automated check. If you want to explain or add anything, write to contact@passflat.com."
+    - `appealAlready`: RU «Обжалование уже получено. Если хочешь что-то добавить, напиши на contact@passflat.com.» UK «Оскарження вже отримано. Якщо хочеш щось додати, напиши на contact@passflat.com.» EN "Your appeal has already been received. If you want to add anything, write to contact@passflat.com."
+    - `appealByEmail`: RU «Обжаловать решение по подбору соседей можно письмом на contact@passflat.com.» UK «Оскаржити рішення щодо підбору сусідів можна листом на contact@passflat.com.» EN "To appeal the matching decision, write to contact@passflat.com."
+    - `appealNothing`: RU «Обжаловать нечего: по этому чату нет решений о подборе соседей.» UK «Оскаржувати нічого: щодо цього чату немає рішень про підбір сусідів.» EN "There's nothing to appeal: this chat has no matching decision."
+  - **Assumption applied:** the command name `/appeal` (spec 07 "the commands"); it is the string in `registerRoommateSafety` and the statement's redress text.
+  - **Agent's readings to confirm:**
+    1. **"A person reviews it"** in the acknowledgement rests on D65 (the owner's weekly review). Drop the sentence if you do not want to promise a review.
+    2. **A banned chat whose profile is not hidden** (deleted, or unhidden with the ban kept) gets the e-mail address. Spec 07 names only "already deleted". With the ban kept, `/mate` still refuses, so "nothing to appeal" would be wrong.
+    3. **A hide clears `appealed_at`** (not the unhide SQL), so the unhide keeps the record of the appeal and each hide gets one `/appeal`.
+    4. **The unhide SQL also writes** `automated=false`, `decided_at=now()` on the lifted reports, and `expired_at = coalesce(expired_at, expires_at)` when the profile goes back to `expired`. Without the last one the daily cron would never delete it (it deletes expired rows by `expired_at`).
+    5. **The read-only SQL shows `about`** (the short text), because a review of "offensive" or "fake" needs it. It shows no username or Telegram chat id.
+    6. **The unban works only while the profile exists.** After the cron deletes it (14 days after `expires_at`), nothing links a ban to a person, so a person who appeals by e-mail after that cannot be found.
+  - **Owner actions:** the review is yours. Run the SQL by hand in the Supabase SQL editor, log the minutes in the posting log, and call the police on a threat (D65). T109 (Q-16) still waits for your answer on how the person hears the decision.
+  - No new event, constant, table or migration.
+- Next: the next runnable task from `node scripts/ralph-tasks.mjs next` (T113 or T097). T109 stays blocked on Q-16; its note names the code T096 left for it.
