@@ -35,6 +35,30 @@ export const INTEREST_DAILY_LIMIT = 20;
 // Value sets of the intake (spec 06 §Intake steps, §Entry and routing callback data)
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * The intake's steps in their decided order (D54): `profile.step` of a draft holds the one
+ * awaiting an answer. After `adult` the profile is saved (spec 06 §Save).
+ */
+export const INTAKE_STEPS = [
+  'districts',
+  'budget',
+  'month',
+  'languages',
+  'gender',
+  'prefers',
+  'about',
+  'smoking',
+  'pets',
+  'adult',
+] as const;
+export type IntakeStep = (typeof INTAKE_STEPS)[number];
+
+/** The step after `step` in the intake; null after the last one or for a step outside the intake. */
+export function nextIntakeStep(step: string): IntakeStep | null {
+  const index = INTAKE_STEPS.indexOf(step as IntakeStep);
+  return index === -1 ? null : (INTAKE_STEPS[index + 1] ?? null);
+}
+
 /** FR-7: the languages a person can pick, in button order. */
 export const LANGUAGES = ['pl', 'en', 'ru', 'uk'] as const;
 
@@ -79,6 +103,11 @@ export const BUDGET_BANDS = [
   { band: 'b5', min: 2500 },
 ] as const;
 export type BudgetBand = (typeof BUDGET_BANDS)[number]['band'];
+
+/** True for a band of `BUDGET_BANDS`: a budget button's data is checked before it is stored. */
+export function isBudgetBand(value: string): value is BudgetBand {
+  return BUDGET_BANDS.some(({ band }) => band === value);
+}
 
 /**
  * A typed number below this is not a monthly amount in zł ("2к", "1,5", "b3") and gets "tap a

@@ -7,6 +7,7 @@ import {
   EDIT_FIELDS,
   GENDERS,
   GRACE_DAYS,
+  INTAKE_STEPS,
   INTEREST_DAILY_LIMIT,
   LANGUAGES,
   MAX_DISTRICTS,
@@ -18,7 +19,9 @@ import {
   SMOKING,
   bandForAmount,
   countBand,
+  isBudgetBand,
   isDistrictPickComplete,
+  nextIntakeStep,
   profileCreatedProperties,
   profileEditedProperties,
   reduceDistrictPick,
@@ -56,6 +59,38 @@ describe('value sets', () => {
       'about',
       'rules',
     ]);
+  });
+});
+
+describe('INTAKE_STEPS and nextIntakeStep', () => {
+  it('keeps the decided order of spec 06 §Intake steps (D54)', () => {
+    expect(INTAKE_STEPS).toEqual([
+      'districts',
+      'budget',
+      'month',
+      'languages',
+      'gender',
+      'prefers',
+      'about',
+      'smoking',
+      'pets',
+      'adult',
+    ]);
+  });
+
+  it('gives the following step, and null after the last one or for a step outside the intake', () => {
+    expect(nextIntakeStep('districts')).toBe('budget');
+    expect(nextIntakeStep('budget')).toBe('month');
+    expect(nextIntakeStep('month')).toBe('languages');
+    expect(nextIntakeStep('adult')).toBeNull();
+    expect(nextIntakeStep('edit_budget')).toBeNull();
+  });
+});
+
+describe('isBudgetBand', () => {
+  it('accepts b1 – b5 only', () => {
+    expect(['b1', 'b2', 'b3', 'b4', 'b5'].every(isBudgetBand)).toBe(true);
+    expect(['b0', 'b6', 'B1', '', 'b1 '].some(isBudgetBand)).toBe(false);
   });
 });
 

@@ -62,10 +62,20 @@ the migrations are missing (`docs/architecture.md` §9).
   `tg_roommate_flow_started`, the intro and the districts step. One intake is open
   per chat: the deposit questions do not start while a roommate draft or edit
   step is open, and the other way round. Typed text goes to an open roommate
-  step that takes text first (a district name at the districts step); at a
-  button-only step it is answered as usual plus the "/cancel leaves the roommate
-  questions" line. Every roommate handler stores the Telegram username on the
-  profile when it changed.
+  step that takes text first (a district name at the districts step, an amount
+  at the budget step); at a button-only step, or for text the step cannot read,
+  it is answered as usual plus the "/cancel leaves the roommate questions" line.
+  Every roommate handler stores the Telegram username on the profile when it
+  changed.
+- **Roommate intake, steps 1 – 3** (spec 06 §Intake steps): districts
+  (`rm:d:<slug>:<1|0>` carries the target state and edits the keyboard in place,
+  up to 3 or `rm:d:any`, then `rm:d:done`), budget per person (`rm:b:<b1..b5>` or
+  a typed amount through `bandForAmount`) and move-in month (four
+  `rm:m:<YYYY-MM>` buttons from `moveInMonthOptions`, Warsaw time). A button
+  whose step has moved on gets "this step is done" and the current step; a step
+  advances only through `advanceStep` (`updateMany where { id, step }`), so a
+  double tap or a redelivered update moves it once. The intake order is
+  `INTAKE_STEPS` in `../roommate/rules.ts`.
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the

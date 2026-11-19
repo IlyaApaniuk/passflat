@@ -8,8 +8,19 @@ import {
   type Context,
 } from 'grammy';
 
-import { MAX_DISTRICTS, reduceDistrictPick, type DistrictPick } from '@/lib/roommate/rules';
 import {
+  BUDGET_BANDS,
+  MAX_DISTRICTS,
+  bandForAmount,
+  isBudgetBand,
+  isDistrictPickComplete,
+  nextIntakeStep,
+  reduceDistrictPick,
+  type BudgetBand,
+  type DistrictPick,
+} from '@/lib/roommate/rules';
+import {
+  advanceStep,
   clearEditStep,
   createDraft,
   deleteDraft,
@@ -18,7 +29,15 @@ import {
   loadRoommateEntry,
   setDistrictPick,
   setRoommateUsername,
+  type StepAnswer,
 } from '@/lib/roommate/store';
+import {
+  formatMoveInMonth,
+  isMoveInMonthPast,
+  monthKey,
+  moveInMonthOptions,
+  parseMonthKey,
+} from '@/lib/roommate/time';
 
 import { track } from './analytics';
 import { hasOpenIntake } from './deposit-flow';
@@ -31,9 +50,10 @@ import { touchChat, type TouchedChat } from './store';
 import { normalizeLocale, type BotLocale } from './texts';
 
 /**
- * The roommate conversation in the bot (spec 06): the entry and its routing for
- * now; the intake steps, the own card, edit, delete, renew, the counts reply and
- * the opt-in are added here by their tasks.
+ * The roommate conversation in the bot (spec 06): the entry and its routing and
+ * the intake steps districts, budget and move-in month for now; the later steps,
+ * the own card, edit, delete, renew, the counts reply and the opt-in are added
+ * here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -155,14 +175,67 @@ async function sendDistrictsStep(
   });
 }
 
+/** Amounts as the bot's cards write them: "1 199" with no-break spaces, in every locale. */
+function amount(value: number): string {
+  return value.toLocaleString('ru-RU').replace(/\s/g, String.fromCharCode(0xa0));
+}
+
+/**
+ * A band's label from the bounds in `BUDGET_BANDS`: "до 1 199 zł", "1 200 – 1 599 zł",
+ * "2 500 zł и больше". A band runs up to the next band's `min` minus one złoty.
+ */
+function budgetBandLabel(band: BudgetBand, locale: BotLocale): string {
+  const index = BUDGET_BANDS.findIndex((b) => b.band === band);
+  const next = BUDGET_BANDS[index + 1];
+  if (index === 0) return rt(locale, 'bandUpTo', { max: amount(next.min - 1) });
+  if (!next) return rt(locale, 'bandFrom', { min: amount(BUDGET_BANDS[index].min) });
+  return rt(locale, 'bandRange', {
+    min: amount(BUDGET_BANDS[index].min),
+    max: amount(next.min - 1),
+  });
+}
+
+/** Step 2: one band per row, cheapest first (`rm:b:<band>`). */
+async function sendBudgetStep(ctx: Context, locale: BotLocale): Promise<void> {
+  const keyboard = InlineKeyboard.from(
+    BUDGET_BANDS.map(({ band }) => [
+      InlineKeyboard.text(budgetBandLabel(band, locale), `rm:b:${band}`),
+    ]),
+  );
+  await ctx.reply(rt(locale, 'askBudget'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
+/** "декабрь 2026" → "Декабрь 2026" on a button. */
+function capitalize(value: string): string {
+  return value.charAt(0).toLocaleUpperCase() + value.slice(1);
+}
+
+/**
+ * Step 3: the current Warsaw month and the next three at `now`, two per row, in the
+ * locale's month names (`rm:m:<YYYY-MM>`).
+ */
+async function sendMonthStep(ctx: Context, locale: BotLocale, now: Date): Promise<void> {
+  const buttons = moveInMonthOptions(now).map((month) =>
+    InlineKeyboard.text(capitalize(formatMoveInMonth(month, locale)), `rm:m:${monthKey(month)}`),
+  );
+  const keyboard = InlineKeyboard.from([buttons]).toFlowed(2);
+  await ctx.reply(rt(locale, 'askMonth'), { parse_mode: 'HTML', reply_markup: keyboard });
+}
+
 /** The question of the profile's open step, sent again (a draft reopened, a stale answer). */
 async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocale): Promise<void> {
   switch (profile.step) {
     case 'districts':
       await sendDistrictsStep(ctx, profile, locale, await cityDistricts());
       return;
+    case 'budget':
+      await sendBudgetStep(ctx, locale);
+      return;
+    case 'month':
+      await sendMonthStep(ctx, locale, new Date());
+      return;
     default:
-      // The later steps (T071 – T075) add their questions here.
+      // The later steps (T072 – T075) add their questions here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -172,6 +245,47 @@ async function resendCurrentStep(ctx: Context, chatDbId: string, locale: BotLoca
   await ctx.reply(rt(locale, 'stepDone'));
   const profile = await findRoommateProfile(chatDbId);
   if (profile && isStepOpen(profile)) await sendStep(ctx, profile, locale);
+}
+
+/**
+ * The chat's profile when it is at `step`, the step a tapped button belongs to.
+ * Otherwise (an older message, a repeated tap after the step moved on, a draft
+ * already closed) "this step is done", the current step again if one is open,
+ * and null (spec 06 "Stale and repeated taps").
+ */
+async function profileAtStep(
+  ctx: Context,
+  chatDbId: string,
+  locale: BotLocale,
+  step: string,
+): Promise<RoommateProfile | null> {
+  const profile = await findRoommateProfile(chatDbId);
+  if (profile && profile.status !== 'hidden') await rememberUsername(ctx, profile);
+  if (profile && isStepOpen(profile) && profile.step === step) return profile;
+
+  await ctx.reply(rt(locale, 'stepDone'));
+  if (profile && isStepOpen(profile)) await sendStep(ctx, profile, locale);
+  return null;
+}
+
+/**
+ * Stores the open step's answer and asks the next question, through the
+ * conditional write of `advanceStep`; when another update moved the step on
+ * meanwhile, nothing is stored and the current step is sent again.
+ */
+async function moveOn(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  answer: StepAnswer = {},
+): Promise<void> {
+  const from = profile.step!;
+  const to = nextIntakeStep(from);
+  if (!(await advanceStep(profile.id, from, to, answer))) {
+    await resendCurrentStep(ctx, profile.chatId, locale);
+    return;
+  }
+  await sendStep(ctx, { ...profile, ...answer, step: to }, locale);
 }
 
 /**
@@ -303,9 +417,25 @@ async function districtsText(
 }
 
 /**
+ * A typed amount at the budget step ("1650", "1 650 zł") stored as its band
+ * (`bandForAmount`). False for text without one amount, so the text goes on to
+ * the district check or the address lookup (spec 06 §Entry and routing).
+ */
+async function budgetText(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  text: string,
+): Promise<boolean> {
+  const band = bandForAmount(text);
+  if (!band) return false;
+  await moveOn(ctx, profile, locale, { budgetBand: band });
+  return true;
+}
+
+/**
  * The steps that take typed text, each returning false for text it cannot use.
- * The budget number (T071), the short text (T073) and the edit steps (T075)
- * join them.
+ * The short text (T073) and the edit steps (T075) join them.
  */
 const TEXT_STEPS: Record<
   string,
@@ -313,7 +443,103 @@ const TEXT_STEPS: Record<
   | undefined
 > = {
   districts: districtsText,
+  budget: budgetText,
 };
+
+// ---------------------------------------------------------------------------------------------
+// Intake buttons, steps 1 – 3 (spec 06 §Intake steps; callback data of §Entry and routing)
+// ---------------------------------------------------------------------------------------------
+
+/** A district toggle carries its target state: `1` picks, `0` unpicks. */
+export const DISTRICT_TOGGLE = /^rm:d:([^:]+):([01])$/;
+export const BUDGET_TAP = /^rm:b:([^:]+)$/;
+export const MONTH_TAP = /^rm:m:([^:]+)$/;
+
+/** The capture groups of a regex-triggered callback. */
+function matchGroups(ctx: CallbackQueryContext<Context>): string[] {
+  return typeof ctx.match === 'string' ? [] : [...ctx.match].slice(1);
+}
+
+/**
+ * `rm:d:<slug>:<1|0>`: sets the district to the button's target state, so a
+ * repeated tap sets the same state; a 4th district is refused with a toast and
+ * changes nothing; a slug outside the `District` table is ignored. The keyboard
+ * is edited in place.
+ */
+const handleDistrictToggle = roommateCallback(async (ctx, chat, locale) => {
+  const [slug, state] = matchGroups(ctx);
+  const districts = await cityDistricts();
+  if (!districts.some((district) => district.slug === slug)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  if (!profile) return;
+
+  const result = reduceDistrictPick(profile, { kind: 'district', slug, on: state === '1' });
+  if (!result.ok) return rt(locale, 'districtLimit', { max: String(MAX_DISTRICTS) });
+  if (!(await setDistrictPick(profile.id, 'districts', result.pick))) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  await ctx.editMessageReplyMarkup({
+    reply_markup: districtsKeyboard(districts, result.pick, locale),
+  });
+});
+
+/** `rm:d:any`: "Any district" stores `any_district=true` and no districts. */
+const handleAnyDistrict = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  if (!profile) return;
+
+  const result = reduceDistrictPick(profile, { kind: 'any' });
+  if (!(await setDistrictPick(profile.id, 'districts', result.pick))) {
+    await resendCurrentStep(ctx, chat.id, locale);
+    return;
+  }
+  await ctx.editMessageReplyMarkup({
+    reply_markup: districtsKeyboard(await cityDistricts(), result.pick, locale),
+  });
+});
+
+/** `rm:d:done`: moves on to the budget with 1 – 3 districts or "any"; with nothing picked, asks again. */
+const handleDistrictsDone = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'districts');
+  if (!profile) return;
+  if (!isDistrictPickComplete(profile)) return rt(locale, 'districtsEmpty');
+  await moveOn(ctx, profile, locale);
+});
+
+/** `rm:b:<b1..b5>`: stores the band and moves on to the month; an unknown band is ignored. */
+const handleBudgetTap = roommateCallback(async (ctx, chat, locale) => {
+  const [band] = matchGroups(ctx);
+  if (!isBudgetBand(band)) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'budget');
+  if (!profile) return;
+  await moveOn(ctx, profile, locale, { budgetBand: band });
+});
+
+/**
+ * `rm:m:<YYYY-MM>`: stores the first day of the month and moves on. A month that
+ * has passed (an older message) gets the step again with the current months; a
+ * month the step never offers is ignored.
+ */
+const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
+  const [key] = matchGroups(ctx);
+  const month = parseMonthKey(key);
+  if (!month) return;
+
+  const profile = await profileAtStep(ctx, chat.id, locale, 'month');
+  if (!profile) return;
+
+  const now = new Date();
+  if (isMoveInMonthPast(month, now)) {
+    await ctx.reply(rt(locale, 'monthPassed'));
+    await sendMonthStep(ctx, locale, now);
+    return;
+  }
+  if (!moveInMonthOptions(now).some((option) => option.getTime() === month.getTime())) return;
+  await moveOn(ctx, profile, locale, { moveInMonth: month });
+});
 
 /**
  * Typed text while a roommate step is open, asked before anything else reads the
@@ -380,4 +606,9 @@ export const handleRoommateStartTap = roommateCallback(async (ctx, chat, locale)
 export function registerRoommateFlow(bot: Bot): void {
   bot.command('mate', handleMate);
   bot.callbackQuery('rm:start', handleRoommateStartTap);
+  bot.callbackQuery(DISTRICT_TOGGLE, handleDistrictToggle);
+  bot.callbackQuery('rm:d:any', handleAnyDistrict);
+  bot.callbackQuery('rm:d:done', handleDistrictsDone);
+  bot.callbackQuery(BUDGET_TAP, handleBudgetTap);
+  bot.callbackQuery(MONTH_TAP, handleMonthTap);
 }

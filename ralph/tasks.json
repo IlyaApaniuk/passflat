@@ -180,14 +180,14 @@
       "title": "Intake steps: districts, budget, move-in month (FR-4 – FR-6)",
       "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
       "dependsOn": ["T065", "T066", "T069"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Steps 1 – 3 of spec 06 §Intake steps with the callback data of §Entry and routing: district toggles edited in place with ✓, the 4th-pick refusal, 'Any district', Done with nothing picked, typed district names through matchDistrict; budget buttons and typed amounts through bandForAmount; four month buttons from moveInMonthOptions in the locale",
         "Stale buttons and a passed month resend the current step; a slug outside the District table is ignored; district toggles carry the target state (rm:d:<slug>:1|0) so a repeated tap sets the same state, and each step advances through updateMany where { id, step } with count === 1 (spec 06 'Stale and repeated taps')",
         "Tests for each edge case listed in spec 06 steps 1 – 3"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

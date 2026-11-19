@@ -85,6 +85,20 @@ function monthFromIndex(index: number): Date {
   return new Date(Date.UTC(Math.floor(index / 12), index % 12, 1));
 }
 
+/** `YYYY-MM` of a month value, the form a move-in button carries (`rm:m:2026-12`). */
+export function monthKey(month: Date): string {
+  return `${month.getUTCFullYear()}-${String(month.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** The month value of a `YYYY-MM` key, or null when the key is not a real month. */
+export function parseMonthKey(key: string): Date | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(key);
+  if (!match) return null;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return new Date(Date.UTC(Number(match[1]), month - 1, 1));
+}
+
 /** The current Warsaw month of `now` and the next three, as month values (FR-6). */
 export function moveInMonthOptions(now: Date): Date[] {
   const current = warsawMonthIndex(now);

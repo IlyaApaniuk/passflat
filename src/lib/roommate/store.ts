@@ -2,7 +2,7 @@ import { Prisma, type RoommateProfile } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 
-import type { DistrictPick } from './rules';
+import { INTAKE_STEPS, type DistrictPick } from './rules';
 
 /**
  * Prisma access for roommate profiles (spec 06 §Module layout; server only).
@@ -12,7 +12,24 @@ import type { DistrictPick } from './rules';
  */
 
 /** The step every new draft starts at (spec 06 §Intake steps, step 1). */
-const FIRST_STEP = 'districts';
+const FIRST_STEP = INTAKE_STEPS[0];
+
+/** The answer fields an intake or edit step stores as it moves on. */
+export type StepAnswer = Partial<
+  Pick<
+    RoommateProfile,
+    | 'districtSlugs'
+    | 'anyDistrict'
+    | 'budgetBand'
+    | 'moveInMonth'
+    | 'languages'
+    | 'gender'
+    | 'prefers'
+    | 'about'
+    | 'smoking'
+    | 'pets'
+  >
+>;
 
 /**
  * A draft, or an edit or renewal step of an active or expired profile: the
@@ -104,6 +121,25 @@ export async function setDistrictPick(
   const { count } = await prisma.roommateProfile.updateMany({
     where: { id: profileId, step },
     data: { districtSlugs: [...pick.districtSlugs], anyDistrict: pick.anyDistrict },
+  });
+  return count === 1;
+}
+
+/**
+ * Stores a step's answer and moves the profile from step `from` to `to` in one
+ * conditional write: false when the profile is no longer at `from` (a repeated
+ * tap, a redelivered update, an older message), and then nothing changed (spec 06
+ * "Stale and repeated taps").
+ */
+export async function advanceStep(
+  profileId: string,
+  from: string,
+  to: string | null,
+  answer: StepAnswer = {},
+): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, step: from },
+    data: { ...answer, step: to },
   });
   return count === 1;
 }

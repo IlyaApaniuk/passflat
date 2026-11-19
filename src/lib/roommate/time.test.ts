@@ -8,8 +8,10 @@ import {
   formatMoveInMonth,
   isMoveInMonthPast,
   isRoommateSendHour,
+  monthKey,
   monthOffset,
   moveInMonthOptions,
+  parseMonthKey,
 } from './time';
 
 /** An instant. */
@@ -20,6 +22,30 @@ const iso = (dates: Date[]) => dates.map((d) => d.toISOString());
 
 afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+describe('monthKey and parseMonthKey (the move-in button data rm:m:<YYYY-MM>)', () => {
+  it('writes and reads YYYY-MM of a month value', () => {
+    expect(monthKey(month('2026-12'))).toBe('2026-12');
+    expect(monthKey(month('2027-03'))).toBe('2027-03');
+    expect(parseMonthKey('2027-01')?.toISOString()).toBe('2027-01-01T00:00:00.000Z');
+    for (const m of moveInMonthOptions(at('2026-12-05T10:00:00Z'))) {
+      expect(parseMonthKey(monthKey(m))?.getTime()).toBe(m.getTime());
+    }
+  });
+
+  it.each(['2027-13', '2027-00', '2027-1', '27-01', '2027-01-01', 'abc', ''])(
+    'reads %j as no month',
+    (key) => {
+      expect(parseMonthKey(key)).toBeNull();
+    },
+  );
+
+  it('does not depend on the process time zone', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    expect(monthKey(month('2027-01'))).toBe('2027-01');
+    expect(parseMonthKey('2027-01')?.toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
 });
 
 describe('constants (D68, FR-6)', () => {
