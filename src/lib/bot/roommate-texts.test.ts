@@ -214,7 +214,7 @@ describe('roommate texts: PRD 3 §8 drafts verbatim', () => {
 describe('roommate texts: numbers agree with the rules', () => {
   it('names the profile life of rules.ts wherever it says the days', () => {
     for (const locale of LOCALES) {
-      for (const key of ['intro', 'renewalReminder', 'btnRenew'] as const) {
+      for (const key of ['intro', 'introMatching', 'renewalReminder', 'btnRenew'] as const) {
         expect(rt(locale, key), `${locale}.${key}`).toContain(String(PROFILE_LIFE_DAYS));
       }
     }

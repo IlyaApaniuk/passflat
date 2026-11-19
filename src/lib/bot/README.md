@@ -59,7 +59,9 @@ the migrations are missing (`docs/architecture.md` §9).
   profile gets the FR-14 reply (with "Delete my profile" while the profile
   exists), a saved profile its own card, a draft its current step again, an open
   deposit intake a "/cancel" line; otherwise a new draft, one
-  `tg_roommate_flow_started`, the intro and the districts step. One intake is open
+  `tg_roommate_flow_started`, the intro (`intro`, or `introMatching` with the
+  switch on: who sees the profile instead of "nobody sees it") and the districts
+  step. One intake is open
   per chat: the deposit questions do not start while a roommate draft or edit
   step is open, and the other way round. Typed text goes to an open roommate
   step that takes text first (a district name at the districts step, an amount
@@ -139,10 +141,13 @@ the migrations are missing (`docs/architecture.md` §9).
   off the reply carries the opt-in button.
 - **Opt-in** (spec 06 §Opt-in, FR-18): "Message me when matching opens"
   (`rm:c:optin`) under the counts reply and on the card, both only while the
-  switch is off. `optInToOpenMessage` sets `notify_on_open_at` (`updateMany where
-{ id, status in [active, expired], notify_on_open_at: null }`): the write that
-  lands sends `tg_roommate_browse_opted_in` with `already=false`, a repeat tap
-  `already=true` and "Already on." first. The reply is `optInConfirm` (the one
+  switch is off. `optInToOpenMessage` sets `notify_on_open_at` and clears
+  `notified_open_at` (`updateMany where { id, status in [active, expired], OR:
+[notify_on_open_at null, notified_open_at not null] }`, so a person told at an
+  earlier opening, before the switch went off again, is told at the next one):
+  the write that lands sends `tg_roommate_browse_opted_in` with `already=false`,
+  a repeat tap `already=true` and "Already on." first. The card shows the opt-in
+  as on only while the message waits (`waitsForOpenMessage`). The reply is `optInConfirm` (the one
   message, which comes only while the profile is active) and `optInClosing`
   (D64); both are the promise check's exceptions, backed by
   `sendMatchingOpenMessages` and the closing route. The card shows the state and
@@ -152,7 +157,8 @@ the migrations are missing (`docs/architecture.md` §9).
 - **Cards** (spec 07 §Cards, FR-25; `roommate-matching.ts`): "Show people"
   (`rm:show:<via>`: `c` the own card, `o` the one-time message, `p` the daily push,
   `n` "That's everyone"; a bare `rm:show` counts as `c`). With the switch off every
-  card button replies "matching is paused" and reads nothing. With it on: no
+  card button replies "matching is paused" and changes nothing but the stored
+  username (as every roommate handler stores it). With it on: no
   profile → "create a profile first" and the intake (a banned chat, a hidden
   profile, a draft get what `/mate` gives them); an expired profile (also one past
   `expires_at` the cron has not marked) → "renew to keep browsing" with Renew; else
@@ -407,6 +413,11 @@ while `ROOMMATE_MATCHING_ENABLED` is exactly `true` (`isMatchingEnabled()` in
 Vercel applies a changed variable only to a new deployment, so turning the
 switch on or off is: set the variable, then redeploy (owner step). Record the
 moment in the posting log and as a PostHog annotation (spec 07 §Switch).
+With it off, `/mate` shows the stage 1 intro and card, and every stage 2 button
+(`rm:show*`, `rm:i:*`, `rm:x:*`, `rm:u:done`, `rm:push:on`) replies "matching is
+paused". Turning it off again keeps stored reactions and sent reveals; the next
+steps, "Stop daily messages", the outcome question and its answers, and the
+send-hour retry of waiting reveals keep working (`roommate-switch.test.ts`).
 
 ## Deep links
 

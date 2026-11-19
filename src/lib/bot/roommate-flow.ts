@@ -60,6 +60,7 @@ import {
   setDistrictPick,
   setLanguages,
   setRoommateUsername,
+  waitsForOpenMessage,
   type StepAnswer,
 } from '@/lib/roommate/store';
 import { isMatchingEnabled } from '@/lib/roommate/switch';
@@ -592,7 +593,8 @@ export function cardFieldLines(
  * The own card's text (spec 06 §Save and the own card): every field the person
  * chose (a skipped optional field has no line; own gender and "live with" are
  * shown here and nowhere else), the hide date in Warsaw time, and the opt-in
- * state with the switch off or the daily-message state with it on.
+ * state with the switch off (on only while the one-time message waits,
+ * `waitsForOpenMessage`) or the daily-message state with it on.
  */
 function ownCardText(
   profile: RoommateProfile,
@@ -623,7 +625,7 @@ function ownCardText(
   if (matchingEnabled) {
     state.push(pushStateLine(profile, locale));
   } else {
-    state.push(rt(locale, profile.notifyOnOpenAt ? 'cardOptInOn' : 'cardOptInOff'));
+    state.push(rt(locale, waitsForOpenMessage(profile) ? 'cardOptInOn' : 'cardOptInOff'));
     state.push(rt(locale, 'cardHiddenUntilOpen'));
   }
   state.push(rt(locale, 'cardPrivateNote'));
@@ -672,7 +674,7 @@ function ownCardKeyboard(
     rows.push(
       [InlineKeyboard.text(rt(locale, 'btnCounts'), 'rm:c:counts')],
       [
-        profile.notifyOnOpenAt
+        waitsForOpenMessage(profile)
           ? InlineKeyboard.text(rt(locale, 'btnOptOut'), OPT_OUT_CALLBACK)
           : InlineKeyboard.text(rt(locale, 'btnOptIn'), OPT_IN_CALLBACK),
       ],
@@ -872,7 +874,9 @@ export async function openRoommate(
       : { entry_source: entry.source },
   );
   const privacyUrl = escapeHtml(webLink('/privacy#roommate-matching', locale, 'roommate'));
-  await ctx.reply(rt(locale, 'intro', { privacyUrl }), {
+  // With the switch on, people who fit see the saved profile: the stage 1 intro would say nobody does.
+  const intro = isMatchingEnabled() ? 'introMatching' : 'intro';
+  await ctx.reply(rt(locale, intro, { privacyUrl }), {
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
   });
@@ -1392,7 +1396,8 @@ function optInReply(locale: BotLocale, already: boolean): string {
 
 /**
  * `rm:c:optin` ("Message me when matching opens", under the counts reply and on the card of a
- * saved profile): sets `notify_on_open_at` through the conditional write of `optInToOpenMessage`.
+ * saved profile): sets `notify_on_open_at` through the conditional write of `optInToOpenMessage`,
+ * which also re-arms a profile told at an earlier opening (the switch on, then off again).
  * The write that lands sends `tg_roommate_browse_opted_in` with `already=false`; a repeat tap (or
  * the second of two overlapping taps) changes nothing and sends it with `already=true`. With the
  * switch on the button is not shown (people browse at once): an old one gets the card, with

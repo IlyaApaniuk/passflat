@@ -197,15 +197,32 @@ export async function renewProfile(
 }
 
 /**
- * Switches the opt-in on (spec 06 §Opt-in, FR-18): `notify_on_open_at = now` on a saved (active or
- * expired) profile that has not opted in. One conditional write on `notify_on_open_at` being
- * null, so of two overlapping taps only one is the first: false means it was already on (or the
- * profile is no longer saved), and nothing changed.
+ * True while the one-time message (spec 06 §Matching is open) waits for this profile: opted in and
+ * not told yet. A profile told at an earlier opening (the switch went on, then off again, spec 07
+ * §Switch) is not waiting, whatever `notify_on_open_at` holds.
+ */
+export function waitsForOpenMessage(
+  profile: Pick<RoommateProfile, 'notifyOnOpenAt' | 'notifiedOpenAt'>,
+): boolean {
+  return profile.notifyOnOpenAt !== null && profile.notifiedOpenAt === null;
+}
+
+/**
+ * Switches the opt-in on (spec 06 §Opt-in, FR-18): `notify_on_open_at = now` and
+ * `notified_open_at` cleared on a saved (active or expired) profile whose opt-in is not waiting
+ * (`waitsForOpenMessage`): never opted in, or told at an earlier opening, so "I'll message you
+ * once when matching opens" holds for the next opening too (spec 07 §Switch, turning it off
+ * again). One conditional write, so of two overlapping taps only one is the first: false means
+ * it was already on (or the profile is no longer saved), and nothing changed.
  */
 export async function optInToOpenMessage(profileId: string, now: Date): Promise<boolean> {
   const { count } = await prisma.roommateProfile.updateMany({
-    where: { id: profileId, status: { in: ['active', 'expired'] }, notifyOnOpenAt: null },
-    data: { notifyOnOpenAt: now },
+    where: {
+      id: profileId,
+      status: { in: ['active', 'expired'] },
+      OR: [{ notifyOnOpenAt: null }, { notifiedOpenAt: { not: null } }],
+    },
+    data: { notifyOnOpenAt: now, notifiedOpenAt: null },
   });
   return count === 1;
 }

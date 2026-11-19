@@ -107,6 +107,19 @@ function isLive(profile: RoommateProfile, now: Date): boolean {
 }
 
 /**
+ * "Matching is paused" (spec 07 §Switch): the reply to a stage 2 button tapped while the switch is
+ * off, which changes nothing else (no card, no reaction, no event). Like every roommate handler it
+ * stores the username on the chat's profile (§Usernames), so a reveal formed before the switch
+ * went off and waiting on that username goes out in the send-hour retry, which runs with the
+ * switch off too.
+ */
+async function replyPaused(ctx: Context, chat: TouchedChat, locale: BotLocale): Promise<void> {
+  const profile = await findRoommateProfile(chat.id);
+  if (profile) await rememberUsername(ctx, profile);
+  await ctx.reply(rt(locale, 'matchingPaused'));
+}
+
+/**
  * The person's own profile when they may browse now (spec 07 §Cards). Otherwise the reply that
  * takes the cards' place, and null: "matching is paused" with the switch off (§Switch); "renew to
  * keep browsing" with Renew for an expired profile (also one the daily cron has not marked yet);
@@ -120,7 +133,7 @@ async function browsingProfile(
   now: Date,
 ): Promise<RoommateProfile | null> {
   if (!isMatchingEnabled()) {
-    await ctx.reply(rt(locale, 'matchingPaused'));
+    await replyPaused(ctx, chat, locale);
     return null;
   }
   const state = await loadRoommateEntry(chat.id);
@@ -343,7 +356,7 @@ const handlePushToggle = roommateCallback(async (ctx, chat, locale) => {
   const [state] = matchGroups(ctx);
   const off = state === 'off';
   if (!off && !isMatchingEnabled()) {
-    await ctx.reply(rt(locale, 'matchingPaused'));
+    await replyPaused(ctx, chat, locale);
     return;
   }
   const profile = await savedProfileFor(ctx, chat.id, locale);

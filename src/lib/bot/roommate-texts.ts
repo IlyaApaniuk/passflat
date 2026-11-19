@@ -28,6 +28,8 @@ import { peopleWord } from './texts';
  * reveal's username prompt and the three next steps. The daily push (§Daily push)
  * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages". The
  * outcome question (§Outcome question) adds the question and its four answers.
+ * `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
+ * that nobody sees the profile until matching opens is replaced by who sees what.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -44,6 +46,9 @@ const RU = {
   btnStart: '🏠 Найти, с кем снять квартиру',
   intro:
     'Найдём, с кем снять квартиру. Ответь на несколько коротких вопросов: районы, бюджет на человека, месяц заезда, языки. Анкету никто не видит, пока не откроется подбор. Анкета живёт 30 дней, удалить её можно в любой момент. Только для 18+. Как мы храним данные: <a href="{privacyUrl}">политика конфиденциальности</a>.',
+  /** The intro with the switch on (spec 07 §Switch), an agent draft: who sees the profile and the username. */
+  introMatching:
+    'Найдём, с кем снять квартиру. Ответь на несколько коротких вопросов: районы, бюджет на человека, месяц заезда, языки. Анкету видят только подходящие тебе люди, а твой username — только при взаимном интересе. Анкета живёт 30 дней, удалить её можно в любой момент. Только для 18+. Как мы храним данные: <a href="{privacyUrl}">политика конфиденциальности</a>.',
   /** FR-14: a banned chat (or a hidden profile); points to the statement of reasons. */
   banned:
     'В этом чате нельзя создать анкету для подбора соседей. Почему и как это обжаловать — в сообщении о решении, которое ты получил(а) раньше.',
@@ -308,6 +313,8 @@ const UK: Record<Key, string> = {
   btnStart: '🏠 Знайти, з ким зняти квартиру',
   intro:
     'Знайдемо, з ким зняти квартиру. Дай відповідь на кілька коротких запитань: райони, бюджет на людину, місяць заїзду, мови. Анкету ніхто не бачить, доки не відкриється підбір. Анкета живе 30 днів, видалити її можна будь-коли. Лише для 18+. Як ми зберігаємо дані: <a href="{privacyUrl}">політика конфіденційності</a>.',
+  introMatching:
+    'Знайдемо, з ким зняти квартиру. Дай відповідь на кілька коротких запитань: райони, бюджет на людину, місяць заїзду, мови. Анкету бачать лише люди, які тобі підходять, а твій username — лише за взаємного інтересу. Анкета живе 30 днів, видалити її можна будь-коли. Лише для 18+. Як ми зберігаємо дані: <a href="{privacyUrl}">політика конфіденційності</a>.',
   banned:
     'У цьому чаті не можна створити анкету для підбору сусідів. Чому і як це оскаржити — у повідомленні про рішення, яке ти отримав(-ла) раніше.',
   btnDeleteMyProfile: '🗑 Видалити мою анкету',
@@ -524,6 +531,8 @@ const EN: Record<Key, string> = {
   btnStart: '🏠 Find someone to rent with',
   intro:
     'Let\'s find someone to rent with. Answer a few short questions: districts, budget per person, move-in month, languages. Nobody sees your profile until matching opens. It lasts 30 days and you can delete it any time. 18+ only. How we keep your data: <a href="{privacyUrl}">privacy policy</a>.',
+  introMatching:
+    'Let\'s find someone to rent with. Answer a few short questions: districts, budget per person, move-in month, languages. Only people who fit you see your profile, and your username only when the interest is mutual. It lasts 30 days and you can delete it any time. 18+ only. How we keep your data: <a href="{privacyUrl}">privacy policy</a>.',
   banned:
     "This chat can't create a matching profile. Why, and how to appeal, is in the decision message you received earlier.",
   btnDeleteMyProfile: '🗑 Delete my profile',

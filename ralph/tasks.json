@@ -560,14 +560,14 @@
       "title": "Switch on and off across the roommate flows (FR-23 criteria 2 – 3)",
       "spec": "docs/specs/07-roommate-matching.md#switch",
       "dependsOn": ["T070", "T084", "T087", "T089", "T090"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Tests cover both switch states for /mate (the card's buttons and the capability line), rm:show, rm:i:*, the opt-in button and the cron's stage 2 jobs",
         "A stage 2 button tapped while the switch is off replies 'matching is paused' in ru, uk and en; reveals already sent and stored reactions stay; the outcome question and moderation keep working",
         "Any gap found in an earlier task's switch handling is fixed here and named in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49: the owner turns the switch on (D58)."
     },
     {
@@ -585,7 +585,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "D49."
+      "notes": "D49.\nFrom T092: spec 07 §Switch keeps moderation working with the switch off, so rm:r:* and rm:rr:* must not read the switch (a Report under a reveal sent before a switch-off still works); add a switch-off case to its tests (roommate-switch.test.ts has a fake for taps plus whole runs)."
     },
     {
       "id": "T094",

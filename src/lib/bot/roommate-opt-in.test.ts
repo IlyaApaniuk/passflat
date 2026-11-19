@@ -21,13 +21,15 @@ const db = vi.hoisted(() => {
   function matches(row: Row, where: Where): boolean {
     return Object.entries(where).every(([key, cond]) => {
       if (key === 'chat') return matches(chatOf(row), cond as Where);
+      if (key === 'OR') return (cond as Where[]).some((part) => matches(row, part));
       const value = row[key];
       if (cond === null) return value === null;
       if (cond instanceof Date) return value instanceof Date && value.getTime() === cond.getTime();
       if (typeof cond === 'object') {
-        const c = cond as { in?: unknown[]; gt?: Date };
+        const c = cond as { in?: unknown[]; gt?: Date; not?: unknown };
         if (c.in) return c.in.includes(value);
         if (c.gt) return value instanceof Date && value.getTime() > c.gt.getTime();
+        if (c.not === null) return value !== null;
         throw new Error(`unsupported filter on ${key}`);
       }
       return value === cond;
@@ -342,13 +344,17 @@ describe('the first tap', () => {
     expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
   });
 
-  it('writes only notify_on_open_at, conditionally on it being unset', async () => {
+  it('writes the opt-in columns only, conditionally on no opt-in waiting', async () => {
     seed({});
     await tap('rm:c:optin');
     expect(db.prisma.roommateProfile.updateMany.mock.calls.map(([args]) => args)).toEqual([
       {
-        where: { id: 'P8', status: { in: ['active', 'expired'] }, notifyOnOpenAt: null },
-        data: { notifyOnOpenAt: NOW },
+        where: {
+          id: 'P8',
+          status: { in: ['active', 'expired'] },
+          OR: [{ notifyOnOpenAt: null }, { notifiedOpenAt: { not: null } }],
+        },
+        data: { notifyOnOpenAt: NOW, notifiedOpenAt: null },
       },
     ]);
   });
