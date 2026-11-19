@@ -54,9 +54,10 @@ const OBSERVATION_FORMS: Record<BotLocale, [string, string, string]> = {
   uk: ['спостереження', 'спостереження', 'спостережень'],
 };
 
-const TENANCY_FORMS: Record<BotLocale, [string, string, string]> = {
-  ru: ['завершённой аренде', 'завершённым арендам', 'завершённым арендам'],
-  uk: ['завершеній оренді', 'завершеним орендам', 'завершеним орендам'],
+/** "2 из 3 ответивших", "1 из 21 ответившего"; the UK relative clause does not agree. */
+const ANSWERED_FORMS: Record<BotLocale, [string, string, string]> = {
+  ru: ['ответившего', 'ответивших', 'ответивших'],
+  uk: ['тих, хто відповів', 'тих, хто відповів', 'тих, хто відповів'],
 };
 
 export function reportsWord(locale: BotLocale, count: number): string {
@@ -75,8 +76,8 @@ export function observationsWord(locale: BotLocale, count: number): string {
   return plural(count, OBSERVATION_FORMS[locale]);
 }
 
-export function tenanciesWord(locale: BotLocale, count: number): string {
-  return plural(count, TENANCY_FORMS[locale]);
+export function answeredWord(locale: BotLocale, count: number): string {
+  return plural(count, ANSWERED_FORMS[locale]);
 }
 
 const PEOPLE_FORMS: Record<BotLocale, [string, string, string]> = {
@@ -92,8 +93,6 @@ type Vars = Record<string, string>;
 
 const RU = {
   cityName: 'Варшава',
-  /** Prepositional case, for "По Варшаве:" — Polish district names stay as they are. */
-  cityNameIn: 'Варшаве',
 
   start:
     '👋 Это Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы.\n\n' +
@@ -109,7 +108,7 @@ const RU = {
     '• Пришли адрес — расходы по дому, а если дома нет в базе, то по его району\n' +
     '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — медиана и место в рейтинге\n' +
     '• /districts — все районы Варшавы по расходам, от дешёвых к дорогим\n' +
-    '• /deposit — сколько стоит залог и как часто его возвращают\n' +
+    '• /deposit — как часто возвращают залог и как вернуть свой\n' +
     '• Не возвращают залог? Напиши «залог» — разберу по закону и составлю письмо хозяину\n' +
     '• /my — на что ты подписан\n' +
     '• /lang — русский / українська\n\n' +
@@ -161,9 +160,8 @@ const RU = {
     'По району <b>{district}</b> отчётов пока мало, чтобы считать медиану — показываю Варшаву целиком.',
   beFirstPrompt:
     '👉 <b>Живёшь здесь?</b> Оставь отчёт — станешь первым по этому дому, и соседи увидят реальные цифры.',
-  depositLine:
-    '🔐 По {area}: залог возвращают полностью в {pct}% случаев <i>(по {answered} {word})</i>.{amount}',
-  depositTypical: 'Типичный залог — {amount}.',
+  /** Ended tenancies only; the area is nominative: a Polish district name or the city. */
+  depositLine: 'Вернули залог полностью или частично: {gotBack} из {answered} {word} ({area})',
   cardFooter: '<i>Passflat — расходы на аренду в Варшаве, о которых сообщили жильцы</i>',
 
   addressNotFound:
@@ -196,8 +194,6 @@ const RU = {
 
   // --- deposit ---
   depositHeader: '🔐 <b>Залог в Варшаве</b>',
-  depositStats:
-    'Типичный залог: <b>{amount}</b>\nВозвращают полностью: <b>{pct}%</b> <i>(по {answered} завершённым арендам)</i>',
   depositNoData: 'Данных по залогам пока мало — но они появятся: каждый отчёт добавляет цифру.',
   depositAdvice:
     'Что решает возврат: протокол приёма-передачи с фото при заезде. Без него спор о залоге — слово против слова.',
@@ -233,7 +229,6 @@ type Key = TextKey;
 
 const UK: Record<Key, string> = {
   cityName: 'Варшава',
-  cityNameIn: 'Варшаві',
 
   start:
     '👋 Це Passflat — витрати на оренду у Варшаві, про які повідомили мешканці.\n\n' +
@@ -249,7 +244,7 @@ const UK: Record<Key, string> = {
     '• Надішли адресу — витрати по будинку, а якщо будинку немає в базі, то по його району\n' +
     '• Напиши район (<code>Воля</code>, <code>Mokotów</code>) — медіана і місце в рейтингу\n' +
     '• /districts — усі райони Варшави за витратами, від дешевих до дорогих\n' +
-    '• /deposit — скільки коштує застава і як часто її повертають\n' +
+    '• /deposit — як часто повертають заставу і як повернути свою\n' +
     '• Не повертають заставу? Напиши «застава» — розберу за законом і складу лист власнику\n' +
     '• /my — на що ти підписаний\n' +
     '• /lang — русский / українська\n\n' +
@@ -299,9 +294,7 @@ const UK: Record<Key, string> = {
     'По району <b>{district}</b> звітів поки замало, щоб рахувати медіану — показую Варшаву цілком.',
   beFirstPrompt:
     '👉 <b>Живеш тут?</b> Залиш звіт — станеш першим по цьому будинку, і сусіди побачать реальні цифри.',
-  depositLine:
-    '🔐 По {area}: заставу повертають повністю у {pct}% випадків <i>(за {answered} {word})</i>.{amount}',
-  depositTypical: 'Типова застава — {amount}.',
+  depositLine: 'Повернули заставу повністю або частково: {gotBack} з {answered} {word} ({area})',
   cardFooter: '<i>Passflat — витрати на оренду у Варшаві, про які повідомили мешканці</i>',
 
   addressNotFound:
@@ -332,8 +325,6 @@ const UK: Record<Key, string> = {
     '👉 Живеш тут? Твій звіт стане одним із перших — і район з’явиться в рейтингу.',
 
   depositHeader: '🔐 <b>Застава у Варшаві</b>',
-  depositStats:
-    'Типова застава: <b>{amount}</b>\nПовертають повністю: <b>{pct}%</b> <i>(за {answered} завершеними орендами)</i>',
   depositNoData: 'Даних по заставах поки мало — але вони з’являться: кожен звіт додає цифру.',
   depositAdvice:
     'Що вирішує повернення: протокол приймання-передавання з фото при заїзді. Без нього суперечка про заставу — слово проти слова.',

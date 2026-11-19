@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { summarizeFigures, type AreaReference, type FigureReport } from '@/lib/cost-figures';
+import {
+  summarizeDepositReturns,
+  summarizeFigures,
+  type AreaReference,
+  type FigureReport,
+} from '@/lib/cost-figures';
 
-import { money, renderDistrict, renderLookup } from './format';
+import { depositStatement, money, renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
 import { plural, reportsWord, t } from './texts';
 
@@ -138,7 +143,7 @@ describe('renderLookup: area card', () => {
     expect(text).toContain('показываю Варшаву целиком');
     expect(text).toContain('📊 <b>Варшава</b> — данные по городу:');
     expect(text).toContain('медиана по 5 отчётам');
-    expect(text).toContain('По Варшаве: залог');
+    expect(text).toContain('ответивших (Варшава)');
   });
 
   it('labels a single report of the area as one observation, without a median or N', () => {
@@ -187,18 +192,101 @@ describe('renderLookup: area card', () => {
 
   it('labels the deposit stat with the area it came from', () => {
     const text = renderLookup(lookup(), 'ru');
-    expect(text).toContain('По Ochota: залог');
-    // Got back fully or partly, in the old wording until the deposit line changes (T034).
-    expect(text).toContain('в 81% случаев');
-    expect(text).toContain('по 37');
+    expect(text).toContain('🔐 Вернули залог полностью или частично: 30 из 37 ответивших (Ochota)');
+  });
+});
+
+/** Golden example 10 of spec 03: three ended tenancies answered, one current tenant did not. */
+const depositReports: FigureReport[] = [
+  report('user', { depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 4_000 }),
+  report('user', { depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 2_500 }),
+  report('user', { depositAmount: 4_000, depositReturned: false, depositReturnedAmount: 0 }),
+  report('user', { depositAmount: 4_000, depositReturned: null, isCurrentTenant: true }),
+];
+
+describe('deposit statistic (spec 04 §Deposit statistics)', () => {
+  const example10 = summarizeDepositReturns(depositReports);
+  const RU_LINE = 'Вернули залог полностью или частично: 2 из 3 ответивших (Ochota)';
+  const UK_LINE = 'Повернули заставу повністю або частково: 2 з 3 тих, хто відповів (Ochota)';
+
+  it('renders example 10 as 2 of 3 with the district name, in RU and UK', () => {
+    expect(example10).toMatchObject({ answered: 3, gotBack: 2, full: 1 });
+
+    expect(renderLookup(lookup({ deposit: example10 }), 'ru')).toContain(`🔐 ${RU_LINE}`);
+    expect(renderLookup(lookup({ deposit: example10 }), 'uk')).toContain(`🔐 ${UK_LINE}`);
+    expect(depositStatement(example10, 'Ochota', 'ru')).toBe(RU_LINE);
+    expect(depositStatement(example10, 'Ochota', 'uk')).toBe(UK_LINE);
   });
 
-  it('hides the deposit stat below three answers', () => {
-    const text = renderLookup(
-      lookup({ deposit: { answered: 2, gotBack: 2, full: 2, medianDeposit: 4000 } }),
-      'ru',
+  it('shows the same line under a building card, named after the area', () => {
+    const text = renderLookup(buildingLookup(mixedBuildingReports, { deposit: example10 }), 'ru');
+    expect(text).toContain(`🔐 ${RU_LINE}`);
+  });
+
+  it('names the city when the reference is the city or missing', () => {
+    for (const ref of [reference('city'), null]) {
+      const text = renderLookup(
+        lookup({ level: 'city', reference: ref, districtName: 'Rembertów', deposit: example10 }),
+        'ru',
+      );
+      expect(text).toContain(
+        '🔐 Вернули залог полностью или частично: 2 из 3 ответивших (Варшава)',
+      );
+      expect(text).not.toContain('ответивших (Rembertów)');
+    }
+  });
+
+  it('renders no line from 2 answers', () => {
+    const two = summarizeDepositReturns(depositReports.slice(1));
+    expect(two.answered).toBe(2);
+
+    expect(depositStatement(two, 'Ochota', 'ru')).toBeNull();
+    expect(depositStatement(two, 'Ochota', 'uk')).toBeNull();
+    for (const locale of ['ru', 'uk'] as const) {
+      const text = renderLookup(lookup({ deposit: two }), locale);
+      expect(text).not.toContain('🔐');
+      expect(text).not.toMatch(/залог|застав/i);
+    }
+  });
+
+  it('gives counts only: no percentage, no typical amount, no personal chance', () => {
+    const deposit = { answered: 37, gotBack: 30, full: 22, medianDeposit: 4_756 };
+    for (const locale of ['ru', 'uk'] as const) {
+      const line = depositStatement(deposit, 'Ochota', locale)!;
+      expect(line).not.toMatch(/%|шанс|ваш|твій|твой|zł|полностью в|повністю у/);
+      expect(line).not.toContain(money(4_756)!);
+    }
+  });
+
+  it('agrees the RU word with the count and escapes the area', () => {
+    const deposit = { answered: 21, gotBack: 20, full: 0, medianDeposit: null };
+    expect(depositStatement(deposit, 'Wola & <Koło>', 'ru')).toBe(
+      'Вернули залог полностью или частично: 20 из 21 ответившего (Wola &amp; &lt;Koło&gt;)',
     );
-    expect(text).not.toContain('залог');
+  });
+
+  it('puts the line in the typed-district answer too', () => {
+    const text = renderDistrict(
+      {
+        name: 'Wola',
+        stats: {
+          total: { median: 4_400, p25: 4_000, p75: 5_000 },
+          rentPerM2: { median: null, p25: null, p75: null },
+          totalPerM2: { median: null, p25: null, p75: null },
+          rentMedian: 3_500,
+          expensesMedian: 900,
+          count: 12,
+        },
+        deposit: example10,
+        rank: null,
+        cityMedian: null,
+      },
+      'uk',
+      5,
+    );
+    expect(text).toContain(
+      '🔐 Повернули заставу повністю або частково: 2 з 3 тих, хто відповів (Wola)',
+    );
   });
 });
 

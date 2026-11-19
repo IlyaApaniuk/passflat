@@ -26,9 +26,9 @@ vi.mock('next/cache', () => ({
 
 vi.mock('@/lib/geo/district', () => ({ resolveDistrictByPoint: h.resolveDistrictByPoint }));
 
-import { summarizeFigures, type FigureReport } from '@/lib/cost-figures';
+import { summarizeDepositReturns, summarizeFigures, type FigureReport } from '@/lib/cost-figures';
 import type { GeocodedAddress } from './geocode';
-import { lookupAddress } from './lookup';
+import { getCityDepositFacts, lookupAddress } from './lookup';
 
 type Where = {
   buildingId?: string;
@@ -308,5 +308,16 @@ describe('lookupAddress on the figure contract', () => {
     h.cityFindUnique.mockResolvedValue({ ...city, isActive: false });
     await expect(lookupAddress(geo)).resolves.toBeNull();
     expect(h.costReportFindMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('getCityDepositFacts', () => {
+  it('summarizes the city’s cost reports only; deposit cases are never read', async () => {
+    // The Prisma mock has no depositCase model: reading one would throw here.
+    const facts = await getCityDepositFacts();
+
+    expect(facts).toEqual({ deposit: summarizeDepositReturns(cityReports) });
+    expect(facts!.deposit).toMatchObject({ answered: 12, gotBack: 4 });
+    expect(depositQueries()).toEqual([{ isVisible: true, building: { cityId: 'city-1' } }]);
   });
 });

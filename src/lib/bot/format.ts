@@ -14,12 +14,12 @@ import {
   type FigureGroup,
 } from '@/lib/cost-figures';
 import {
+  answeredWord,
   listingsWord,
   observationsBasisWord,
   observationsWord,
   reportsWord,
   t,
-  tenanciesWord,
   type BotLocale,
   type TextKey,
 } from './texts';
@@ -86,18 +86,31 @@ export function submitLink(
   return url.toString();
 }
 
-function depositLine(deposit: DepositReturns, area: string, locale: BotLocale): string | null {
-  const { gotBack, answered, medianDeposit } = deposit;
+/**
+ * The deposit statistic as counts with the area it came from (spec 04 §Deposit
+ * statistics): "2 of 3 who answered got it back, fully or partly (Ochota)". No
+ * percentage, no typical amount (it has no N of its own) and no chance for the
+ * reader's own case. Null below MIN_DEPOSIT_ANSWERS answers. The cards and the
+ * /deposit command both use it, so the wording and the gate cannot drift.
+ */
+export function depositStatement(
+  deposit: DepositReturns,
+  area: string,
+  locale: BotLocale,
+): string | null {
+  const { gotBack, answered } = deposit;
   if (answered < MIN_DEPOSIT_ANSWERS) return null;
-  const pct = Math.round((gotBack / answered) * 100);
-  const amount = money(medianDeposit);
   return t(locale, 'depositLine', {
-    area: escapeHtml(area),
-    pct: String(pct),
+    gotBack: String(gotBack),
     answered: String(answered),
-    word: tenanciesWord(locale, answered),
-    amount: amount ? ` ${t(locale, 'depositTypical', { amount })}` : '',
+    word: answeredWord(locale, answered),
+    area: escapeHtml(area),
   });
+}
+
+function depositLine(deposit: DepositReturns, area: string, locale: BotLocale): string | null {
+  const statement = depositStatement(deposit, area, locale);
+  return statement && `🔐 ${statement}`;
 }
 
 /** True when the reference is the whole city (or there is none), not the district. */
@@ -107,11 +120,11 @@ function areaIsCity(lookup: AddressLookup): boolean {
 
 /**
  * Deposit figures are never building-level, so the area is always named — under
- * a building card an unlabelled "88% returned" would read as this house's record.
+ * a building card an unlabelled "2 of 3" would read as this house's record.
  */
 function lookupDepositLine(lookup: AddressLookup, locale: BotLocale): string | null {
   const area =
-    areaIsCity(lookup) || !lookup.districtName ? t(locale, 'cityNameIn') : lookup.districtName;
+    areaIsCity(lookup) || !lookup.districtName ? t(locale, 'cityName') : lookup.districtName;
   return depositLine(lookup.deposit, area, locale);
 }
 

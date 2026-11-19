@@ -1,7 +1,9 @@
 import type { CommandContext, Context } from 'grammy';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { handleStart } from './bot';
+import { summarizeDepositReturns, type FigureReport } from '@/lib/cost-figures';
+
+import { handleDeposit, handleStart } from './bot';
 import { t } from './texts';
 
 const mocks = vi.hoisted(() => ({
@@ -10,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   track: vi.fn(),
   startDepositFlow: vi.fn(),
   getDistrictBySlug: vi.fn(),
+  getCityDepositFacts: vi.fn(),
 }));
 
 vi.mock('./store', () => ({
@@ -30,7 +33,7 @@ vi.mock('./deposit-flow', () => ({
 vi.mock('./lookup', () => ({
   getDistrictBySlug: mocks.getDistrictBySlug,
   getCity: vi.fn(),
-  getCityDepositFacts: vi.fn(),
+  getCityDepositFacts: mocks.getCityDepositFacts,
   getDistrictTable: vi.fn(),
   lookupAddress: vi.fn(),
 }));
@@ -153,5 +156,56 @@ describe('handleStart', () => {
       is_new: false,
     });
     expect(replyKey(reply)).toBe(t('uk', 'startAfterPayload'));
+  });
+});
+
+/** Golden example 10 of spec 03 (the deposit fields only): 2 of 3 answered got it back. */
+const depositReports: FigureReport[] = [
+  { source: 'user', depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 4_000 },
+  { source: 'user', depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 2_500 },
+  { source: 'user', depositAmount: 4_000, depositReturned: false, depositReturnedAmount: 0 },
+  { source: 'user', depositAmount: 4_000, depositReturned: null, isCurrentTenant: true },
+];
+
+describe('handleDeposit', () => {
+  it('states the city statistic as counts in the cards’ wording', async () => {
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain(
+      `${t('ru', 'depositHeader')}\n\nВернули залог полностью или частично: 2 из 3 ответивших (Варшава)\n`,
+    );
+    expect(text).toContain(t('ru', 'depositAdvice'));
+    expect(text).not.toMatch(/%|Типичный залог|Возвращают полностью/);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_deposit_viewed');
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    expect(replyKey(reply)).toContain(
+      'Повернули заставу повністю або частково: 2 з 3 тих, хто відповів (Варшава)',
+    );
+  });
+
+  it('says data is thin below three answers, and when the city is missing', async () => {
+    for (const facts of [{ deposit: summarizeDepositReturns(depositReports.slice(1)) }, null]) {
+      mocks.getCityDepositFacts.mockResolvedValue(facts);
+      const { ctx, reply } = fakeContext('/deposit');
+      await handleDeposit(ctx);
+
+      const text = replyKey(reply);
+      expect(text).toContain(t('ru', 'depositNoData'));
+      expect(text).not.toContain('ответивших');
+    }
   });
 });

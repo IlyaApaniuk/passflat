@@ -557,3 +557,46 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - (6) The deposit line keeps the old "возвращают полностью X%" wording until T034.
   - No assumptions, tables or migrations. Analytics unchanged.
 - Next: T034 (deposit line and `/deposit` wording via `summarizeDepositReturns`, in `depositLine` of `format.ts`), T035 (`b_` deep link, reuses `renderLookup`), T049 (`renderDistrict` on the contract; reuse `groupBlocks(…, 'area', …)` from `format.ts`).
+
+### 2026-11-19 04:19 · T034 · done
+
+- Done:
+  - `src/lib/bot/format.ts`: new exported `depositStatement(deposit, area, locale)`. It renders the `summarizeDepositReturns` counts as «Вернули залог полностью или частично: X из N ответивших (<area>)» (UK «Повернули заставу повністю або частково: X з N тих, хто відповів (<area>)»), only from `MIN_DEPOSIT_ANSWERS` (3) answers, with the area escaped.
+    - The private `depositLine` adds the 🔐 prefix for the building card, the area card and the typed-district answer.
+    - The area is nominative: the district's Polish name, or `cityName` («Варшава») when the reference is the city or missing. `cityNameIn` is gone.
+    - The percentage, "возвращают полностью" and the typical deposit are gone.
+  - `src/lib/bot/bot.ts`: the `/deposit` body is now the exported `handleDeposit(ctx)`. It shows the city statistic through the same `depositStatement`, else `depositNoData`. `money` and `MIN_DEPOSIT_ANSWERS` are no longer imported there.
+  - `src/lib/bot/texts.ts` (RU and UK):
+    - `depositLine` rewritten;
+    - `depositTypical`, `depositStats`, `cityNameIn` removed;
+    - `tenanciesWord` replaced by `answeredWord` (RU «ответившего / ответивших», UK invariant «тих, хто відповів»);
+    - the `/help` line for `/deposit` no longer promises «сколько стоит залог».
+  - `docs/architecture.md` §3, bot line: one sentence on the deposit statement.
+- Tests:
+  - `format.test.ts`, new describe (7 tests):
+    - golden example 10 through `summarizeDepositReturns` renders 2 of 3 with «Ochota», in RU and UK, on the area card and via `depositStatement`;
+    - the same line under a building card;
+    - «(Варшава)» for a city reference and for no reference;
+    - 2 answers → no line and no «залог/застав» in RU or UK;
+    - no %, zł, typical amount or personal wording;
+    - «20 из 21 ответившего» and an escaped area;
+    - the typed-district answer in UK.
+      The old percentage assertions were replaced.
+  - `bot.test.ts`, 3 new `handleDeposit` tests: the RU city line with no % or old wording, plus `tg_deposit_viewed`; the UK line; `depositNoData` from 2 answers and when there is no city.
+  - `lookup.test.ts`, 1 new test: `getCityDepositFacts` equals `summarizeDepositReturns` of the city's cost reports, and the only deposit query is the city's `costReport` (the Prisma mock has no `depositCase`).
+- Checks: `npx vitest run src/lib/bot` passed (8 files / 155 tests). `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types / 1 duplicate export, as before), Vitest 64 files / 792 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started and no Telegram call was made.
+- Owner review:
+  - Draft copy (RU and UK, `texts.ts`):
+    - `depositLine` (new wording);
+    - the `/help` line for `/deposit`: «как часто возвращают залог и как вернуть свой» / «як часто повертають заставу і як повернути свою».
+    - Removed: `depositTypical`, `depositStats`, `cityNameIn`.
+  - Display choice to confirm: the typical deposit («Типичный залог — 4 756 zł») is gone from the cards and from `/deposit`. Two reasons:
+    - `DepositReturns.medianDeposit` has no N of its own;
+    - it blends current tenants and asking prices (scraped listings' deposits), so it cannot be labelled honestly.
+      Bringing it back needs an N (and a tenant-only filter) in the contract. The website already never shows it.
+  - The area in the parentheses is the Polish district name («(Ochota)»), not a Cyrillic one as in the spec's «(Мокотув)»; the bot has no Cyrillic district names.
+  - No assumptions, tables or migrations. Analytics unchanged (`tg_deposit_viewed` kept as is).
+- Next:
+  - T035 (`b_` deep link) and T049 (`renderDistrict` on the contract; it already calls `depositLine`).
+  - T037 should also align the command menu's `/deposit` description in `scripts/tg-webhook.ts` («Залог: сколько и как часто возвращают»), since the typical amount is no longer shown.

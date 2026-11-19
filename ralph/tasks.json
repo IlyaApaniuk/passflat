@@ -548,14 +548,14 @@
       "title": "Bot deposit statistics as specific answers with N and area",
       "spec": "docs/specs/04-telegram-bot.md#deposit-statistics-in-the-bot",
       "dependsOn": ["T033"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "depositLine and the /deposit depositStats use summarizeDepositReturns: «Вернули залог полностью или частично: X из N ответивших (<area>)» and the UK equivalent, only when answered >= 3",
         "No individual probability; DepositCase is never read",
         "Unit tests: example 10 of spec 03 renders 2 of 3 with the area name; 2 answers render no line"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

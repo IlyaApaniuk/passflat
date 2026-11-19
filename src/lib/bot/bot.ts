@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard, type CommandContext, type Context } from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
-import { MIN_AREA_REPORTS, MIN_DEPOSIT_ANSWERS } from '@/lib/cost-figures';
+import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
 
 import { track } from './analytics';
 import {
@@ -15,8 +15,8 @@ import { dt } from './deposit-texts';
 import { matchDistrict } from './districts';
 import { geocodeAddress } from './geocode';
 import {
+  depositStatement,
   escapeHtml,
-  money,
   renderDistrict,
   renderDistrictTable,
   renderLookup,
@@ -232,6 +232,38 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
   });
 }
 
+/**
+ * `/deposit`: the city's deposit statistic in the cards' wording and gate
+ * (`depositStatement`), then the advice and the deposit helper. Exported so
+ * tests can call it with a fake context.
+ */
+export async function handleDeposit(ctx: CommandContext<Context>): Promise<void> {
+  const chat = await touchChat({ chatId: ctx.chat.id });
+  const locale = chat.locale as BotLocale;
+  track(ctx.chat.id, 'tg_deposit_viewed');
+
+  const facts = await getCityDepositFacts();
+  const statement = facts && depositStatement(facts.deposit, t(locale, 'cityName'), locale);
+  const lines = [
+    t(locale, 'depositHeader'),
+    '',
+    statement || t(locale, 'depositNoData'),
+    '',
+    t(locale, 'depositAdvice'),
+    '',
+    t(locale, 'cardFooter'),
+  ];
+
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    link_preview_options: { is_disabled: true },
+    reply_markup: new InlineKeyboard()
+      .text(dt(locale, 'btnStartFlow'), 'dep:start')
+      .row()
+      .url(t(locale, 'btnSubmit'), webLink('/warsaw/costs/submit', locale, 'deposit')),
+  });
+}
+
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
 
@@ -262,37 +294,7 @@ export function createBot(token: string): Bot {
     });
   });
 
-  bot.command('deposit', async (ctx) => {
-    const chat = await touchChat({ chatId: ctx.chat.id });
-    const locale = chat.locale as BotLocale;
-    track(ctx.chat.id, 'tg_deposit_viewed');
-
-    const facts = await getCityDepositFacts();
-    const lines = [t(locale, 'depositHeader'), ''];
-
-    if (facts && facts.deposit.answered >= MIN_DEPOSIT_ANSWERS) {
-      lines.push(
-        t(locale, 'depositStats', {
-          amount: money(facts.deposit.medianDeposit) ?? '—',
-          pct: String(Math.round((facts.deposit.gotBack / facts.deposit.answered) * 100)),
-          answered: String(facts.deposit.answered),
-        }),
-      );
-    } else {
-      lines.push(t(locale, 'depositNoData'));
-    }
-
-    lines.push('', t(locale, 'depositAdvice'), '', t(locale, 'cardFooter'));
-
-    await ctx.reply(lines.join('\n'), {
-      parse_mode: 'HTML',
-      link_preview_options: { is_disabled: true },
-      reply_markup: new InlineKeyboard()
-        .text(dt(locale, 'btnStartFlow'), 'dep:start')
-        .row()
-        .url(t(locale, 'btnSubmit'), webLink('/warsaw/costs/submit', locale, 'deposit')),
-    });
-  });
+  bot.command('deposit', handleDeposit);
 
   bot.command('cancel', async (ctx) => {
     const chat = await touchChat({ chatId: ctx.chat.id });
