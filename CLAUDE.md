@@ -74,9 +74,13 @@ conversation is Russian and is independent of repository language.
 
 - Show aggregates (medians, ranges, counts) per building, district or city; raw reports stay
   server-side. Addresses are building-level only, never apartment numbers.
-- Medians blend `user`, `import` and `scraped` sources by the owner's decision (cold start).
-  Never call a blended figure "market", never write "verified" or "checked by tenants", never
-  invent statistics, and gate any percentage comparison at N ≥ 5.
+- The building page, the checker and the bot read the figure contract (`src/lib/cost-figures.ts`)
+  and show the tenant group (`user` + `import`) and the asking-price group (`scraped`)
+  separately, each with its N (PRD 1 package C). Single-number surfaces (map, cards, district
+  roll-ups, calculator, OG, bot `/districts`, neighbours) still blend all three sources by the
+  owner's decision D4 (cold start) until Q-2 is answered. Never call a blended figure "market",
+  never write "verified" or "checked by tenants", never invent statistics, and gate any
+  percentage comparison at N ≥ 5.
 - Reviews and tags describe buildings, never named private persons.
 - The deposit helper prepares a letter and explains statutory deadlines; it is not legal advice
   and must not give a confident personal verdict when data or the contract could not be read.

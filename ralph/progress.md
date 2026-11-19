@@ -1096,3 +1096,63 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - UK: «Увійди, щоб закріпити звіт і відкрити розбивку комуналки» / «Твій звіт збережено. Створи акаунт або увійди, щоб закріпити його за собою. Після входу:».
   - No assumptions, tables or migrations. Analytics unchanged (`anon_unlock_cta_clicked` kept).
 - Next: T046 from a clean tree. T046's handoff should add under website draft copy: T051's two draft keys (`unlockTitle`, `unlockDesc`) and the two removed keys.
+
+### 2026-11-19 06:00 · T046 · done
+
+- Done (docs only, no code):
+  - `docs/specs/README.md`, requirement map: a Tasks column; every FR row is Done or Blocked with its task. Q-3's FR-22 / FR-25 / FR-34 defaults and the marketing half of FR-31 have their own Blocked rows. The status line records the final check.
+  - `CLAUDE.md` "Cost data honesty": the building page, the checker and the bot read the figure contract and show the tenant group (`user` + `import`) and the asking-price group (`scraped`) separately, each with its N (PRD 1 package C). Single-number surfaces still blend all three sources under D4 until Q-2 is answered. The other honesty rules are unchanged.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 33 unused exports / 18 types as before, Vitest 72 files / 951 tests, build OK). `npm run test:e2e` exit 0 (2/2, port 3100, stopped afterwards). `node scripts/ralph-tasks.mjs summary` before `done`: 43 done, 6 blocked, only T046 left. `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review (PRD 1 handoff):
+  - **Website draft copy** (all four locales unless noted; wording is in each task's entry above):
+    - T013: `listings.roommateRoles.find`, `.offer` (EN, UK drafts; PL, RU given), `.findChosen`, `.change`.
+    - T015: `listings.noMatch.title`, `listings.noMatch.clearFilters`.
+    - T016: `listings.demandCapture.saveInterestButton`, `.subtitle`, `.subtitleLoggedIn`, `.interestSaved`, `listings.roommateCostsBridge`, `listings.roommateCostsBridgeCta` (some RU given).
+    - T019: `costs.building.figures.sourceTenant`, `sourceTenantWithImported`, `sourceImported`, `sourceAsking`, `tenantTitle`, `askingTitle`, `nListings`, `depositReturned`, `countOfTotal`.
+    - T020: `costs.building.figures.oneObservation` (RU given), `roomsValue`, `areaValue`, `knownPart`, `knownPartHint`, `valueUnknown`, `valueIncluded`, `includedCount`, `unknownCount`, `lastRecorded`, `lastRecordedAsking`, `tenancyRange`, `tenancyYear`, `tenancyOngoing`, `tenancyCurrent`, `tenancyFrom`, `tenancyUntil`, `tenancyUnknown`.
+    - T021: `costs.trust.sampleSize`, `costs.building.whiteSpotDesc`, `costs.building.figures.viewDetails`, `addExperience`, `noBuildingData` (RU given), `noAreaData`, `referenceTenantDistrict`, `referenceTenantCity`, `referenceAskingDistrict`, `referenceAskingCity`, `referenceHint`.
+    - T024: `costs.building.figures.depositReturnedArea`.
+    - T025: `costs.submit.comparisonHeading`.
+    - T026: `share.landingDataLabel`.
+    - T035: `checker.costs.telegramCta`.
+    - T047: `costs.submit.unlockItemPosition`, `costs.submit.shareInviteDesc`.
+    - T048: `share.cardDescription`, `share.landingStep2`, `share.landingStep3`, `share.landingRange`.
+    - T051: `costs.submit.unlockTitle`, `costs.submit.unlockDesc`.
+    - Deleted keys: `costs.trust.reliable` (T021), nine `checker.costs.*` (T024), six comparison keys (T025), nine `share.*` / `costs.overview.vsMedian*` (T026), `costs.submit.unlockItemDeposit` / `unlockItemTenure` (T051).
+    - Unused keys left in place (cleanup candidates): see T019, T020, T022 and T025.
+  - **Bot draft copy** (RU and UK):
+    - `texts.ts`, T033: `groupTenant`, `groupTenantImported`, `groupAsking`, `oneObservation`, `oneObservationArea`, `characteristicApartment` / `Room` / `Rooms` / `Area`, `headlineTotal`, `headlineKnownPart`, `headlineRent`, `medianN`, `singleN`, `detailKnownPart`, `detailRent`, `detailExpenses`, `knownPartHint`, `referenceHeaderDistrict`, `referenceHeaderCity`, `referenceDistrictName`, `referenceTenant`, `referenceAsking`, `referenceKnownPart`, `referenceRent`, `neighbourLine`, `noAreaData`. Changed: `cardFooter`, `areaHeader`, `cityHeader`, `noBuildingData`, `noHouseNumber`.
+    - `texts.ts`, T034: `depositLine` and the `/deposit` line of `help`.
+    - `texts.ts`, T035: `buildingLinkFailed`, `intakeStillOpen`.
+    - `texts.ts`, T037: `subscribeBuilding`, `subscribeDistrict`, `subscribedBuilding`, `subscribedDistrict`, `alreadySubscribed`, `unsubscribed`, `mySubsHeader`, `mySubsEmpty`, `outsideCityNamed`, `btnCityWait`, `cityWaitAdded`, `cityWaitAlready`, `start`, `startAfterPayload`, `help`, `COMMAND_MENU`.
+    - `deposit-texts.ts`, T040: `remindersOff`.
+    - Removed: T033 `totalLine`, `thinBuilding`, `verdictAbove` / `Below` / `Same`; T034 `depositTypical`, `depositStats`, `cityNameIn`; T049 `areaTotal`, `splitLine`, `basedOn`, `districtThinCity`, `observationsBasisWord`.
+  - **Assumption constants applied**:
+    - `src/lib/analytics/page-context.ts`: the `page_type` mapping, incl. `blog` (Q-12) (T004); the entry-page mechanism (T005).
+    - `src/lib/analytics/building-events.ts`: `report_count`, `user_count`, `import_count`, `scraped_count` (T009).
+    - `src/lib/analytics/interest-events.ts`: `API_ERROR_CODES`, `errorCodeFromStatus` (T010).
+    - `src/lib/cost-figures.ts`, Q-3 block (T017): `SOURCE_GROUP`, `LEGACY_NULL_IS_COMPLETE = false`, `TRIM_OUTLIERS = false`, `CLAMP_EXPENSES_AT_ZERO = true`, `ONE_OBSERVATION_REPORTS = 1`, `RECORDED_AT_PRECISION = 'month'`, `TENANCY_PRECISION = 'year'`, `AREA_STEP_M2 = 5`, `MIN_DEPOSIT_ANSWERS = 3`. `MIN_AREA_REPORTS = 5` is Decided.
+    - `src/lib/cost-figures.ts`: `MIN_COMPARABLE_N = 5` (T022).
+    - `src/lib/cost-figures-query.ts`: `REVALIDATE_SECONDS = 300`, `REPORT_LIMIT = 5000` (T018, the spec's values).
+    - `src/lib/bot/start-payload.ts`: `ENTRY_SOURCE` (T031, T038).
+    - `docs/analytics/activation-funnels.md`: the Telegram address funnel window (T044, set in the doc only).
+  - **Blocked tasks and their questions** (in `docs/product/prd/prd-1-decision-review.md`):
+    - T002 (Q-1): move PRD 2 FR-1 (lost landing events) into PRD 1? Proposal: yes.
+    - T028 (Q-2): single-number surfaces for a mixed base: (a) tenant group with labelled asking fallback, (b) the blend with a composition label, or (c) two numbers? Proposal: (a).
+    - T029 (Q-4): rewrite about 25 marketing keys that say "verified", "checked by tenants", "actually pay" or "returned in full", or keep them?
+    - T030 (Q-3): confirm the cautious figure defaults listed above.
+    - T042 (Q-5): RU/UK deposit wording for an unread contract, a non-lease and unsupported cases.
+    - T043 (Q-6): `wants_lawyer` button text and confirmation, or hide the button until a partner exists?
+  - **Tables and migrations**: no PRD 1 task added a table or a migration. The branch still carries the four bot migrations from Sep–Oct 2026, not applied in production (see the bot README). Each needs your approval before it runs in production.
+  - **Owner actions**:
+    - Run `npm run bot:webhook -- https://passflat.com` once after deploy to publish the new RU/UK command menu (T037).
+    - Send `docs/legal-review/deposit-scenarios.md` to a Polish lawyer (T041).
+    - Run each funnel query once and fill in the deploy date in `docs/analytics/activation-funnels.md` (T044).
+    - Confirm the bot's production status for the README (T045).
+  - **Unverified**:
+    - The mobile flows, checked by eye: the building page, the checker, the post-submit and share screens, the roommate role selector, the empty states. No task opened a real browser.
+    - The events in PostHog Live Events after deploy. Each task's entry names its event; PostHog is off locally.
+    - The bot in production: never started, no Telegram call made.
+    - The CI e2e job: not run, nothing was pushed.
+- Next: PRD 1 is complete apart from the six blocked tasks. Answer Q-1 – Q-6 (`ralph-answer`) to queue them, or take PRD 2 in with `prd-intake`.
