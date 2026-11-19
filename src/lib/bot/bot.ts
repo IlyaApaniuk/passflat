@@ -120,8 +120,9 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
   await ctx.replyWithChatAction('typing');
 
   const geo = await geocodeAddress(query);
+  // The typed text never goes into an event (spec 04 §Typed text in bot events).
   if (!geo) {
-    track(chatId, 'tg_address_not_found', { query });
+    track(chatId, 'tg_address_not_found');
     await ctx.reply(t(locale, 'addressNotFound'), { parse_mode: 'HTML' });
     return;
   }
@@ -131,7 +132,8 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
     // Another city is demand data, not a miss: offer a one-tap waitlist right
     // here, so the ask needs no email and the reply can come back to this chat.
     const city = geo.city;
-    track(chatId, 'tg_address_outside_city', { query, city });
+    // Only the geocoded city name, and no property at all when none resolved.
+    track(chatId, 'tg_address_outside_city', city ? { city } : {});
     // Callback data is capped at 64 bytes; a city name that does not fit is
     // answered without the button rather than with a truncated city.
     const callback = city ? `cw:${city}` : null;

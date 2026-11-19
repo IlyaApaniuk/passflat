@@ -29,9 +29,12 @@ Identities:
   full page load starts a new visitor and a new session.
 - **Account id:** the Supabase user id, used by server events. It cannot be joined to client
   events, because the client never identifies.
-- **E-mail:** the two waitlist server events use the lower-cased e-mail as `distinct_id`
-  (existing; Q-15). Never select `distinct_id` or person properties of these events, and never
-  copy an e-mail into a query result.
+- **No e-mail identity:** no event of these funnels uses an e-mail as its identity or property
+  (D32, T057). The waitlist is counted by the client event `listing_interest_saved` and by database rows (§4).
+  The two removed server events `city_notify_subscribed` and `district_notify_subscribed` used
+  the e-mail as `distinct_id` until T057 was deployed; when a query reaches that older data,
+  count it with `count()`, never select its `distinct_id` or person properties, and never copy
+  an e-mail into a query result.
 - **`tg_<chatId>`:** every bot event (`src/lib/bot/analytics.ts`) with `source: 'telegram_bot'`.
   It is never merged with a web identity. Queries return counts only, never the `distinct_id`.
 
@@ -73,15 +76,15 @@ properties.
 
 ### Website, server (no page context)
 
-| Event                        | Fires in                                        | Identity                                                                            | Properties                                                                                                                                                                               |
-| ---------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listing_created`            | `src/app/api/listings/route.ts`                 | account id                                                                          | `listing_id`, `type`, `city`, `district`, `has_photos`, `price`, `is_paid`, `promote_days`                                                                                               |
-| `conversation_started`       | `src/app/api/conversations/route.ts`            | account id                                                                          | `listing_id`, `listing_type`, `conversation_id`                                                                                                                                          |
-| `cost_report_submitted`      | `src/app/api/cost-reports/route.ts` (POST only) | account id, or the `pf_anon` cookie id for an anonymous report (not the PostHog id) | `building_id`, `city`, `source` (the report's provenance `user` \| `import` \| `scraped`, not the form's entry `source`), `was_flagged`, `fill_on_behalf`, `scraped_import`, `anonymous` |
-| `city_notify_subscribed`     | `src/app/api/city-notify/route.ts`              | e-mail (Q-15)                                                                       | `city`, `locale` (city-launch class)                                                                                                                                                     |
-| `district_notify_subscribed` | same                                            | e-mail (Q-15)                                                                       | `city`, `locale`, `districtSlug` (`''` for the whole city), `listingType` (both listings classes)                                                                                        |
+| Event                   | Fires in                                        | Identity                                                                            | Properties                                                                                                                                                                               |
+| ----------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listing_created`       | `src/app/api/listings/route.ts`                 | account id                                                                          | `listing_id`, `type`, `city`, `district`, `has_photos`, `price`, `is_paid`, `promote_days`                                                                                               |
+| `conversation_started`  | `src/app/api/conversations/route.ts`            | account id                                                                          | `listing_id`, `listing_type`, `conversation_id`                                                                                                                                          |
+| `cost_report_submitted` | `src/app/api/cost-reports/route.ts` (POST only) | account id, or the `pf_anon` cookie id for an anonymous report (not the PostHog id) | `building_id`, `city`, `source` (the report's provenance `user` \| `import` \| `scraped`, not the form's entry `source`), `was_flagged`, `fill_on_behalf`, `scraped_import`, `anonymous` |
 
-The two waitlist events fire after every successful upsert, also when the row already existed.
+`POST /api/city-notify` (the waitlist) sends no server event (D32): a listings-interest save is
+counted by `listing_interest_saved` on the client and by `city_notify_subscriptions` rows, a
+city-launch save by rows only (§4).
 
 ### Telegram bot (`tg_<chatId>`; every event also has `source: 'telegram_bot'`)
 
@@ -519,34 +522,31 @@ ORDER BY 1, 2;
 
 Compare with the events for the same interval:
 
-| Database rows                                | Client event                                                 | Server or bot event                                                       |
-| -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `listings_city`, `listings_district` by type | `listing_interest_saved` by `listing_type`, `district_scope` | `district_notify_subscribed` by `listingType`, `districtSlug` (e-mail id) |
-| `city_launch`                                | none (no client event on the city form)                      | `city_notify_subscribed` (e-mail id)                                      |
-| `b:` and `d:`                                | none                                                         | `tg_subscribed` with `already` not true, by `target`                      |
-| `c:`                                         | none                                                         | `tg_city_requested` with `already` not true                               |
+| Database rows                                | Client event                                                 | Bot event                                            |
+| -------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
+| `listings_city`, `listings_district` by type | `listing_interest_saved` by `listing_type`, `district_scope` | none                                                 |
+| `city_launch`                                | none (no client event on the city form)                      | none: rows only                                      |
+| `b:` and `d:`                                | none                                                         | `tg_subscribed` with `already` not true, by `target` |
+| `c:`                                         | none                                                         | `tg_city_requested` with `already` not true          |
 
-- A client success and the server event of the same save are one save, never two conversions.
+- The waitlist has no server event (D32): `listing_interest_saved` and the rows are the two
+  counts of the same saves, never two conversions.
 - A repeat save of the same e-mail and class updates the existing row (`created_at` unchanged)
-  but fires both events again, so events can exceed new rows.
-- Count the e-mail-keyed events with `count()`; never select their `distinct_id`.
+  but fires `listing_interest_saved` again, so events can exceed new rows.
 
 ```sql
 -- HogQL. Event side of the comparison. Counts only.
 SELECT
     event,
-    coalesce(toString(properties.listing_type), toString(properties.listingType), '') AS listing_type,
+    coalesce(toString(properties.listing_type), '') AS listing_type,
     multiIf(
         event = 'listing_interest_saved', toString(properties.district_scope),
-        event = 'district_notify_subscribed',
-            if(coalesce(toString(properties.districtSlug), '') = '', 'city', 'district'),
         event = 'tg_subscribed', toString(properties.target),
         ''
     ) AS scope,
     count() AS events
 FROM events
-WHERE event IN ('listing_interest_saved', 'district_notify_subscribed', 'city_notify_subscribed',
-        'tg_subscribed', 'tg_city_requested')
+WHERE event IN ('listing_interest_saved', 'tg_subscribed', 'tg_city_requested')
     AND (event NOT IN ('tg_subscribed', 'tg_city_requested')
         OR coalesce(toString(properties.already), '') != 'true')
     AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
@@ -711,7 +711,7 @@ ORDER BY week, event, code
   ≥ 1 `cost_form_started` from them.
 - **Server and bot events cannot be joined** to client sessions: `listing_created`,
   `conversation_started` and `cost_report_submitted` use the account id or the `pf_anon` id, the
-  waitlist events the e-mail, the bot `tg_<chatId>`.
+  bot `tg_<chatId>`.
 - **Bot events from the contract reading may be lost** until T050 ships: the reading runs in its
   own `after()` task, concurrently with the webhook's flush, so `tg_deposit_contract` and the
   `tg_deposit_verdict` sent after a read contract can miss the flush.

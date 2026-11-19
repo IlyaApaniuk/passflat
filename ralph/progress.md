@@ -1522,3 +1522,19 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Behaviour to know:** one link deletes one row (one type + district). The same e-mail's other saved interests and its city-launch row stay. The link is shown once, right after saving; a visitor who closes the page has no other way back to it. A repeat save of the same row returns a link to the same row.
   - No tables, migrations or events.
 - Next: T057 (spec 02 §Waitlist server events + spec 04 §Typed text in bot events).
+
+### 2026-11-19 11:13 · T057 · done
+
+- Done:
+  - `src/app/api/city-notify/route.ts`: no `trackServerEvent` any more (`city_notify_subscribed` / `district_notify_subscribed` removed, with the success-path `flushPostHog`); both `captureServerException` calls (persist, confirmation e-mail) omit `distinctId`, properties unchanged. Validation, upsert, P2002, `removeUrl`, confirmation e-mail unchanged.
+  - `src/lib/bot/bot.ts` (`replyLookup`): `tg_address_not_found` sends no properties; `tg_address_outside_city` sends `{ city }` (geocoded name) or `{}` when none resolved. Reply and `cw:` button unchanged.
+  - Docs: `docs/analytics/activation-funnels.md` (identities, the server table and its note, §4 comparison table, bullets and HogQL without the removed events, the limitations line), `docs/specs/05-measurement-docs.md` (event-table identities, §4 note), `src/lib/bot/README.md` (event table rows and the note under it), `docs/specs/01-analytics-context.md` (§Interest events: no server event), `docs/architecture.md` (analytics row), `docs/specs/README.md` (T057 → Done).
+- Tests: `route.test.ts` (new `expectNoEmailInPostHog`: no `trackServerEvent`, no `distinctId` and no e-mail in any `captureServerException` call; exact options for the persist and confirmation-e-mail exceptions; the class tests keep every other assertion); `bot.test.ts` (+3, fake `track`: not-found carries nothing, outside-city carries only `{ city: 'Kraków' }` with the button unchanged, no `city` / `query` key when geocoding resolved no city).
+- Checks: `npm run verify` exit 0 twice (second run after a doc and comment fix; lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 88 files / 1178 tests, build OK). `next-env.d.ts` restored. Nothing deployed; no PostHog event looked at.
+- Did not work: nothing.
+- Owner review:
+  - **Other e-mail distinct ids in `src/` (not changed, per spec):** `src/app/api/contact/route.ts:68` `trackServerEvent(email, 'contact_form_sent', …)` (also sends `subject_category` = the typed subject); `src/app/[locale]/auth/actions.ts:137, 221, 247, 290, 350` `captureServerException(…, { distinctId: email })`. Not a distinct id but an e-mail in PostHog: `src/app/[locale]/auth/callback/route.ts:121` `identifyUser(user.id, { email, name, … })` person properties.
+  - **Assumption (spec):** exceptions from `/api/city-notify` now have no distinct id (PostHog files them under its own anonymous id).
+  - **After deploy:** no new `city_notify_subscribed` / `district_notify_subscribed` events; saved waitlist interest is read from `listing_interest_saved` and `city_notify_subscriptions` rows (activation-funnels §4). Older e-mail-keyed events stay in PostHog (the US project, D30); deleting them is the owner's.
+  - No copy, tables, migrations or new events.
+- Next: T058 (spec 02 §City-launch e-mail link and send guard).

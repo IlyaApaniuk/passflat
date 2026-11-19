@@ -954,13 +954,13 @@
         "docs/analytics/activation-funnels.md, docs/specs/05-measurement-docs.md and src/lib/bot/README.md no longer describe e-mail-keyed waitlist events or typed text in bot events"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-15, D32, 2026-11-19.",
       "id": "T057",
       "milestone": "M6",
       "title": "Stop e-mail-keyed waitlist events and typed text in bot address events",
       "spec": "docs/specs/02-roommate-and-waitlist.md#waitlist-server-events",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": [],

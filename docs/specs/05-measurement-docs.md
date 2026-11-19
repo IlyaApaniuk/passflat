@@ -10,8 +10,8 @@ FR-47, FR-5. `docs/analytics/activation-funnels.md`, written after packages A–
 as it is (event names and properties checked with a search of `src/`, not copied from specs).
 
 1. **Event table:** every event the five funnels use, where it fires (file), its properties,
-   whether it is client, server or bot, and its identity (visitor id, e-mail for the two
-   waitlist server events, `tg_<chatId>`).
+   whether it is client, server or bot, and its identity (visitor id, account id, `tg_<chatId>`;
+   no funnel event is keyed by e-mail, D32).
 2. **Funnels**, each with steps, a HogQL query or the PostHog funnel settings, and its window:
    1. Roommate, counted in sessions per step, not events (`$pageview` re-fires on every filter
       change and checker `?p=` update, because `replaceState` updates `useSearchParams`):
@@ -47,13 +47,12 @@ as it is (event names and properties checked with a search of `src/`, not copied
 4. **Database counts** (read-only SQL for the owner): saved interests per class from
    `city_notify_subscriptions` (city launch, city listings, district listings, by
    `listing_type`) and from `telegram_subscriptions` by `target_key` prefix, compared with the
-   client events; the server and client success of one submission are never two conversions.
+   client events; the client event and the row of one submission are never two conversions.
    Split city-launch rows by `created_at` before and after the PRD 1 deploy: earlier whole-city
    roommate and sublet requests were stored as city-launch rows and are still selected by the
    city-launch mailing.
-   The two waitlist server events used the e-mail as their identity; T057 removes them (Q-15,
-   D32), after which the doc counts the waitlist by `listing_interest_saved` and database rows
-   and never copies an e-mail into a query result.
+   The waitlist has no server event (Q-15, D32, T057): the doc counts it by
+   `listing_interest_saved` and database rows and never copies an e-mail into a query result.
 5. **Two full weeks after the release:** compare week 1 and week 2 (Monday–Sunday): entries by
    `page_type` and `entry_page_type`, useful actions, saved requests (DB), sources (`ref`, UTM,
    referring domain) and errors (`listing_interest_failed` by `error_code`,

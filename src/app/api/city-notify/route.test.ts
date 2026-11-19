@@ -96,6 +96,18 @@ function expectNothingStored() {
   expect(h.trackServerEvent).not.toHaveBeenCalled();
 }
 
+/**
+ * Spec 02 §Waitlist server events: the route sends no server event, and no PostHog call
+ * (an exception included) carries the e-mail, as a distinct id or anywhere else.
+ */
+function expectNoEmailInPostHog() {
+  expect(h.trackServerEvent).not.toHaveBeenCalled();
+  expect(JSON.stringify(h.captureServerException.mock.calls)).not.toContain(EMAIL);
+  for (const [, options] of h.captureServerException.mock.calls) {
+    expect(options).not.toHaveProperty('distinctId');
+  }
+}
+
 const listings = (extra: Record<string, unknown>) => ({
   email: EMAIL,
   city: 'warsaw',
@@ -148,11 +160,8 @@ describe('POST /api/city-notify · city launch', () => {
       template: 'cityNotifyConfirmation',
       data: { cityName: 'Kraków' },
     });
-    expect(h.trackServerEvent).toHaveBeenCalledTimes(1);
-    expect(h.trackServerEvent).toHaveBeenCalledWith(EMAIL, 'city_notify_subscribed', {
-      city: 'Kraków',
-      locale: 'pl',
-    });
+    // No `city_notify_subscribed` any more (Q-15, D32).
+    expectNoEmailInPostHog();
   });
 
   it('treats empty listingType and districtSlug as the city-launch class', async () => {
@@ -163,7 +172,7 @@ describe('POST /api/city-notify · city launch', () => {
     expect(res.status).toBe(200);
     expect(h.upsert.mock.calls[0][0].where).toEqual(uniqueKey('', '', 'gdańsk'));
     expect(h.sendEmail).toHaveBeenCalledTimes(1);
-    expect(h.trackServerEvent.mock.calls[0][1]).toBe('city_notify_subscribed');
+    expectNoEmailInPostHog();
   });
 
   it('uses the session e-mail for a logged-in submit without an e-mail', async () => {
@@ -182,6 +191,10 @@ describe('POST /api/city-notify · city launch', () => {
 
     expect(res.status).toBe(200);
     expect(h.captureServerException).toHaveBeenCalledTimes(1);
+    expect(h.captureServerException).toHaveBeenCalledWith(expect.any(Error), {
+      properties: { source: 'city_notify', step: 'confirmation_email' },
+    });
+    expectNoEmailInPostHog();
   });
 });
 
@@ -201,13 +214,8 @@ describe('POST /api/city-notify · listings interest', () => {
       create: { listingType: 'roommate', districtSlug: '', city: 'warsaw', locale: 'ru' },
     });
     expect(h.sendEmail).not.toHaveBeenCalled();
-    expect(h.trackServerEvent).toHaveBeenCalledTimes(1);
-    expect(h.trackServerEvent).toHaveBeenCalledWith(EMAIL, 'district_notify_subscribed', {
-      city: 'warsaw',
-      locale: 'ru',
-      districtSlug: '',
-      listingType: 'roommate',
-    });
+    // No `district_notify_subscribed` any more (Q-15, D32).
+    expectNoEmailInPostHog();
   });
 
   it('stores a whole-city request when districtSlug is missing altogether', async () => {
@@ -228,12 +236,7 @@ describe('POST /api/city-notify · listings interest', () => {
     });
     expect(h.upsert.mock.calls[0][0].where).toEqual(uniqueKey('replacement', 'mokotow'));
     expect(h.sendEmail).not.toHaveBeenCalled();
-    expect(h.trackServerEvent).toHaveBeenCalledWith(EMAIL, 'district_notify_subscribed', {
-      city: 'warsaw',
-      locale: 'ru',
-      districtSlug: 'mokotow',
-      listingType: 'replacement',
-    });
+    expectNoEmailInPostHog();
   });
 
   it.each([
@@ -364,7 +367,7 @@ describe('POST /api/city-notify · repeats and races', () => {
     expect(await res.json()).toEqual({ success: true });
     expect(h.findUnique).not.toHaveBeenCalled();
     expect(h.captureServerException).not.toHaveBeenCalled();
-    // The winning request already tracked and confirmed this row.
+    // The winning request already confirmed this row.
     expect(h.sendEmail).not.toHaveBeenCalled();
     expect(h.trackServerEvent).not.toHaveBeenCalled();
   });
@@ -407,8 +410,12 @@ describe('POST /api/city-notify · repeats and races', () => {
 
     await expectError(res, 500, 'server_error');
     expect(h.captureServerException).toHaveBeenCalledTimes(1);
+    expect(h.captureServerException).toHaveBeenCalledWith(expect.any(Error), {
+      properties: { source: 'city_notify', step: 'persist', city: 'warsaw' },
+    });
+    expect(h.flushPostHog).toHaveBeenCalledTimes(1);
     expect(h.sendEmail).not.toHaveBeenCalled();
-    expect(h.trackServerEvent).not.toHaveBeenCalled();
+    expectNoEmailInPostHog();
   });
 });
 

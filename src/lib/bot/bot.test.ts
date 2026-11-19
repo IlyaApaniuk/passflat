@@ -669,6 +669,58 @@ describe('handleText (typed address or district)', () => {
   });
 });
 
+describe('typed text in bot events (spec 04 §Typed text in bot events)', () => {
+  const TYPED = 'Moja ulica 7 m. 12, Jan Kowalski';
+
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+  });
+
+  /** Every property value any tracked event carried, flattened to strings. */
+  function trackedValues(): string[] {
+    return mocks.track.mock.calls.flatMap(([, , properties]) =>
+      Object.values((properties ?? {}) as Record<string, unknown>).map(String),
+    );
+  }
+
+  it('tg_address_not_found carries no properties at all', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_address_not_found']]);
+    expect(trackedValues().some((value) => value.includes('ulica'))).toBe(false);
+  });
+
+  it('tg_address_outside_city carries only the geocoded city name', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-k', city: 'Kraków' });
+    mocks.lookupAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([
+      [CHAT_ID, 'tg_address_outside_city', { city: 'Kraków' }],
+    ]);
+    expect(trackedValues().some((value) => value.includes('ulica'))).toBe(false);
+    // The reply and its waitlist button are unchanged.
+    expect(buttons(reply)).toEqual(['cw:Kraków']);
+  });
+
+  it('tg_address_outside_city has no city property when geocoding resolved none', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-x', city: null });
+    mocks.lookupAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_address_outside_city', {}]]);
+    const properties = mocks.track.mock.calls[0][2] as Record<string, unknown>;
+    expect('city' in properties).toBe(false);
+    expect('query' in properties).toBe(false);
+    expect(replyKey(reply)).toBe(t('ru', 'outsideCity'));
+  });
+});
+
 describe('links to the cost form (spec 04 §Links to the website)', () => {
   /** The card's button that opens the cost form, parsed. */
   function submitButton(reply: ReturnType<typeof vi.fn>): URL {

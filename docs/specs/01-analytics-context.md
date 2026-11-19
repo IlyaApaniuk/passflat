@@ -126,9 +126,9 @@ In `src/components/listings/listings-empty-state.tsx`, after `POST /api/city-not
   `invalid_email`, `invalid_input`, `unknown_city`, `unknown_district`, `rate_limited`,
   `server_error`; `network_error` when fetch threw; `server_error` for a response without a
   known `code`. Nothing else is sent: no email, no form text, no response body.
-- No success event on an error; one event per submit; the server-side
-  `city_notify_subscribed` / `district_notify_subscribed` stay unchanged and are not a second
-  conversion (spec 05).
+- No success event on an error; one event per submit. The route sends no server event
+  (`city_notify_subscribed` / `district_notify_subscribed` were removed, spec 02 §Waitlist
+  server events, D32), so this is the only waitlist event (spec 05).
 - Pure function `interestOutcomeEvent({ status | networkError, listingType, districtSlug, intent })`
   → `{ event, properties }`, tested for each code and for both scopes.
 

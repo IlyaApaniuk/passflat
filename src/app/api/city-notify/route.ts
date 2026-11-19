@@ -4,7 +4,7 @@ import { sendEmail } from '@/lib/email/send';
 import { resolveEmailLocale, type EmailLocale } from '@/lib/email/types';
 import { makeInterestRemovalToken } from '@/lib/email/unsubscribe';
 import { localeUrl } from '@/lib/email/url';
-import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
+import { flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -197,9 +197,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     // Two parallel identical submits can both try the insert; the loser hits the
-    // unique key. The row exists and the winner tracks and confirms it, so this
-    // one just succeeds (no second event, no duplicate e-mail). A listings row still
-    // gets its remove link, found by the same unique key.
+    // unique key. The row exists and the winner confirms it, so this one just
+    // succeeds (no duplicate e-mail). A listings row still gets its remove link,
+    // found by the same unique key.
     if (isPrismaUniqueConstraintError(err)) {
       const existing = isListingsInterest
         ? await prisma.cityNotifySubscription
@@ -212,26 +212,14 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error('[city-notify] Failed to persist subscription:', err);
+    // No distinct id: the e-mail is never a PostHog identity (spec 02 §Waitlist server
+    // events). The waitlist is counted by the client's `listing_interest_saved` and by rows.
     captureServerException(err, {
-      distinctId: normalizedEmail,
       properties: { source: 'city_notify', step: 'persist', city: cityName },
     });
     await flushPostHog();
     return errorResponse(500, 'server_error', 'Something went wrong. Please try again.');
   }
-
-  trackServerEvent(
-    normalizedEmail,
-    isListingsInterest ? 'district_notify_subscribed' : 'city_notify_subscribed',
-    {
-      city: cityName,
-      locale: emailLocale,
-      ...(isListingsInterest
-        ? { districtSlug: districtSlugClean, listingType: listingTypeClean }
-        : {}),
-    },
-  );
-  await flushPostHog();
 
   // Only the city-launch class gets the "we'll tell you when we launch here"
   // confirmation: that copy is about a city launch, and no code notifies
@@ -247,7 +235,6 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error('[city-notify] Failed to send confirmation email:', err);
       captureServerException(err, {
-        distinctId: normalizedEmail,
         properties: { source: 'city_notify', step: 'confirmation_email' },
       });
       await flushPostHog();

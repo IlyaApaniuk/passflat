@@ -209,8 +209,8 @@ holds the bot funnels.
 | ----------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tg_bot_started`              | `/start`, with or without a payload           | `payload` (the raw payload or null), `is_new` (first time the chat is seen)                                                                                                                                        |
 | `tg_address_checked`          | an address card is sent (typed or `b_` link)  | `level` (`building` \| `district` \| `city`), `district` (slug), `has_building`, `report_count`, `entry_source` (`typed_address` \| `link_building`), `lookup_level` (= `level`), `source_kind`, `n`, `incomplete` |
-| `tg_address_not_found`        | geocoding found nothing                       | `query` (the typed text, Q-15)                                                                                                                                                                                     |
-| `tg_address_outside_city`     | the address is outside the checker city       | `query` (the typed text, Q-15), `city` (geocoded city name or null)                                                                                                                                                |
+| `tg_address_not_found`        | geocoding found nothing                       | none                                                                                                                                                                                                               |
+| `tg_address_outside_city`     | the address is outside the checker city       | `city` (the geocoded city name); absent when geocoding resolved no city                                                                                                                                            |
 | `tg_district_checked`         | a district card is sent (typed or `d_` link)  | `district` (slug), `report_count`, `entry_source` (`typed_district` \| `link_district`), `source_kind`, `n`, `incomplete`                                                                                          |
 | `tg_districts_viewed`         | `/districts`, or its button                   | `via: 'button'` from the button; none from the command                                                                                                                                                             |
 | `tg_city_requested`           | the city waitlist button                      | `city`, `city_key` (`c:<slug>`), `waiting` (chats waiting, this one included), `already`                                                                                                                           |
@@ -237,10 +237,11 @@ it once; `replyDistrict` is the one place for `tg_district_checked`, which
 describes the district's reference (the city's below `MIN_AREA_REPORTS`). The
 `entry_source` values are the `ENTRY_SOURCE` constant in `start-payload.ts`.
 
-No check event carries free text; `tg_address_not_found` and
-`tg_address_outside_city` still send the typed `query` (Q-15). Apart from
-`query`, no property holds free text, and none holds a person's name, contract
-text or the chat id (which is only in the distinct id).
+No bot event carries the text a person typed (D32): `tg_address_not_found` and
+`tg_address_outside_city` send no `query`, and `city` is the geocoded city name,
+never the typed address. No property holds free text, a person's name, contract
+text or the chat id (which is only in the distinct id). A new event adds no
+free text either.
 
 Events are flushed before the function ends: the webhook route registers
 `flushPostHog` with `after()` and the follow-ups cron awaits it. The contract
