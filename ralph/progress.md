@@ -2891,3 +2891,40 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - No new table, migration or event.
   - **Owner action after the deploy:** run `npm run bot:webhook` so the `en` and `pl` menus are published.
 - Next: `node scripts/ralph-tasks.mjs next` (T100, website bot languages FR-39, is now unblocked).
+
+### 2026-11-19 20:45 · T100 · done
+
+- Done:
+  - No copy changed. A search of the four message files found one general bot-language line, `listings.findFlatmate.languages`. It already named English, Russian and Ukrainian in all four locales (written by T085). No line speaks only of the deposit helper and names languages.
+  - `TelegramBotCta` reads only `costs.telegramCta` ("Open this building in the Telegram bot" and its translations), which names no language. The roommate block of spec 02 is `findFlatmate`.
+  - New `src/i18n/bot-languages-copy.test.ts`:
+    - It finds every leaf value that names English, Russian or Ukrainian. It uses per-locale stems for every case form, plus the Latin "English" and the endonyms.
+    - It sorts each match into one of three kinds:
+      - a deposit-only line (`DEPOSIT_ONLY_LINES`, empty): names Russian and Ukrainian, never English (D63);
+      - a listed non-bot line (`NOT_BOT_LINES`);
+      - a bot line (the value names the bot or Telegram, or the key path does): must name all three (FR-39).
+    - An unlisted language line without the bot fails and asks to be classified.
+    - It also checks that the same keys are bot-language lines in all four locales, that the roommate line is found in each, and that every listed exception exists.
+    - It tests the check itself on synthetic dictionaries. A general line without English fails in every locale, including «Telegram-бот», «бота» and «w bocie». A deposit-only line passes with Russian and Ukrainian and fails with English. «работают» is not read as the bot.
+  - `docs/specs/README.md`: FR-39 → Done.
+- Keys:
+  - Changed: none.
+  - Kept as general bot lines (English, Russian, Ukrainian): `listings.findFlatmate.languages`. pl «Bot mówi po angielsku, rosyjsku i ukraińsku.», en "The bot speaks English, Russian and Ukrainian.", ru «Бот говорит по-английски, по-русски и по-украински.», uk «Бот говорить англійською, російською та українською.».
+  - Kept as deposit-only lines: none exist on the website.
+  - Not bot lines (`NOT_BOT_LINES`):
+    - `landing.tools.templatesDescription`: template languages;
+    - `helpCenter.general.a4`: the website's four languages;
+    - `documents.resources.intro`: template PDFs.
+  - Outside the message files, `src/content/blog/renting-without-agent-warsaw-*.mdx` names "Russian and Ukrainian" for third-party Telegram rental channels, not for the Passflat bot. It is unchanged and out of this spec's scope.
+- Checks:
+  - `npx vitest run src/i18n/bot-languages-copy.test.ts`: 21 passed.
+  - Mutation check: the pl line without "angielsku" → 2 failures (FR-39 violation, roommate line not three languages); reverted, so pl.json equals HEAD.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 137 files / 2875 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: nothing.
+- Owner review: nothing. No copy changed, and no assumption, event, table or migration was added.
+- Next: `node scripts/ralph-tasks.mjs next` (T101, events and behaviour documented, FR-40).

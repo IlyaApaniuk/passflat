@@ -711,14 +711,14 @@
       "title": "Website copy names the bot's languages (FR-39)",
       "spec": "docs/specs/04-telegram-bot.md#website-bot-languages",
       "dependsOn": ["T085"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Every general bot-language line in src/i18n/messages says English, Russian and Ukrainian in all four locales; deposit-only lines keep Russian and Ukrainian (D63)",
         "A test over the four message files fails on a general bot line without English",
         "Changed and kept keys are listed in the progress entry; key parity holds"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D50, D63."
     },
     {
