@@ -711,14 +711,14 @@
       "title": "Write the activation funnels document",
       "spec": "docs/specs/05-measurement-docs.md#activation-funnels-document",
       "dependsOn": ["T005", "T010", "T013", "T024", "T038"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "docs/analytics/activation-funnels.md has the event table (checked by searching src/), the five funnels with steps, queries or settings and windows, DB counts, the two-week comparison and the limitations, exactly as spec 05 lists them",
         "Every event and property named exists in src/ (the progress entry lists the search used); no query was run against PostHog",
         "Roommate is counted in sessions per step with intent as a breakdown; address answers split by answer_level and entry_page_type; E8 and E9 readouts are marked valid only after FR-13 is fixed and verified"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

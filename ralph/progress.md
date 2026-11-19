@@ -877,3 +877,48 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - (4) The `outcomeLetterFailed` procedural claims (20 000 zł, fees, e-Sąd) have no citation in code.
   - Owner action: send the document to a Polish lawyer. Line numbers go stale when `deposit.ts` / `deposit-flow.ts` / `deposit-texts.ts` change.
 - Next: remaining M4 tasks per `ralph/tasks.json`.
+
+### 2026-11-19 05:20 · T044 · done
+
+- Done:
+  - New `docs/analytics/activation-funnels.md` (English), written from the code at `23e0c34`:
+    - a validity box, repeated in 2.1 and 2.2: E8 and E9 readouts are valid only after FR-13 (T002, Q-1) is fixed and verified;
+    - the event table: client, server and bot events of the five funnels, each with file, own properties and identity (visitor id, account id, `pf_anon` id, e-mail for the two waitlist events, `tg_<chatId>`);
+    - five funnels, each with steps, a HogQL query and its window:
+      - roommate in sessions per step, `intent` as a breakdown (the last role in the session or `none`), the waitlist and offer branches, `listing_created` / `conversation_started` as server counts of record;
+      - address with the entry kind (checker vs building, `location_score_viewed` fallback), split by `entry_page_type` and the first answer's `answer_level`;
+      - contribution by entry `source` and address `method`, `cost_report_submitted` as the count of record;
+      - Telegram address per chat;
+      - Telegram deposit per chat, 30 days from the first flow start;
+    - read-only Postgres SQL for `city_notify_subscriptions` (three classes, before/after the PRD 1 deploy) and `telegram_subscriptions` (by `target_key` prefix), plus the event-side comparison;
+    - the two-week Monday–Sunday comparison: entries, useful actions, saved requests, sources, errors;
+    - the limitations, and the searches used.
+  - `docs/architecture.md` §5: a pointer to the new document.
+- Searches used (non-test files of `src/`):
+  - `grep -rnE "capture\(" src --include='*.ts' --include='*.tsx' --exclude='*.test.ts' --exclude='*.test.tsx'`;
+  - `grep -rnE "captureServerEvent|trackServerEvent|serverCapture|from '@/lib/posthog-server'" src`;
+  - `grep -rnE "track\(" src/lib/bot --include='*.ts' --exclude='*.test.ts'`;
+  - `grep -rnE "\.identify\(|\.reset\(|\.alias\(" src`;
+  - then the property builders under `src/lib/analytics/`, `src/lib/bot/check-events.ts`, `cost-figures.ts` (`answerProperties`), `cost-submit-params.ts`, and posthog-js 1.374 in `node_modules`.
+  - A scratch Node script checked every backticked snake_case name and every quoted event name in the doc against `src/`. The only names not found are query labels (`city_launch`, `no_answer`, ...) and DB names from `prisma/schema.prisma` `@map`s.
+- No query was run against PostHog or any database.
+- Checks:
+  - `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types / 1 duplicate export, as before), Vitest 71 files / 916 tests, build OK. `next-env.d.ts` restored.
+  - After verify, the validity wording was tightened (markdown only); `npx prettier --check` passed on both files.
+  - No code changed, so no tests were added.
+- Did not work: nothing.
+- Owner review:
+  - Assumption, set in the document only: the Telegram address funnel window is the readout week (Monday–Sunday) per chat. Spec 05 sets windows only for the web funnels and the deposit funnel.
+  - Choices to confirm:
+    - (1) Web funnel steps are cumulative presence in one session, not strict time order.
+    - (2) The address split uses the session's first answer; the roommate `intent` uses the last role chosen.
+    - (3) "Useful actions" in the two-week comparison are the funnels' action events, read one per line and never summed.
+  - Facts found in the code (stated in the doc, nothing changed):
+    - (1) The client never calls `posthog.identify`. Server `listing_created`, `conversation_started` and `cost_report_submitted` therefore cannot be joined to sessions.
+    - (2) The provider's `register_once` for `ref` / `utm_*` runs in the same effect as the landing `$pageview`. Before `init` it is a no-op (posthog-js writes through `this.persistence`, created in `init`), so landing ref/UTM share FR-13's loss. The SDK's `$session_entry_utm_*` / `$session_entry_referring_domain` do not.
+    - (3) `cost_report_submitted.source` is provenance (`user` / `import` / `scraped`), not the form's entry source.
+    - (4) A logged-out offer-room click leaves the session in memory mode on a Google or e-mail-link sign-in.
+    - (5) Until T050 ships, `tg_deposit_verdict` after a read contract can be lost, as well as `tg_deposit_contract`.
+  - Owner actions: run each query once on a short interval before relying on it (HogQL syntax was checked by reading only); fill in the PRD 1 deploy time in the date placeholders.
+  - No copy, tables or migrations.
+- Next: T045 (bot README and the architecture bot rows), then the final check of M5.
