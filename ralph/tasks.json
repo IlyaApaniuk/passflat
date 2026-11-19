@@ -12,14 +12,14 @@
       "title": "Fix landing events lost before posthog.init (FR-13, moved from PRD 2 FR-1)",
       "spec": "docs/specs/01-analytics-context.md#landing-capture",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Built exactly as criteria 1-8 of spec 01 §Landing capture: a test that fails on the current code first; if the loss cannot be reproduced, block with the finding instead of changing the provider",
         "The before_send page context of T005 still attaches to every event after init moves",
         "Consent model and analytics identity unchanged (D10); existing consent tests pass unchanged"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-1 (prd-1-decision-review.md). Should PRD 2 FR-1 (landing $pageview and mount-time events dropped because PostHogPageView captures before the parent effect runs posthog.init; 86 % of visits have no $pageview) move into PRD 1 now, so E8 and E9 can be read? Proposal: yes.\nOwner answer: Q-1 yes (D22, 2026-11-19): PRD 2 FR-1 moves into PRD 1; build it from spec 01 §Landing capture, which now holds the criteria (PRD 2 v0.2 drops FR-1)."
     },
     {

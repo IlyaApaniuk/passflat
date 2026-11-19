@@ -78,6 +78,11 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The shell is zsh: quote globs in flags (`--include='*.ts'`), or the command fails with "no matches found".
 - Compare knip's "Unused exports (N)" with the last log entry: a higher N means the task removed an export's last consumer; delete the dead export in the same task.
 - A task added with `ralph-tasks.mjs add` must also go into the PRD's final-check task's `dependsOn` (edit `ralph/tasks.json`): `next` picks the first runnable task in file order, so a final check runs before later-added tasks otherwise.
+- `posthog.init` runs in `src/instrumentation-client.ts` (`initPostHog`, before React hydrates); never move it back into a component effect, or children's mount-time captures are dropped.
+- Real client PostHog events can be checked in e2e: the e2e build has a dummy key and the fake host `E2E_POSTHOG_HOST`; reuse `recordPostHog` from `e2e/posthog-landing.spec.ts` (answers the route, decodes gzip, sets `navigator.webdriver` false because posthog-js drops bot events, `POSTHOG_DEBUG` logs pre-init drops).
+- In the e2e build (no DB) an unknown first segment hits `[city]`, and every city page returns 500; only non-city pages (`/en`, `/en/about`, `/en/auth/login`, ...) render 200.
+- A background `next start` is denied by the loop permissions; probe pages with a temporary spec in `e2e/` run by `npx playwright test <file>` (it builds and serves on 3100), then delete it.
+- Mount-time effects can be unit-tested in React's commit order (children before parents, re-run on changed deps) with the harness in `src/components/providers/posthog-provider.test.ts`.
 
 ## Log
 
@@ -1156,3 +1161,48 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - The bot in production: never started, no Telegram call made.
     - The CI e2e job: not run, nothing was pushed.
 - Next: PRD 1 is complete apart from the six blocked tasks. Answer Q-1 – Q-6 (`ralph-answer`) to queue them, or take PRD 2 in with `prd-intake`.
+
+### 2026-11-19 09:08 · T002 · done
+
+- Reproduced first (criterion 1). The e2e build ran real posthog-js 1.374 in real Chromium, with a dummy key and a fake host answered by the test. On the old code (init in the provider's own effect):
+  - Static pages kept their landing `$pageview`: `/en`, `/en/about`, `/en/blog`, `/en/resources`, `/en/contact`.
+  - `/en/auth/login` and `/en/auth/register` (200) dropped a mount-time capture (`auth_started` on login). posthog-js logged "You must initialize PostHog before calling posthog.capture".
+  - Server renders that failed lost their landing `$pageview`: every `/en/warsaw/*` page (500 without a DB) and `/en/pricing` (404).
+  - The new e2e test "a mount-time capture on the landing page is not dropped" failed on the old code: `auth_started` never arrived.
+  - Not reproducible here: city pages with real data. There is no DB in e2e, and a separate `next start` against the local DB was denied. So it is unverified whether this loss alone explains the production readout (86 % of visits without `$pageview`). The check after deploy will tell.
+- Done:
+  - `src/lib/analytics/posthog-client.ts` (new): `initPostHog()` holds the unchanged `posthog.init` config: memory persistence until consent, `before_send` page-context hook, bootstrap flags, `loaded` callback. It does nothing without `NEXT_PUBLIC_POSTHOG_KEY` or a window, and inits only once. An `init` that throws is caught and its message logged.
+  - `src/instrumentation-client.ts` (new): calls `initPostHog()`. Next.js runs it once per full page load, before React hydrates (Next 16 docs). Knip picks it up as an entry.
+  - `src/components/providers/posthog-provider.tsx`: the init effect is removed. `PostHogPageView`, `PersistenceUpgrade` and `SessionRecordingGate` are unchanged.
+  - `playwright.config.ts`: the e2e build sets `NEXT_PUBLIC_POSTHOG_KEY=phc_e2e_dummy_key` and `NEXT_PUBLIC_POSTHOG_HOST=https://posthog.e2e.invalid` (exported as `E2E_POSTHOG_HOST`). The server wrapper's flushes to that host log `ENOTFOUND` in the e2e output; nothing reaches PostHog.
+  - Docs:
+    - `docs/architecture.md` §5: where init runs and why no capture can precede it; the e2e fake host.
+    - `docs/analytics/activation-funnels.md`: validity note, the Sources paragraph, the E8 / E9 steps and §6 Limitations. The fix is built, not deployed or verified; the ≥ 90 % check after deploy.
+    - `docs/specs/README.md`: FR-13 → Done.
+- Tests:
+  - `e2e/posthog-landing.spec.ts`, 4 tests:
+    - The landing `$pageview` on `/en`: exactly once, with `$current_url` and page context, no pre-init warning, no `ph_` localStorage key or cookie.
+    - `auth_started` on `/en/auth/login`: once.
+    - A failed render still sends its one `$pageview`.
+    - A client navigation from `/en` to `/en/about` adds exactly one `$pageview` in the same session, with `entry_page_type: home`.
+  - `src/components/providers/posthog-provider.test.ts`, 5 tests. A mount harness runs effects in React's commit order, and a posthog-js double drops captures made before init and applies `before_send`. Boot order: instrumentation-client, then mount of the provider and the real `BuildingCostsClient`.
+    - One `$pageview` with page context.
+    - One `building_detail_viewed`.
+    - A re-render records nothing; a client navigation records one more `$pageview`.
+    - Without a key: no init, nothing sent, the page renders.
+    - Memory store until consent, then `set_config` upgrade on the same instance.
+  - `src/lib/analytics/posthog-client.test.ts`, 8 tests: no key / no window, init once, persistence by consent (accepted / declined / none), host override, `before_send` page context (criterion 7), `loaded` callback, an init that throws.
+  - `src/lib/consent.test.ts` and `page-context.test.ts` pass unchanged.
+- Checks:
+  - `npm run verify` exit 0: lint, typecheck, knip (32 unused exports, one fewer than before; no unused files), Vitest 74 files / 964 tests, build OK.
+  - `npm run test:e2e` exit 0: 6/6 (2 home + 4 landing) on port 3100, stopped afterwards.
+  - `next-env.d.ts` restored. The temporary probe spec `e2e/zz-probe.spec.ts` was deleted.
+- Did not work: a probe of city pages against the local DB. Starting a second server is denied by the loop permissions.
+- Owner review:
+  - No copy, tables, migrations or new events. Consent model and identity unchanged (D10). Assumption: the after-deploy threshold "sessions with `$pageview` ≥ 90 % of sessions with `$web_vitals` in the first full week" (spec 01). It is written in `docs/analytics/activation-funnels.md` §6 only; there is no code constant.
+  - Side effect: `src/app/[locale]/error.tsx` and `global-error.tsx` send `captureException` only when `posthog.__loaded`. That is now true on a landing error, so `$exception` events from error landings start to arrive.
+  - The CI e2e job now runs posthog-js against the fake host as well.
+  - After deploy:
+    1. In PostHog Live Events, land on a city page and on `/auth/login` with a fresh browser; check one `$pageview` each and `auth_started`.
+    2. After the first full week, compare sessions with `$pageview` against sessions with `$web_vitals` (≥ 90 %).
+- Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`).

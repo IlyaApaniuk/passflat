@@ -10,9 +10,11 @@ specs. None of the queries has been run: loop iterations never query PostHog. Ho
 checked by reading only, so run each one on a short interval before you rely on it.
 
 > **Validity.** E8 and E9 readouts are **valid only after FR-13 (landing capture, moved from
-> PRD 2 FR-1 by D22; task T002) is fixed and verified** in PostHog Live Events. Until then the first
-> page of a full page load usually sends no `$pageview` and no mount-time event, so entries are
-> undercounted and every split by entry page is wrong (see [Limitations](#6-limitations)).
+> PRD 2 FR-1 by D22; task T002) is verified** in PostHog Live Events. The fix is built (T002,
+> 2026-11-19: `posthog.init` runs in `src/instrumentation-client.ts`, before React hydrates) but
+> not deployed or verified. Data from before the deploy lost the landing `$pageview` and
+> mount-time events on many first pages, so entries are undercounted and every split by entry
+> page is wrong there (see [Limitations](#6-limitations)).
 
 This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
 §6 and `docs/product/experiments.md`). It contains no A/B
@@ -114,8 +116,8 @@ Steps:
 
 1. Sessions with any event with `page_type = 'roommate'` (`/<city>/roommate`). Use any event,
    not only `$pageview`: `$pageview` re-fires on every filter change and checker `?p=` update
-   (`replaceState` updates `useSearchParams`), and the landing one is usually dropped while FR-13
-   is open.
+   (`replaceState` updates `useSearchParams`), and before the FR-13 fix (T002) the landing one
+   was often dropped.
 2. → `listing_detail_viewed` with `listing_type = 'roommate'`.
 3. → `listing_external_contact_clicked` or `interest_modal_opened` (roommate).
 
@@ -207,9 +209,9 @@ Steps:
 
 1. **Entry**, two kinds, kept apart:
    - checker: `checker_viewed`;
-   - building page: `$pageview` with `page_type = 'building'`. While FR-13 is open, use
-     `location_score_viewed` with `surface = 'building'` as the fallback; the query counts
-     either.
+   - building page: `$pageview` with `page_type = 'building'`. For data from before the FR-13
+     fix is verified, use `location_score_viewed` with `surface = 'building'` as the fallback;
+     the query counts either.
      The entry kind is the first of these in the session. Starting a check and landing on a
      building page are different entries: also split by `entry_page_type`.
 2. **Answer**, split by `answer_level` (spec 01 §Answer quality): `address_checked` without
@@ -627,9 +629,10 @@ UTC>'` in a `WHERE`), next to the event-side query for the same week.
 Sources: sessions per week by first-touch `ref`, UTM and referring domain. The SDK's
 `$session_entry_utm_source` and `$session_entry_referring_domain` come from the session's first
 URL. The provider's `ref` and `utm_*` super properties are registered by the same effect that
-sends the landing `$pageview`: before `posthog.init` they are not stored (posthog-js 1.374
-`register_once` writes through `this.persistence`, created in `init`), so they share FR-13's
-loss on landings.
+sends the landing `$pageview`. Before the FR-13 fix they were not stored when that effect ran
+before `posthog.init` (posthog-js 1.374 `register_once` writes through `this.persistence`,
+created in `init`), so they shared FR-13's loss on landings. Since T002, `init` runs before
+React hydrates, so they are registered on every landing; verify after deploy.
 
 ```sql
 -- HogQL. Sessions per week by source.
@@ -677,12 +680,19 @@ ORDER BY week, event, code
 
 ## 6. Limitations
 
-- **Landing capture (FR-13).** Until the owner's fix (T002, Q-1) is verified in Live Events, the
-  first page of a full page load usually sends no `$pageview` and no event captured on mount
-  (`checker_viewed`, `listing_detail_viewed`, `building_detail_viewed`, ...), and its `ref` / UTM
-  super properties are not registered. Entries are undercounted, and E8 and E9 readouts that
-  split by entry page are not valid. `location_score_viewed` stays the fallback for building
-  entries until then.
+- **Landing capture (FR-13).** Before the fix, `posthog.init` ran in the provider's own effect,
+  after its children's effects, and posthog-js drops a `capture` made before `init`. So the
+  first page of a full page load could lose its `$pageview`, its events captured on mount
+  (`checker_viewed`, `listing_detail_viewed`, `building_detail_viewed`, `auth_started`, ...) and
+  its `ref` / UTM super properties. The e2e build reproduced it (T002, 2026-11-19): `auth_started`
+  on the login page and the `$pageview` of server renders that failed (404, 500) were dropped,
+  while static pages such as the home page kept their `$pageview`. City pages could not be
+  checked without a database. The fix (T002) runs `init` in `src/instrumentation-client.ts`,
+  before React hydrates. It is built and tested (`e2e/posthog-landing.spec.ts`) but **not
+  deployed or verified**: after deploy, check Live Events, and in the first full week sessions
+  with `$pageview` should be at least 90 % of sessions with `$web_vitals` (spec 01,
+  Assumption). Until that check passes, E8 and E9 readouts that split by entry page are not
+  valid, and `location_score_viewed` stays the fallback for building entries in older data.
 - **Memory mode.** Without consent a full page load starts a new visitor and session, so the
   session's entry and the provider's `ref` / UTM are lost on reload, and any step after a reload
   (for example a sign-in round trip) leaves the funnel. `page_type` itself is recomputed from
