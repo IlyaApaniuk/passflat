@@ -1407,7 +1407,25 @@
         "askingTitle": "Ceny ofertowe z ogłoszeń",
         "nListings": "{count, plural, one {# ogłoszenie} few {# ogłoszenia} many {# ogłoszeń} other {# ogłoszenia}}",
         "depositReturned": "{gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
-        "countOfTotal": "{count} z {total}"
+        "countOfTotal": "{count} z {total}",
+        "oneObservation": "Jedna obserwacja pod tym adresem",
+        "roomsValue": "Pokoje: {count}",
+        "areaValue": "Powierzchnia ≈ {area} m²",
+        "knownPart": "Znana część kosztów",
+        "knownPartHint": "Nie podano wszystkich mediów — pełny koszt miesięczny może być wyższy",
+        "valueUnknown": "Nieznane",
+        "valueIncluded": "Wliczone w czynsz najmu",
+        "includedCount": "wliczone w czynsz najmu: {count}",
+        "unknownCount": "nieznane: {count}",
+        "lastRecorded": "Ostatni raport dodany lub potwierdzony: {date}",
+        "lastRecordedAsking": "Ostatnia cena ofertowa dodana: {date}",
+        "tenancyRange": "Okres tych kosztów: {from}–{to}",
+        "tenancyYear": "Okres tych kosztów: {year}",
+        "tenancyOngoing": "Okres tych kosztów: od {from} do dziś",
+        "tenancyCurrent": "Okres tych kosztów: do dziś",
+        "tenancyFrom": "Okres tych kosztów: od {from}",
+        "tenancyUntil": "Okres tych kosztów: do {to}",
+        "tenancyUnknown": "Nie wiadomo, za jaki okres płacono te koszty"
       }
     },
     "trust": {

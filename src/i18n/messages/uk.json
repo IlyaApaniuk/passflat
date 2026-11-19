@@ -1407,7 +1407,25 @@
         "askingTitle": "Ціни з оголошень",
         "nListings": "{count, plural, one {# оголошення} few {# оголошення} many {# оголошень} other {# оголошення}}",
         "depositReturned": "{gotBack} з {answered} тих, хто відповів, отримали заставу назад — повністю або частково",
-        "countOfTotal": "{count} з {total}"
+        "countOfTotal": "{count} з {total}",
+        "oneObservation": "Одне спостереження за цією адресою",
+        "roomsValue": "Кімнат: {count}",
+        "areaValue": "Площа ≈ {area} м²",
+        "knownPart": "Відома частина витрат",
+        "knownPartHint": "Вказано не всі комунальні платежі — повна сума на місяць може бути вищою",
+        "valueUnknown": "Невідомо",
+        "valueIncluded": "Включено в оренду",
+        "includedCount": "включено в оренду: {count}",
+        "unknownCount": "невідомо: {count}",
+        "lastRecorded": "Останній звіт додано або підтверджено: {date}",
+        "lastRecordedAsking": "Останню ціну з оголошення додано: {date}",
+        "tenancyRange": "Період цих витрат: {from}–{to}",
+        "tenancyYear": "Період цих витрат: {year}",
+        "tenancyOngoing": "Період цих витрат: з {from} донині",
+        "tenancyCurrent": "Період цих витрат: донині",
+        "tenancyFrom": "Період цих витрат: з {from}",
+        "tenancyUntil": "Період цих витрат: до {to}",
+        "tenancyUnknown": "Невідомо, за який період сплачувалися ці витрати"
       }
     },
     "trust": {

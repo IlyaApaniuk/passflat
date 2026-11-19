@@ -1,17 +1,30 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { format } from 'date-fns';
+import { enUS, ru } from 'date-fns/locale';
 import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 
 import { summarizeFigures, type FigureReport } from './cost-figures';
 import {
+  breakdownHasFigures,
+  breakdownNotes,
   breakdownRows,
+  characteristicMessages,
+  comparableTenantGroup,
   FIGURE_GROUP_N_KEY,
+  FIGURE_GROUP_RECORDED_KEY,
   FIGURE_GROUP_TITLE_KEY,
   GROUP_FIGURE_LABEL_KEY,
+  groupDateMessages,
   groupFigureRows,
+  isOneObservation,
+  KNOWN_PART_HINT_KEY,
+  ONE_OBSERVATION_KEY,
   orderedFigureGroups,
   sourceLineMessages,
+  tenancyMessage,
+  type FigureMessage,
 } from './building-figures-view';
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
@@ -24,7 +37,7 @@ const messages = Object.fromEntries(
   ]),
 );
 
-type Translate = (key: string, values?: Record<string, number>) => string;
+type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 /** The real ICU rendering of a locale file, keyed by plain strings. */
 function translator(locale: (typeof LOCALES)[number]): Translate {
@@ -66,6 +79,33 @@ const summaryOf = (sources: string[]) =>
     sources.map((source) => complete(source, { rent: 3000, totalMonthlyAvg: 3800 })),
     building,
   );
+
+const render = (locale: (typeof LOCALES)[number], messageList: FigureMessage[]) =>
+  messageList.map((message) => translator(locale)(message.key, message.values));
+
+/** Golden example 2 of spec 03: one observation, and the same with a second report. */
+const oneReport = complete('user', {
+  rentalType: 'apartment',
+  rooms: 2,
+  areaM2: 52,
+  rent: 3200,
+  totalMonthlyAvg: 4000,
+});
+const oneObservation = summarizeFigures([oneReport], building);
+const twoObservations = summarizeFigures(
+  [oneReport, incomplete('user', { totalMonthlyAvg: 4200 })],
+  building,
+);
+
+/** Golden example 9 of spec 03: dates. */
+const datedReport = complete('user', {
+  createdAt: '2026-03-10',
+  confirmedAt: '2026-09-01',
+  livedFrom: '2025-01-01',
+  livedUntil: '2026-06-30',
+});
+const undatedReport = complete('user', { createdAt: '2026-05-02' });
+const monthIn = (locale: typeof enUS) => (month: Date) => format(month, 'LLLL yyyy', { locale });
 
 describe('sourceLineMessages', () => {
   it('renders the spec line for a mixed building, tenant reports first', () => {
@@ -133,24 +173,117 @@ describe('orderedFigureGroups', () => {
 describe('groupFigureRows', () => {
   it('gives each group its own figures and N (golden example 1)', () => {
     const tenant = groupFigureRows(mixedBuilding.groups.tenant!);
-    expect(tenant.headline).toMatchObject({
+    expect(tenant.headline).toEqual({
       key: 'completeTotal',
-      figure: { median: 3850, n: 2 },
+      figure: expect.objectContaining({ median: 3850, n: 2 }),
+      labelKey: 'costs.building.medianMonthlyTotal',
     });
+    // "3 reports, all-in total from 2": the known part stays visible with its own N.
     expect(tenant.rows).toEqual([
-      { key: 'rent', figure: expect.objectContaining({ median: 3200, n: 3 }) },
-      { key: 'expenses', figure: expect.objectContaining({ median: 750, n: 2 }) },
+      {
+        key: 'knownPartTotal',
+        figure: expect.objectContaining({ median: 3900, n: 1 }),
+        labelKey: 'costs.building.figures.knownPart',
+      },
+      {
+        key: 'rent',
+        figure: expect.objectContaining({ median: 3200, n: 3 }),
+        labelKey: 'costs.building.rent',
+      },
+      {
+        key: 'expenses',
+        figure: expect.objectContaining({ median: 750, n: 2 }),
+        labelKey: 'costs.building.expenses',
+      },
     ]);
+    expect(tenant.knownPart).toBe(true);
 
-    // Asking prices have no complete total: rent is the headline, nothing merges.
+    // Asking prices have no complete total: the known part leads, never as the monthly cost.
     const asking = groupFigureRows(mixedBuilding.groups.asking!);
-    expect(asking.headline).toMatchObject({ key: 'rent', figure: { median: 3400, n: 2 } });
-    expect(asking.rows).toEqual([]);
+    expect(asking.headline).toEqual({
+      key: 'knownPartTotal',
+      figure: expect.objectContaining({ median: 4000, n: 2 }),
+      labelKey: 'costs.building.figures.knownPart',
+    });
+    expect(asking.rows.map((row) => [row.key, row.figure.median, row.figure.n])).toEqual([
+      ['rent', 3400, 2],
+    ]);
+  });
+
+  it('labels one observation as a value, not a typical total (golden example 2)', () => {
+    const one = groupFigureRows(oneObservation.groups.tenant!);
+    expect(one.headline).toEqual({
+      key: 'completeTotal',
+      figure: expect.objectContaining({ median: 4000, n: 1 }),
+      labelKey: 'costs.compare.colTotal',
+    });
+    expect(one.rows.map((row) => [row.key, row.figure.median])).toEqual([
+      ['rent', 3200],
+      ['expenses', 800],
+      ['completeTotalPerM2', 77],
+    ]);
+    expect(one.knownPart).toBe(false);
+    expect(translator('ru')(one.headline!.labelKey)).toBe('Всего в месяц');
+
+    // A second report makes the group several: the typical label, a complete total from 1.
+    const several = groupFigureRows(twoObservations.groups.tenant!);
+    expect(several.headline).toMatchObject({
+      key: 'completeTotal',
+      figure: { median: 4000, n: 1 },
+      labelKey: 'costs.building.medianMonthlyTotal',
+    });
+    expect(several.rows[0]).toMatchObject({
+      key: 'knownPartTotal',
+      figure: { median: 4200, n: 1 },
+    });
+  });
+
+  it('leads with the known part when utilities are not established (golden example 3)', () => {
+    const summary = summarizeFigures(
+      [incomplete('user', { rent: 2800, totalMonthlyAvg: 3100 })],
+      building,
+    );
+    const card = groupFigureRows(summary.groups.tenant!);
+    expect(card.headline).toMatchObject({
+      key: 'knownPartTotal',
+      figure: { median: 3100, n: 1 },
+      labelKey: 'costs.building.figures.knownPart',
+    });
+    expect(card.rows.map((row) => row.key)).toEqual(['rent']);
+    expect(card.knownPart).toBe(true);
+    expect(translator('en')(card.headline!.labelKey)).toBe('Known part of the costs');
+    expect(translator('en')(KNOWN_PART_HINT_KEY)).toBe(
+      'Not all utilities were listed, so the full monthly cost may be higher',
+    );
+  });
+
+  it('treats a legacy report as a known part (golden example 4)', () => {
+    const summary = summarizeFigures(
+      [{ source: 'user', totalMonthlyAvg: 3600, utilitiesComplete: null }],
+      building,
+    );
+    const card = groupFigureRows(summary.groups.tenant!);
+    expect(card.headline).toMatchObject({ key: 'knownPartTotal', figure: { median: 3600, n: 1 } });
+    expect(card.rows).toEqual([]);
+  });
+
+  it('never labels a known part with a monthly-cost label in any locale', () => {
+    for (const locale of LOCALES) {
+      const label = translator(locale)(GROUP_FIGURE_LABEL_KEY.knownPartTotal);
+      const monthly = translator(locale)(GROUP_FIGURE_LABEL_KEY.completeTotal);
+      expect(label).not.toBe(monthly);
+    }
+    expect(render('ru', [{ key: GROUP_FIGURE_LABEL_KEY.knownPartTotal, values: {} }])).toEqual([
+      'Известная часть расходов',
+    ]);
   });
 
   it('adds the per-m² total when reports carry an area', () => {
     const summary = summarizeFigures(
-      [complete('user', { rent: 3000, totalMonthlyAvg: 4000, areaM2: 50 })],
+      [
+        complete('user', { rent: 3000, totalMonthlyAvg: 4000, areaM2: 50 }),
+        complete('user', { rent: 3000, totalMonthlyAvg: 4000, areaM2: 50 }),
+      ],
       building,
     );
     expect(groupFigureRows(summary.groups.tenant!).rows.map((row) => row.key)).toEqual([
@@ -160,9 +293,52 @@ describe('groupFigureRows', () => {
     ]);
   });
 
-  it('has no headline when the group has neither a complete total nor rent', () => {
-    const summary = summarizeFigures([incomplete('user', { totalMonthlyAvg: 3100 })], building);
-    expect(groupFigureRows(summary.groups.tenant!)).toEqual({ headline: null, rows: [] });
+  it('has no headline when the group has no total and no rent', () => {
+    const summary = summarizeFigures([complete('user', { adminFee: 600 })], building);
+    expect(groupFigureRows(summary.groups.tenant!)).toEqual({
+      headline: null,
+      rows: [],
+      knownPart: false,
+    });
+  });
+});
+
+describe('one observation', () => {
+  it('reads «Одно наблюдение по этому адресу» with its characteristics (golden example 2)', () => {
+    const tenant = oneObservation.groups.tenant!;
+    expect(isOneObservation(tenant)).toBe(true);
+    expect(translator('ru')(ONE_OBSERVATION_KEY)).toBe('Одно наблюдение по этому адресу');
+    expect(translator('en')(ONE_OBSERVATION_KEY)).toBe('One observation at this address');
+    // Area rounded to 5 m² by the contract.
+    expect(render('en', characteristicMessages(tenant))).toEqual([
+      'Whole apartment',
+      'Rooms: 2',
+      'Area ≈ 50 m²',
+    ]);
+    expect(render('ru', characteristicMessages(tenant))).toEqual([
+      'Вся квартира',
+      'Комнат: 2',
+      'Площадь ≈ 50 м²',
+    ]);
+  });
+
+  it('is never compared, and has no characteristics once a second report arrives', () => {
+    expect(comparableTenantGroup(oneObservation)).toBeNull();
+    const several = twoObservations.groups.tenant!;
+    expect(isOneObservation(several)).toBe(false);
+    expect(characteristicMessages(several)).toEqual([]);
+    expect(comparableTenantGroup(twoObservations)).toBe(several);
+  });
+
+  it('shows only the characteristics the report has', () => {
+    const summary = summarizeFigures(
+      [complete('scraped', { rentalType: 'room', rent: 1800 })],
+      building,
+    );
+    expect(characteristicMessages(summary.groups.asking!)).toEqual([
+      { key: 'costs.submit.room', values: {} },
+    ]);
+    expect(comparableTenantGroup(summary)).toBeNull();
   });
 });
 
@@ -176,13 +352,24 @@ describe('breakdownRows', () => {
       building,
     );
     const { basic, detail } = breakdownRows(summary.groups.tenant!);
-    expect(basic.map((row) => row.key)).toEqual(['rent', 'adminFee']);
-    expect(detail.map((row) => row.key)).toEqual(['electricity', 'water']);
-    expect(detail[0]).toMatchObject({ figure: { median: 150, n: 1 }, oftenIncluded: true });
-    expect(detail[1]).toMatchObject({ figure: { median: 80, n: 1 }, oftenIncluded: false });
+    expect(basic.map((row) => [row.key, row.state, row.n])).toEqual([
+      ['rent', 'value', 2],
+      ['adminFee', 'value', 2],
+    ]);
+    expect(detail.map((row) => [row.key, row.state, row.n])).toEqual([
+      ['electricity', 'value', 1],
+      ['gas', 'unknown', 2],
+      ['heating', 'unknown', 2],
+      ['water', 'value', 1],
+      ['internet', 'unknown', 2],
+      ['other', 'unknown', 2],
+    ]);
+    // The electricity value comes with the report that said "included in rent".
+    expect(render('en', breakdownNotes(detail[0]))).toEqual(['included in rent: 1']);
+    expect(render('en', breakdownNotes(detail[3]))).toEqual(['unknown: 1']);
   });
 
-  it('shows a confirmed zero as a value with its own N (golden example 5)', () => {
+  it('tells a confirmed zero, included in rent and unknown apart (golden example 5)', () => {
     const summary = summarizeFigures(
       [
         complete('user', { internet: 0 }),
@@ -191,23 +378,130 @@ describe('breakdownRows', () => {
       ],
       building,
     );
-    expect(breakdownRows(summary.groups.tenant!).detail).toEqual([
-      {
-        key: 'internet',
-        figure: expect.objectContaining({ median: 0, n: 1 }),
-        oftenIncluded: false,
-      },
+    const internet = breakdownRows(summary.groups.tenant!).detail.find(
+      (row) => row.key === 'internet',
+    )!;
+    expect(internet).toEqual({
+      key: 'internet',
+      state: 'zero',
+      figure: expect.objectContaining({ median: 0, n: 1 }),
+      n: 1,
+      includedCount: 1,
+      unknownCount: 1,
+    });
+    expect(render('en', breakdownNotes(internet))).toEqual(['included in rent: 1', 'unknown: 1']);
+  });
+
+  it('says "included in rent" when no report gave an amount but some said it is included', () => {
+    const summary = summarizeFigures(
+      [
+        complete('user', { heatingIncluded: true }),
+        complete('user', { heatingIncluded: true }),
+        complete('user', {}),
+      ],
+      building,
+    );
+    const heating = breakdownRows(summary.groups.tenant!).detail.find(
+      (row) => row.key === 'heating',
+    )!;
+    expect(heating).toMatchObject({ state: 'included', n: 2, includedCount: 2, unknownCount: 1 });
+    expect(render('en', breakdownNotes(heating))).toEqual(['unknown: 1']);
+    expect(translator('ru')('costs.building.figures.valueIncluded')).toBe('Включено в аренду');
+  });
+
+  it('says "unknown" for a metric no report answered (golden example 3)', () => {
+    const summary = summarizeFigures(
+      [incomplete('user', { rent: 2800, totalMonthlyAvg: 3100 })],
+      building,
+    );
+    const { basic, detail } = breakdownRows(summary.groups.tenant!);
+    expect(basic.map((row) => [row.key, row.state, row.n])).toEqual([
+      ['rent', 'value', 1],
+      ['adminFee', 'unknown', 1],
+    ]);
+    expect(detail.every((row) => row.state === 'unknown' && row.n === 1)).toBe(true);
+    expect(breakdownNotes(detail[0])).toEqual([]);
+    expect(breakdownHasFigures(detail)).toBe(false);
+    expect(translator('en')('costs.building.figures.valueUnknown')).toBe('Unknown');
+  });
+
+  it('builds the asking group from asking prices only, with the N of listings', () => {
+    const { basic, detail } = breakdownRows(mixedBuilding.groups.asking!);
+    expect(basic[0]).toMatchObject({ key: 'rent', state: 'value', figure: { median: 3400 }, n: 2 });
+    expect(detail.every((row) => row.state === 'unknown' && row.n === 2)).toBe(true);
+  });
+
+  it('counts figures only where a row says more than unknown', () => {
+    expect(breakdownHasFigures([{ state: 'unknown' }, { state: 'included' }])).toBe(true);
+    expect(breakdownHasFigures([{ state: 'unknown' }, { state: 'zero' }])).toBe(true);
+    expect(breakdownHasFigures([])).toBe(false);
+  });
+});
+
+describe('dates', () => {
+  it('shows when the last report was added or confirmed, as month and year (golden example 9)', () => {
+    const summary = summarizeFigures([datedReport, undatedReport], building);
+    const tenant = summary.groups.tenant!;
+    expect(render('en', groupDateMessages(tenant, monthIn(enUS)))).toEqual([
+      'Last report added or confirmed: September 2026',
+      'Period of these costs: 2025–2026',
+    ]);
+    expect(render('ru', groupDateMessages(tenant, monthIn(ru)))).toEqual([
+      'Последний отчёт добавлен или подтверждён: сентябрь 2026',
+      'Период этих расходов: 2025–2026',
     ]);
   });
 
-  it('builds the asking group from asking prices only', () => {
-    const { basic } = breakdownRows(mixedBuilding.groups.asking!);
-    expect(basic).toEqual([
-      {
-        key: 'rent',
-        figure: expect.objectContaining({ median: 3400, n: 2 }),
-        oftenIncluded: false,
-      },
+  it('says the period is not known when no report has tenancy dates (golden example 9)', () => {
+    const tenant = summarizeFigures([undatedReport], building).groups.tenant!;
+    expect(render('en', groupDateMessages(tenant, monthIn(enUS)))).toEqual([
+      'Last report added or confirmed: May 2026',
+      'The period these costs were paid is not known',
+    ]);
+    expect(render('ru', [tenancyMessage(null)])).toEqual([
+      'Неизвестно, за какой период платились эти расходы',
+    ]);
+  });
+
+  it('shows a current tenancy as running to now', () => {
+    const tenant = summarizeFigures(
+      [complete('user', { livedFrom: '2025-04-01', isCurrentTenant: true })],
+      building,
+    ).groups.tenant!;
+    expect(render('en', [tenancyMessage(tenant.tenancy)])).toEqual([
+      'Period of these costs: 2025 to now',
+    ]);
+  });
+
+  it('covers a single year and a missing end or start', () => {
+    expect(render('en', [tenancyMessage({ from: '2026', to: '2026' })])).toEqual([
+      'Period of these costs: 2026',
+    ]);
+    expect(render('en', [tenancyMessage({ from: '2024', to: null })])).toEqual([
+      'Period of these costs: from 2024',
+    ]);
+    expect(render('en', [tenancyMessage({ from: null, to: '2025' })])).toEqual([
+      'Period of these costs: until 2025',
+    ]);
+    expect(render('en', [tenancyMessage({ from: null, to: 'now' })])).toEqual([
+      'Period of these costs: up to now',
+    ]);
+  });
+
+  it('gives asking prices the date they were added and no paid period', () => {
+    const asking = summarizeFigures(
+      [complete('scraped', { rent: 3000, createdAt: '2026-10-15' })],
+      building,
+    ).groups.asking!;
+    expect(render('en', groupDateMessages(asking, monthIn(enUS)))).toEqual([
+      'Last asking price added: October 2026',
+    ]);
+  });
+
+  it('shows no recorded date when the group has none', () => {
+    const tenant = summarizeFigures([complete('user', {})], building).groups.tenant!;
+    expect(groupDateMessages(tenant, monthIn(enUS)).map((message) => message.key)).toEqual([
+      'costs.building.figures.tenancyUnknown',
     ]);
   });
 });
@@ -217,12 +511,33 @@ describe('message keys', () => {
     ...Object.values(FIGURE_GROUP_TITLE_KEY),
     ...Object.values(FIGURE_GROUP_N_KEY),
     ...Object.values(GROUP_FIGURE_LABEL_KEY),
+    ...Object.values(FIGURE_GROUP_RECORDED_KEY),
+    ONE_OBSERVATION_KEY,
+    KNOWN_PART_HINT_KEY,
+    'costs.compare.colTotal',
+    'costs.submit.wholeApartment',
+    'costs.submit.room',
     'costs.building.figures.sourceTenant',
     'costs.building.figures.sourceTenantWithImported',
     'costs.building.figures.sourceImported',
     'costs.building.figures.sourceAsking',
     'costs.building.figures.depositReturned',
     'costs.building.figures.countOfTotal',
+    'costs.building.figures.roomsValue',
+    'costs.building.figures.areaValue',
+    'costs.building.figures.valueUnknown',
+    'costs.building.figures.valueIncluded',
+    'costs.building.figures.includedCount',
+    'costs.building.figures.unknownCount',
+    ...[
+      'tenancyRange',
+      'tenancyYear',
+      'tenancyOngoing',
+      'tenancyCurrent',
+      'tenancyFrom',
+      'tenancyUntil',
+      'tenancyUnknown',
+    ].map((name) => `costs.building.figures.${name}`),
   ];
 
   it.each(LOCALES)('exist as strings in %s.json (client namespace costs)', (locale) => {

@@ -1,13 +1,19 @@
 // Display decisions of the building page over the figure contract (spec 03
-// §Building page, FR-22, FR-27). Pure, client-safe: the page renders what these
-// return and never merges the tenant and the asking group into one number.
+// §Building page, FR-22, FR-24 – FR-28). Pure, client-safe: the page renders what
+// these return and never merges the tenant and the asking group into one number.
 
-import type { FigureGroup, FigureGroupKey, FigureSummary, MetricFigure } from '@/lib/cost-figures';
+import {
+  TENANCY_ONGOING,
+  type FigureGroup,
+  type FigureGroupKey,
+  type FigureSummary,
+  type MetricFigure,
+} from '@/lib/cost-figures';
 
 /** A message key with its ICU values, rendered by the caller's `t()`. */
 export interface FigureMessage {
   key: string;
-  values: Record<string, number>;
+  values: Record<string, string | number>;
 }
 
 /** The title of a group's card and breakdown section. */
@@ -21,6 +27,17 @@ export const FIGURE_GROUP_N_KEY: Record<FigureGroupKey, string> = {
   tenant: 'costs.overview.nReports',
   asking: 'costs.building.figures.nListings',
 };
+
+/** When the group's latest report was added or confirmed (never when the costs were paid). */
+export const FIGURE_GROUP_RECORDED_KEY: Record<FigureGroupKey, string> = {
+  tenant: 'costs.building.figures.lastRecorded',
+  asking: 'costs.building.figures.lastRecordedAsking',
+};
+
+/** Shown on a group of exactly one report instead of any median or range. */
+export const ONE_OBSERVATION_KEY = 'costs.building.figures.oneObservation';
+/** Shown with a known-part figure: the utilities of those reports are not established. */
+export const KNOWN_PART_HINT_KEY = 'costs.building.figures.knownPartHint';
 
 /**
  * The source line: what exists and where it comes from, e.g. "3 reports from
@@ -61,20 +78,59 @@ export function orderedFigureGroups(summary: Pick<FigureSummary, 'groups'>): Fig
   );
 }
 
-export type GroupFigureKey = 'completeTotal' | 'rent' | 'expenses' | 'completeTotalPerM2';
+/**
+ * One report is one observation: its values are shown as they are, with its
+ * characteristics, and never as a median, a range or a comparison (FR-24).
+ */
+export function isOneObservation(group: Pick<FigureGroup, 'observation'>): boolean {
+  return group.observation === 'one';
+}
+
+/**
+ * The tenant group the comparison may set against the district or the city:
+ * none for one observation, which is never compared.
+ */
+export function comparableTenantGroup(summary: Pick<FigureSummary, 'groups'>): FigureGroup | null {
+  const { tenant } = summary.groups;
+  return tenant && !isOneObservation(tenant) ? tenant : null;
+}
+
+export type GroupFigureKey =
+  | 'completeTotal'
+  | 'knownPartTotal'
+  | 'rent'
+  | 'expenses'
+  | 'completeTotalPerM2';
 
 export interface GroupFigureRow {
   key: GroupFigureKey;
   figure: MetricFigure;
+  labelKey: string;
 }
 
-/** Label of each group figure (all existing keys). */
+/** Label of each group figure. A known part is never labelled as the monthly cost (FR-25). */
 export const GROUP_FIGURE_LABEL_KEY: Record<GroupFigureKey, string> = {
   completeTotal: 'costs.building.medianMonthlyTotal',
+  knownPartTotal: 'costs.building.figures.knownPart',
   rent: 'costs.building.rent',
   expenses: 'costs.building.expenses',
   completeTotalPerM2: 'costs.building.totalPerM2Compare',
 };
+
+/** One observation has a value, not a typical one: the labels that would claim a median. */
+const ONE_OBSERVATION_LABEL_KEY: Partial<Record<GroupFigureKey, string>> = {
+  completeTotal: 'costs.compare.colTotal',
+};
+
+/** Card order; the headline is the first of these with a value (the contract's rule). */
+const GROUP_FIGURE_ORDER: GroupFigureKey[] = [
+  'completeTotal',
+  'knownPartTotal',
+  'rent',
+  'expenses',
+  'completeTotalPerM2',
+];
+const HEADLINE_KEYS: GroupFigureKey[] = ['completeTotal', 'knownPartTotal', 'rent'];
 
 function usable(figure: MetricFigure): boolean {
   return figure.n >= 1 && figure.median != null;
@@ -82,21 +138,56 @@ function usable(figure: MetricFigure): boolean {
 
 /**
  * The figures of one group's card, each with its own N: the headline is the
- * all-in total of complete reports when there is one, else rent; the other
- * usable figures follow. No headline when the group has neither.
+ * all-in total of complete reports when there is one, else the known part of
+ * the costs, else rent; the other figures with a value follow. `knownPart` is
+ * true when a known-part figure is shown, so the card explains it.
  */
 export function groupFigureRows(group: FigureGroup): {
   headline: GroupFigureRow | null;
   rows: GroupFigureRow[];
+  knownPart: boolean;
 } {
-  const rows: GroupFigureRow[] = [
-    { key: 'completeTotal', figure: group.completeTotal },
-    { key: 'rent', figure: group.rent },
-    { key: 'expenses', figure: group.expenses },
-    { key: 'completeTotalPerM2', figure: group.completeTotalPerM2 },
-  ].filter((row): row is GroupFigureRow => usable(row.figure));
-  const headline = rows.find((row) => row.key === 'completeTotal' || row.key === 'rent') ?? null;
-  return { headline, rows: rows.filter((row) => row !== headline) };
+  const labels = isOneObservation(group)
+    ? { ...GROUP_FIGURE_LABEL_KEY, ...ONE_OBSERVATION_LABEL_KEY }
+    : GROUP_FIGURE_LABEL_KEY;
+  const rows = GROUP_FIGURE_ORDER.map((key) => ({
+    key,
+    figure: group[key],
+    labelKey: labels[key],
+  })).filter((row) => usable(row.figure));
+  const headline = rows.find((row) => HEADLINE_KEYS.includes(row.key)) ?? null;
+  return {
+    headline,
+    rows: rows.filter((row) => row !== headline),
+    knownPart: rows.some((row) => row.key === 'knownPartTotal'),
+  };
+}
+
+/** The known characteristics of a one-observation group: rental type, rooms, area. */
+export function characteristicMessages(
+  group: Pick<FigureGroup, 'characteristics'>,
+): FigureMessage[] {
+  const characteristics = group.characteristics;
+  if (!characteristics) return [];
+  const messages: FigureMessage[] = [];
+  if (characteristics.rentalType === 'apartment') {
+    messages.push({ key: 'costs.submit.wholeApartment', values: {} });
+  } else if (characteristics.rentalType === 'room') {
+    messages.push({ key: 'costs.submit.room', values: {} });
+  }
+  if (characteristics.rooms != null && characteristics.rooms > 0) {
+    messages.push({
+      key: 'costs.building.figures.roomsValue',
+      values: { count: characteristics.rooms },
+    });
+  }
+  if (characteristics.areaM2 != null) {
+    messages.push({
+      key: 'costs.building.figures.areaValue',
+      values: { area: characteristics.areaM2 },
+    });
+  }
+  return messages;
 }
 
 export type BreakdownKey =
@@ -109,37 +200,139 @@ export type BreakdownKey =
   | 'internet'
   | 'other';
 
+/**
+ * What a breakdown row says (FR-26): a value, a confirmed zero, "included in
+ * rent" when no report gave an amount but some said it is included, or
+ * "unknown" when no report said anything.
+ */
+export type BreakdownState = 'value' | 'zero' | 'included' | 'unknown';
+
 export interface BreakdownRow {
   key: BreakdownKey;
+  state: BreakdownState;
   figure: MetricFigure;
-  /** At least half of the group's reports say it is included in the rent. */
-  oftenIncluded: boolean;
+  /** The N under the row: values for a value or zero, else the reports behind the state. */
+  n: number;
+  includedCount: number;
+  unknownCount: number;
 }
 
 /** Rent and the admin fee stay public; the per-utility rows are behind the contribution gate. */
 const PUBLIC_BREAKDOWN: BreakdownKey[] = ['rent', 'adminFee'];
-const OFTEN_INCLUDED_SHARE = 0.5;
+const UTILITY_ROWS = ['electricity', 'gas', 'heating', 'water', 'internet', 'other'] as const;
 
-/** One group's breakdown rows with a usable value, in display order. */
+function breakdownRow(
+  key: BreakdownKey,
+  figure: MetricFigure,
+  includedCount: number,
+  unknownCount: number,
+): BreakdownRow {
+  const state: BreakdownState = usable(figure)
+    ? figure.median === 0
+      ? 'zero'
+      : 'value'
+    : includedCount > 0
+      ? 'included'
+      : 'unknown';
+  const n = state === 'included' ? includedCount : state === 'unknown' ? unknownCount : figure.n;
+  return { key, state, figure, n, includedCount, unknownCount };
+}
+
+/**
+ * One group's breakdown in display order. Every row is present: a metric with
+ * no value says "included in rent" or "unknown" instead of disappearing, and a
+ * stored 0 stays a zero.
+ */
 export function breakdownRows(group: FigureGroup): {
   basic: BreakdownRow[];
   detail: BreakdownRow[];
 } {
-  const { utilities } = group;
-  const oftenIncluded = (includedCount: number) =>
-    group.reportCount > 0 && includedCount / group.reportCount >= OFTEN_INCLUDED_SHARE;
+  const { utilities, reportCount } = group;
   const all: BreakdownRow[] = [
-    { key: 'rent', figure: group.rent, oftenIncluded: false },
-    { key: 'adminFee', figure: group.adminFee, oftenIncluded: false },
-    ...(['electricity', 'gas', 'heating', 'water', 'internet', 'other'] as const).map((key) => ({
-      key,
-      figure: utilities[key].value,
-      oftenIncluded: oftenIncluded(utilities[key].includedCount),
-    })),
+    breakdownRow('rent', group.rent, 0, reportCount - group.rent.n),
+    breakdownRow('adminFee', group.adminFee, 0, reportCount - group.adminFee.n),
+    ...UTILITY_ROWS.map((key) =>
+      breakdownRow(
+        key,
+        utilities[key].value,
+        utilities[key].includedCount,
+        utilities[key].unknownCount,
+      ),
+    ),
   ];
-  const rows = all.filter((row) => usable(row.figure));
   return {
-    basic: rows.filter((row) => PUBLIC_BREAKDOWN.includes(row.key)),
-    detail: rows.filter((row) => !PUBLIC_BREAKDOWN.includes(row.key)),
+    basic: all.filter((row) => PUBLIC_BREAKDOWN.includes(row.key)),
+    detail: all.filter((row) => !PUBLIC_BREAKDOWN.includes(row.key)),
   };
+}
+
+/** Whether rows hold anything to show beyond "unknown" (a gate over unknowns teases nothing). */
+export function breakdownHasFigures(rows: Pick<BreakdownRow, 'state'>[]): boolean {
+  return rows.some((row) => row.state !== 'unknown');
+}
+
+/** The other answers behind a row, each with its count: "included in rent: 1 · unknown: 2". */
+export function breakdownNotes(row: BreakdownRow): FigureMessage[] {
+  const notes: FigureMessage[] = [];
+  if ((row.state === 'value' || row.state === 'zero') && row.includedCount > 0) {
+    notes.push({
+      key: 'costs.building.figures.includedCount',
+      values: { count: row.includedCount },
+    });
+  }
+  if (row.state !== 'unknown' && row.unknownCount > 0) {
+    notes.push({
+      key: 'costs.building.figures.unknownCount',
+      values: { count: row.unknownCount },
+    });
+  }
+  return notes;
+}
+
+/** `latestRecordedAt` (`YYYY-MM…`) as a local date on the first of that month. */
+function recordedMonth(latestRecordedAt: string | null): Date | null {
+  const match = latestRecordedAt?.match(/^(\d{4})-(\d{2})/);
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : null;
+}
+
+/** The period the costs were paid, as years only, or that it is not known (FR-28). */
+export function tenancyMessage(tenancy: FigureGroup['tenancy']): FigureMessage {
+  const from = tenancy?.from ?? null;
+  const to = tenancy?.to ?? null;
+  const key = (name: string) => `costs.building.figures.${name}`;
+  if (to === TENANCY_ONGOING) {
+    return from
+      ? { key: key('tenancyOngoing'), values: { from } }
+      : { key: key('tenancyCurrent'), values: {} };
+  }
+  if (from && to) {
+    return from === to
+      ? { key: key('tenancyYear'), values: { year: from } }
+      : { key: key('tenancyRange'), values: { from, to } };
+  }
+  if (from) return { key: key('tenancyFrom'), values: { from } };
+  if (to) return { key: key('tenancyUntil'), values: { to } };
+  return { key: key('tenancyUnknown'), values: {} };
+}
+
+/**
+ * The dates of a group (FR-28): when its latest report was added or confirmed,
+ * as month and year through the caller's `formatMonth`, and, for tenant
+ * reports, the period the costs were paid. Asking prices were never paid, so
+ * that line is left out for them.
+ */
+export function groupDateMessages(
+  group: Pick<FigureGroup, 'key' | 'latestRecordedAt' | 'tenancy'>,
+  formatMonth: (month: Date) => string,
+): FigureMessage[] {
+  const messages: FigureMessage[] = [];
+  const recorded = recordedMonth(group.latestRecordedAt);
+  if (recorded) {
+    messages.push({
+      key: FIGURE_GROUP_RECORDED_KEY[group.key],
+      values: { date: formatMonth(recorded) },
+    });
+  }
+  if (group.key === 'tenant') messages.push(tenancyMessage(group.tenancy));
+  return messages;
 }

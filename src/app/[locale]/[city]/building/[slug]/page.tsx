@@ -10,6 +10,7 @@ import { formatAddressDisplay } from '@/lib/address';
 import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
 import { loadBuildingFigures } from '@/lib/cost-figures-query';
 import { buildingTenantDetails } from '@/lib/building-tenant-details';
+import { comparableTenantGroup } from '@/lib/building-figures-view';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
 import type { Metadata } from 'next';
@@ -375,9 +376,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
   })();
 
   // The building side of the comparison is the tenant group (never a blend of
-  // tenant reports and asking prices); the comparison itself is reworked by
-  // spec 03 §Comparisons.
-  const buildingMedianTotal = tenant?.completeTotal.median ?? null;
+  // tenant reports and asking prices), and never one observation (FR-24); the
+  // comparison itself is reworked by spec 03 §Comparisons.
+  const compared = comparableTenantGroup(figures);
+  const buildingMedianTotal = compared?.completeTotal.median ?? null;
 
   const districtBaseline: Baseline | null = cachedDistrict
     ? {
@@ -482,10 +484,10 @@ export default async function BuildingCostsPage({ params }: PageProps) {
         lastUpdated={lastUpdated}
         comparison={{
           thisBuilding: buildingMedianTotal,
-          thisBuildingRent: tenant?.rent.median ?? null,
-          thisBuildingRentPerM2: tenant?.rentPerM2.median ?? null,
-          thisBuildingTotalPerM2: tenant?.completeTotalPerM2.median ?? null,
-          thisBuildingExpenses: tenant?.expenses.median ?? null,
+          thisBuildingRent: compared?.rent.median ?? null,
+          thisBuildingRentPerM2: compared?.rentPerM2.median ?? null,
+          thisBuildingTotalPerM2: compared?.completeTotalPerM2.median ?? null,
+          thisBuildingExpenses: compared?.expenses.median ?? null,
           district: districtBaseline,
           city: cityBaseline,
         }}

@@ -1407,7 +1407,25 @@
         "askingTitle": "Цены из объявлений",
         "nListings": "{count, plural, one {# объявление} few {# объявления} many {# объявлений} other {# объявления}}",
         "depositReturned": "{gotBack} из {answered} ответивших получили залог обратно — полностью или частично",
-        "countOfTotal": "{count} из {total}"
+        "countOfTotal": "{count} из {total}",
+        "oneObservation": "Одно наблюдение по этому адресу",
+        "roomsValue": "Комнат: {count}",
+        "areaValue": "Площадь ≈ {area} м²",
+        "knownPart": "Известная часть расходов",
+        "knownPartHint": "Указаны не все коммунальные платежи — полная сумма в месяц может быть выше",
+        "valueUnknown": "Неизвестно",
+        "valueIncluded": "Включено в аренду",
+        "includedCount": "включено в аренду: {count}",
+        "unknownCount": "неизвестно: {count}",
+        "lastRecorded": "Последний отчёт добавлен или подтверждён: {date}",
+        "lastRecordedAsking": "Последняя цена из объявления добавлена: {date}",
+        "tenancyRange": "Период этих расходов: {from}–{to}",
+        "tenancyYear": "Период этих расходов: {year}",
+        "tenancyOngoing": "Период этих расходов: с {from} по сей день",
+        "tenancyCurrent": "Период этих расходов: по сей день",
+        "tenancyFrom": "Период этих расходов: с {from}",
+        "tenancyUntil": "Период этих расходов: до {to}",
+        "tenancyUnknown": "Неизвестно, за какой период платились эти расходы"
       }
     },
     "trust": {

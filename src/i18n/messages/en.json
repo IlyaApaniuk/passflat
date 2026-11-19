@@ -1407,7 +1407,25 @@
         "askingTitle": "Asking prices from listings",
         "nListings": "{count, plural, one {# listing} other {# listings}}",
         "depositReturned": "{gotBack} of {answered} who answered got the deposit back, fully or partly",
-        "countOfTotal": "{count} of {total}"
+        "countOfTotal": "{count} of {total}",
+        "oneObservation": "One observation at this address",
+        "roomsValue": "Rooms: {count}",
+        "areaValue": "Area ≈ {area} m²",
+        "knownPart": "Known part of the costs",
+        "knownPartHint": "Not all utilities were listed, so the full monthly cost may be higher",
+        "valueUnknown": "Unknown",
+        "valueIncluded": "Included in rent",
+        "includedCount": "included in rent: {count}",
+        "unknownCount": "unknown: {count}",
+        "lastRecorded": "Last report added or confirmed: {date}",
+        "lastRecordedAsking": "Last asking price added: {date}",
+        "tenancyRange": "Period of these costs: {from}–{to}",
+        "tenancyYear": "Period of these costs: {year}",
+        "tenancyOngoing": "Period of these costs: {from} to now",
+        "tenancyCurrent": "Period of these costs: up to now",
+        "tenancyFrom": "Period of these costs: from {from}",
+        "tenancyUntil": "Period of these costs: until {to}",
+        "tenancyUnknown": "The period these costs were paid is not known"
       }
     },
     "trust": {

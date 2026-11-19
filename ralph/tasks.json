@@ -316,7 +316,7 @@
       "title": "Building page: one observation, known part, zero vs unknown and dates",
       "spec": "docs/specs/03-building-figures.md#building-page",
       "dependsOn": ["T019"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A group with one report reads «Одно наблюдение по этому адресу» (RU given; PL, EN, UK drafts) with its values and characteristics, and shows no median, range or comparison",
         "A knownPartTotal is labelled 'known part of the costs' and never as the monthly cost; the utilitiesUnknown chip is replaced",
@@ -325,7 +325,7 @@
         "Display decisions are pure helpers with unit tests built on golden examples 2-5 and 9"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

@@ -21,15 +21,23 @@ import { monthsSince, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import type { FigureGroup, FigureGroupKey, FigureSummary, MetricFigure } from '@/lib/cost-figures';
 import type { PeriodicBreakdownRow, TenantDetails } from '@/lib/building-tenant-details';
 import {
+  breakdownHasFigures,
+  breakdownNotes,
   breakdownRows,
+  characteristicMessages,
   FIGURE_GROUP_N_KEY,
   FIGURE_GROUP_TITLE_KEY,
-  GROUP_FIGURE_LABEL_KEY,
+  groupDateMessages,
   groupFigureRows,
+  isOneObservation,
+  KNOWN_PART_HINT_KEY,
+  ONE_OBSERVATION_KEY,
   orderedFigureGroups,
   sourceLineMessages,
   type BreakdownKey,
   type BreakdownRow,
+  type BreakdownState,
+  type FigureMessage,
   type GroupFigureRow,
 } from '@/lib/building-figures-view';
 import { useHasContributed } from '@/hooks/use-has-contributed';
@@ -138,6 +146,7 @@ const BREAKDOWN_ROW: Record<
 // Icon of each figure in a group card's split row.
 const GROUP_FIGURE_ICON: Record<GroupFigureRow['key'], { icon: LucideIcon; tint: string }> = {
   completeTotal: { icon: Home, tint: 'bg-primary/10 text-primary' },
+  knownPartTotal: { icon: Info, tint: 'bg-muted text-muted-foreground' },
   rent: { icon: Home, tint: 'bg-primary/10 text-primary' },
   expenses: { icon: RefreshCw, tint: 'bg-muted text-muted-foreground' },
   completeTotalPerM2: { icon: Ruler, tint: 'bg-muted text-muted-foreground' },
@@ -151,7 +160,12 @@ interface CostItem {
   color: string;
   bgColor: string;
   figure: MetricFigure;
-  oftenIncluded: boolean;
+  /** A value, a confirmed zero, "included in rent" or "unknown" (FR-26). */
+  state: BreakdownState;
+  /** The N under the row: its values, or the reports behind its state. */
+  n: number;
+  /** The other answers behind the row, e.g. "included in rent: 1". */
+  notes: FigureMessage[];
   winter?: MetricFigure;
   summer?: MetricFigure;
   periodicBreakdown?: PeriodicBreakdownRow[] | null;
@@ -447,6 +461,9 @@ export function BuildingCostsClient({
   // client (useHasContributed) so the page stays static/ISR — not a hard paywall.
   const showDetails = useHasContributed();
   const dateFmtLocale = DATE_LOCALE_MAP[locale] ?? enUS;
+  // Dates are shown as month and year only (FR-28); standalone month names.
+  const formatMonth = (month: Date) => format(month, 'LLLL yyyy', { locale: dateFmtLocale });
+  const renderMessage = (message: FigureMessage) => t(message.key, message.values);
 
   useEffect(() => {
     posthog?.capture(
@@ -475,6 +492,9 @@ export function BuildingCostsClient({
   const groupTitle = (key: FigureGroupKey) => t(FIGURE_GROUP_TITLE_KEY[key]);
   // Every figure carries the N of its own values: reports or listings.
   const metricN = (key: FigureGroupKey, n: number) => t(FIGURE_GROUP_N_KEY[key], { count: n });
+  // One observation is a value, never a median: no "≈" in front of it (FR-24).
+  const tenantOne = figures.groups.tenant ? isOneObservation(figures.groups.tenant) : false;
+  const approx = (one: boolean) => (one ? '' : '≈ ');
   const formatFigure = (row: GroupFigureRow) =>
     row.key === 'completeTotalPerM2'
       ? `${Math.round(row.figure.median!).toLocaleString()} ${t('costs.building.perM2')}`
@@ -539,7 +559,9 @@ export function BuildingCostsClient({
       color: style.color,
       bgColor: style.bgColor,
       figure: row.figure,
-      oftenIncluded: row.oftenIncluded,
+      state: row.state,
+      n: row.n,
+      notes: breakdownNotes(row),
       ...seasons,
     };
   };
@@ -548,7 +570,10 @@ export function BuildingCostsClient({
     const details = group.key === 'tenant' ? tenantDetails : null;
     const { basic, detail } = breakdownRows(group);
     const detailItems = detail.map((row) => toCostItem(row, details));
+    // Only figures are worth a contribution gate; a section of unknowns is shown as it is.
+    let detailHasFigures = breakdownHasFigures(detail);
     if (details && details.periodic.n > 0) {
+      detailHasFigures = true;
       detailItems.push({
         key: 'periodic',
         label: t('costs.building.periodic'),
@@ -556,18 +581,34 @@ export function BuildingCostsClient({
         color: 'text-violet-500',
         bgColor: 'bg-violet-500/10',
         figure: details.periodic,
-        oftenIncluded: false,
+        state: 'value',
+        n: details.periodic.n,
+        notes: [],
         periodicBreakdown: details.periodicBreakdown,
       });
     }
-    return { group, basic: basic.map((row) => toCostItem(row, details)), detail: detailItems };
+    return {
+      group,
+      one: isOneObservation(group),
+      basic: basic.map((row) => toCostItem(row, details)),
+      detail: detailItems,
+      detailHasFigures,
+    };
   };
 
   const breakdowns = groups.map(breakdownFor);
 
   const seasonText = (figure: MetricFigure) => `${figure.median} PLN (${figure.n})`;
 
-  const renderCostRow = (groupKey: FigureGroupKey, item: CostItem, i: number) => (
+  // A value, a confirmed zero, "included in rent" and "unknown" read differently (FR-26).
+  const costValueText = (item: CostItem, one: boolean) => {
+    if (item.state === 'zero') return '0 PLN';
+    if (item.state === 'included') return t('costs.building.figures.valueIncluded');
+    if (item.state === 'unknown') return t('costs.building.figures.valueUnknown');
+    return `${approx(one)}${item.figure.median!.toLocaleString()} PLN`;
+  };
+
+  const renderCostRow = (groupKey: FigureGroupKey, one: boolean, item: CostItem, i: number) => (
     <motion.div
       key={`${groupKey}-${item.key}`}
       initial={{ opacity: 0, x: -10 }}
@@ -580,18 +621,24 @@ export function BuildingCostsClient({
           <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${item.bgColor}`}>
             <item.icon className={`h-[18px] w-[18px] ${item.color}`} />
           </div>
-          <div>
-            <span className="font-medium">{item.label}</span>
-            {item.oftenIncluded && (
-              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">
-                {t('costs.building.oftenIncluded')}
-              </Badge>
-            )}
-          </div>
+          <span className="font-medium">{item.label}</span>
         </div>
         <div className="text-right">
-          <p className="font-semibold">≈ {item.figure.median} PLN</p>
-          <p className="text-xs text-muted-foreground">{metricN(groupKey, item.figure.n)}</p>
+          <p
+            className={
+              item.state === 'value' || item.state === 'zero'
+                ? 'font-semibold'
+                : 'text-sm font-medium text-muted-foreground'
+            }
+          >
+            {costValueText(item, one)}
+          </p>
+          <p className="text-xs text-muted-foreground">{metricN(groupKey, item.n)}</p>
+          {item.notes.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {item.notes.map(renderMessage).join(' · ')}
+            </p>
+          )}
         </div>
       </div>
       {item.winter && item.summer && item.winter.n > 0 && item.summer.n > 0 && (
@@ -700,15 +747,9 @@ export function BuildingCostsClient({
                     {t('costs.trust.outdated')}
                   </Badge>
                 )}
-                {lastUpdated && (
-                  <Badge variant="secondary" className="w-fit">
-                    {t('costs.building.updated', {
-                      date: format(new Date(lastUpdated), 'd MMMM', {
-                        locale: dateFmtLocale,
-                      }),
-                    })}
-                  </Badge>
-                )}
+                {/* No day-precision "Updated" badge: each group card says when
+                    its latest report was added or confirmed, as month and
+                    year (FR-28), so asking prices never date tenant reports. */}
               </div>
             </div>
           </motion.div>
@@ -771,9 +812,14 @@ export function BuildingCostsClient({
               {/* One card per group, tenant reports first, then asking prices:
                   each with its own figures and N, never one number over both. */}
               {groups.map((group) => {
-                const { headline, rows } = groupFigureRows(group);
+                const { headline, rows, knownPart } = groupFigureRows(group);
                 if (!headline) return null;
                 const isTenant = group.key === 'tenant';
+                // One observation: its values and characteristics, no median,
+                // range or N per figure (the group is one report).
+                const one = isOneObservation(group);
+                const characteristics = characteristicMessages(group);
+                const dates = groupDateMessages(group, formatMonth);
                 return (
                   <motion.div
                     key={group.key}
@@ -788,22 +834,31 @@ export function BuildingCostsClient({
                       )}
                       <CardHeader>
                         <CardTitle>{groupTitle(group.key)}</CardTitle>
+                        {one && (
+                          <div className="space-y-1 pt-1 text-sm text-muted-foreground">
+                            <p className="font-medium text-foreground">{t(ONE_OBSERVATION_KEY)}</p>
+                            {characteristics.length > 0 && (
+                              <p>{characteristics.map(renderMessage).join(' · ')}</p>
+                            )}
+                          </div>
+                        )}
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-muted-foreground">
-                          {t(GROUP_FIGURE_LABEL_KEY[headline.key])}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{t(headline.labelKey)}</p>
                         <motion.p
                           initial={{ opacity: 0, scale: 0.5 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
                           className={`text-4xl font-bold ${isTenant ? 'text-primary' : ''}`}
                         >
-                          ≈ {formatFigure(headline)}
+                          {approx(one)}
+                          {formatFigure(headline)}
                         </motion.p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {metricN(group.key, headline.figure.n)}
-                        </p>
+                        {!one && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {metricN(group.key, headline.figure.n)}
+                          </p>
+                        )}
 
                         {rows.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t pt-4">
@@ -818,12 +873,17 @@ export function BuildingCostsClient({
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground">
-                                      {t(GROUP_FIGURE_LABEL_KEY[row.key])}
+                                      {t(row.labelKey)}
                                     </p>
-                                    <p className="text-lg font-semibold">≈ {formatFigure(row)}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {metricN(group.key, row.figure.n)}
+                                    <p className="text-lg font-semibold">
+                                      {approx(one)}
+                                      {formatFigure(row)}
                                     </p>
+                                    {!one && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {metricN(group.key, row.figure.n)}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -831,10 +891,29 @@ export function BuildingCostsClient({
                           </div>
                         )}
 
-                        {isTenant && (
+                        {/* The known part is never the full monthly cost (FR-25). */}
+                        {knownPart && (
+                          <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            {t(KNOWN_PART_HINT_KEY)}
+                          </p>
+                        )}
+
+                        {isTenant && !one && (
                           <p className="mt-4 text-xs text-muted-foreground">
                             {t('costs.building.estimateCaption', { count: group.reportCount })}
                           </p>
+                        )}
+
+                        {dates.length > 0 && (
+                          <div className="mt-4 space-y-1 border-t pt-4 text-xs text-muted-foreground">
+                            {dates.map((message) => (
+                              <p key={message.key} className="flex items-start gap-1.5">
+                                <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                {renderMessage(message)}
+                              </p>
+                            ))}
+                          </div>
                         )}
                       </CardContent>
                     </Card>
@@ -860,7 +939,8 @@ export function BuildingCostsClient({
                         </div>
                         <div className="text-left sm:text-right">
                           <p className="text-lg font-semibold">
-                            ≈ {tenantDetails.deposit.median!.toLocaleString()} PLN
+                            {approx(tenantOne)}
+                            {tenantDetails.deposit.median!.toLocaleString()} PLN
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {metricN('tenant', tenantDetails.deposit.n)}
@@ -898,7 +978,8 @@ export function BuildingCostsClient({
                               <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                               <p className="text-sm">
                                 <span className="font-semibold">
-                                  ≈ {Math.round(tenantDetails.tenure.medianMonths)}{' '}
+                                  {approx(tenantOne)}
+                                  {Math.round(tenantDetails.tenure.medianMonths)}{' '}
                                   {t('costs.building.monthsShort')}
                                 </span>
                                 <span className="text-muted-foreground">
@@ -967,7 +1048,7 @@ export function BuildingCostsClient({
                   <CardContent className="space-y-6">
                     {/* One section per group, tenant reports first. Rent + the
                         admin fee stay public; the per-utility detail is gated. */}
-                    {breakdowns.map(({ group, basic, detail }) =>
+                    {breakdowns.map(({ group, one, basic, detail, detailHasFigures }) =>
                       basic.length > 0 || detail.length > 0 ? (
                         <div key={group.key} className="space-y-3">
                           <p className="text-sm font-medium text-muted-foreground">
@@ -975,23 +1056,23 @@ export function BuildingCostsClient({
                           </p>
                           {basic.length > 0 && (
                             <div className="space-y-3">
-                              {basic.map((item, i) => renderCostRow(group.key, item, i))}
+                              {basic.map((item, i) => renderCostRow(group.key, one, item, i))}
                             </div>
                           )}
                           {detail.length > 0 && (
                             <GatedSection
-                              show={showDetails}
+                              show={showDetails || !detailHasFigures}
                               submitHref={`/${citySlug}/costs/submit?b=${building.id}&source=building`}
                             >
                               <div className="space-y-3">
-                                {detail.map((item, i) => renderCostRow(group.key, item, i))}
+                                {detail.map((item, i) => renderCostRow(group.key, one, item, i))}
                               </div>
                             </GatedSection>
                           )}
                         </div>
                       ) : null,
                     )}
-                    {breakdowns.every(({ detail }) => detail.length === 0) && (
+                    {breakdowns.every(({ detailHasFigures }) => !detailHasFigures) && (
                       <ContributePrompt
                         icon={FileText}
                         title={t('costs.building.emptyBreakdownTitle')}
