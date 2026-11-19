@@ -18,6 +18,7 @@ import {
 import { SITE_URL } from '@/lib/site-url';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
 import { median } from '@/lib/cost-stats';
+import { depositClaim } from '@/lib/deposit-claim';
 import { ArrowRight, Calculator, Plus } from 'lucide-react';
 
 // A data report assembled from the live cost DB. Rendered on demand (not
@@ -62,25 +63,20 @@ async function getReport() {
       .sort((a, b) => b.reports - a.reports || (b.medianExpenses ?? 0) - (a.medianExpenses ?? 0))
       .at(0) ?? null;
 
-  // Deposit reality — same definition as the landing hero: median amount
-  // (rounded to hundreds) and the share of leavers who got it back in full.
-  // Real tenant reports only; scraped listings carry no deposit fields.
+  // Deposit reality — same definition as the landing hero (`depositClaim`): the
+  // tenant group's median amount and "X of N who answered got it back, fully
+  // or partly", or nothing below MIN_DEPOSIT_ANSWERS answers.
   const depositReports = await prisma.costReport.findMany({
     where: { building: { cityId: city.id }, isVisible: true },
-    select: { depositAmount: true, depositReturned: true },
+    select: {
+      source: true,
+      depositAmount: true,
+      depositReturned: true,
+      depositReturnedAmount: true,
+      isCurrentTenant: true,
+    },
     take: 5000,
   });
-  const depositAmounts = depositReports
-    .map((r) => (r.depositAmount == null ? null : Number(r.depositAmount)))
-    .filter((v): v is number => v != null && v > 0);
-  const depositMed = median(depositAmounts);
-  const depositMedian = depositMed == null ? null : Math.round(depositMed / 100) * 100;
-  const returnKnown = depositReports.filter((r) => r.depositReturned != null);
-  const depositReturnedPct = returnKnown.length
-    ? Math.round(
-        (100 * returnKnown.filter((r) => r.depositReturned === true).length) / returnKnown.length,
-      )
-    : null;
 
   return {
     cityNameKey: city.nameKey,
@@ -99,8 +95,7 @@ async function getReport() {
           total: example.medianTotal,
         }
       : null,
-    depositMedian,
-    depositReturnedPct,
+    deposit: depositClaim(depositReports),
   };
 }
 
@@ -160,11 +155,14 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
       question: t('rentReport.faqQ2'),
       answer: t('rentReport.faqA2', { expenses: fmt(report.medianExpenses) }),
     },
-    ...(report.depositReturnedPct != null
+    ...(report.deposit
       ? [
           {
             question: t('rentReport.faqQ3'),
-            answer: t('rentReport.faqA3', { pct: report.depositReturnedPct }),
+            answer: t('rentReport.faqA3', {
+              gotBack: report.deposit.gotBack,
+              answered: report.deposit.answered,
+            }),
           },
         ]
       : []),
@@ -322,15 +320,20 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
             )}
 
             {/* Deposit reality — the one statistic no other page has */}
-            {report.depositMedian != null && report.depositReturnedPct != null && (
+            {report.deposit && (
               <>
                 <h2 className="mt-10 text-xl font-semibold">{t('rentReport.kaucjaTitle')}</h2>
                 <p className="mt-2 text-muted-foreground">
-                  {t('rentReport.kaucjaAmount', { deposit: fmt(report.depositMedian) })}
+                  {t('rentReport.kaucjaAmount', { deposit: fmt(report.deposit.medianDeposit) })}
                 </p>
                 <Card className="mt-4 border-accent/30 bg-accent/5">
                   <CardContent className="flex items-center gap-4 p-5">
-                    <p className="text-4xl font-bold text-accent">{report.depositReturnedPct}%</p>
+                    <p className="shrink-0 text-4xl font-bold tabular-nums text-accent">
+                      {t('costs.building.figures.countOfTotal', {
+                        count: report.deposit.gotBack,
+                        total: report.deposit.answered,
+                      })}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {t('rentReport.kaucjaReturnedLabel')}
                     </p>

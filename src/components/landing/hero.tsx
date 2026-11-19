@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { useIsTouch } from '@/hooks/use-reveal';
+import type { DepositClaim } from '@/lib/deposit-claim';
 import { BarChart3, MapPinned, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -16,8 +17,7 @@ interface HeroProps {
     buildingsWithCosts: number;
     pricePerM2: number | null;
     expensesMonthly: number | null;
-    depositMedian: number | null;
-    depositReturnedPct: number | null;
+    deposit: DepositClaim | null;
   };
 }
 
@@ -61,14 +61,16 @@ export function Hero({ stats: liveStats }: HeroProps) {
       ? { value: `≈${expensesMonthly} ${t('statsExpensesUnit')}`, label: t('statsExpenses') }
       : null;
 
-  // Deposit (upfront cash) + the share who got it back, in one block — the last
-  // piece of the "full cost of moving in" picture.
-  const depositMedian = liveStats?.depositMedian ?? null;
-  const depositReturnedPct = liveStats?.depositReturnedPct ?? null;
-  const depositStat =
-    depositMedian && depositMedian > 0 && depositReturnedPct != null
-      ? { value: `≈${depositMedian} zł`, label: t('statsDeposit', { pct: depositReturnedPct }) }
-      : null;
+  // Deposit (upfront cash) + "X of N who answered got it back, fully or
+  // partly", in one block — the last piece of the "full cost of moving in"
+  // picture. `depositClaim` withholds it below MIN_DEPOSIT_ANSWERS answers.
+  const deposit = liveStats?.deposit ?? null;
+  const depositStat = deposit
+    ? {
+        value: `≈${deposit.medianDeposit} zł`,
+        label: t('statsDeposit', { gotBack: deposit.gotBack, answered: deposit.answered }),
+      }
+    : null;
 
   // Per-m² value, coverage, then the two hidden costs (monthly extras + deposit).
   const stats = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>

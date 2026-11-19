@@ -18,6 +18,7 @@ import { LandingContent } from '@/components/landing/landing-content';
 import { prisma } from '@/lib/prisma';
 import { median, perAreaValues } from '@/lib/cost-stats';
 import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { depositClaim } from '@/lib/deposit-claim';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -49,7 +50,13 @@ async function getStats() {
   // monthly total, so query it separately (no totalMonthlyAvg filter).
   const depositReports = await prisma.costReport.findMany({
     where: { building: { city: { slug: DEFAULT_CITY } }, isVisible: true },
-    select: { depositAmount: true, depositReturned: true },
+    select: {
+      source: true,
+      depositAmount: true,
+      depositReturned: true,
+      depositReturnedAmount: true,
+      isCurrentTenant: true,
+    },
     take: 5000,
   });
 
@@ -79,19 +86,10 @@ async function getStats() {
   );
   const expensesMonthly = expenses == null ? null : round10(expenses);
 
-  // Deposit: median amount (rounded to hundreds — it's a large one-off sum) and
-  // the share of past tenants who got it back. Real reports only (scraped
-  // listings carry no deposit), so it's honest tenant data.
-  const depositAmounts = depositReports
-    .map((r) => (r.depositAmount == null ? null : Number(r.depositAmount)))
-    .filter((v): v is number => v != null && v > 0);
-  const depositMed = median(depositAmounts);
-  const depositMedian = depositMed == null ? null : Math.round(depositMed / 100) * 100;
-  const returnKnown = depositReports.filter((r) => r.depositReturned != null);
-  const returnTrue = returnKnown.filter((r) => r.depositReturned === true);
-  const depositReturnedPct = returnKnown.length
-    ? Math.round((100 * returnTrue.length) / returnKnown.length)
-    : null;
+  // Deposit: the tenant group's median amount and "X of N who answered got it
+  // back, fully or partly" (spec 03 §Marketing copy), or nothing below
+  // MIN_DEPOSIT_ANSWERS answers.
+  const deposit = depositClaim(depositReports);
 
   return {
     listings,
@@ -102,8 +100,7 @@ async function getStats() {
     buildingsWithCosts,
     pricePerM2,
     expensesMonthly,
-    depositMedian,
-    depositReturnedPct,
+    deposit,
   };
 }
 
@@ -191,7 +188,7 @@ async function getDistrictMedians() {
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
-const getStatsCached = unstable_cache(getStats, ['home-stats'], { revalidate: 300 });
+const getStatsCached = unstable_cache(getStats, ['home-stats-v2'], { revalidate: 300 });
 const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians'], {
   revalidate: 300,
   tags: ['costs'],

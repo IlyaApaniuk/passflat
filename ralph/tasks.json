@@ -472,13 +472,13 @@
       "title": "Rewrite marketing copy that claims verified or actually-paid figures",
       "spec": "docs/specs/03-building-figures.md#marketing-copy",
       "dependsOn": ["T018"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Every key listed in the spec section follows the owner's answer to Q-4 in all four locale files",
         "The home hero and blog report deposit numbers use summarizeDepositReturns (no partial returns or current tenants counted as returned in full)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-4. About 25 marketing keys say 'verified', 'checked by tenants', 'actually pay' or 'returned in full' (D3 kept them; CLAUDE.md and PRD 1 forbid them): rewrite to 'costs tenants reported' wording drafted by the agent, or keep them?\nOwner answer: Q-4 rewrite (D25, 2026-11-19): reported-costs wording in four locales drafted by the agent for review; faqA3 = got it back, fully or partly; hero and blog deposit numbers use summarizeDepositReturns; supersedes D3 for honesty copy."
     },
     {

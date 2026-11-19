@@ -110,7 +110,7 @@ describe('share landing', () => {
   it('an old brag link previews the neutral area card', async () => {
     for (const searchParams of [BELOW, ABOVE, { d: 'mokotow' }]) {
       const { title, image } = await metadata(searchParams);
-      expect(title).toBe('What people really pay for rent in Mokotów');
+      expect(title).toBe('Reported rental costs in Mokotów');
       expect(image.pathname).toBe('/api/og');
       expect(image.searchParams.get('title')).toBe(share('en').ogTitleNeutral);
       expect(image.searchParams.get('statLabel')).toBe('Mokotów median');
