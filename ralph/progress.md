@@ -146,6 +146,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `node scripts/ralph-tasks.mjs add` needs an explicit `id` (the next free `T…`; check `grep -o '"id": "T1[0-9][0-9]"' ralph/tasks.json`).
 - A page render test proves its keys exist and parse in every locale when the mocked `useTranslations(namespace)` passes `namespace` and `onError: (e) => { throw e }` to `createTranslator` (a missing key otherwise renders its path silently); example: `src/app/[locale]/terms/matching-sections.test.ts`.
 - A new bot event (`track(…, 'tg_…')`) needs a row in a `src/lib/bot/README.md` events table naming every property key it sends; `src/lib/bot/roommate-readme.test.ts` checks it (a new property builder goes into its `PROPERTY_BUILDERS`).
+- `src/lib/bot/roommate-posting-kit.test.ts` parses `docs/marketing/roommate-posts.md` (every `t.me/…?start=` link, the group-key table), `roommate-posting-log.md` (columns, rows) and `bot-profile.md` (BotFather limits): change their headings, table columns or `text` blocks together with that test.
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
 
 ## Log
@@ -2978,3 +2979,66 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: chained shell commands (`; echo $?`, `git -C`) were denied; ran plain commands instead.
 - Owner review: no copy, assumption, event, table or migration changed. The README describes the existing assumptions (mate sources, event names and properties, the 2,000-profile in-memory limit) as **Assumption**.
 - Next: `node scripts/ralph-tasks.mjs next` (T102, posting kit and posting log, FR-41).
+
+### 2026-11-19 21:05 · T102 · done
+
+- Done:
+  - New `docs/marketing/roommate-posts.md`:
+    - opens with "Draft for the owner" and the six D53 rules;
+    - the honesty rules for any rewording;
+    - how to use the templates: replace `<bot>`, use `mate_<source>_<key>`, and drop the stage 1 sentence on the day of the switch;
+    - 7 reply templates, each in RU, UK and EN with one link: short, districts, money per person, privacy, a Facebook comment (`mate_fb_group`), a Threads line (`mate_threads_group`), languages. The others use `mate_tg_group`;
+    - a version without a link (`@<bot>` + `/mate`, logged as `no-link`);
+    - an empty group-key table: Key, Source, Public group, Language, Links allowed, Admins asked, Notes.
+  - New `docs/marketing/roommate-posting-log.md`:
+    - no-people rule; a week without a row is "missing";
+    - minutes vs manual minutes (incl. the D65 review);
+    - link tags, removed posts or warnings;
+    - a "Switch on at:" line for `{switch_at}`;
+    - an example row in a code block, so it is never counted;
+    - the 7-column table, empty.
+  - New `docs/marketing/bot-profile.md`: BotFather description and about text in RU, UK and EN.
+    - They name address and district costs, `/mate` and `/deposit`. The EN text says the deposit helper is RU/UK only.
+    - The wording holds with the switch on or off.
+    - It notes that RU fits the BotFather default (the bot's own fallback) and that UK and EN go per language through `setMyDescription` / `setMyShortDescription`. That is an owner action; no code calls them.
+    - Lengths: description 481 / 500 / 500 of 512, about 108 / 112 / 101 of 120.
+  - New `src/lib/bot/roommate-posting-kit.test.ts` (40 tests):
+    - every `t.me/…?start=` payload of roommate-posts.md → `{ kind: 'roommate' }` with a tg/fb/ig/threads source, not `other`, and a key;
+    - 6–8 templates × 3 languages, one link each, different wording;
+    - the no-link version;
+    - the D53 rules are present;
+    - honesty patterns over every copied text and the BotFather texts: verified/checked, guarantee, "we'll find", "opens on", market, cheaper, month names, and numbers other than 18 / 30;
+    - filled group-key rows: key shape, source, unique, and the link parses to that source and key;
+    - log columns and row format, no `@handle`, no 7+ digit run;
+    - BotFather limits.
+    - Each check is also tested on bad samples.
+  - `src/lib/bot/README.md`: a pointer to bot-profile.md under "Going live", and a paragraph on the posting kit and its test after the deep-link table. `docs/specs/README.md`: FR-41 → Done.
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-posting-kit.test.ts`: 40 passed.
+  - Mutation check: one link set to `mate_threads_Group` → 1 failure (lands as `other`); reverted.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 139 files / 2920 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, posted or sent; BotFather untouched.
+- Did not work: the first EN description had 529 characters; the length test caught it, and it was shortened.
+- Owner review:
+  - **All three files are agent drafts** in RU, UK and EN; read them before the first slot.
+  - **Assumptions applied (format, spec 05 §Posting kit):**
+    - the bot username is the placeholder `<bot>` (the production username is not in the repo);
+    - template links end in the placeholder key `group`, which you replace per group;
+    - the source differs per template (tg, fb, threads);
+    - log slots are `1` / `2` / `review` / `none`. `none` is a week with no posting, logged as 0 rather than "missing".
+  - **Agent's readings to confirm:**
+    1. The templates describe stage 1. Each ends with one fixed sentence («Подбор пока не открыт.» / «Підбір поки що не відкрито.» / "Matching isn't open yet."), to delete on the day of the switch. No stage 2 version exists.
+    2. Every template says it is the owner's bot («я делаю бесплатного бота Passflat»). That disclosure is the agent's addition, not a D53 rule.
+    3. Template 3 names no figure on purpose. A figure the owner quotes must come from the bot's reply, with its group and N.
+    4. The BotFather default language is suggested as RU, because the bot answers unknown client languages in RU.
+  - **Owner actions:**
+    - fill the group-key table before posting;
+    - after the deploy, set the BotFather texts;
+    - optionally set UK / EN / PL per language with `setMyDescription` / `setMyShortDescription`;
+    - write the switch moment into the posting log.
+  - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next` (T103, stage 1 readout, FR-42; it reads the posting log's columns).

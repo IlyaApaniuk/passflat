@@ -758,7 +758,7 @@
       "title": "Posting kit and posting log for the owner (FR-41)",
       "spec": "docs/specs/05-measurement-docs.md#posting-kit",
       "dependsOn": ["T063"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "docs/marketing/roommate-posts.md and docs/marketing/roommate-posting-log.md as spec 05 §Posting kit: D53 rules first, 6 – 8 templates in RU, UK and EN with different wording, a no-link variant, the group-key table, the log columns",
         "No template promises a match, date or result, names an unproduced figure or says 'verified'; the log holds no names, chat ids or message texts",
@@ -766,7 +766,7 @@
         "docs/marketing/bot-profile.md drafts the BotFather description and about text in RU, UK and EN (spec 05 §Posting kit), listed for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D46, D53, D65."
     },
     {

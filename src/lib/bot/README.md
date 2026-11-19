@@ -480,7 +480,8 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 ## Going live
 
 1. **BotFather** — `/newbot`, then keep the token. Set the description and
-   about text; the command menu is published by the webhook script
+   about text (drafts in RU, UK and EN: `docs/marketing/bot-profile.md`); the
+   command menu is published by the webhook script
    (`COMMAND_MENUS` in `texts.ts`: RU by default, UK for `language_code: 'uk'`,
    EN for `en` and `pl`). A menu change takes effect only after
    `npm run bot:webhook` is run again.
@@ -653,6 +654,11 @@ starts with `mate` opens the roommate flow (`openRoommate`) with a source from
 | `mate_web`, `mate_web_<detail>`                                        | `web` (and the detail); the website sends `mate_web_roommate` |
 | any other payload starting `mate` (`mate_xyz`, `mate_tg_Bad`, `matey`) | `other`, no detail, no error                                  |
 | no payload: `/mate`, the `rm:start` button                             | `bot_menu`                                                    |
+
+The owner's posting kit (`docs/marketing/roommate-posts.md`, spec 05 §Posting
+kit) holds the reply templates and the group-key table;
+`roommate-posting-kit.test.ts` parses every link there and every filled key with
+`parseStartPayload` and fails on one that would land as `other`.
 
 The building link `b_<uuid>` builds the same answer as typing that building's
 address: `lookupBuilding` and `lookupAddress` share one function in
