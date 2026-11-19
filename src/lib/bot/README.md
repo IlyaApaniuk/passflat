@@ -110,6 +110,13 @@ and `20261005140000_deposit_contract`, then PRD 3's `20261119122602_roommate_mat
 RLS on the new tables by hand.
 The deposit flow's contract step also needs `ANTHROPIC_API_KEY`.
 
+Roommate matching stage 2 (cards, interest, reveals, daily push) runs only
+while `ROOMMATE_MATCHING_ENABLED` is exactly `true` (`isMatchingEnabled()` in
+`../roommate/switch.ts`, read per call; any other value or unset is off).
+Vercel applies a changed variable only to a new deployment, so turning the
+switch on or off is: set the variable, then redeploy (owner step). Record the
+moment in the posting log and as a PostHog annotation (spec 07 §Switch).
+
 ## Deep links
 
 `https://t.me/<bot>?start=<payload>`. Telegram allows at most 64 characters of

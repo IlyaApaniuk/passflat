@@ -1701,3 +1701,17 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Assumptions applied (D68), one place:** `ROOMMATE_ENTRY_SOURCE`, `MATE_LINK` (detail `[a-z0-9]{1,24}`) and `MATE_LINK_SOURCES` in `src/lib/bot/start-payload.ts`.
   - **Analytics behaviour change (spec 04 privacy fix):** after deploy, `tg_bot_started.payload` and `TelegramChat.startPayload` read `invalid` for any `/start` text that is not `[A-Za-z0-9_-]{1,64}`; before it they held the typed text. No event name or new event; no tables, migrations or copy.
 - Next: T069 routes `{ kind: 'roommate' }` in `handleStart` (spec 06 §Entry and routing), or the next runnable task from `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-19 13:39 · T064 · done
+
+- Done:
+  - `src/lib/roommate/switch.ts` (new): `isMatchingEnabled()` returns `process.env.ROOMMATE_MATCHING_ENABLED === 'true'`, read on every call, nothing cached at module load. No consumer yet (the stage 1/2 flows import it in their own tasks).
+  - `.env.example`: `ROOMMATE_MATCHING_ENABLED=` (empty) with one comment line, after `ANTHROPIC_API_KEY`. No other env file touched. The project has no env validation schema (searched `src` for `z.object` / `createEnv` / `envSchema`), so nothing to make optional.
+  - `src/lib/bot/README.md` "Going live": one paragraph on the switch and the owner step "set the variable, then redeploy" (spec 07 §Switch names the bot README). `docs/specs/README.md` FR-23 stays Planned (T092 left).
+- Tests: `src/lib/roommate/switch.test.ts` (new, 11): unset, `''`, `'TRUE'`, `'True'`, `'1'`, `'false'`, `'yes'`, `' true'`, `'true '` → off; `'true'` → on; flipping the variable between calls changes the result (per-call read). Uses `vi.stubEnv` / `vi.unstubAllEnvs` (`undefined` deletes the variable). Proven to fail by temporarily using `?.trim().toLowerCase() === 'true'` (4 failures, reverted).
+- Checks: `npx vitest run src/lib/roommate/switch.test.ts` 11 passed. `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 92 files / 1305 tests, build OK). `next-env.d.ts` restored. Nothing deployed.
+- Did not work: nothing.
+- Owner review:
+  - **Owner step (later, at the switch, D58):** set `ROOMMATE_MATCHING_ENABLED=true` in Vercel, then redeploy; record the moment in the posting log and as a PostHog annotation (`{switch_at}` of the E15 queries). Until then leave it unset: everything stays off.
+  - No copy, events, tables, migrations or assumptions.
+- Next: the next runnable task from `node scripts/ralph-tasks.mjs next`. Stage 1/2 code checks the switch with `isMatchingEnabled()` from `@/lib/roommate/switch`; tests set it with `vi.stubEnv('ROOMMATE_MATCHING_ENABLED', 'true')` and `vi.unstubAllEnvs()` in `afterEach`.

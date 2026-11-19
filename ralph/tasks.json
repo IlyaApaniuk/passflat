@@ -46,14 +46,14 @@
       "title": "Matching switch helper and its env placeholder (FR-23 criteria 1 and 4)",
       "spec": "docs/specs/07-roommate-matching.md#switch",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/roommate/switch.ts exports isMatchingEnabled(), reading process.env.ROOMMATE_MATCHING_ENABLED on every call; only the exact string 'true' turns it on",
         "Unit tests for unset, '', 'TRUE', '1', 'false' and 'true'",
         ".env.example documents ROOMMATE_MATCHING_ENABLED= with an empty placeholder and one comment line; if the project validates env variables in a schema, the variable is optional there"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Built first because stage 1 texts and buttons depend on the switch state. The behaviour of each flow in both states is tested in its own task and in T092."
     },
     {
