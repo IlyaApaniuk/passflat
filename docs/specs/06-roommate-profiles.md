@@ -324,6 +324,14 @@ activated_at: now, expires_at: computeExpiresAt(now, move_in_month), adult_confi
   only when `count === 1` send one `tg_roommate_profile_created` (§Events) and the replies, so a
   double tap on "I'm 18+" gives one row and one event. Then the own card and the counts reply
   (§Counts).
+- **A move-in month that passed while the draft was open** (a draft lives `DRAFT_LIFE_DAYS`;
+  agent's clarification, the renewal's rule of §Renewal, T111): when
+  `isMoveInMonthPast(move_in_month, now)` at "I'm 18+", nothing is saved; the draft moves from
+  `adult` to `step = 'save_month'` through the conditional `updateMany({ where: { id, step:
+'adult' } })`, the reply is "that month has passed" (`monthPassed`) and the move-in step with
+  the current months. A current month tapped there saves as above in one write that also stores
+  the month (`where: { id, status: 'draft', step: 'save_month' }`), with one
+  `tg_roommate_profile_created`; the later steps are not asked again.
 - **Own card** (shown only to its owner): every field the person chose, including own gender and
   "live with", the opt-in state (switch off) or the daily-message state (switch on), and the date
   the profile hides (`expires_at` in the locale, Europe/Warsaw). Buttons: Edit (`rm:c:edit`),

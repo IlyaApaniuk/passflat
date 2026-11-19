@@ -35,6 +35,7 @@ import {
   profileCreatedProperties,
   profileEditedProperties,
   RENEW_MONTH_STEP,
+  SAVE_MONTH_STEP,
   reduceDistrictPick,
   renewalCheck,
   setLanguage,
@@ -120,6 +121,12 @@ describe('renewalCheck (what a Renew tap does, spec 06 §Renewal)', () => {
   it('the renewal step is not an edit step', () => {
     expect(RENEW_MONTH_STEP).toBe('renew_month');
     expect(editFieldOf(RENEW_MONTH_STEP)).toBeNull();
+  });
+
+  it("the save's month step is neither an edit step nor followed by another intake step", () => {
+    expect(SAVE_MONTH_STEP).toBe('save_month');
+    expect(editFieldOf(SAVE_MONTH_STEP)).toBeNull();
+    expect(nextIntakeStep(SAVE_MONTH_STEP)).toBeNull();
   });
 });
 

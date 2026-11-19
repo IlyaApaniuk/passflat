@@ -80,6 +80,7 @@ import {
   PETS_TAP,
   PREFERS_TAP,
   SMOKING_TAP,
+  cancelRoommate,
   handleMate,
   handleRoommateText,
   registerRoommateFlow,
@@ -1578,6 +1579,213 @@ describe('step 9: 18+ and the save (FR-9, FR-12)', () => {
     expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'мне 25')).toBe('passed');
     expect(row()).toMatchObject({ status: 'draft', step: 'adult' });
     expect(reply).not.toHaveBeenCalled();
+  });
+});
+
+describe('step 9 with a move-in month that passed while the draft was open (spec 06 §Save)', () => {
+  /** A draft started in late November with November as the move-in month, at 18+ on 5 December. */
+  const LAST_MONTH = new Date('2026-11-01T00:00:00.000Z');
+  const STALE = {
+    step: 'adult',
+    districtSlugs: ['wola'],
+    budgetBand: 'b2',
+    moveInMonth: LAST_MONTH,
+    languages: ['ru'],
+    smoking: 'no',
+    pets: 'fine',
+  } satisfies Partial<RoommateProfile>;
+
+  const CURRENT_MONTHS = [
+    ['rm:m:2026-12', 'rm:m:2027-01'],
+    ['rm:m:2027-02', 'rm:m:2027-03'],
+  ];
+
+  const created = () =>
+    mocks.track.mock.calls.filter(([, event]) => event === 'tg_roommate_profile_created');
+  const savedWrites = () =>
+    db.roommateProfile.updateMany.mock.calls.filter(
+      ([{ data: fields }]) => (fields as { status?: string }).status === 'active',
+    );
+
+  it('"I\'m 18+" saves nothing, says the month has passed and asks it with the current months', async () => {
+    seed(STALE);
+    const { reply, answerCallbackQuery } = await tap('rm:a:yes');
+
+    expect(texts(reply)).toEqual([rt('ru', 'monthPassed'), rt('ru', 'askMonth')]);
+    expect(data(replyKeyboard(reply, 1))).toEqual(CURRENT_MONTHS);
+    expect(db.roommateProfile.updateMany).toHaveBeenCalledTimes(1);
+    expect(db.roommateProfile.updateMany).toHaveBeenCalledWith({
+      where: { id: 'profile-1', step: 'adult' },
+      data: { step: 'save_month' },
+    });
+    expect(savedWrites()).toHaveLength(0);
+    expect(row()).toMatchObject({
+      status: 'draft',
+      step: 'save_month',
+      moveInMonth: LAST_MONTH,
+      activatedAt: null,
+      expiresAt: null,
+      adultConfirmedAt: null,
+    });
+    expect(mocks.track).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('says it in the chat locale', async () => {
+    mocks.touchChat.mockResolvedValue({ ...CHAT, locale: 'uk' });
+    seed(STALE);
+    const { reply } = await tap('rm:a:yes');
+
+    expect(texts(reply)).toEqual([rt('uk', 'monthPassed'), rt('uk', 'askMonth')]);
+    expect(labels(replyKeyboard(reply, 1))[0]).toEqual(['Грудень 2026', 'Січень 2027']);
+  });
+
+  it('the month tap then saves once with the new month, without asking the later steps again', async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+    vi.clearAllMocks();
+    const { reply } = await tap('rm:m:2027-01');
+
+    // NOW + 30 days comes before the end of January.
+    const expiresAt = new Date('2027-01-04T10:00:00.000Z');
+    expect(db.roommateProfile.updateMany).toHaveBeenCalledWith({
+      where: { id: 'profile-1', status: 'draft', step: 'save_month' },
+      data: {
+        status: 'active',
+        step: null,
+        activatedAt: NOW,
+        expiresAt,
+        adultConfirmedAt: NOW,
+        moveInMonth: new Date('2027-01-01T00:00:00.000Z'),
+      },
+    });
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({
+      ...STALE,
+      moveInMonth: new Date('2027-01-01T00:00:00.000Z'),
+      status: 'active',
+      step: null,
+    });
+    expect(row().expiresAt?.toISOString()).toBe(expiresAt.toISOString());
+    expect(row().expiresAt!.getTime()).toBeGreaterThan(NOW.getTime());
+
+    expect(created()).toEqual([
+      [
+        CHAT_ID,
+        'tg_roommate_profile_created',
+        {
+          district_count: 1,
+          any_district: false,
+          budget_band: 'b2',
+          move_in_offset_months: 1,
+          language_count: 1,
+          has_text: false,
+          rule_count: 2,
+          entry_source: 'tg',
+          has_username: true,
+        },
+      ],
+    ]);
+    // The own card with the new month and a future hide date, then the counts reply; no step again.
+    expect(texts(reply)).toHaveLength(2);
+    const card = texts(reply)[0] as string;
+    expect(card.startsWith(`${rt('ru', 'cardHeader')}\n\n`)).toBe(true);
+    expect(card).toContain('Заезд: январь 2027');
+    expect(card).toContain('Анкета скроется 4 января 2027.');
+    expect(texts(reply)[1]).toBe(`${rt('ru', 'countsNobodyElse')} ${rt('ru', 'countsOpensLater')}`);
+    expect(texts(reply)).not.toContain(rt('ru', 'askLanguages'));
+    expect(texts(reply)).not.toContain(rt('ru', 'askAdult'));
+  });
+
+  it('the current month picked there hides at its end, not in the past', async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+    await tap('rm:m:2026-12');
+
+    expect(row()).toMatchObject({ status: 'active', step: null });
+    expect(row().expiresAt?.toISOString()).toBe('2026-12-31T22:59:59.000Z');
+    expect(created()[0][2]).toMatchObject({ move_in_offset_months: 0 });
+  });
+
+  it('a double tap on "I\'m 18+", then on the month, still gives one row and one event', async () => {
+    seed(STALE);
+    const firstYes = fakeCtx();
+    const secondYes = fakeCtx();
+    await Promise.all([tap('rm:a:yes', firstYes), tap('rm:a:yes', secondYes)]);
+
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month' });
+    expect(savedWrites()).toHaveLength(0);
+    const asked = [...texts(firstYes.reply), ...texts(secondYes.reply)];
+    expect(asked.filter((text) => text === rt('ru', 'monthPassed'))).toHaveLength(1);
+    expect(asked).toContain(rt('ru', 'stepDone'));
+
+    const firstMonth = fakeCtx();
+    const secondMonth = fakeCtx();
+    await Promise.all([tap('rm:m:2027-01', firstMonth), tap('rm:m:2027-01', secondMonth)]);
+
+    expect(db.rows).toHaveLength(1);
+    expect(row()).toMatchObject({ status: 'active', step: null });
+    expect(created()).toHaveLength(1);
+    const replies = [...texts(firstMonth.reply), ...texts(secondMonth.reply)] as string[];
+    expect(replies.filter((text) => text.startsWith(rt('ru', 'cardHeader')))).toHaveLength(1);
+    expect(replies.filter((text) => text.startsWith(rt('ru', 'countsNobodyElse')))).toHaveLength(1);
+    expect(replies).toContain(rt('ru', 'stepDone'));
+  });
+
+  it('an "I\'m 18+" button tapped again at the month question saves nothing and asks the month', async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+    const again = await tap('rm:a:yes');
+
+    expect(texts(again.reply)).toEqual([rt('ru', 'stepDone'), rt('ru', 'askMonth')]);
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month', moveInMonth: LAST_MONTH });
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it("the old month's button there gets the step again and saves nothing", async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+    const { reply } = await tap('rm:m:2026-11');
+
+    expect(texts(reply)).toEqual([rt('ru', 'monthPassed'), rt('ru', 'askMonth')]);
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month', moveInMonth: LAST_MONTH });
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
+
+  it('a December draft at 00:30 Warsaw time on 1 January is asked again, whatever the process time zone', async () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    vi.setSystemTime(new Date('2026-12-31T23:30:00Z'));
+    seed({ ...STALE, moveInMonth: new Date('2026-12-01T00:00:00.000Z') });
+    const { reply } = await tap('rm:a:yes');
+
+    expect(texts(reply)).toEqual([rt('ru', 'monthPassed'), rt('ru', 'askMonth')]);
+    expect(data(replyKeyboard(reply, 1))[0]).toEqual(['rm:m:2027-01', 'rm:m:2027-02']);
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month' });
+  });
+
+  it('/mate at the month question sends it again; /cancel deletes the draft', async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+
+    const reopened = fakeCtx();
+    await handleMate(reopened.ctx as CommandContext<Context>);
+    expect(texts(reopened.reply)).toEqual([rt('ru', 'askMonth')]);
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month' });
+
+    const cancel = fakeCtx();
+    expect(await cancelRoommate(cancel.ctx, 'chat-row', 'ru')).toBe(true);
+    expect(texts(cancel.reply)).toEqual([rt('ru', 'cancelledDraft')]);
+    expect(db.rows).toHaveLength(0);
+    expect(created()).toHaveLength(0);
+  });
+
+  it('typed text at the month question passes on', async () => {
+    seed(STALE);
+    await tap('rm:a:yes');
+    const { ctx } = fakeCtx();
+
+    expect(await handleRoommateText(ctx, 'chat-row', 'ru', 'январь')).toBe('passed');
+    expect(row()).toMatchObject({ status: 'draft', step: 'save_month', moveInMonth: LAST_MONTH });
   });
 });
 

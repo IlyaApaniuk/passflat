@@ -886,13 +886,13 @@
         "Tests: a draft at adult with last month saves nothing and asks the month; the month tap then saves once; a double tap still gives one row and one event"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found by T074. Agent clarification needed in spec 06 §Save (the renewal has the same rule: a past month runs the move-in step first, spec 06 §Renewal). If the owner prefers a different behaviour, block with the question.",
       "id": "T111",
       "milestone": "M1",
       "title": "Save with a move-in month that passed while the draft was open (FR-6, FR-12 gap)",
       "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T086"],

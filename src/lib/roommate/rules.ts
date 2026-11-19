@@ -210,6 +210,13 @@ export function editStepOf(field: RoommateEditField): `edit_${RoommateEditField}
  */
 export const RENEW_MONTH_STEP = 'renew_month';
 
+/**
+ * The move-in question again on a draft at the 18+ step whose month passed while the draft was
+ * open (spec 06 §Save, the renewal's rule): the month picked here is stored with the save, so the
+ * later steps are not asked again and the new profile never hides in the past.
+ */
+export const SAVE_MONTH_STEP = 'save_month';
+
 /** The field of an edit step (`edit_budget` → `budget`); null for an intake or renewal step. */
 export function editFieldOf(step: string | null): RoommateEditField | null {
   if (!step?.startsWith('edit_')) return null;

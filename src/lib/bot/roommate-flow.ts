@@ -15,6 +15,7 @@ import {
   MAX_DISTRICTS,
   PETS,
   RENEW_MONTH_STEP,
+  SAVE_MONTH_STEP,
   SMOKING,
   bandForAmount,
   editFieldOf,
@@ -400,6 +401,7 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
     case 'month':
     case 'edit_month':
     case RENEW_MONTH_STEP:
+    case SAVE_MONTH_STEP:
       await sendMonthStep(ctx, locale, new Date());
       return;
     case 'languages':
@@ -1077,7 +1079,7 @@ const handleBudgetTap = roommateCallback(async (ctx, chat, locale) => {
  * `rm:m:<YYYY-MM>`: stores the first day of the month and moves on. A month that
  * has passed (an older message) gets the step again with the current months; a
  * month the step never offers is ignored. At `renew_month` the month renews the
- * profile (`finishRenewal`).
+ * profile (`finishRenewal`); at `save_month` it saves the draft (`finishSave`).
  */
 const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
   const [key] = matchGroups(ctx);
@@ -1091,6 +1093,7 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
     'month',
     'edit_month',
     RENEW_MONTH_STEP,
+    SAVE_MONTH_STEP,
   );
   if (!profile) return;
 
@@ -1108,6 +1111,10 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
       return;
     }
     await finishRenewal(ctx, profile, locale, now, month, RENEW_MONTH_STEP);
+    return;
+  }
+  if (profile.step === SAVE_MONTH_STEP) {
+    await finishSave(ctx, profile, locale, now, month, SAVE_MONTH_STEP);
     return;
   }
   if (profile.step === 'edit_month') {
@@ -1270,27 +1277,30 @@ const handlePetsTap = roommateCallback(async (ctx, chat, locale) => {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * `rm:a:yes`: saves the draft through the conditional write of `saveProfile`.
- * Only the tap whose write lands sends `tg_roommate_profile_created` and the own
- * card and the counts reply, so a double tap gives one active row and one event;
- * the other tap gets "this step is done".
+ * Saves the draft through the conditional write of `saveProfile` (with `step`,
+ * the new month from `save_month`). Only the write that lands sends
+ * `tg_roommate_profile_created` and the own card and the counts reply, so a
+ * double tap gives one active row and one event; the other tap gets "this step
+ * is done".
  */
-const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
-  const profile = await profileAtStep(ctx, chat.id, locale, 'adult');
-  if (!profile) return;
-  // The month step always stores one before the intake reaches this step.
-  if (!profile.moveInMonth) throw new Error('roommate draft at the 18+ step without a month');
-
-  const now = new Date();
-  const result = await saveProfile(profile.id, profile.moveInMonth, now);
+async function finishSave(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  now: Date,
+  moveInMonth: Date,
+  step?: string,
+): Promise<void> {
+  const result = await saveProfile(profile.id, moveInMonth, now, step);
   if (!result.saved) {
-    await resendCurrentStep(ctx, chat.id, locale);
+    await resendCurrentStep(ctx, profile.chatId, locale);
     return;
   }
   const saved: RoommateProfile = {
     ...profile,
     status: 'active',
     step: null,
+    moveInMonth,
     activatedAt: now,
     expiresAt: result.expiresAt,
     adultConfirmedAt: now,
@@ -1299,6 +1309,31 @@ const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
   track(ctx.chat!.id, 'tg_roommate_profile_created', profileCreatedProperties(saved, now));
   await sendOwnCard(ctx, saved, locale);
   await sendCounts(ctx, saved, locale);
+}
+
+/**
+ * `rm:a:yes`: saves the draft (`finishSave`). A move-in month that passed while
+ * the draft was open (it lives `DRAFT_LIFE_DAYS`) would save a profile that hides
+ * in the past, so the month is asked again first (`save_month`, the renewal's
+ * rule) and the save follows the month tap; nothing is saved or sent before it.
+ */
+const handleAdultYes = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await profileAtStep(ctx, chat.id, locale, 'adult');
+  if (!profile) return;
+  // The month step always stores one before the intake reaches this step.
+  if (!profile.moveInMonth) throw new Error('roommate draft at the 18+ step without a month');
+
+  const now = new Date();
+  if (isMoveInMonthPast(profile.moveInMonth, now)) {
+    if (!(await advanceStep(profile.id, 'adult', SAVE_MONTH_STEP))) {
+      await resendCurrentStep(ctx, chat.id, locale);
+      return;
+    }
+    await ctx.reply(rt(locale, 'monthPassed'));
+    await sendMonthStep(ctx, locale, now);
+    return;
+  }
+  await finishSave(ctx, profile, locale, now, profile.moveInMonth);
 });
 
 /** `rm:a:no`: deletes the draft at once and says that matching is for adults and nothing was saved. */

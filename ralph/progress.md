@@ -3127,3 +3127,42 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
       D52 and D60 cover neither case; the doc says so (§8.3).
   - No new copy, event, table or migration.
 - Next: `node scripts/ralph-tasks.mjs next` (now T111, the past move-in month at save, found in T074; T105, the PRD 3 final check, FR-44, comes after the remaining tasks).
+
+### 2026-11-19 21:34 · T111 · done
+
+- Done:
+  - `src/lib/roommate/rules.ts`: `SAVE_MONTH_STEP = 'save_month'`, a draft step next to `RENEW_MONTH_STEP` (not an intake step and not an edit step).
+  - `src/lib/roommate/store.ts`: `saveProfile(id, moveInMonth, now, step?)`. Without `step` the write is unchanged: `where { id, status: 'draft' }`. With `step` it also needs the draft at that step and stores `moveInMonth`.
+  - `src/lib/bot/roommate-flow.ts`:
+    - the save part of `handleAdultYes` moved into `finishSave` (same event, card and counts; `saved` now carries the month);
+    - `handleAdultYes`: when `isMoveInMonthPast(moveInMonth, now)` → `advanceStep(id, 'adult', 'save_month')`, `monthPassed`, the month step with the current months. Nothing is saved and no event is sent; a lost race gets `stepDone` and the current step;
+    - `handleMonthTap` accepts `save_month` → `finishSave(…, month, 'save_month')`, so the later steps are not asked again;
+    - `sendStep` sends the month question at `save_month` (`/mate` on the draft, stale taps).
+    - `/cancel` (draft deleted) and typed text (passes on) work there unchanged.
+  - `docs/specs/06-roommate-profiles.md` §Save: the agent's clarification (the renewal's rule). `docs/specs/README.md`: new row "FR-12 (gap)" → T111, Done. `src/lib/bot/README.md`: the save bullet names it.
+- Tests:
+  - `roommate-intake.test.ts`: new block "step 9 with a move-in month that passed while the draft was open" (10 tests):
+    - "I'm 18+" with November on 5 December: the exact `updateMany` (`adult` → `save_month`), no save write, no event, `monthPassed` + current months (RU; UK labels);
+    - the January tap: the exact save write with `moveInMonth`, `expires_at` 2027-01-04 in the future, one event with `move_in_offset_months: 1`, the card ("Заезд: январь 2027", "скроется 4 января 2027") and the counts reply, nothing else;
+    - December picked there → hides 2026-12-31 22:59:59Z;
+    - double tap on "I'm 18+", then on the month → one row, one event, one card, one counts reply;
+    - "I'm 18+" again at the month question; the old month's button there;
+    - a December draft at 00:30 Warsaw time on 1 January under `TZ=America/Los_Angeles`;
+    - `/mate` resends the month and `/cancel` deletes the draft; typed text passes on.
+  - `rules.test.ts` (+1): `SAVE_MONTH_STEP`, not an edit step, no next intake step.
+  - Mutation check: the past-month branch disabled → all 10 new tests fail; reverted.
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-intake.test.ts src/lib/roommate/rules.test.ts`: 288 passed; the roommate files under `TZ=UTC`: 554 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 140 files / 2955 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: the first run of the new tests had one wrong expectation in the test (it spread the old month into the saved row); fixed in the test.
+- Owner review:
+  - **Agent's clarification to confirm (spec 06 §Save, as the task proposed):**
+    - a past month at "I'm 18+" asks the month again, then saves; there is no separate "the month has passed" event;
+    - only a month that has passed triggers it. A month that ends within 3 days still saves at once, as before, so the profile can hide within days. The renewal also asks in that case; the save does not, because the task's criteria name only the past month.
+  - No new copy (`monthPassed`, `askMonth` from T068), no new event, no table, no migration.
+- Next: `node scripts/ralph-tasks.mjs next` (now T112, the checker's one-observation area wording, found in T086; T105, the PRD 3 final check, comes after the remaining tasks).

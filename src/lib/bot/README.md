@@ -104,7 +104,10 @@ so each fails while its migrations are missing (`docs/architecture.md` §9).
   `activated_at`, `adult_confirmed_at`, `expires_at` from `computeExpiresAt`), and
   only the tap whose write lands sends `tg_roommate_profile_created`
   (`profileCreatedProperties`) and the own card; "I'm under 18" deletes the draft
-  at once and says nothing was saved. The own card, shown only to its owner,
+  at once and says nothing was saved. A move-in month that passed while the
+  draft was open is asked again first (`save_month`, "that month has passed"),
+  and the month tap there saves with the new month; the later steps are not
+  asked again. The own card, shown only to its owner,
   lists every chosen field (own gender and "live with" only here), the hide date
   in Warsaw time and, by the switch, the opt-in or the daily-message state; its
   buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while

@@ -746,21 +746,25 @@ export async function setLanguages(
  * 18+ confirmed at `now`, hiding at `computeExpiresAt(now, moveInMonth)`. One
  * conditional write on `status = 'draft'`: true for exactly one of two
  * overlapping taps on "I'm 18+", so only that one sends the event and the card.
+ * With `step` (`save_month`, a month that passed while the draft was open) the
+ * new month is stored too and the write also needs the draft at that step.
  */
 export async function saveProfile(
   profileId: string,
   moveInMonth: Date,
   now: Date,
+  step?: string,
 ): Promise<{ saved: true; expiresAt: Date } | { saved: false }> {
   const expiresAt = computeExpiresAt(now, moveInMonth);
   const { count } = await prisma.roommateProfile.updateMany({
-    where: { id: profileId, status: 'draft' },
+    where: { id: profileId, status: 'draft', ...(step ? { step } : {}) },
     data: {
       status: 'active',
       step: null,
       activatedAt: now,
       expiresAt,
       adultConfirmedAt: now,
+      ...(step ? { moveInMonth } : {}),
     },
   });
   return count === 1 ? { saved: true, expiresAt } : { saved: false };
