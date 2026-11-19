@@ -134,7 +134,7 @@ export const MIN_AREA_REPORTS = 5;
 /** A deposit statistic is shown only from this many answers, for an area or a building. */
 export const MIN_DEPOSIT_ANSWERS = 3;
 
-// --- Q-3 parameters (Assumption: the cautious defaults until the owner confirms) ---
+// --- Q-3 parameters (Decided, D24 2026-11-19: the owner confirmed these cautious defaults) ---
 
 /** Which group each source belongs to: tenant = user + import, asking = scraped. */
 export const SOURCE_GROUP: Record<SourceKind, FigureGroupKey> = {
@@ -443,6 +443,8 @@ export function summarizeDepositReturns(
  * The level a building is set against: its district when the district holds
  * at least MIN_AREA_REPORTS reports (after the rental-type filter), otherwise
  * the city, and nothing when the city has no report either.
+ * Decided (Q-3, D24): chosen by the district's total report count over both
+ * groups; each surface then shows the reference per group with its own N.
  */
 export function areaReferenceLevel(
   district: FigureSummary | null,

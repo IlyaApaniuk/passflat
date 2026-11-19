@@ -1293,3 +1293,14 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Assumption: the hero and blog deposit numbers read the tenant group only (user + import) and keep the old rounding to hundreds (`DEPOSIT_ROUNDING_STEP` in `src/lib/deposit-claim.ts`). Behaviour change: below 3 answers the hero tile and the blog deposit section disappear (before: any answer showed a percentage).
   - No tables, migrations or events.
 - Next: T052 (city hub, district pages, calculator baseline, home hero district medians and top building); the home top building is still averaged over all sources under the "Reported costs, shown anonymously" badge until then.
+
+### 2026-11-19 09:44 · T030 · done
+
+- Done (Q-3 confirmed as built, D24; no value or behaviour changed):
+  - `src/lib/cost-figures.ts`: the Q-3 block header now reads "Decided, D24 2026-11-19" instead of "Assumption … until the owner confirms"; the `areaReferenceLevel` doc comment records the decided rule (the district's total report count over both groups, reference shown per group with its own N).
+  - `src/lib/cost-figures.test.ts`: the constants test is split into "keeps the shared gates" (`MIN_AREA_REPORTS` 5, `MIN_DEPOSIT_ANSWERS` 3) and "keeps every Q-3 default the owner confirmed (D24)", which pins `SOURCE_GROUP` (user + import = tenant, scraped = asking), `LEGACY_NULL_IS_COMPLETE` false, `TRIM_OUTLIERS` false, `CLAMP_EXPENSES_AT_ZERO` true, `ONE_OBSERVATION_REPORTS` 1, `RECORDED_AT_PRECISION` month, `TENANCY_PRECISION` year, `AREA_STEP_M2` 5. Golden examples unchanged.
+  - `docs/specs/03-building-figures.md`: the inline "(Q-3)" markers now say D24; §Parameters to confirm records what T030 did. `docs/specs/README.md`: the T030 row → Done.
+- Checks: `npx vitest run src/lib/cost-figures.test.ts` 46/46. `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types — fewer than T029's 32 / 18 because the test now imports the constants; no unused files; Vitest 80 files / 1012 tests; build OK). `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: nothing new. The values are the ones D24 confirmed; no copy, tables, migrations or events.
+- Next: the next task in the queue (`node scripts/ralph-tasks.mjs next`); T052 continues the single-number rule.

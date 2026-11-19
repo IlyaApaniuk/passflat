@@ -36,7 +36,7 @@ through them (`CLAUDE.md`: never a second aggregation for the bot).
 
 ```ts
 type SourceKind = 'user' | 'import' | 'scraped';
-type FigureGroupKey = 'tenant' | 'asking'; // tenant = user + import, asking = scraped (Q-3)
+type FigureGroupKey = 'tenant' | 'asking'; // tenant = user + import, asking = scraped (Q-3, D24)
 type RentalTypeFilter = 'all' | 'apartment' | 'room';
 
 interface MetricFigure {
@@ -81,7 +81,7 @@ interface FigureSummary {
 ```
 
 Function: `summarizeFigures(reports, { level, rentalType })`. Medians use `computeStats` from
-`src/lib/cost-stats.ts` without trimming (Q-3). Rounding as `computeStats` rounds.
+`src/lib/cost-stats.ts` without trimming (Q-3, D24). Rounding as `computeStats` rounds.
 
 ### Rules
 
@@ -93,7 +93,7 @@ Function: `summarizeFigures(reports, { level, rentalType })`. Medians use `compu
   `apartment` drop reports whose `rentalType` differs or is `null`; `all` keeps every report and
   `rentalTypeCounts` shows the mix.
 - **Completeness (FR-25, FR-26):** a report is complete only when `utilitiesComplete === true`
-  (legacy `null` counts as not established: Q-3, constant `LEGACY_NULL_IS_COMPLETE = false`).
+  (legacy `null` counts as not established: Q-3, D24, `LEGACY_NULL_IS_COMPLETE = false`).
   Complete totals feed `completeTotal` and `expenses`; the others feed `knownPartTotal`.
   Original records are not changed.
 - **Zero vs unknown (FR-26):** a stored `0` is a confirmed zero and counts as a value; `null` is
@@ -103,7 +103,7 @@ Function: `summarizeFigures(reports, { level, rentalType })`. Medians use `compu
   and totals count values `> 0`. `reportCount` is shown only as the size of the group, never as
   the N of a metric.
 - **Observation (FR-24):** `observation` follows the group's `reportCount`: `one` for exactly
-  one report, `several` for more, `none` for zero (Q-3). The headline metric of a group is
+  one report, `several` for more, `none` for zero (Q-3, D24). The headline metric of a group is
   `completeTotal` when its `n ≥ 1`, else `knownPartTotal`, else `rent`; every metric still shows
   its own N, so "4 reports, all-in total from 1" stays visible.
 - **Dates (FR-28):** `latestRecordedAt` is when a report was added or confirmed, never shown as
@@ -111,7 +111,7 @@ Function: `summarizeFigures(reports, { level, rentalType })`. Medians use `compu
   and the latest `livedUntil` (or "now" for `isCurrentTenant`) over the group, as years only
   ("2025–2026"); `null` when no report has them, and the surface then says the period is
   unknown. Month-and-year and years-only are cautious privacy defaults for one-report groups
-  (Q-3).
+  (Q-3, confirmed in D24).
 - **Area name:** a reference carries `level`, `slug` and the display name source (`districtName`
   for a district, the city's `nameKey` for a city); each surface renders the name in its own
   locale and grammar (the bot needs case forms such as «по Варшаве»).
@@ -227,7 +227,7 @@ FR-22, FR-24 – FR-28, FR-31 – FR-33. `src/app/[locale]/[city]/building/[slug
   | deposit return rate (`isCurrentTenant === false`, no N gate) | `summarizeDepositReturns` for the building, `answered ≥ 3`                                     |
   | median deposit, deposit months, tenure, lease type           | kept, over the tenant group only, labelled with N                                              |
   | `utilitiesUnknown` chip (`user` + `false` only)              | replaced by the group's known-part figure                                                      |
-  | outlier trimming (2.5·MAD)                                   | removed: untrimmed medians (Q-3)                                                               |
+  | outlier trimming (2.5·MAD)                                   | removed: untrimmed medians (Q-3, D24)                                                          |
   | comparison, percentile, position bars                        | §Comparisons                                                                                   |
 
 - **Event:** `building_detail_viewed` keeps `report_count`, `user_count`, `import_count`,
@@ -404,8 +404,9 @@ entered by Passflat from a tenant's answers; `LEGACY_NULL_IS_COMPLETE = false` (
 `observation one` = a group with exactly one report; dates as month and year, tenancy as years,
 area rounded to 5 m² for one report; `MIN_DEPOSIT_ANSWERS = 3`, also for a building's own
 deposit statistic; the reference level chosen by the district's total report count and shown
-per group with its own N. T030 keeps the values, marks the constants' comments as decided (D24)
-instead of pending Q-3, and keeps the golden tests unchanged.
+per group with its own N. T030 (done) kept the values and the golden tests, marked the
+constants' block and `areaReferenceLevel` as decided (D24), and pins every value in the
+constants test of `src/lib/cost-figures.test.ts`, so a change is deliberate.
 
 ## Consistency
 

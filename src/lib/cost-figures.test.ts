@@ -8,18 +8,25 @@ import { singleNumberLabel } from './single-number-view';
 
 import {
   answerProperties,
+  AREA_STEP_M2,
   areaReferenceLevel,
+  CLAMP_EXPENSES_AT_ZERO,
   comparableRanks,
   isComparable,
   LEGACY_NULL_IS_COMPLETE,
   MIN_AREA_REPORTS,
   MIN_COMPARABLE_N,
   MIN_DEPOSIT_ANSWERS,
+  ONE_OBSERVATION_REPORTS,
+  RECORDED_AT_PRECISION,
   SINGLE_NUMBER_MIN_N,
   singleNumberFigure,
+  SOURCE_GROUP,
   summarizeDepositReturns,
   summarizeFigures,
   TENANCY_ONGOING,
+  TENANCY_PRECISION,
+  TRIM_OUTLIERS,
   type ComparisonSide,
   type FigureReport,
   type FigureSummary,
@@ -45,10 +52,20 @@ function reports(count: number, source: FigureReport['source'] = 'user'): Figure
 }
 
 describe('cost-figures constants', () => {
-  it('keeps the shared gates and the cautious Q-3 default', () => {
+  it('keeps the shared gates', () => {
     expect(MIN_AREA_REPORTS).toBe(5);
     expect(MIN_DEPOSIT_ANSWERS).toBe(3);
+  });
+
+  it('keeps every Q-3 default the owner confirmed (D24)', () => {
+    expect(SOURCE_GROUP).toEqual({ user: 'tenant', import: 'tenant', scraped: 'asking' });
     expect(LEGACY_NULL_IS_COMPLETE).toBe(false);
+    expect(TRIM_OUTLIERS).toBe(false);
+    expect(CLAMP_EXPENSES_AT_ZERO).toBe(true);
+    expect(ONE_OBSERVATION_REPORTS).toBe(1);
+    expect(RECORDED_AT_PRECISION).toBe('month');
+    expect(TENANCY_PRECISION).toBe('year');
+    expect(AREA_STEP_M2).toBe(5);
   });
 });
 

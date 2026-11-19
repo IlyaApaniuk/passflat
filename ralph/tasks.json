@@ -487,12 +487,12 @@
       "title": "Apply the owner's answer on the figure parameters",
       "spec": "docs/specs/03-building-figures.md#parameters-to-confirm",
       "dependsOn": ["T017"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The Q-3 constants in src/lib/cost-figures.ts match the owner's answer; golden tests and the spec section are updated; every surface still passes its tests"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-3. Confirm the cautious defaults: tenant group = user + import; legacy utilitiesComplete=null counts as not established; untrimmed medians; expenses never below 0; 'one observation' = a group with one report; dates as month/year and tenancy as years; deposit share only from 3 answers; reference level by the district's report count?\nOwner answer: Q-3 confirmed (D24, 2026-11-19): every cautious default stays as built; mark the constants decided, keep values and golden tests."
     },
     {
