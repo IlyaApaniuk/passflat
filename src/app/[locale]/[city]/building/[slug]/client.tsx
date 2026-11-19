@@ -20,6 +20,10 @@ import { Badge } from '@/components/ui/badge';
 import { type CostStats, monthsSince, TRUST_THRESHOLDS } from '@/lib/cost-stats';
 import { useHasContributed } from '@/hooks/use-has-contributed';
 import {
+  buildingDetailViewedProperties,
+  type ReportSourceCounts,
+} from '@/lib/analytics/building-events';
+import {
   ArrowLeft,
   Building2,
   MapPin,
@@ -295,6 +299,8 @@ interface BuildingCostsClientProps {
     placeId: string | null;
   };
   reports: number;
+  /** Visible reports in total and per source, for `building_detail_viewed` only. */
+  sourceCounts: ReportSourceCounts;
   lastUpdated: string | null;
   costs: {
     rent: CostStats | null;
@@ -363,6 +369,7 @@ interface BuildingCostsClientProps {
 export function BuildingCostsClient({
   building,
   reports,
+  sourceCounts,
   lastUpdated,
   costs,
   includedCounts,
@@ -400,11 +407,10 @@ export function BuildingCostsClient({
   const dateFmtLocale = DATE_LOCALE_MAP[locale] ?? enUS;
 
   useEffect(() => {
-    posthog?.capture('building_detail_viewed', {
-      building_id: building.id,
-      building_slug: building.slug,
-      city: citySlug,
-    });
+    posthog?.capture(
+      'building_detail_viewed',
+      buildingDetailViewedProperties(building, citySlug, sourceCounts),
+    );
   }, [building.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // /review resolves an address through Places, so the place id skips that step

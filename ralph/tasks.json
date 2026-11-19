@@ -129,14 +129,14 @@
       "title": "Add report and per-source counts to building_detail_viewed",
       "spec": "docs/specs/01-analytics-context.md#building-view",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The building page server passes counts of visible reports per source; building_detail_viewed adds report_count, user_count, import_count, scraped_count and keeps building_id, building_slug, city",
         "Counting is a pure function with a unit test: sources user, user, scraped give report_count 3, user_count 2, import_count 0, scraped_count 1; zero reports give all zeros",
         "The event still fires once per building id"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Names are an Assumption (spec). T019 later takes the counts from the figure contract."
     },
     {

@@ -11,6 +11,7 @@ import { computeStats, median, monthsSince, perAreaValues, type CostStats } from
 import { periodicChargesMonthlyTotal, PERIODIC_CATEGORIES } from '@/lib/periodic-charges';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
+import { reportSourceCounts } from '@/lib/analytics/building-events';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -690,6 +691,7 @@ export default async function BuildingCostsPage({ params }: PageProps) {
           placeId: building.placeId,
         }}
         reports={reportCount}
+        sourceCounts={reportSourceCounts(reports.map((r) => r.source))}
         lastUpdated={lastUpdated}
         costs={costs}
         comparison={{
