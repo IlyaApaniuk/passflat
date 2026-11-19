@@ -1,7 +1,8 @@
 # PRD 1: Activation measurement and the Telegram bot
 
 - **Version:** 0.1 (draft), 2026-11-18
-- **Status:** In progress, 2026-11-19: 60 tasks (T002–T061) in `ralph/tasks.json`, none
+- **Status:** Done, 2026-11-19 (built and tested on chore/agent-harness; not deployed). 60 tasks
+  (T002–T061), archived in `ralph/archive/prd-1-activation-and-bot-tasks.json`, none
   blocked (T060, Q-17, answered by D47); T061 aligns the bot to «ты» (D42); specs in `docs/specs/01`–`05`. Evaluated 2026-11-19
   (`prd-1-decision-review.md`: ready with assumptions, 16 decisions, 6 of them blocking a
   task); all 16 answered by the owner on 2026-11-19 (D22 – D33)

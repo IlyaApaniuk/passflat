@@ -108,3 +108,139 @@ T042, T043, T052 – T058):
   `docs/ops/posthog-eu-migration.md`, the four bot migrations to apply one by one, RLS on
   `telegram_chats`, `telegram_subscriptions` and `deposit_cases`, the token, the webhook and
   `npm run bot:webhook`, and what remains unverified.
+
+## PRD 3: roommate docs
+
+PRD 3 FR-40, **Decided**. After the roommate flows are built, from the code as it is (event names
+and properties checked with a search of `src/`, not copied from specs):
+
+- `src/lib/bot/README.md`: "What is implemented" (the roommate intake, own card, counts, room
+  reference, opt-in, matching behind `ROOMMATE_MATCHING_ENABLED`, report, automatic hiding,
+  statement of reasons, `/appeal`, the English locale and the deposit gate), "Deep links" with the
+  `mate` table of spec 04, "Events" with every roommate event of specs 06 and 07 and its
+  properties, "Promises and capabilities": the bot now sends on its own the renewal reminder, the
+  one-time message, the daily push and the outcome question (the roommate cron at 10:00
+  Europe/Warsaw), and at the moment they happen the reveal, the statement of reasons and the hide
+  notice to reporters, plus the closing message only from the owner's manual route — and nothing
+  else; the "Owner review" section of spec 07; the known limits (stored usernames, in-memory
+  compatibility up to 2,000 active profiles); "Not built yet" (paid speed, a Polish bot locale,
+  web profiles).
+- `docs/analytics/activation-funnels.md`: the new events and values (bot roommate events, web
+  `intent=find_flatmate`, `telegram_bot_opened` `source=roommate`), with identities.
+- `docs/architecture.md`: §3 data model (the three tables and `roommate_banned_at`), §4 cron
+  table (`/api/cron/roommate-daily` twice a day with the Warsaw send hour; the manual
+  `/api/cron/roommate-close`), §5 the bot row.
+- Acceptance: every event of specs 06 and 07 appears in the README "Events" table with its
+  properties (a test may read the README and the event constants; agent's choice).
+
+## Posting kit
+
+PRD 3 FR-41; **Decided** (the rules, D53; manual minutes include the owner's review, D65);
+**Assumption** (the format). Audience-language content (`CLAUDE.md` exception for
+`docs/marketing/`).
+
+- `docs/marketing/roommate-posts.md` starts with "Draft for the owner" and the rules of D53 (reply
+  to people who post that they look for a roommate rather than broadcast; vary the wording; at most
+  3 – 4 groups per slot; ask admins first; prefer Telegram; identical links across Facebook
+  groups risk a block of the passflat.com domain), then 6 – 8 reply templates in RU, UK and EN,
+  each with one `mate_<source>_<group>` link and different wording, a version without a link that
+  names the bot by username for groups that ban links, and a table of group keys the owner fills
+  (public group handles only; keys `[a-z0-9]{1,24}`).
+- No template promises a match, a date or a result; none names a figure the figure contract did
+  not produce; none calls profiles "verified".
+- `docs/marketing/roommate-posting-log.md`: a table with date, slot, minutes, groups (keys),
+  link tags, removed posts or warnings, manual-handling minutes (including the weekly review of
+  hidden profiles and appeals, D65), and a line saying a week without entries is "missing" in the
+  readout. It holds no user names, chat ids or message texts.
+- Test: every `t.me/…?start=` link in `roommate-posts.md` parses with `parseStartPayload` to
+  `{ kind: 'roommate' }` with a source other than `other`.
+- `docs/marketing/bot-profile.md`: drafts of the BotFather description and "about" text in RU, UK
+  and EN that name what the bot does now (address and district costs, the deposit helper, roommate
+  matching), with no promise of a match, a date or a result; the owner sets them in BotFather
+  after the deploy (nobody else owns them).
+
+## Stage 1 readout
+
+PRD 3 FR-42; **Decided** (thresholds, D52; the daily check from 2027-01-04, D58; the extension,
+D59); **Assumption** (query shape). The loop writes and checks the queries by reading; it never
+runs them (CLAUDE.md).
+
+A section "Roommate stage 1 (E14)" in `docs/analytics/activation-funnels.md`:
+
+1. HogQL: persons with `tg_roommate_flow_started` and with `tg_roommate_profile_created` from
+   day 0, by `entry_source` and `entry_detail`; the flow → profile funnel (A23); persons with
+   `tg_roommate_browse_opted_in`.
+2. Read-only SQL: active profiles on the readout day (spec 06 §Counts definition); active
+   profiles per district (named districts only); "any" profiles; budget bands (A26); opted-in
+   profiles.
+3. The rules: stop below 15 profiles, below 1 profile per owner-hour, or above 30 manual minutes a
+   week (average over full weeks, from the posting log; a week without a log entry is "missing");
+   go at ≥ 30 profiles, ≥ 20 active and ≥ 3 districts with ≥ 3 active profiles each; between the
+   two, stage 1 is extended once to 2027-02-28 with the same rules and the switch off (D59).
+4. The daily check (D58): from 2027-01-04 the owner runs the go part daily: the profile count
+   from PostHog (his Claude session with the PostHog MCP may run that query), and "active" and
+   "districts with ≥ 3" with the read-only SQL in the Supabase SQL editor, because the PostHog MCP
+   cannot read the database (the website block shows the same counts up to an hour old). The
+   switch goes on at the first day on or after 2027-01-07 when all three go numbers hold, by
+   setting the variable and redeploying (spec 07 §Switch); otherwise it waits for the 2027-01-18
+   readout and the 2027-01-20 decision.
+5. The worked example of `docs/product/experiments.md` E14 (34 profiles, 22 active, 3 districts,
+   27.5 hours, 18 minutes → go), and one between stop and go (20 profiles, 1.2 per owner-hour →
+   extend).
+6. No events at all → "no data", not 0. The PostHog project is the EU project from the move date
+   (D30). The December – January trough is stated.
+
+## Stage 2 readout
+
+PRD 3 FR-43; **Decided** (thresholds, D52; the stop rule and persons, D60); **Assumption** (query
+shape).
+
+A section "Roommate stage 2 (E15)" in `docs/analytics/activation-funnels.md`:
+
+1. HogQL for the match rate as E15 defines it (persons with `tg_roommate_profile_created` or
+   `tg_roommate_profile_renewed` at least 14 days before the readout and no
+   `tg_roommate_profile_deleted` before the switch → the share with at least one
+   `tg_roommate_matched` between the switch and the readout); pairs (`tg_roommate_matched` with
+   `role=completer`); outcome persons (`renting_together` or `talking`); browsing persons
+   (`tg_roommate_cards_viewed` after the switch); the push reading for H12 (persons with
+   `tg_roommate_push_sent` → same-day `tg_roommate_cards_viewed`; persons with
+   `tg_roommate_push_opted_out`).
+   Every query takes the switch moment as a parameter `{switch_at}` (the owner records it in the
+   posting log and as a PostHog annotation, spec 07 §Switch). Outcome persons count only persons
+   who also have `tg_roommate_matched`. The H12 push reading uses `tg_roommate_cards_viewed` with
+   `via=push`. Alongside the decided match rate, report (without a rule) the same rate over
+   persons whose profile was active at `{switch_at}` (no `tg_roommate_profile_expired` or
+   `tg_roommate_profile_deleted` before it); which one the stop rule uses is **Open** (PRD 3
+   Q-15).
+2. A28: `has_username` on `tg_roommate_profile_created` (persons with and without a username at
+   save), and `tg_roommate_username_prompted` → `tg_roommate_username_set` by `context`. Read-only
+   SQL: a cross-check of mutual pairs among existing rows; pairs waiting on a username (matched,
+   not revealed, a `tg_username` null on either side).
+3. The rules: continue at ≥ 30 % match rate at switch + 14 days and, by about 2027-03-31, ≥ 10
+   pairs and ≥ 3 outcome persons; stop (D60) if at switch + 14 days fewer than 15 % of
+   qualifying persons have a match, or no pair formed among 20 or more browsing persons, or at
+   about 2027-03-31 fewer than 10 pairs; outcomes counted as persons.
+4. Worked examples: switch 2027-01-08, readout 2027-01-22; 24 qualifying, 8 with a match → 33 % →
+   holds, 5 pairs so far; 24 qualifying, 3 with a match → 12.5 % → stop; 22 browsing and no
+   `completer` → stop. Fewer than 10 qualifying persons → counts only, "the rule cannot be read".
+
+## PRD 3 final check
+
+PRD 3 FR-44, **Decided**. One task at the end:
+
+- `npm run verify` passes; `node scripts/ralph-tasks.mjs summary` shows every other PRD 3 task done
+  or blocked with its question.
+- The requirement map in `README.md` maps every FR-1 – FR-44 to a done task or to a blocked task
+  with its question.
+- The progress entry is the owner's handoff, separating built, tested and not deployed: the
+  migration name (to approve and apply after the four bot migrations, D18, D29); RLS on
+  `roommate_profiles`, `roommate_reactions`, `roommate_reports` (D9); `ROOMMATE_MATCHING_ENABLED`
+  unset for the deploy (D49), and that turning it on later means setting it and redeploying, then
+  recording the moment (spec 07 §Switch); the two cron entries in `vercel.json`;
+  `npm run bot:webhook` for the RU, UK, EN (and `pl`) menus and the BotFather description and
+  about text (`docs/marketing/bot-profile.md`); the open questions Q-15 – Q-18 with their blocked
+  tasks; every draft copy key for review (bot
+  RU/UK/EN, web four locales) with the privacy section marked "approve before the deploy" and the
+  terms, statement of reasons and safety lines marked "approve before the switch" (D56); the
+  Assumption constants; the open lawyer questions (D69); what remains unverified (the bot in
+  production, Live Events after deploy, mobile layout by eye).

@@ -1,13 +1,15 @@
 # PRD 3: Roommate matching — a structured waiting list, mutual matching and an English bot
 
-- **Version:** 0.1, 2026-11-19
-- **Status:** Evaluated, 2026-11-19 (`prd-3-decision-review.md`: ready with assumptions, 14
-  decisions). Written as Draft the same day; the owner reviews `../thesis.md`, this PRD and the
-  decision review before decomposition (D49); not decomposed, no tasks.
+- **Version:** 0.2, 2026-11-19
+- **Status:** In progress, 2026-11-19: 49 tasks (T062 – T110) in `ralph/tasks.json`, 4 of them
+  blocked on Q-15 – Q-18 (T107 – T110); specs `docs/specs/06`, `07` and the PRD 3 sections of
+  `02`, `04`, `05`. Evaluated the
+  same day (`prd-3-decision-review.md`: ready with assumptions, 14 decisions), all answered by
+  the owner on 2026-11-19 (D54 – D70).
 - **Serves:** H13 through H14 (stage 1, E14) and H15 (stage 2, E15); H12 through the daily push
   (E15 reading); H10 through the roommate page entry (E11). H16 (paid speed) is not built here.
 - **BRD assumptions:** A4, A5, A6, A18 (Contradicted, acted on), A21 (Contradicted, acted on),
-  A22, A23, A24, A26, A27; A25 only in Not in scope. No requirement rests on a contradicted
+  A22, A23, A24, A26, A27, A28 (registered 2026-11-19); A25 only in Not in scope. No requirement rests on a contradicted
   assumption.
 - **Builds on:** PRD 1 (`prd-1-activation-and-bot.md`), deployed first: package A
   (`telegram_bot_opened`, page context, `roommate_intent_selected`), package B (the roommate role
@@ -48,16 +50,23 @@ minutes come from the posting log (FR-41).
 - **Stage 1, readout 2027-01-18.** Stop if fewer than 15 profiles, fewer than 1 profile per
   owner-hour of posting, or more than 30 minutes a week of manual handling. Go if at least 30
   profiles, at least 20 active, and at least 3 districts with at least 3 active profiles each.
-  Between the two: **Open** (Q-3).
+  Between the two: stage 1 is extended once to 2027-02-28 with the same rules and the switch off
+  — **Decided** (D59).
 - **Stage 2.** Within 14 days of the switch, at least 30 % of profiles older than 14 days have
   at least one mutual match; by about 2027-03-31, at least 10 mutual pairs and at least 3
-  "renting together" or "talking" outcomes. Stop rule: **Open** (Q-4).
+  "renting together" or "talking" outcomes. Stop rule — **Decided** (D60): matching stops if,
+  14 days after the switch, fewer than 15 % of qualifying persons have a mutual match, or no pair
+  formed among 20 or more browsing persons; and at about 2027-03-31 below 10 pairs. Outcomes are
+  counted as persons.
 - **Decision.** The owner decides on 2027-01-20 from the stage 1 readout (D43, D52).
+- **The bot itself.** D14's kill rule no longer applies: E5 is reported at day 30, and the bot's
+  fate is decided by the stage 1 readout and the 2027-01-20 decision — **Decided** (D57).
 
 **Dates.** Day 0 of stage 1 is the deploy of this PRD with the switch off (target about
-2026-12-01, Q-14); the owner posts from that day (D46, D53). The switch for stage 2 is turned on
-around 2027-01-07 for February move-ins, only if stage 1 passes (D49; timing against the
-2027-01-18 readout is Q-2).
+2026-12-01, D67); the owner posts from that day (D46, D53). The switch for stage 2 serves
+February move-ins (D49): from 2027-01-04 the owner runs the readout query (FR-42) daily and turns
+the switch on at the first day on or after 2027-01-07 when all three go numbers hold; otherwise
+the switch waits for the 2027-01-18 readout and the 2027-01-20 decision (D58).
 
 **Owner time — Decided** (D46): two 30-minute slots a day, about 7 hours a week, under the
 posting rules of D53; no personal help (D39). Manual handling is measured, and above 30 minutes a
@@ -78,8 +87,8 @@ so.
 | M5        | English bot locale                                     | FR-37 – FR-39 |
 | M6        | Measurement docs, posting kit and the readout          | FR-40 – FR-44 |
 
-All milestones ship in one deploy with the switch off (Q-14); M3 and M4 work only with the switch
-on (FR-23).
+All milestones ship in one deploy with the switch off (D67); M3 and M4 work only with the switch
+on (FR-23). No requirement is cut (D70).
 
 ## 3. Requirements
 
@@ -231,7 +240,7 @@ Depends on: FR-5 · Open questions: none
 
 ```text
 FR-7. Languages step
-Milestone: M1 · Priority: Must · Status: Open (Q-5: which profile fields are stored)
+Milestone: M1 · Priority: Must · Status: Decided (D54)
 Who and when: the intake's fourth step
 Result: a multi-select of Polish, English, Russian and Ukrainian, with the bot locale's language
   ticked in advance, and "Done"
@@ -243,7 +252,7 @@ Edge cases: none beyond FR-4's stale-button rule
 Data: `languages text[]` (pl, en, ru, uk)
 Analytics: `language_count` on `tg_roommate_profile_created`
 Screen: no design · Copy: agent draft RU/UK/EN
-Depends on: FR-6 · Open questions: Q-5
+Depends on: FR-6 · Open questions: none (Q-5 answered, D54)
 ```
 
 ```text
@@ -268,7 +277,7 @@ Depends on: FR-7 · Open questions: none (lawyer question listed in the decision
 
 ```text
 FR-9. Adult confirmation
-Milestone: M1 · Priority: Must · Status: Open (Q-5)
+Milestone: M1 · Priority: Must · Status: Decided (D54)
 Who and when: the last required step, before saving
 Result: "I confirm I am 18 or older" / "I am under 18"
 Acceptance criteria:
@@ -279,12 +288,12 @@ Edge cases: none
 Data: `adult_confirmed_at timestamptz` · Analytics: none
 Screen: no design · Copy: drafts in §8
 Depends on: FR-8; the 18+ rule of the terms (`termsPage.accounts.item1`, `privacy.children`)
-Open questions: Q-5
+Open questions: none (D54)
 ```
 
 ```text
 FR-10. Optional short text
-Milestone: M1 · Priority: Should · Status: Open (Q-5)
+Milestone: M1 · Priority: Should · Status: Decided (D54)
 Who and when: an optional step after FR-8
 Result: up to 280 characters about the person, shown on their card in stage 2; "Skip" allowed
 Acceptance criteria:
@@ -299,12 +308,12 @@ Acceptance criteria:
 Edge cases: only spaces → treated as skip
 Data: `about text null` (≤ 280) · Analytics: `has_text` on `tg_roommate_profile_created`
 Screen: no design · Copy: drafts in §8
-Depends on: FR-8 · Open questions: Q-5
+Depends on: FR-8 · Open questions: none (D54)
 ```
 
 ```text
 FR-11. House rules
-Milestone: M1 · Priority: Could · Status: Open (Q-5)
+Milestone: M1 · Priority: Could · Status: Decided (D54; built, D70)
 Who and when: an optional step after FR-10
 Result: smoking (no / outside only / fine) and pets (no pets / I have a pet / fine with pets),
   each skippable; shown on the card in stage 2; not used for compatibility
@@ -315,7 +324,7 @@ Edge cases: none
 Data: `smoking text null`, `pets text null`
 Analytics: `rule_count` (0–2) on `tg_roommate_profile_created`
 Screen: no design · Copy: agent draft RU/UK/EN
-Depends on: FR-10 · Open questions: Q-5
+Depends on: FR-10 · Open questions: none (D54)
 ```
 
 ```text
@@ -330,7 +339,7 @@ Acceptance criteria:
   1. A complete intake creates one active row and sends one `tg_roommate_profile_created`.
   2. Edit opens a field picker; changing one field keeps the others and does not change
      `expires_at`; it sends `tg_roommate_profile_edited` with `field`.
-  3. No name or photo is asked or stored (Q-5).
+  3. No name or photo is asked or stored (D54).
   4. A draft row with no step answered for 7 days is deleted by the daily roommate cron (FR-15);
      `/cancel` deletes it at once.
 Edge cases: two quick taps on the last button → one row (unique `chat_id`) and one event
@@ -345,7 +354,7 @@ Milestone: M1 · Priority: Must · Status: Decided (deletion at once on request,
   brief); Assumption (the optional reason)
 Who and when: the person taps "Delete my profile" and confirms
 Result: the profile and its reactions are deleted in the same request; reports keep their
-  reason and decision with the profile reference set to null (Q-6)
+  reason and decision with the profile reference set to null (D55)
 Acceptance criteria:
   1. Given a confirmed delete, then no `roommate_profiles` or `roommate_reactions` row of that
      profile remains, and the reply confirms it.
@@ -357,7 +366,7 @@ Acceptance criteria:
 Edge cases: a delete after a reveal → the other person's reveal message stays (Telegram
   messages cannot be recalled); the copy before the delete says so
 Data: deletes rows · Analytics: as above · Screen: no design · Copy: drafts in §8
-Depends on: FR-12 · Open questions: Q-6 (reports)
+Depends on: FR-12 · Open questions: none (reports, D55)
 ```
 
 ```text
@@ -376,18 +385,21 @@ Depends on: FR-1, FR-34 · Open questions: none
 
 ```text
 FR-15. Expiry, renewal reminder and deletion after expiry
-Milestone: M1 · Priority: Must · Status: Decided (30-day profile life, D49 owner brief);
-  Open (Q-6: the end-of-month rule, the grace period, then deletion)
+Milestone: M1 · Priority: Must · Status: Decided (30-day profile life, D49 owner brief; the
+  end-of-month rule, the 14-day grace period and deletion, D55; messages at 10:00
+  Europe/Warsaw, D68)
 Who and when: the daily roommate cron (a new route guarded by `requireCronAuth`, agent's choice
-  of path; Assumption: daily at 09:00 UTC)
-Result (proposal in Q-6): `expires_at` is the earlier of 30 days after creation or renewal and
+  of path; it sends its messages at 10:00 Europe/Warsaw, D68: 09:00 UTC in winter, 08:00 UTC
+  in summer)
+Result (D55): `expires_at` is the earlier of 30 days after creation or renewal and
   the end of the move-in month (23:59:59 Europe/Warsaw). The first cron run at or after
   `expires_at` minus 3 days sends one reminder with "Renew for 30 days" and "Delete". At
   `expires_at` the profile is `expired`: not counted, not shown. 14 days after expiry it is
   deleted with its reactions.
 Acceptance criteria:
   1. Created 2026-12-03 08:00 UTC with move-in February 2027 → `expires_at` 2027-01-02 08:00 UTC
-     (30 days come before the end of February); reminder on the run of 2026-12-30 09:00 UTC;
+     (30 days come before the end of February); reminder on the run of 2026-12-30 09:00 UTC
+     (10:00 Warsaw);
      renewed 2026-12-31 10:00 UTC → `expires_at` 2027-01-30 10:00 UTC.
   2. Created 2026-12-20 with move-in December 2026 → `expires_at` 2026-12-31 23:59:59 Warsaw (the
      month ends first); reminder on the run of 2026-12-29.
@@ -401,7 +413,7 @@ Edge cases: the cron runs twice → one reminder; an expired profile renewed wit
   period → active again with new dates; a profile hidden by moderation is never renewed
 Data: `expires_at`, `renewal_reminded_at`, `expired_at`, `renewed_at`
 Analytics: as criterion 5 · Screen: no design · Copy: drafts in §8
-Depends on: FR-12; the reminder pattern of PRD 1 FR-46 · Open questions: Q-6
+Depends on: FR-12; the reminder pattern of PRD 1 FR-46 · Open questions: none (D55, D68)
 ```
 
 ### M2. Stage 1 counts, opt-in and sender; web entry
@@ -436,7 +448,7 @@ Depends on: FR-12 · Open questions: none
 ```text
 FR-17. The room cost reference next to the counts
 Milestone: M2 · Priority: Must · Status: Decided (the room cost reference, D49; groups shown
-  apart with their N, D23, CLAUDE.md); Open (Q-8: a per-person split of flat figures)
+  apart with their N, D23, CLAUDE.md; the per-person split of flat figures, D61)
 Who and when: in the counts reply (FR-16), for each district the person chose, or for Warsaw
   when they chose "any"
 Result: the room figures from `loadAreaReference({ districtId, cityId, rentalType: 'room' })`,
@@ -452,10 +464,16 @@ Acceptance criteria:
   3. No room report at the district or city level → "No room figures for this area yet".
   4. The numbers equal what the checker's area reference shows for the same reports and
      rental type (the consistency test pattern of checker-consistency.test.ts).
+  5. Per-person split (D61): after the room lines, one line "for two people about X each (half
+     of the median flat)" from the tenant group's all-in median of whole apartments in the
+     same area rule (`rentalType: 'apartment'`), with its N, X rounded half up to 10 zł (§5
+     example 2: 4,850 → 2,430); no line when that group has no all-in median (a known part,
+     one observation or no tenant apartment reports) and never from asking prices.
 Edge cases: one tenant report → "one observation" without a median, as the cards do
 Data: none · Analytics: none
 Screen: no design · Copy: the existing area-card wording; new lead-in drafts in §8
-Depends on: FR-16; PRD 1 package C · Open questions: Q-8
+Depends on: FR-16; PRD 1 package C · Open questions: Q-17 (studios in the split; built as D61
+  says until answered)
 ```
 
 ```text
@@ -463,19 +481,23 @@ FR-18. Opt-in "message me once when matching opens"
 Milestone: M2 · Priority: Must · Status: Decided (D49)
 Who and when: under the counts reply, while the switch is off
 Result: one tap sets `notify_on_open_at`; the reply confirms one message when matching opens
+  and says "If matching does not open, we'll tell you and delete your profile" (D64)
 Acceptance criteria:
   1. The first tap sends `tg_roommate_browse_opted_in` with `already=false`; a repeat tap replies
      "already on" and sends the event with `already=true`.
   2. The person's card shows the opt-in and lets them switch it off.
   3. The promise text is allowed in texts.test.ts only because FR-19's sender exists: the test
-     names the key and the sender function; every other "we will write" promise still fails.
+     names the key and the sender function; the closing sentence (D64) is allowed only because
+     FR-20's route exists, and the test names that route too; every other "we will write"
+     promise still fails.
   4. With the switch on, the button is not shown (people can browse at once).
 Edge cases: the profile expires before matching opens → no message (FR-19 sends to active
   profiles only); the reply says so
 Data: `notify_on_open_at`, `notified_open_at`
 Analytics: `tg_roommate_browse_opted_in` (`already`)
-Screen: no design · Copy: drafts in §8 (depends on Q-11)
-Depends on: FR-16, FR-19 · Open questions: Q-11 (what is said if matching never opens)
+Screen: no design · Copy: drafts in §8 (the closing sentence, D64)
+Depends on: FR-16, FR-19, FR-20 · Open questions: Q-18 (the closing promise for profiles that
+  expire first; built as D64 words it until answered)
 ```
 
 ```text
@@ -502,9 +524,11 @@ Depends on: FR-18, FR-23, FR-24 · Open questions: none
 
 ```text
 FR-20. A closing message if matching does not open
-Milestone: M2 · Priority: Could · Status: Open (Q-11)
-Who and when: the owner, after deciding on 2027-01-20 to stop (D43)
-Result (proposal): a manual POST route guarded by `requireCronAuth` sends each profile one
+Milestone: M2 · Priority: Could · Status: Decided (D64: a manual, owner-triggered route; built,
+  D70)
+Who and when: the owner, after deciding on 2027-01-20, or at the end of the D59 extension, not to
+  open matching (D43)
+Result (D64): a manual POST route guarded by `requireCronAuth` sends each profile one
   message ("matching will not open; your profile is deleted now") and deletes all roommate rows
 Acceptance criteria:
   1. The route does nothing without the cron secret and without an explicit `confirm=true` body.
@@ -512,7 +536,7 @@ Acceptance criteria:
      with `reason=closed`.
 Edge cases: run twice → the second run finds no rows
 Data: deletes rows · Analytics: as criterion 2 · Screen: none · Copy: draft in §8
-Depends on: FR-1 · Open questions: Q-11
+Depends on: FR-1 · Open questions: none (D64)
 ```
 
 ```text
@@ -588,7 +612,7 @@ Acceptance criteria:
   4. `.env.example` documents it with an empty placeholder.
 Edge cases: a button from the "on" period tapped after it is off → "matching is paused"
 Data: none · Analytics: none · Screen: none · Copy: drafts in §8
-Depends on: none · Open questions: Q-2 (when it is turned on)
+Depends on: none · Open questions: none (when it goes on: D58)
 ```
 
 ```text
@@ -600,7 +624,7 @@ Result: two different active profiles A and B are compatible when all of these h
   1. Districts: A or B is "any", or their district sets share at least one district.
   2. Budget: their bands differ by at most one step (b2 and b3 yes; b2 and b4 no).
   3. Move-in: their months differ by at most one month.
-  4. Languages: they share at least one language (if Q-5 keeps the field).
+  4. Languages: they share at least one language (D54).
   5. "Live with": A's preference accepts B and B's accepts A. "Anyone" accepts every profile;
      "women" accepts only a profile whose own gender is woman; "men" only man; a profile without
      a stated gender is accepted only by "anyone".
@@ -610,7 +634,7 @@ Acceptance criteria:
      seeded local database or a Prisma mock, agent's choice).
 Edge cases: A and B in the same chat cannot happen (one profile per chat)
 Data: none · Analytics: none · Screen: none · Copy: none
-Depends on: FR-4 – FR-8 · Open questions: Q-5 (languages)
+Depends on: FR-4 – FR-8 · Open questions: none (languages, D54)
 ```
 
 ```text
@@ -643,7 +667,8 @@ Depends on: FR-23, FR-24 · Open questions: none
 ```text
 FR-26. Mutual interest reveals both usernames
 Milestone: M3 · Priority: Must · Status: Decided (mutual interest reveals both Telegram usernames
-  with safety lines, D49); Open (Q-7: the safety wording)
+  with safety lines, D49; the safety wording is an agent draft the owner approves before the
+  switch, D56)
 Who and when: A taps "Interested" on B while B's "Interested" on A exists
 Result: both reactions get `matched_at` in one transaction; each person gets one message:
   "You are both interested. Write to @<username>." with the safety lines and the next steps
@@ -662,13 +687,13 @@ Edge cases: B deleted the profile between the taps → A's tap is a plain "Inter
 Data: `matched_at` on both reactions
 Analytics: `tg_roommate_matched` (`role`), `tg_roommate_contact_revealed`
 Screen: no design · Copy: drafts in §8
-Depends on: FR-25 · Open questions: Q-7
+Depends on: FR-25 · Open questions: none (D56)
 ```
 
 ```text
 FR-27. Daily "N new people fit"
-Milestone: M3 · Priority: Must · Status: Decided (a daily push, opt-out, D49); Assumption
-  (send time, what counts as new)
+Milestone: M3 · Priority: Must · Status: Decided (a daily push, opt-out, D49; sent at 10:00
+  Europe/Warsaw, D68); Assumption (what counts as new, accepted in D68)
 Who and when: the daily roommate cron while the switch is on
 Result: each active profile with the push on gets at most one message a day when at least one
   compatible profile was created or renewed since its last push (or since its own creation) and
@@ -757,9 +782,9 @@ Depends on: FR-25 · Open questions: none
 
 ```text
 FR-32. Automatic hiding
-Milestone: M4 · Priority: Must · Status: Decided (automatic hiding, D49); Open (Q-9: the rule)
+Milestone: M4 · Priority: Must · Status: Decided (automatic hiding, D49; the rule, D62)
 Who and when: on each stored report
-Result (proposal in Q-9): a profile is hidden when reports from 2 different people exist, or at
+Result (D62): a profile is hidden when reports from 2 different people exist, or at
   once on one report with the reason "looks under 18"
 Acceptance criteria:
   1. Golden case: R1 reports X ("fake profile") → X stays visible to others; R1 reports X again →
@@ -772,12 +797,13 @@ Acceptance criteria:
 Edge cases: two reports in the same second → one hide (conditional update on `hidden_at`)
 Data: `hidden_at`, `hidden_reason` · Analytics: `tg_roommate_profile_hidden`
 Screen: no design · Copy: drafts in §8
-Depends on: FR-31 · Open questions: Q-9
+Depends on: FR-31 · Open questions: none (D62)
 ```
 
 ```text
 FR-33. Statement of reasons to the hidden person
-Milestone: M4 · Priority: Must · Status: Decided (automatic, D49); Open (Q-7: the legal text)
+Milestone: M4 · Priority: Must · Status: Decided (automatic, D49; the text is an agent draft
+  the owner approves before the switch, D56)
 Who and when: at the moment a profile is hidden
 Result: one message to the hidden person with: what was restricted (the profile is hidden from
   matching), the facts (how many reports and their reason categories, never who reported), that
@@ -788,9 +814,9 @@ Acceptance criteria:
   1. The message is sent once, claimed before sending, in the chat's locale.
   2. It names no reporter and no other profile.
 Edge cases: the chat blocked the bot → nothing is delivered; the row records it
-Data: none new · Analytics: none · Screen: no design · Copy: the skeleton in §8; the legal text
-  is the owner's (Q-7)
-Depends on: FR-32, FR-36 · Open questions: Q-7
+Data: none new · Analytics: none · Screen: no design · Copy: an agent draft from the skeleton in
+  §8, approved by the owner before the switch (D56)
+Depends on: FR-32, FR-36 · Open questions: none (D56)
 ```
 
 ```text
@@ -805,27 +831,34 @@ Acceptance criteria:
      `reason=moderation`; the ban stays on the chat row.
 Edge cases: none · Data: `telegram_chats.roommate_banned_at` · Analytics: none
 Screen: no design · Copy: agent draft
-Depends on: FR-32 · Open questions: Q-6 (how long the ban marker is kept)
+Depends on: FR-32 · Open questions: none (the ban marker is kept while the chat row exists,
+  D55)
 ```
 
 ```text
 FR-35. Appeals and the owner's review
-Milestone: M4 · Priority: Should · Status: Assumption; Open (Q-12: the owner's weekly minutes)
+Milestone: M4 · Priority: Should · Status: Decided (the owner reviews up to 10 minutes a week
+  inside the 30-minute cap and informs the police when a report suggests a threat, D65);
+  Assumption (the commands)
 Who and when: a hidden person sends `/appeal`; the owner reviews weekly
 Result: `/appeal` stores `appealed_at` and replies with a fixed acknowledgement that names
   contact@passflat.com and promises no time; the bot README holds read-only SQL listing hidden
   profiles with report reasons and appeals, and the SQL to unhide one and clear the ban
 Acceptance criteria:
   1. A second `/appeal` changes nothing.
-  2. The README section says the owner logs the minutes spent (FR-41).
+  2. The README section says the owner spends up to 10 minutes a week, logs them as manual
+     minutes (FR-41), and informs the police when a report suggests a threat (DSA Art. 18,
+     D65).
 Edge cases: `/appeal` from a chat that is not hidden → "nothing to appeal"
 Data: `appealed_at` · Analytics: none · Screen: none · Copy: agent draft
-Depends on: FR-32 · Open questions: Q-12
+Depends on: FR-32 · Open questions: Q-16 (how the person learns the appeal decision, DSA Art.
+  20)
 ```
 
 ```text
 FR-36. Terms and privacy sections for matching
-Milestone: M4 · Priority: Must · Status: Open (Q-7: legal texts are the owner's)
+Milestone: M4 · Priority: Must · Status: Decided (D56: agent drafts, the owner approves; the
+  privacy part before the deploy, the moderation part before the switch; the hiding rule, D62)
 Who and when: before the deploy (privacy part) and before the switch (moderation part)
 Result: draft keys in all four locales: a privacy section (fields, purpose, Telegram as the
   channel, other users as recipients of the card and, on mutual interest, of the username, the
@@ -838,7 +871,7 @@ Acceptance criteria:
      reviewed by a lawyer.
 Edge cases: none · Data: none · Analytics: none
 Screen: src/app/[locale]/privacy, src/app/[locale]/terms · Copy: agent drafts for the owner
-Depends on: FR-12, FR-25, FR-32 · Open questions: Q-7
+Depends on: FR-12, FR-25, FR-32 · Open questions: none (D56)
 ```
 
 ### M5. English bot locale
@@ -861,11 +894,11 @@ Depends on: none · Open questions: none
 
 ```text
 FR-38. Bot texts in English
-Milestone: M5 · Priority: Must · Status: Decided (matching in English, D50); Open (Q-10: the
-  deposit flow in English)
+Milestone: M5 · Priority: Must · Status: Decided (matching in English, D50; the deposit flow
+  stays RU and UK, D63)
 Who and when: a chat with locale `en`
-Result: every text in src/lib/bot/texts.ts and the new roommate texts exist in English. Proposal
-  (Q-10): the deposit flow (deposit-texts.ts) stays Russian and Ukrainian; an `en` chat that
+Result: every text in src/lib/bot/texts.ts and the new roommate texts exist in English. Decided
+  (D63): the deposit flow (deposit-texts.ts) stays Russian and Ukrainian; an `en` chat that
   opens it gets one English line, "The deposit helper speaks Russian and Ukrainian for now",
   and the two language buttons
 Acceptance criteria:
@@ -874,7 +907,7 @@ Acceptance criteria:
   3. The Polish letter itself is unchanged.
 Edge cases: none · Data: none · Analytics: none · Screen: no design
 Copy: agent draft EN, marked for the owner's review
-Depends on: FR-37 · Open questions: Q-10
+Depends on: FR-37 · Open questions: none (D63)
 ```
 
 ```text
@@ -940,20 +973,23 @@ Acceptance criteria:
   2. Read-only SQL: active profiles on the readout day; active profiles per district (named
      districts only); "any" profiles; budget bands (A26); opted-in profiles.
   3. It states the stop and go rules of D52, owner-hours and manual minutes from the posting log
-     (a week without a log entry is "missing"), and Q-3's answer once given.
+     (a week without a log entry is "missing"), D59's extension for a result between stop and
+     go, and D58's daily check: from 2027-01-04 the owner runs the go part daily and turns the
+     switch on at the first day on or after 2027-01-07 when all three go numbers hold.
   4. It reproduces the worked example of `../experiments.md` E14 (34 profiles, 22 active, 3
      districts, 27.5 hours, 18 minutes → go).
   5. No events at all → the readout says "no data", not 0.
 Edge cases: the PostHog project is the EU project from the move date (D30)
 Data: none · Analytics: none · Screen: none · Copy: none
 Depends on: FR-2, FR-12, FR-16, FR-41
-Open questions: Q-3. Note: the loop never queries PostHog (CLAUDE.md); queries are checked by reading
+Open questions: none (D58, D59). Note: the loop never queries PostHog (CLAUDE.md); queries are
+  checked by reading
 ```
 
 ```text
 FR-43. Stage 2 readout (E15)
-Milestone: M6 · Priority: Must · Status: Decided (thresholds, D52); Assumption (query shape,
-  outcomes counted as persons)
+Milestone: M6 · Priority: Must · Status: Decided (thresholds, D52; the stop rule and outcomes
+  counted as persons, D60); Assumption (query shape)
 Who and when: at switch + 14 days and about 2027-03-31
 Result: a "Roommate stage 2 (E15)" section in docs/analytics/activation-funnels.md
 Acceptance criteria:
@@ -963,9 +999,16 @@ Acceptance criteria:
   3. Worked example: switch 2027-01-08, readout 2027-01-22; 24 qualifying persons, 8 with a match
      → 33 % ≥ 30 % → the 14-day rule holds; 5 pairs so far. Fewer than 10 qualifying persons →
      counts only, "the rule cannot be read".
+  4. The stop rule of D60 with its own worked example: 24 qualifying persons, 3 with a match →
+     12.5 % < 15 % → stop; 22 browsing persons (`tg_roommate_cards_viewed` after the switch) and
+     no `completer` event → stop; at about 2027-03-31 fewer than 10 pairs → stop.
+  5. A28: `has_username` on `tg_roommate_profile_created`, `tg_roommate_username_prompted` →
+     `tg_roommate_username_set`, and read-only SQL for pairs waiting on a username (matched, not
+     revealed, a `tg_username` null on either side).
 Edge cases: as FR-42
 Data: none · Analytics: none · Screen: none · Copy: none
-Depends on: FR-25 – FR-29 · Open questions: Q-4
+Depends on: FR-25 – FR-29 · Open questions: Q-15 (whether profiles that expired before the
+  switch qualify; both rates are reported until answered)
 ```
 
 ```text
@@ -985,7 +1028,7 @@ Depends on: all · Open questions: none
 ## 4. Data
 
 One migration (FR-1). Personal data in **bold**. Column names are an **Assumption**; retention
-is **Decided** where marked, otherwise **Open** (Q-6).
+is **Decided** (D49, D55); the fields are **Decided** (D51, D54).
 
 `roommate_profiles` (one per chat):
 
@@ -997,11 +1040,11 @@ is **Decided** where marked, otherwise **Open** (Q-6).
 | **`district_slugs`**, **`any_district`**                        | text[], boolean           | FR-4                                                   |
 | **`budget_band`**                                               | text                      | FR-5                                                   |
 | **`move_in_month`**                                             | date                      | FR-6                                                   |
-| **`languages`**                                                 | text[]                    | FR-7 (Q-5)                                             |
+| **`languages`**                                                 | text[]                    | FR-7 (D54)                                             |
 | **`gender`**, **`prefers`**                                     | text null, text           | FR-8 (D51)                                             |
-| **`about`**                                                     | text null, ≤ 280          | FR-10 (Q-5)                                            |
-| **`smoking`**, **`pets`**                                       | text null                 | FR-11 (Q-5)                                            |
-| `adult_confirmed_at`                                            | timestamptz               | FR-9 (Q-5)                                             |
+| **`about`**                                                     | text null, ≤ 280          | FR-10 (D54)                                            |
+| **`smoking`**, **`pets`**                                       | text null                 | FR-11 (D54)                                            |
+| `adult_confirmed_at`                                            | timestamptz               | FR-9 (D54)                                             |
 | **`tg_username`**                                               | text null                 | FR-25, FR-26: read from each update                    |
 | `notify_on_open_at`, `notified_open_at`                         | timestamptz null          | FR-18, FR-19                                           |
 | `push_off`, `last_push_at`                                      | boolean, timestamptz null | FR-27                                                  |
@@ -1024,12 +1067,12 @@ is **Decided** where marked, otherwise **Open** (Q-6).
 
 - Profile life: 30 days from creation or renewal — **Decided** (D49).
 - Deletion on request: at once, with its reactions — **Decided** (D49).
-- After expiry: proposal hidden at the earlier of 30 days and the end of the move-in month,
-  deleted 14 days later — **Open** (Q-6).
-- Drafts never finished: deleted after 7 days — **Open** (Q-6).
+- After expiry: hidden at the earlier of 30 days and the end of the move-in month, renewable for
+  14 days, then deleted with its reactions — **Decided** (D55).
+- Drafts never finished: deleted after 7 days — **Decided** (D55).
 - Reports: reason and decision kept 6 months after creation, references nulled when a profile is
-  deleted, then deleted by the cron — **Open** (Q-6).
-- Ban marker: kept while the `telegram_chats` row exists — **Open** (Q-6).
+  deleted, then deleted by the cron — **Decided** (D55).
+- Ban marker: kept while the `telegram_chats` row exists — **Decided** (D55).
 - No name, photo, birth date, phone, e-mail or document is ever stored. Nothing about a profile
   goes to PostHog beyond the bands, counts and booleans of §6.
 
@@ -1074,7 +1117,7 @@ reports: 1,700 zł a month all-in (2 reports); asking prices in listings: 1,550 
 the costs (5 listings)." No percentage, no "cheaper than", no blended number. Wesoła with 2 room
 reports → "Wesoła has fewer than 5 room reports; Warsaw:" and the city lines.
 
-Per-person split, **only if Q-8 is answered yes** (proposal): tenant-group all-in totals of
+Per-person split, **Decided** (D61): tenant-group all-in totals of
 apartments in Mokotów 4,200; 4,600; 4,800; 4,900; 5,100; 5,400 → median 4,850 zł (N = 6) → "for
 two people about 2,430 zł each (half of the median flat)", rounded half up to 10 zł; never applied
 to a known part or to asking prices.
@@ -1134,7 +1177,9 @@ Bands: `count_band` and `results_band` are `0`, `1-2`, `3-5`, `6+`.
 ## 8. Key copy (drafts for the owner's review)
 
 The bot addresses the person with «ты» / «ти» (D42). Drafts, not approved; legal-sounding lines
-(privacy, statement of reasons, safety) are the owner's (Q-7).
+(privacy, statement of reasons, safety) are agent drafts the owner approves: the privacy section
+before the deploy, the moderation terms, the statement of reasons and the safety lines before
+the switch (D56).
 
 **Intake intro (FR-3)**
 
@@ -1190,7 +1235,9 @@ The bot addresses the person with «ты» / «ти» (D42). Drafts, not approve
 **Opt-in (FR-18)** — button RU «Напиши мне, когда откроется подбор», UK «Напиши мені, коли
 відкриється підбір», EN "Message me when matching opens". Confirmation RU «Напишу один раз, когда
 подбор откроется.», UK «Напишу один раз, коли підбір відкриється.», EN "I'll message you once when
-matching opens." (the sentence on what happens if it never opens depends on Q-11).
+matching opens." Then the closing sentence (D64): RU «Если подбор не откроется, напишу об этом и
+удалю анкету.», UK «Якщо підбір не відкриється, напишу про це й видалю анкету.», EN "If matching
+does not open, we'll tell you and delete your profile."
 
 **Matching is open (FR-19)**
 
@@ -1217,7 +1264,7 @@ matching opens." (the sentence on what happens if it never opens depends on Q-11
 UK «Скаргу отримано. Перевірка автоматична; про рішення напишемо.», EN "Report received. The
 check is automated; we'll tell you the decision."
 
-**Statement of reasons (FR-33), skeleton only (legal text Q-7):** what was restricted; the
+**Statement of reasons (FR-33), skeleton for the agent draft the owner approves (D56):** what was restricted; the
 facts (number of reports, reason categories); "decision made automatically"; the ground in the
 terms; redress: `/appeal`, contact@passflat.com, a complaint to the President of UKE, court.
 
@@ -1230,8 +1277,10 @@ days?"
 обмінялися контактами, повідомлення в іншої людини залишиться.», EN "Delete your profile? It's
 immediate and final. If you already swapped contacts, the other person keeps that message."
 
-**Closing message (FR-20, only if Q-11 says yes)** — EN "Matching will not open after all. Your
-profile is deleted now. Thanks for trying Passflat." RU and UK follow the EN.
+**Closing message (FR-20, D64)** — EN "Matching will not open after all. Your profile is deleted
+now. Thanks for trying Passflat." RU «Подбор так и не откроется. Твоя анкета уже удалена. Спасибо,
+что попробовал(а) Passflat.» UK «Підбір так і не відкриється. Твою анкету вже видалено. Дякуємо,
+що спробував(-ла) Passflat.»
 
 **Website block (FR-21)**
 
@@ -1267,7 +1316,9 @@ profile is deleted now. Thanks for trying Passflat." RU and UK follow the EN.
   the latest stored value.
 - **The owner's own tests:** only on the dev bot, which runs without the PostHog key (D37).
 - **The switch goes off:** FR-23 criterion 3.
-- **Time zones:** months and the end of the move-in month in Europe/Warsaw; cron times in UTC.
+- **Time zones:** months and the end of the move-in month in Europe/Warsaw; the roommate cron's
+  messages go at 10:00 Europe/Warsaw all year (D68), so the schedule follows the daylight-saving
+  change; other cron times stay in UTC.
 - **Production migration missing:** the roommate cron fails like `telegram-followups` would; the
   owner applies the migration before the deploy (owner steps).
 - **Rate limits:** the bot's 12 messages a minute per chat applies to typed text; button taps are
@@ -1283,8 +1334,8 @@ profile is deleted now. Thanks for trying Passflat." RU and UK follow the EN.
   listings (D45).
 - Groups of three or more; matching outside Warsaw (D6).
 - Age bands, names, birth dates, identity verification; "verified" anything.
-- Messages to the existing roommate rows of `city_notify_subscriptions` (a consent question for a
-  lawyer, Q-13).
+- Messages to the existing roommate rows of `city_notify_subscriptions` (D66; a consent question
+  for a lawyer).
 - Notifications about building or district figures (E13, D40).
 - PRD 2's `dep_<source>` links (PRD 2 On hold, D39).
 - Automating DSA Art. 18 (the owner informs the police when a report suggests a threat).
@@ -1293,20 +1344,41 @@ profile is deleted now. Thanks for trying Passflat." RU and UK follow the EN.
 
 ## 11. Owner steps
 
-1. Review `../thesis.md`, this PRD and `prd-3-decision-review.md`; answer the decisions.
+1. Review `../thesis.md`, this PRD and `prd-3-decision-review.md`; answer the decisions (done
+   2026-11-19, D54 – D70).
 2. Deploy PRD 1 with the bot (D29) and move PostHog to the EU project (D30).
 3. Approve and apply the one PRD 3 migration after the four bot migrations (D18).
 4. Switch RLS on for `roommate_profiles`, `roommate_reactions`, `roommate_reports` (D9).
 5. Deploy PRD 3 with `ROOMMATE_MATCHING_ENABLED` unset; run `npm run bot:webhook` so the RU, UK
    and EN command menus are published; update the BotFather description and about text.
-6. Review the copy: bot RU/UK/EN, web four locales, privacy and terms drafts.
+6. Review the copy: bot RU/UK/EN, web four locales, privacy and terms drafts. Approve the
+   privacy section before the deploy (stage 1 launches only then); approve the moderation terms,
+   the statement of reasons and the safety lines before the switch (D56).
 7. Post links two slots a day under D53 and keep the posting log (FR-41).
-8. If accepted (Q-12): review hidden profiles and appeals weekly; inform the police if a report
-   suggests a threat (DSA Art. 18).
-9. Around 2027-01-07, if stage 1 passes (Q-2): set `ROOMMATE_MATCHING_ENABLED=true`.
-10. Keep the lawyer questions of the decision review for when a lawyer is possible (D39, D51).
+8. Review hidden profiles and appeals for up to 10 minutes a week, logged as manual minutes;
+   inform the police if a report suggests a threat (DSA Art. 18) (D65).
+9. From 2027-01-04, run the FR-42 query daily; on the first day on or after 2027-01-07 when all
+   three go numbers hold, set `ROOMMATE_MATCHING_ENABLED=true`; otherwise decide on 2027-01-20
+   from the readout (D58). Between stop and go, extend stage 1 once to 2027-02-28 (D59).
+10. If matching is not opened: run the FR-20 route once (D64).
+11. Keep the lawyer questions of the decision review for when a lawyer is possible (D39, D51,
+    D69).
 
 ## 12. Open questions
+
+All answered by the owner on 2026-11-19 (`prd-3-decision-review.md`, "Owner's answers"): Q-1
+D57, Q-2 D58, Q-3 D59, Q-4 D60, Q-5 D54, Q-6 D55, Q-7 D56, Q-8 D61, Q-9 D62, Q-10 D63, Q-11
+D64, Q-12 D65, Q-13 D66, Q-14 D67; the defaults D68, the lawyer questions D69, no scope cut D70.
+The table is kept as the record of what was asked.
+
+Open, raised by the architect gap review of 2026-11-19 (`prd-3-decision-review.md`, "Questions
+for the owner from the gap review"), each held by a blocked task while the rest is built:
+
+- **Q-15** — E15 "qualifying persons": do profiles that expired before the switch count? (FR-43;
+  T110)
+- **Q-16** — How the person learns the appeal decision (DSA Art. 20)? (FR-35; T109)
+- **Q-17** — Are studios left out of the per-person split of D61? (FR-17 criterion 5; T107)
+- **Q-18** — The opt-in's closing promise for profiles that expire first (D64)? (FR-18; T108)
 
 | ID   | Question                                                                                                    | Owner | Blocks                          |
 | ---- | ----------------------------------------------------------------------------------------------------------- | ----- | ------------------------------- |
@@ -1327,12 +1399,35 @@ profile is deleted now. Thanks for trying Passflat." RU and UK follow the EN.
 
 ## 13. Size
 
-About 35 tasks: M1 9, M2 8, M3 6, M4 4, M5 4, M6 4. About 15 bot-flow tasks of 10–30 minutes and
-20 small tasks of 2–5 minutes: roughly 4–9 hours of loop time. Cut first if time is short: FR-20,
-FR-30, FR-11, FR-22 (Could and Should), then FR-28 and FR-10. Do not cut the 18+ confirmation,
-the text filter, deletion, expiry, the honest counts, the report and the statement of reasons.
+Estimated at about 35 tasks; decomposed into 49 (T062 – T110): M1 18, M2 10, M3 6, M4 6, M5 3,
+M6 6, of which 4 are blocked on Q-15 – Q-18. The difference: pure rule modules split from the flows (time, rules, text filter, texts,
+switch), the intake split into four tasks, and separate tasks for the capability list, edit, the
+closing route and the switch states. No scope cut (D70): the "cut first" list (FR-20, FR-30,
+FR-11, FR-22, then FR-28 and FR-10) is not applied.
 
 ## What changed
 
 - **0.1, 2026-11-19.** First draft by Claude from D48 – D53 and the two research reports of
   2026-11-19. Not yet reviewed by the owner.
+- **0.2, 2026-11-19.** The owner's answers to the decision review (D54 – D70), applied by Claude.
+  Every Open mark the owner answered became Decided with its D-number: Q-5 profile fields (D54;
+  FR-7, FR-9 – FR-11, §4), Q-6 retention (D55; FR-13, FR-15, FR-34, §4), Q-7 legal texts as agent
+  drafts the owner approves, privacy before the deploy, moderation before the switch (D56; FR-26,
+  FR-33, FR-36, §8, §11), Q-1 D14's kill rule no longer applies (D57; §1), Q-2 the switch timing
+  (D58; §1 Dates, FR-23, FR-42, §11), Q-3 the extension to 2027-02-28 (D59; §1, FR-42), Q-4 the
+  stage 2 stop rule (D60; §1, FR-43), Q-8 the per-person split (D61; FR-17 criterion 5, §5),
+  Q-9 the hiding rule (D62; FR-32), Q-10 the deposit flow stays RU and UK (D63; FR-38), Q-11 the
+  closing sentence and the manual route (D64; FR-18, FR-20, §8), Q-12 the owner's 10 minutes a
+  week (D65; FR-35, §11), Q-13 (D66; §10), Q-14 decompose today, one deploy by about 2026-12-01
+  (D67; §1, §2), the row 15 defaults accepted with daily messages at 10:00 Europe/Warsaw (D68;
+  FR-15, FR-27, §9), the lawyer questions kept (D69), no scope cut (D70; §2, §13). A28 is cited.
+  No Open mark of Q-1 – Q-14 is left. The architect gap review then opened Q-15 – Q-18 (§12),
+  held by four blocked tasks, and added the analytics needed to read E15 and A28
+  (`has_username`, `tg_roommate_profile_expired`, the username prompt events, `via` on
+  `tg_roommate_cards_viewed`) and a Report button under the reveal. Small clarifications by
+  Claude, marked as such in
+  the specs: four helper columns (`entry_source`, `activated_at`, `statement_sent_at`, per-pair
+  `revealed_at` instead of `reveal_pending`), an edit of the move-in month never extends a
+  profile's life, the one-time message replaces that day's push, the next-step buttons are
+  callbacks so they can be counted, and Polish Telegram clients get the English command menu.
+  The requirement text is otherwise unchanged.

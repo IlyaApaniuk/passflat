@@ -1,7 +1,11 @@
 # 04 · Telegram bot: handoff, honest figures and promises (PRD 1 package D)
 
-Requirements FR-35 – FR-46 of PRD 1. Bot locales stay RU and UK. No new notifier, mailing or
-outbound message; the existing deposit follow-ups stay (**Decided**). Tests mock Telegram,
+Requirements FR-35 – FR-46 of PRD 1. In PRD 1 the bot locales stay RU and UK and no new
+notifier, mailing or outbound message is added; the existing deposit follow-ups stay
+(**Decided**). PRD 3 changes three things here (D49, D50): the `mate` payload (§Start payloads),
+the capabilities and the messages the bot now sends first (§Promises and capabilities), and the
+English locale (§English bot locale, §Website bot languages); the roommate flows themselves are
+specs 06 and 07. Tests mock Telegram,
 Google, Anthropic and Prisma; nothing starts the bot or calls an API for real. Bot identity
 `tg_<chatId>` is never joined with web identities, and chat ids never appear in website URLs.
 
@@ -57,8 +61,31 @@ FR-35, FR-36. `src/lib/bot/start-payload.ts`: `parseStartPayload(raw)` →
 | anything else (for example `thr_med`)           | `{ kind: 'unknown' }`              |
 
 PRD 2 FR-2 later adds `dep_<source>`; keep the parser one function with a table-driven test.
-`tg_bot_started` keeps the raw `payload` and `is_new`. `TelegramChat.startPayload` stays
-first-touch.
+
+**PRD 3 FR-2, `mate` links** (**Assumption**: the source set and the detail pattern; accepted,
+D68). New result `{ kind: 'roommate', source, detail? }`, checked before the `unknown` fallback
+and after the 64-character / character-set guard:
+
+| Payload                                                                | Result                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `mate`                                                                 | `{ kind: 'roommate', source: 'direct' }`                       |
+| `mate_tg`, `mate_fb`, `mate_ig`, `mate_threads`                        | `source` `tg`, `fb`, `ig`, `threads`                           |
+| `mate_<source>_<detail>`, source above, detail `[a-z0-9]{1,24}`        | that `source` and `detail` (the posting kit's group keys)      |
+| `mate_web`, `mate_web_<detail>`                                        | `source: 'web'` (and `detail`)                                 |
+| any other payload starting `mate` (`mate_xyz`, `mate_tg_Bad`, `matey`) | `{ kind: 'roommate', source: 'other' }`, no `detail`, no error |
+
+`dep`, `b_<uuid>`, `d_<slug>`, `web_<source>` and an empty payload behave as before. The
+roommate source values are their own exported constant (`ROOMMATE_ENTRY_SOURCE`: `direct`, `tg`,
+`fb`, `ig`, `threads`, `web`, `bot_menu`, `other`), not `ENTRY_SOURCE`, so `entry_source` keeps
+one meaning per event family. `handleStart` sends `{ kind: 'roommate' }` to the roommate entry
+(spec 06 §Entry and routing); `TelegramChat.startPayload` stays first-touch. One test row per
+table row, including the unchanged payloads.
+
+`tg_bot_started` keeps `payload` and `is_new`, with one privacy fix found in the PRD 3 architect
+review: `payload` is the raw string only when it passes the guard (`[A-Za-z0-9_-]{1,64}`, the
+only shape a deep link can carry); anything else, which can only be text typed after `/start`, is
+sent as `payload: 'invalid'` (no free text in events, CLAUDE.md). `TelegramChat.startPayload`
+follows the same rule. A test covers a typed sentence after `/start`.
 
 The bot's check-event `entry_source` values live in one exported constant next to the parser
 (**Assumption**): `typed_address`, `typed_district`, `link_building`, `link_district`. PRD 2
@@ -142,6 +169,20 @@ FR-39, FR-40 (**Decided**); copy **agent draft** (RU and UK), listed for review.
   `language_code: 'uk'`. It takes effect only when the owner runs `npm run bot:webhook`; the
   final check lists that step for the owner. Iterations never run it.
 - Deposit follow-up texts stay (they are real).
+
+**PRD 3** (**Decided**, D49, D64; spec 06 §Capability text and command menu, §Opt-in):
+
+- The capability list adds the roommate entry `/mate`, worded by the switch (spec 07 §Switch);
+  "No roommate search" above no longer holds. The command menu adds `mate`.
+- The bot now writes first in these cases only, each claimed before sending: the deposit
+  follow-ups (as before); the roommate renewal reminder, the one-time "matching is open" message,
+  the daily push and the outcome question (the roommate cron at 10:00 Europe/Warsaw, D68); the
+  reveal and the username prompt to the waiting person of a pair, the statement of reasons and the
+  hide notice to reporters (at the moment they happen, and retried by the same cron when a send
+  failed: `retryPendingReveals`, the statement retry, the reporter-notice retry); the closing
+  message (only when the owner runs the manual route, D64).
+- The promise check keeps failing on every "we will write" text except the two roommate keys
+  that name their backing code (spec 06 §Opt-in).
 
 ## Bot analytics
 
@@ -325,3 +366,58 @@ letter changes.
   the new wording.
 - Bot copy found outside these two files (a search of `src/lib/bot/` and
   `scripts/tg-webhook.ts`) is listed in the progress entry, not changed.
+
+## English bot locale
+
+PRD 3 FR-37, FR-38; **Decided** (English, D50; the deposit flow stays RU and UK, D63);
+**Assumption** (the detection map: `pl` → English, D68). Copy **agent draft** EN, listed for
+review. No Polish bot locale (D50).
+
+- Build order (so the tree compiles at every step): first the English dictionary, plurals and
+  menu, with the dictionaries typed by `TextLocale = 'ru' | 'uk' | 'en'` while `BotLocale` stays
+  `'ru' | 'uk'`; then, in one step, `BotLocale` widens and `dt()` narrows with the deposit gate
+  below, because the wider type breaks `deposit-texts.ts` until the gate exists.
+- `BotLocale` becomes `'ru' | 'uk' | 'en'`. `normalizeLocale`: `uk…` → `uk`; `en…` and `pl…` →
+  `en`; anything else and no language code → `ru` (today's default). Unit tests for `uk-UA`,
+  `en-GB`, `pl`, `ru`, `de` and undefined. `TelegramChat.locale` accepts `en` (a text column, no
+  migration); an existing chat keeps its stored locale; `touchChat` sets the locale only for a new
+  chat, as today.
+- Plurals: `plural(locale, count, forms)` uses one / other for `en` and the Slavic rule for `ru`
+  and `uk`; every counted word in `texts.ts` and `roommate-texts.ts` gets English forms.
+- `texts.ts` gets an `EN` dictionary for every key; `DICTS` includes it; a test fails if any key
+  lacks an `en` value, and the promise and capability checks of `texts.test.ts` run over `en`
+  too. House style for English: plain words, "you"; "utilities" for media/komunalka.
+- `/lang` offers Русский, Українська and English (`lang:(ru|uk|en)`); `langPrompt` and `langSet`
+  get English. A chat that switches locale in the middle of an intake gets the next message in the
+  new locale.
+- `COMMAND_MENU.en`; `scripts/tg-webhook.ts` publishes it for `language_code: 'en'` and also for
+  `'pl'` (Polish clients would otherwise see the default Russian menu while the bot answers them
+  in English; agent's clarification). It takes effect only when the owner runs
+  `npm run bot:webhook`.
+- **The deposit flow in an `en` chat** (D63): every entry (`/deposit`'s "start" button
+  `dep:start`, the `dep` link, the deposit keyword offer of `maybeOfferDeposit`) replies "The
+  deposit helper speaks Russian and Ukrainian for now" with two buttons, Русский (`dep:lang:ru`)
+  and Українська (`dep:lang:uk`); a tap sets the chat locale and starts the deposit flow in it.
+  `deposit-texts.ts` stays RU and UK: `dt()` takes `'ru' | 'uk'`. The type alone does not protect
+  the runtime, because every handler reads `chat.locale as BotLocale` (a cast), so a chat whose
+  stored locale is `en` would make `dt()` throw: in `cancelDepositFlow` (`/cancel`), after
+  `/lang` switches a chat with an open case to English, and in `sendDueFollowUps`, where the throw
+  comes after the claim and before the `try`, loses that follow-up and stops the day's run. One
+  helper `depositLocale(locale)` is used at every `dt()` call: `en` → the gate above at the entry
+  points, and `ru` for a case that is already open (follow-ups, outcome buttons, `/cancel`
+  replies). The texts `/cancel` sends that are not deposit-specific (`cancelled`,
+  `nothingToCancel`, `remindersOff`) move to `texts.ts` with English versions. `/deposit`'s
+  statistic (texts.ts) is in English. The Polish letter is unchanged.
+- Tests: detection, plurals, the EN key coverage, `/lang` with three buttons, the deposit gate
+  for each entry and both language buttons, `/cancel` and `sendDueFollowUps` with an `en` chat
+  (no throw, the follow-up sent in Russian), the menu for `en` and `pl` (a test of the webhook
+  script's menu table, not a call).
+
+## Website bot languages
+
+PRD 3 FR-39, **Decided** (D50, D63). Where website copy (`src/i18n/messages/*.json`,
+`TelegramBotCta` and the roommate block of spec 02) names the bot's languages, it says English,
+Russian and Ukrainian, in all four locales. A line that speaks only of the deposit helper keeps
+"Russian and Ukrainian" (D63). A test searches the four message files for bot-language lines and
+fails on a general bot line without English (the task lists the keys it changed and the deposit
+lines it kept). Key parity holds.

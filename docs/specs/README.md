@@ -4,20 +4,20 @@ These specs describe what the loop builds. They grow with every PRD: a new PRD c
 specs and adds new ones. Loop iterations read only these specs and the code; product documents
 in `docs/product/` explain why, the specs say what.
 
-**Current PRD:** PRD 1, "Activation measurement and the Telegram bot"
-(`../product/prd/prd-1-activation-and-bot.md`, version 0.1), decomposed on 2026-11-19 in the
-night run (D21) before the owner answered its decision review
-(`../product/prd/prd-1-decision-review.md`). Requirements FR-1 – FR-49 are defined there, in the
-"Requirements (FR mapping)" table. The owner answered every question of the review on
-2026-11-19 (D22 – D33): the six blocked tasks are back in the queue, T028 is split into four
-slices (T028, T052 – T054), and milestone M6 "Owner follow-ups" holds T055 – T058 (Q-14 – Q-16),
-T060 (Q-17, D47) and T061 (the bot's «ты», D42), followed by a second final check (T059).
-Harness tasks of milestone M0 are archived in `../../ralph/archive/harness-tasks.json`.
+**Current PRD:** PRD 3, "Roommate matching — a structured waiting list, mutual matching and an
+English bot" (`../product/prd/prd-3-roommate-matching.md`, version 0.2), decomposed on
+2026-11-19 after the owner answered every question of its decision review
+(`../product/prd/prd-3-decision-review.md`; D54 – D70). Requirements FR-1 – FR-44; all 44 are
+built (D70). Specs 06 and 07 are new; specs 02, 04 and 05 carry PRD 3 sections. Tasks start at
+T062 in `../../ralph/tasks.json`; the requirement map is below.
 
-**Next PRD:** PRD 3, "Roommate matching" (`../product/prd/prd-3-roommate-matching.md`),
-Evaluated on 2026-11-19 and awaiting the owner's review (D49); not decomposed, so no spec covers
-it yet. PRD 2 (`../product/prd/prd-2-deposit-sprint.md`) is On hold since 2026-11-19 (D39) and is
-not decomposed; the specs keep their "PRD 2 later adds" notes as history.
+**Previous PRDs:** PRD 1, "Activation measurement and the Telegram bot"
+(`../product/prd/prd-1-activation-and-bot.md`), is Done (2026-11-19: built and tested on
+`chore/agent-harness`, not deployed); its 60 tasks are archived in
+`../../ralph/archive/prd-1-activation-and-bot-tasks.json` and its map is kept below. Harness
+tasks of milestone M0 are archived in `../../ralph/archive/harness-tasks.json`. PRD 2
+(`../product/prd/prd-2-deposit-sprint.md`) is On hold since 2026-11-19 (D39) and is not
+decomposed; the specs keep their "PRD 2 later adds" notes as history.
 
 ## How iterations work
 
@@ -56,19 +56,81 @@ Draft copy is allowed where a spec says so; list such keys in the progress entry
   example `checker`). Put a new key in a namespace the component already receives, or extend
   the provider; a missing namespace fails only at runtime and no test catches it, so the task
   names the namespace and the provider it checked in its progress entry.
-- Bot copy lives in `src/lib/bot/texts.ts` and `deposit-texts.ts`, RU and UK.
+- Bot copy lives in `src/lib/bot/texts.ts` (RU, UK, and EN from PRD 3 FR-38),
+  `deposit-texts.ts` (RU and UK only, D63) and `roommate-texts.ts` (RU, UK and EN, spec 06). The
+  bot addresses the user with «ты» / «ти» (D42).
 
 ## Spec files
 
-| File                                                       | Area                                                     | PRD 1 package |
-| ---------------------------------------------------------- | -------------------------------------------------------- | ------------- |
-| [01-analytics-context.md](01-analytics-context.md)         | Page context, entry page, activation events, key parity  | A (M1)        |
-| [02-roommate-and-waitlist.md](02-roommate-and-waitlist.md) | Roommate roles, interest API, city-launch, empty states  | B (M2)        |
-| [03-building-figures.md](03-building-figures.md)           | Shared figure contract and every surface that shows it   | C (M3)        |
-| [04-telegram-bot.md](04-telegram-bot.md)                   | Deep links, honest cards, promises, analytics, reminders | D (M4)        |
-| [05-measurement-docs.md](05-measurement-docs.md)           | Funnel doc, bot README, final check                      | E (M5)        |
+| File                                                       | Area                                                                                              | PRD 1 package | PRD 3 milestones              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- |
+| [01-analytics-context.md](01-analytics-context.md)         | Page context, entry page, activation events, key parity                                           | A (M1)        | —                             |
+| [02-roommate-and-waitlist.md](02-roommate-and-waitlist.md) | Roommate roles, interest API, city-launch, empty states; PRD 3: find a flatmate, room money block | B (M2)        | M2 (FR-21, FR-22)             |
+| [03-building-figures.md](03-building-figures.md)           | Shared figure contract and every surface that shows it                                            | C (M3)        | — (read by spec 06)           |
+| [04-telegram-bot.md](04-telegram-bot.md)                   | Deep links, honest cards, promises, analytics, reminders; PRD 3: `mate` links, English locale     | D (M4)        | M1 (FR-2), M5 (FR-37 – FR-39) |
+| [05-measurement-docs.md](05-measurement-docs.md)           | Funnel doc, bot README, final check; PRD 3: docs, posting kit, readouts                           | E (M5)        | M6 (FR-40 – FR-44)            |
+| [06-roommate-profiles.md](06-roommate-profiles.md)         | Roommate data, intake, own card, expiry, daily cron, counts, room reference, opt-in, closing      | —             | M1, M2 (FR-1, FR-3 – FR-20)   |
+| [07-roommate-matching.md](07-roommate-matching.md)         | Switch, compatibility, cards, reveal, push, outcome, report, hiding, appeals, legal drafts        | —             | M3, M4 (FR-23 – FR-36)        |
 
-## Requirement map
+## Requirement map (PRD 3)
+
+Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
+Planned (task todo). Decomposed on 2026-11-19 after the owner's answers (D54 – D70). The
+architect gap review found 26 gaps: 22 are folded into the specs and tasks (one new task, T106),
+and 4 need the owner (Q-15 – Q-18 in `../product/prd/prd-3-decision-review.md`), held by the
+blocked tasks T107 – T110 at the end of the table; the rest of each requirement is built as
+decided. FR-24 is built in M2 (T081) because the one-time message of FR-19 counts compatible
+people.
+
+| FR           | Requirement                                            | Spec                                                                                                                               | Tasks                  | Status  |
+| ------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------- |
+| FR-1         | Roommate tables in one migration                       | [06 §Data model](06-roommate-profiles.md#data-model)                                                                               | T062                   | Planned |
+| FR-2         | `mate` deep links carry a source                       | [04 §Start payloads](04-telegram-bot.md#start-payloads), [06 §Entry](06-roommate-profiles.md#entry-and-routing)                    | T063, T069             | Planned |
+| FR-3         | Roommate entry inside the bot, capability list, menu   | [06 §Entry](06-roommate-profiles.md#entry-and-routing), [06 §Capability](06-roommate-profiles.md#capability-text-and-command-menu) | T069, T070             | Planned |
+| FR-4 – FR-6  | Districts, budget, move-in month steps                 | [06 §Intake steps](06-roommate-profiles.md#intake-steps), [06 §Warsaw calendar](06-roommate-profiles.md#warsaw-calendar)           | T065, T066, T071       | Planned |
+| FR-7, FR-8   | Languages, own gender and "live with"                  | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T072                   | Planned |
+| FR-9         | Adult confirmation                                     | [06 §Intake steps](06-roommate-profiles.md#intake-steps)                                                                           | T074                   | Planned |
+| FR-10, FR-11 | Short text with the contact filter, house rules        | [06 §Text filter](06-roommate-profiles.md#text-filter)                                                                             | T067, T073             | Planned |
+| FR-12        | Save, own card, edit, draft lifetime                   | [06 §Save and the own card](06-roommate-profiles.md#save-and-the-own-card)                                                         | T068, T074, T075, T077 | Planned |
+| FR-13        | Delete at once                                         | [06 §Delete](06-roommate-profiles.md#delete)                                                                                       | T076                   | Planned |
+| FR-14        | One profile per chat; banned chats                     | [06 §Entry](06-roommate-profiles.md#entry-and-routing)                                                                             | T069                   | Planned |
+| FR-15        | Expiry, renewal reminder, deletion after expiry        | [06 §Daily cron](06-roommate-profiles.md#daily-cron), [06 §Renewal](06-roommate-profiles.md#renewal)                               | T065, T077, T078       | Planned |
+| FR-16        | Honest counts per district                             | [06 §Counts](06-roommate-profiles.md#counts)                                                                                       | T079                   | Planned |
+| FR-17        | Room cost reference and the per-person split           | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T080                   | Planned |
+| FR-18        | Opt-in "message me once when matching opens"           | [06 §Opt-in](06-roommate-profiles.md#opt-in)                                                                                       | T084                   | Planned |
+| FR-19        | The one-time "matching is open" message                | [06 §Matching is open](06-roommate-profiles.md#matching-is-open)                                                                   | T082                   | Planned |
+| FR-20        | Manual closing route                                   | [06 §Closing route](06-roommate-profiles.md#closing-route)                                                                         | T083                   | Planned |
+| FR-21        | Roommate page: find a flatmate                         | [02 §Find a flatmate](02-roommate-and-waitlist.md#find-a-flatmate)                                                                 | T085                   | Planned |
+| FR-22        | Roommate page: room money block                        | [02 §Room money block](02-roommate-and-waitlist.md#room-money-block)                                                               | T086                   | Planned |
+| FR-23        | One switch for matching                                | [07 §Switch](07-roommate-matching.md#switch)                                                                                       | T064, T092             | Planned |
+| FR-24        | Compatibility rule                                     | [07 §Compatibility](07-roommate-matching.md#compatibility)                                                                         | T081                   | Planned |
+| FR-25        | Cards one at a time                                    | [07 §Cards](07-roommate-matching.md#cards)                                                                                         | T087                   | Planned |
+| FR-26        | Mutual interest reveals both usernames                 | [07 §Interest](07-roommate-matching.md#interest-and-mutual-match), [07 §Reveal](07-roommate-matching.md#reveal)                    | T088, T089             | Planned |
+| FR-27        | Daily "N new people fit"                               | [07 §Daily push](07-roommate-matching.md#daily-push)                                                                               | T090                   | Planned |
+| FR-28        | Daily limit on "Interested"                            | [07 §Interest](07-roommate-matching.md#interest-and-mutual-match)                                                                  | T088                   | Planned |
+| FR-29        | Outcome question                                       | [07 §Outcome question](07-roommate-matching.md#outcome-question)                                                                   | T091                   | Planned |
+| FR-30        | Next steps after a match                               | [07 §Reveal](07-roommate-matching.md#reveal)                                                                                       | T089                   | Planned |
+| FR-31        | Report with a reason and a receipt                     | [07 §Report](07-roommate-matching.md#report)                                                                                       | T093                   | Planned |
+| FR-32        | Automatic hiding                                       | [07 §Automatic hiding](07-roommate-matching.md#automatic-hiding)                                                                   | T094, T095             | Planned |
+| FR-33        | Statement of reasons                                   | [07 §Statement of reasons](07-roommate-matching.md#statement-of-reasons)                                                           | T095                   | Planned |
+| FR-34        | No new profile after a hide                            | [07 §Automatic hiding](07-roommate-matching.md#automatic-hiding)                                                                   | T094                   | Planned |
+| FR-35        | Appeals and the owner's review                         | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T096                   | Planned |
+| FR-36        | Terms and privacy sections for matching                | [07 §Terms and privacy drafts](07-roommate-matching.md#terms-and-privacy-drafts)                                                   | T097                   | Planned |
+| FR-37        | The `en` bot locale                                    | [04 §English bot locale](04-telegram-bot.md#english-bot-locale)                                                                    | T099                   | Planned |
+| FR-38        | Bot texts in English; deposit gate                     | [04 §English bot locale](04-telegram-bot.md#english-bot-locale)                                                                    | T098, T099             | Planned |
+| FR-39        | Website names the bot's languages                      | [04 §Website bot languages](04-telegram-bot.md#website-bot-languages)                                                              | T100                   | Planned |
+| FR-40        | Events and behaviour documented                        | [05 §PRD 3: roommate docs](05-measurement-docs.md#prd-3-roommate-docs)                                                             | T101                   | Planned |
+| FR-41        | Posting kit and posting log                            | [05 §Posting kit](05-measurement-docs.md#posting-kit)                                                                              | T102                   | Planned |
+| FR-42        | Stage 1 readout (E14)                                  | [05 §Stage 1 readout](05-measurement-docs.md#stage-1-readout)                                                                      | T103                   | Planned |
+| FR-43        | Stage 2 readout (E15)                                  | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T104                   | Planned |
+| FR-44        | Final check and handoff                                | [05 §PRD 3 final check](05-measurement-docs.md#prd-3-final-check)                                                                  | T105                   | Planned |
+| FR-16 (gap)  | Chats marked blocked from `my_chat_member` updates     | [06 §Blocked chats](06-roommate-profiles.md#blocked-chats)                                                                         | T106                   | Planned |
+| FR-17 (Q-17) | Per-person split without studios, if the owner says so | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T107                   | Blocked |
+| FR-18 (Q-18) | The closing promise for profiles that expire first     | [06 §Opt-in](06-roommate-profiles.md#opt-in)                                                                                       | T108                   | Blocked |
+| FR-35 (Q-16) | Telling the person the appeal decision (DSA Art. 20)   | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T109                   | Blocked |
+| FR-43 (Q-15) | E15 qualifying persons                                 | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T110                   | Blocked |
+
+## Requirement map (PRD 1, done)
 
 Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
 Planned (task todo). Final check (T046, 2026-11-19): every non-blocked PRD 1 task was done; six

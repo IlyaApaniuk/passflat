@@ -2,7 +2,9 @@
 
 Requirements FR-3 and FR-14 – FR-20 of PRD 1. Listings stay frozen (D5): these are the fixes
 the owner's brief lists, nothing more. No matching, profiles for seekers, a third "search a flat
-together" flow, chat, CRM or new notifications (**Decided**). URLs, canonical and hreflang of
+together" flow, chat, CRM or new notifications (**Decided** for PRD 1; PRD 3 adds the third role
+and the room money block on this page, §Find a flatmate and §Room money block, and the matching
+in the bot, specs 06 and 07: D49 supersedes the exclusion). URLs, canonical and hreflang of
 `/[city]/roommate` and listing pages do not change. `/replacement` and `/sublet` keep their
 behaviour: every change below is guarded by `listingType === 'roommate'` unless it says
 otherwise.
@@ -254,3 +256,77 @@ reminders).
 
   A test asserts that no locale's `body` or `cta` mentions listings («объявлен», «ogłosze»,
   «listing», «оголошен»).
+
+## Find a flatmate
+
+PRD 3 FR-21; **Decided** (the roommate page is an entry, D48; PRD 1's "no third flow" no longer
+applies, D49); **Assumption** (placement, the top 5 districts, the one-hour freshness; accepted,
+D68). Copy: PRD 3 §8 "Website block" drafts (PL first), four locales, listed for review.
+
+- The role selector (`src/components/listings/roommate-role-selector.tsx`,
+  `src/lib/roommate-roles.ts`) gets a third choice, "Looking for someone to rent a flat with"
+  (`intent = find_flatmate`; PL draft «Szukam współlokatora do wynajmu», RU «Ищу, с кем снять
+  квартиру», EN "Looking for someone to rent with", UK «Шукаю, з ким зняти квартиру»).
+  `RoommateIntent` (`src/lib/analytics/interest-events.ts`) gains `find_flatmate`.
+  `chooseRoommateRole('find_flatmate')` returns one `roommate_intent_selected` with
+  `intent=find_flatmate`, collapses the choices into a chip like `find_room`, and does not
+  navigate. Mobile: three choices without horizontal scroll at 360 px (they may wrap to two
+  lines), tap targets at least 44 px high.
+- Choosing it shows a block at the top of the scrolling list container (so it scrolls with the
+  list on a `h-screen` page): title, "{count} people in Warsaw already have a profile", up to 5
+  districts named by most active profiles with their counts, one sentence on how matching works in
+  the bot (district, budget per person, move-in month; contacts only on mutual interest), the
+  bot's languages (English, Russian and Ukrainian, D50), and a button to
+  `https://t.me/<bot>?start=mate_web_roommate`. The list stays rendered below.
+- The counts come from `loadRoommateCounts()` (spec 06 §Counts) loaded on the server in
+  `src/app/[locale]/[city]/roommate/page.tsx` through `unstable_cache` with `revalidate: 3600`
+  (counts at most an hour old) and passed down as a prop; zero → "Be among the first" and no
+  number; a database error → the block without counts. Only for the checker city (`warsaw`);
+  another city's roommate page gets no block.
+- The button does **not** reuse the `TelegramBotCta` component: it calls
+  `useTranslations('checker')`, a namespace kept off this route on purpose (`src/i18n/messages.ts`),
+  so the page would fail at runtime, and it hardcodes the payload `web_${source}`. Instead: a pure
+  `botStartPayload(source, buildingId)` in `src/lib/analytics/telegram-events.ts` (building →
+  `b_<id>`, `roommate` → `mate_web_roommate`, any other source → `web_<source>`) that
+  `TelegramBotCta` also uses, and a button in the roommate block with its keys in the `listings`
+  namespace the page already receives. It captures `telegram_bot_opened` with `source=roommate` (a
+  new `TelegramBotSource` value) and `has_building_context=false` through the existing
+  `telegramBotOpenedProperties`, opens in a new tab, and is absent when
+  `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` is unset.
+- District names in the block are the website's localized district names, the ones the listings
+  district filter shows (the task names the helper it found).
+- ICU plurals for `{count}` in each locale.
+- The role creates no listing and asks for no address.
+- Tests: the pure helper's three choices, the event properties, `botStartPayload` for a building,
+  `roommate` and `checker`, the block's empty and zero states (render test or pure props mapping),
+  key parity, and that the roommate page's client tree does not use the `checker` namespace.
+
+## Room money block
+
+PRD 3 FR-22; **Decided** (scope, D41); **Assumption** (the checklist items, the link targets).
+Copy: Polish written first, four locales, agent drafts listed for review; no legal claims.
+
+- Shown to a visitor who chose "I'm looking for a room" (`find_room`) and on the empty list
+  (`listingsEmptyKind` = `no_offers_in_city`) of `/warsaw/roommate`: title "Found a room? What it
+  will cost you per person, and is it safe to pay the deposit?"
+- **Figures:** the Warsaw room reference, `loadAreaReference({ districtId: null, cityId,
+rentalType: 'room' })`, rendered with the website's existing figure helpers (the checker's area
+  reference rendering): both groups with their N and labels, no number the figure contract did not
+  produce. No room figures → the block without the figures line. The figures equal the bot's for
+  Warsaw (spec 06 §Room cost reference); a test feeds one fixture to both.
+- **Checklist** (5 items, agent draft): see the room before paying anything; never pay a
+  "reservation" before a viewing and a signed contract; ask what the rent includes (czynsz,
+  media); ask for a handover protocol (protokół zdawczo-odbiorczy) at move-in; check the address
+  in Passflat.
+- **Address check link** to `/[city]/check`, capturing the existing `cost_data_cta_clicked` with
+  `source=roommate_bridge`.
+- **Links out** (**Assumption**: targets), each naming the site, `rel="nofollow noopener"`,
+  `target="_blank"`: OLX rooms in Warsaw (`https://www.olx.pl/nieruchomosci/stancje-pokoje/warszawa/`),
+  Otodom rooms in Warsaw (`https://www.otodom.pl/pl/wyniki/wynajem/pokoj/mazowieckie/warszawa/warszawa/warszawa`),
+  a Facebook search for Warsaw room groups (`https://www.facebook.com/search/groups/?q=pokoje%20warszawa`).
+  No event (E11 counts the address check, not links out).
+- The existing roommate bridge (§Checker link) stays; the block does not duplicate it when both
+  would show (the block's address-check link replaces the bridge line while the block is shown,
+  agent's choice named in the progress entry).
+- Tests: the block's presence per intent and empty state, the figures from a fixture, the link
+  attributes, key parity.
