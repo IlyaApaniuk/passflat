@@ -14,6 +14,7 @@ import {
   LANGUAGES,
   MAX_DISTRICTS,
   PETS,
+  RENEW_MONTH_STEP,
   SMOKING,
   bandForAmount,
   editFieldOf,
@@ -32,6 +33,7 @@ import {
   profileCreatedProperties,
   profileEditedProperties,
   reduceDistrictPick,
+  renewalCheck,
   setLanguage,
   showsRenew,
   type BudgetBand,
@@ -49,6 +51,7 @@ import {
   isStepOpen,
   loadRoommateEntry,
   openEditStep,
+  renewProfile,
   saveEdit,
   saveProfile,
   setDistrictPick,
@@ -70,6 +73,7 @@ import {
   monthKey,
   moveInMonthOptions,
   parseMonthKey,
+  renewalNeedsNewMonth,
 } from '@/lib/roommate/time';
 
 import { track } from './analytics';
@@ -86,9 +90,10 @@ import { normalizeLocale, type BotLocale } from './texts';
  * The roommate conversation in the bot (spec 06): the entry and its routing, the
  * nine intake steps (districts, budget, move-in month, languages, own gender,
  * "live with", the short text, smoking and pets, 18+), the save, the own card,
- * its Edit (each field reuses its intake step as `edit_<field>`) and its Delete
- * (with the optional reason); renew, the counts reply and the opt-in (the
- * handlers of the other card buttons) are added here by their tasks.
+ * its Edit (each field reuses its intake step as `edit_<field>`), its Delete
+ * (with the optional reason) and Renew (with the move-in question as
+ * `renew_month` when the month has passed or ends soon); the counts reply and the
+ * opt-in (the handlers of the other card buttons) are added here by their tasks.
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. Nothing here logs: a profile holds
@@ -381,6 +386,7 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
       return;
     case 'month':
     case 'edit_month':
+    case RENEW_MONTH_STEP:
       await sendMonthStep(ctx, locale, new Date());
       return;
     case 'languages':
@@ -409,7 +415,6 @@ async function sendStep(ctx: Context, profile: RoommateProfile, locale: BotLocal
       await sendAdultStep(ctx, locale);
       return;
     default:
-      // The renewal month (T078) adds its question here.
       await ctx.reply(rt(locale, 'tapButton'));
   }
 }
@@ -587,8 +592,8 @@ function ownCardText(
  * The own card's buttons (spec 06 §Save and the own card): Renew only within
  * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
  * Delete; with the switch off "How many are looking?" and the opt-in toggle,
- * with it on "Show people" and the daily-message toggle (spec 07). Their
- * handlers come with their tasks (edit, delete, renew, counts, opt-in, stage 2).
+ * with it on "Show people" and the daily-message toggle (spec 07). The handlers
+ * of counts, opt-in and stage 2 come with their tasks.
  */
 function ownCardKeyboard(
   profile: RoommateProfile,
@@ -920,14 +925,22 @@ const handleBudgetTap = roommateCallback(async (ctx, chat, locale) => {
 /**
  * `rm:m:<YYYY-MM>`: stores the first day of the month and moves on. A month that
  * has passed (an older message) gets the step again with the current months; a
- * month the step never offers is ignored.
+ * month the step never offers is ignored. At `renew_month` the month renews the
+ * profile (`finishRenewal`).
  */
 const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
   const [key] = matchGroups(ctx);
   const month = parseMonthKey(key);
   if (!month) return;
 
-  const profile = await profileAtStep(ctx, chat.id, locale, 'month', 'edit_month');
+  const profile = await profileAtStep(
+    ctx,
+    chat.id,
+    locale,
+    'month',
+    'edit_month',
+    RENEW_MONTH_STEP,
+  );
   if (!profile) return;
 
   const now = new Date();
@@ -937,6 +950,15 @@ const handleMonthTap = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   if (!moveInMonthOptions(now).some((option) => option.getTime() === month.getTime())) return;
+  if (profile.step === RENEW_MONTH_STEP) {
+    // The grace period can end while the question is open; the next cron run deletes the profile.
+    if (renewalCheck(profile, now) === 'refused') {
+      await ctx.reply(rt(locale, 'renewRefused'));
+      return;
+    }
+    await finishRenewal(ctx, profile, locale, now, month, RENEW_MONTH_STEP);
+    return;
+  }
   if (profile.step === 'edit_month') {
     await moveOn(ctx, profile, locale, { moveInMonth: month });
     return;
@@ -1327,6 +1349,91 @@ const handleDeleteReason = roommateCallback(async (ctx, _chat, locale) => {
   await ctx.reply(rt(locale, 'reasonThanks'));
 });
 
+// ---------------------------------------------------------------------------------------------
+// Renew (FR-15; spec 06 §Renewal)
+// ---------------------------------------------------------------------------------------------
+
+/** The own card again as stored now (a lost race, a Renew that is not due), or what replaces it. */
+async function sendCurrentCard(ctx: Context, chatDbId: string, locale: BotLocale): Promise<void> {
+  const profile = await savedProfileFor(ctx, chatDbId, locale);
+  if (profile) await sendOwnCard(ctx, profile, locale);
+}
+
+/**
+ * Renews the profile through the conditional write of `renewProfile` (with `step`, the new month
+ * from `renew_month`). Only the write that lands sends one `tg_roommate_profile_renewed` (no
+ * properties), "renewed" with the new hide date and the card; a lost race gets the current step
+ * or card.
+ */
+async function finishRenewal(
+  ctx: Context,
+  profile: RoommateProfile,
+  locale: BotLocale,
+  now: Date,
+  moveInMonth: Date,
+  step?: string,
+): Promise<void> {
+  const result = await renewProfile(profile, moveInMonth, now, step);
+  if (!result.renewed) {
+    if (step) await resendCurrentStep(ctx, profile.chatId, locale);
+    else await sendCurrentCard(ctx, profile.chatId, locale);
+    return;
+  }
+  track(ctx.chat!.id, 'tg_roommate_profile_renewed');
+  await ctx.reply(rt(locale, 'renewed', { date: formatWarsawDate(result.expiresAt, locale) }));
+  await sendOwnCard(
+    ctx,
+    {
+      ...profile,
+      status: 'active',
+      renewedAt: now,
+      expiresAt: result.expiresAt,
+      renewalRemindedAt: null,
+      expiredAt: null,
+      moveInMonth,
+      step: step ? null : profile.step,
+    },
+    locale,
+  );
+}
+
+/**
+ * `rm:c:renew` (the renewal reminder, the own card, an expired card inside the grace period):
+ * renews for `PROFILE_LIFE_DAYS`, capped by the move-in month. A month that has passed or ends
+ * within `RENEWAL_REMINDER_DAYS` is asked first (`renew_month`, not while the deposit questions
+ * are open). A hidden profile is never renewed (D55), nor an expired one past its grace period; an
+ * active profile not yet due (an old reminder after a renewal) gets its card.
+ */
+const handleRenewTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale, true);
+  if (!profile) return;
+
+  const now = new Date();
+  const check = renewalCheck(profile, now);
+  if (check === 'refused') {
+    await ctx.reply(rt(locale, 'renewRefused'));
+    return;
+  }
+  if (check === 'not_due') {
+    await sendOwnCard(ctx, profile, locale);
+    return;
+  }
+  if (profile.moveInMonth && !renewalNeedsNewMonth(profile.moveInMonth, now)) {
+    await finishRenewal(ctx, profile, locale, now, profile.moveInMonth);
+    return;
+  }
+  if (await hasOpenIntake(chat.id)) {
+    await ctx.reply(rt(locale, 'depositQuestionsOpen'));
+    return;
+  }
+  if (!(await openEditStep(profile.id, RENEW_MONTH_STEP))) {
+    await sendCurrentCard(ctx, chat.id, locale);
+    return;
+  }
+  await ctx.reply(rt(locale, 'renewMonthFirst'));
+  await sendMonthStep(ctx, locale, now);
+});
+
 /**
  * Typed text while a roommate step is open, asked before anything else reads the
  * text: `used` when the open step took it (it never reaches the deposit flow, the
@@ -1414,4 +1521,5 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:c:delok', handleDeleteConfirm);
   bot.callbackQuery('rm:c:keep', handleKeepTap);
   bot.callbackQuery(DELETE_REASON, handleDeleteReason);
+  bot.callbackQuery('rm:c:renew', handleRenewTap);
 }

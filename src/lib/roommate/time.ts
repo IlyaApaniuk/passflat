@@ -8,7 +8,7 @@
  * and writes to the `@db.Date` column `move_in_month` (2026-12-01 → `2026-12-01T00:00:00.000Z`).
  * An instant (`now`, `from`, `expires_at`) is an ordinary `Date`.
  */
-import { PROFILE_LIFE_DAYS } from './rules';
+import { PROFILE_LIFE_DAYS, RENEWAL_REMINDER_DAYS } from './rules';
 
 const WARSAW_TIME_ZONE = 'Europe/Warsaw';
 
@@ -144,6 +144,16 @@ export function monthOffset(moveInMonth: Date, now: Date): number {
 /** True once the Warsaw calendar has left `moveInMonth` (a stale button, a renewal). */
 export function isMoveInMonthPast(moveInMonth: Date, now: Date): boolean {
   return monthOffset(moveInMonth, now) < 0;
+}
+
+/**
+ * A renewal asks for a new move-in month first (spec 06 §Renewal) when the month has passed, or
+ * when it ends within `RENEWAL_REMINDER_DAYS` of `now`: the renewed profile would hide with the
+ * month and be reminded again the next day.
+ */
+export function renewalNeedsNewMonth(moveInMonth: Date, now: Date): boolean {
+  if (isMoveInMonthPast(moveInMonth, now)) return true;
+  return endOfWarsawMonth(moveInMonth).getTime() - now.getTime() <= RENEWAL_REMINDER_DAYS * DAY_MS;
 }
 
 /**

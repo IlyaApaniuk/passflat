@@ -149,10 +149,27 @@ the migrations are missing (`docs/architecture.md` §9).
   and only with a bot configured, each through `createCronSender`: blocked chats
   skipped, the row claimed first, a 403 marks the chat blocked and keeps the
   claim, any other error releases it, a 429 releases it and stops the run, at
-  most 25 a second and 1,000 a run, none started after 45 s. No message job is
-  built yet (renewal, reveals, statements, outcome, the one-time message and the
-  push add theirs in `MESSAGE_JOBS`, in the priority order of the spec). The
-  response holds counts only; PostHog is flushed before it.
+  most 25 a second and 1,000 a run, none started after 45 s. Built jobs in
+  `MESSAGE_JOBS`: the renewal reminder (`sendRenewalReminders`; reveals,
+  statements, outcome, the one-time message and the push add theirs in the
+  priority order of the spec). The response holds counts only; PostHog is
+  flushed before it.
+- **Renewal** (spec 06 §Renewal, FR-15): from the first send-hour run at or after
+  `expires_at` − 3 days, each active profile with `renewal_reminded_at` null gets
+  one reminder naming its hide date, with Renew (`rm:c:renew`) and Delete
+  (`rm:c:del`); claimed on `renewal_reminded_at` (the claim also checks
+  `expires_at` as read), no event, earliest dates first. Renew (the reminder, the
+  card, an expired card) goes through `renewalCheck`: an active profile within 3
+  days of `expires_at` or an expired one inside its 14-day grace renews; one not
+  yet due (an old reminder) gets its card; a hidden profile and an expired one
+  past its grace are refused. A move-in month that has passed or ends within 3
+  days (`renewalNeedsNewMonth`) is asked first as `renew_month` (not while the
+  deposit questions are open; `/cancel` closes it). `renewProfile` writes active,
+  `renewed_at`, `expires_at` from `computeExpiresAt`, clears
+  `renewal_reminded_at` and `expired_at` (and stores the month), conditional on
+  `renewed_at` as read, so only the write that lands sends
+  `tg_roommate_profile_renewed` (no properties), "renewed" with the new date and
+  the card.
 
 ## Layout
 

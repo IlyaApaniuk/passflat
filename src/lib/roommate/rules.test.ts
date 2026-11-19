@@ -34,7 +34,9 @@ import {
   nextIntakeStep,
   profileCreatedProperties,
   profileEditedProperties,
+  RENEW_MONTH_STEP,
   reduceDistrictPick,
+  renewalCheck,
   setLanguage,
   showsRenew,
   type DistrictPick,
@@ -68,6 +70,56 @@ describe('showsRenew (the own card Renew button, spec 06 §Save and the own card
 
   it('graceEnd is GRACE_DAYS after the expiry', () => {
     expect(graceEnd(NOW).getTime() - NOW.getTime()).toBe(GRACE_DAYS * DAY);
+  });
+});
+
+describe('renewalCheck (what a Renew tap does, spec 06 §Renewal)', () => {
+  const NOW = new Date('2026-12-30T10:00:00Z');
+  const DAY = 24 * 60 * 60 * 1000;
+  const shift = (days: number, ms = 0) => new Date(NOW.getTime() + days * DAY + ms);
+  const active = (expiresAt: Date | null) => ({ status: 'active', expiresAt, expiredAt: null });
+
+  it('renews an active profile within RENEWAL_REMINDER_DAYS of expires_at, the same rule as the card', () => {
+    expect(renewalCheck(active(shift(3)), NOW)).toBe('renew');
+    expect(renewalCheck(active(shift(0, 1000)), NOW)).toBe('renew');
+    expect(renewalCheck(active(shift(3, 1000)), NOW)).toBe('not_due');
+    expect(renewalCheck(active(shift(10)), NOW)).toBe('not_due');
+    for (const days of [4, 3, 0]) {
+      const profile = active(shift(days));
+      expect(renewalCheck(profile, NOW) === 'renew').toBe(showsRenew(profile, NOW));
+    }
+  });
+
+  it('renews an expired profile until GRACE_DAYS after expired_at, then refuses', () => {
+    const expired = (expiredAt: Date) => ({ status: 'expired', expiresAt: expiredAt, expiredAt });
+    expect(renewalCheck(expired(shift(-1)), NOW)).toBe('renew');
+    expect(renewalCheck(expired(shift(-GRACE_DAYS, 1000)), NOW)).toBe('renew');
+    expect(renewalCheck(expired(shift(-GRACE_DAYS)), NOW)).toBe('refused');
+    expect(renewalCheck(expired(shift(-20)), NOW)).toBe('refused');
+  });
+
+  it('falls back to expires_at for an expired row without expired_at', () => {
+    expect(renewalCheck({ status: 'expired', expiresAt: shift(-2), expiredAt: null }, NOW)).toBe(
+      'renew',
+    );
+    expect(renewalCheck({ status: 'expired', expiresAt: null, expiredAt: null }, NOW)).toBe(
+      'refused',
+    );
+  });
+
+  it('never renews a hidden profile or a draft (D55)', () => {
+    expect(renewalCheck({ status: 'hidden', expiresAt: shift(1), expiredAt: null }, NOW)).toBe(
+      'refused',
+    );
+    expect(renewalCheck({ status: 'draft', expiresAt: null, expiredAt: null }, NOW)).toBe(
+      'refused',
+    );
+    expect(renewalCheck(active(null), NOW)).toBe('not_due');
+  });
+
+  it('the renewal step is not an edit step', () => {
+    expect(RENEW_MONTH_STEP).toBe('renew_month');
+    expect(editFieldOf(RENEW_MONTH_STEP)).toBeNull();
   });
 });
 

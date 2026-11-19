@@ -131,9 +131,10 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
 }
 
 /**
- * Opens an edit step (`edit_<field>`) on a saved (active or expired) profile; the profile stays
- * active and counted (spec 06 §Save and the own card, Edit). An edit step already open is
- * replaced: the person picked another field.
+ * Opens an edit step (`edit_<field>`) or the renewal's `renew_month` on a saved (active or
+ * expired) profile; the profile stays as it is and an active one stays counted (spec 06 §Save and
+ * the own card, Edit; §Renewal). A step already open is replaced: the person picked another field
+ * or tapped Renew.
  */
 export async function openEditStep(profileId: string, step: string): Promise<boolean> {
   const { count } = await prisma.roommateProfile.updateMany({
@@ -158,6 +159,39 @@ export async function saveEdit(
     data: { ...answer, step: null },
   });
   return count === 1;
+}
+
+/**
+ * Renews a saved (active or expired) profile (spec 06 §Renewal): active again, `renewed_at` now,
+ * `expires_at` from `computeExpiresAt(now, moveInMonth)`, the reminder and expiry marks cleared.
+ * With `step` (`renew_month`) the new month is stored and that step closed; without it an open
+ * edit step is left alone. One conditional write on `renewed_at` as read (and on the step), so of
+ * two overlapping taps only one lands; a hidden profile never matches.
+ */
+export async function renewProfile(
+  profile: Pick<RoommateProfile, 'id' | 'renewedAt'>,
+  moveInMonth: Date,
+  now: Date,
+  step?: string,
+): Promise<{ renewed: true; expiresAt: Date } | { renewed: false }> {
+  const expiresAt = computeExpiresAt(now, moveInMonth);
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: {
+      id: profile.id,
+      status: { in: ['active', 'expired'] },
+      renewedAt: profile.renewedAt,
+      ...(step ? { step } : {}),
+    },
+    data: {
+      status: 'active',
+      renewedAt: now,
+      expiresAt,
+      renewalRemindedAt: null,
+      expiredAt: null,
+      ...(step ? { moveInMonth, step: null } : {}),
+    },
+  });
+  return count === 1 ? { renewed: true, expiresAt } : { renewed: false };
 }
 
 /** Leaves an edit or renewal step of a saved profile; the profile itself stays as it was. */

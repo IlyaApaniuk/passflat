@@ -52,6 +52,25 @@ export function graceEnd(expiredAt: Date): Date {
   return new Date(expiredAt.getTime() + GRACE_DAYS * DAY_MS);
 }
 
+/**
+ * What a Renew tap does (spec 06 §Renewal): `renew` for an expired profile inside its grace
+ * period or an active one within `RENEWAL_REMINDER_DAYS` of `expires_at` (`showsRenew`);
+ * `not_due` for an active profile further from it (an old reminder's button after a renewal);
+ * `refused` for a hidden profile (never renewed, D55), a draft, and an expired profile past its
+ * grace period (the next cron run deletes it).
+ */
+export function renewalCheck(
+  profile: Pick<RoommateProfile, 'status' | 'expiresAt' | 'expiredAt'>,
+  now: Date,
+): 'renew' | 'not_due' | 'refused' {
+  if (profile.status === 'expired') {
+    const expiredAt = profile.expiredAt ?? profile.expiresAt;
+    return expiredAt && now.getTime() < graceEnd(expiredAt).getTime() ? 'renew' : 'refused';
+  }
+  if (profile.status !== 'active') return 'refused';
+  return showsRenew(profile, now) ? 'renew' : 'not_due';
+}
+
 // ---------------------------------------------------------------------------------------------
 // Value sets of the intake (spec 06 §Intake steps, §Entry and routing callback data)
 // ---------------------------------------------------------------------------------------------
@@ -157,6 +176,12 @@ export function isEditField(value: string): value is RoommateEditField {
 export function editStepOf(field: RoommateEditField): `edit_${RoommateEditField}` {
   return `edit_${field}`;
 }
+
+/**
+ * The renewal's move-in question on a saved profile (spec 06 §Renewal): open while the person
+ * picks a new month, because the old one has passed or ends within `RENEWAL_REMINDER_DAYS`.
+ */
+export const RENEW_MONTH_STEP = 'renew_month';
 
 /** The field of an edit step (`edit_budget` → `budget`); null for an intake or renewal step. */
 export function editFieldOf(step: string | null): RoommateEditField | null {

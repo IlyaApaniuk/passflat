@@ -812,13 +812,5 @@ describe('runRoommateDaily', () => {
     expect(profile('p')?.renewalRemindedAt).toBeNull();
   });
 
-  it('the default run has no message job yet: nothing is sent in the send hour', async () => {
-    seedProfile({ id: 'p', expiresAt: new Date(NOW.getTime() + DAY) });
-    const { api, sendMessage } = fakeApi();
-
-    const result = await runRoommateDaily(api, NOW, { clock: fakeClock() });
-
-    expect(sendMessage).not.toHaveBeenCalled();
-    expect(result.messages).toEqual({ sent: 0, blocked: 0, failed: 0, skipped: 0, stopped: null });
-  });
+  // The default jobs (the renewal reminder of T078) are tested in `roommate-renewal.test.ts`.
 });

@@ -14,6 +14,7 @@ import {
   monthOffset,
   moveInMonthOptions,
   parseMonthKey,
+  renewalNeedsNewMonth,
 } from './time';
 
 /** An instant. */
@@ -240,6 +241,32 @@ describe('isMoveInMonthPast and monthOffset', () => {
   it('counts across years', () => {
     expect(monthOffset(month('2028-01'), at('2027-11-15T12:00:00Z'))).toBe(2);
     expect(monthOffset(month('2026-11'), at('2027-01-15T12:00:00Z'))).toBe(-2);
+  });
+});
+
+describe('renewalNeedsNewMonth (spec 06 §Renewal)', () => {
+  it('asks for a month when the move-in month has passed', () => {
+    expect(renewalNeedsNewMonth(month('2026-12'), at('2027-01-02T10:00:00Z'))).toBe(true);
+    expect(renewalNeedsNewMonth(month('2026-11'), at('2027-01-02T10:00:00Z'))).toBe(true);
+  });
+
+  it('asks when the month ends within 3 days: exactly 3 days before its Warsaw end, not a second earlier (CET)', () => {
+    // December 2026 ends at 2026-12-31T22:59:59Z.
+    expect(renewalNeedsNewMonth(month('2026-12'), at('2026-12-28T22:59:59Z'))).toBe(true);
+    expect(renewalNeedsNewMonth(month('2026-12'), at('2026-12-28T22:59:58Z'))).toBe(false);
+    expect(renewalNeedsNewMonth(month('2026-12'), at('2026-12-29T09:00:00Z'))).toBe(true);
+    expect(renewalNeedsNewMonth(month('2026-12'), at('2026-12-31T22:59:59Z'))).toBe(true);
+  });
+
+  it('uses the summer-time month end (CEST)', () => {
+    // June 2027 ends at 2027-06-30T21:59:59Z.
+    expect(renewalNeedsNewMonth(month('2027-06'), at('2027-06-27T21:59:59Z'))).toBe(true);
+    expect(renewalNeedsNewMonth(month('2027-06'), at('2027-06-27T21:59:58Z'))).toBe(false);
+  });
+
+  it('keeps a later month: the golden renewal of 2026-12-31 with move-in February 2027', () => {
+    expect(renewalNeedsNewMonth(month('2027-02'), at('2026-12-31T10:00:00Z'))).toBe(false);
+    expect(renewalNeedsNewMonth(month('2027-01'), at('2026-12-31T10:00:00Z'))).toBe(false);
   });
 });
 

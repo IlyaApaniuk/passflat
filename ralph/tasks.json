@@ -297,14 +297,14 @@
       "title": "Renewal reminder and renewal (FR-15)",
       "spec": "docs/specs/06-roommate-profiles.md#renewal",
       "dependsOn": ["T074", "T077"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The send-hour run sends one reminder per active profile at or after expires_at − 3 days, claimed on renewal_reminded_at, naming the hide date, with Renew and Delete",
         "Renew from the reminder, the card or an expired card within the grace period follows spec 06 §Renewal (a past move-in month, or one that ends within 3 days, asks for a month first; a hidden profile is refused) and sends tg_roommate_profile_renewed once",
         "Both golden cases of spec 06 §Renewal are tests, plus a second run without a second reminder and renewal of an expired profile"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

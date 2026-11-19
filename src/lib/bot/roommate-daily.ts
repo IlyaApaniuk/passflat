@@ -1,10 +1,16 @@
-import { GrammyError, type Api } from 'grammy';
+import { GrammyError, InlineKeyboard, type Api } from 'grammy';
 
 import { prisma } from '@/lib/prisma';
-import { DRAFT_LIFE_DAYS, GRACE_DAYS, REPORT_LIFE_MONTHS } from '@/lib/roommate/rules';
-import { isRoommateSendHour } from '@/lib/roommate/time';
+import {
+  DRAFT_LIFE_DAYS,
+  GRACE_DAYS,
+  RENEWAL_REMINDER_DAYS,
+  REPORT_LIFE_MONTHS,
+} from '@/lib/roommate/rules';
+import { formatWarsawDate, isRoommateSendHour } from '@/lib/roommate/time';
 
 import { track } from './analytics';
+import { rt, type RoommateLocale } from './roommate-texts';
 
 /**
  * The jobs of the roommate daily cron (spec 06 §Daily cron; FR-15, FR-12 criterion 4, D55, D68):
@@ -292,19 +298,89 @@ export function createCronSender(
  */
 export type MessageJob = (sender: CronSender, now: Date) => Promise<void>;
 
+/** Roommate copy in the chat's stored bot language (`telegram_chats.locale`). */
+function roommateLocale(locale: string): RoommateLocale {
+  return locale === 'uk' || locale === 'en' ? locale : 'ru';
+}
+
+/**
+ * The reminder's buttons: "Renew for 30 days" and "Delete", handled in `roommate-flow.ts`
+ * (`rm:c:renew`, `rm:c:del`), which this module does not import (it would pull the whole
+ * conversation into the cron).
+ */
+function renewalReminderKeyboard(locale: RoommateLocale): InlineKeyboard {
+  return InlineKeyboard.from([
+    [InlineKeyboard.text(rt(locale, 'btnRenew'), 'rm:c:renew')],
+    [InlineKeyboard.text(rt(locale, 'btnDelete'), 'rm:c:del')],
+  ]);
+}
+
+/**
+ * The renewal reminder (spec 06 §Renewal, FR-15): from the first send-hour run at or after
+ * `expires_at − RENEWAL_REMINDER_DAYS`, one message per active profile with
+ * `renewal_reminded_at` null, naming the date it hides (not "in 3 days": a profile capped by its
+ * month's end can have less), with Renew and Delete. Claimed on `renewal_reminded_at`; the claim
+ * also checks `expires_at` as read, so a renewal between the read and the claim is not reminded
+ * of the old date. A renewal clears `renewal_reminded_at`, so the next date is reminded again.
+ * The earliest hide dates go first. No event (spec 06 §Events has none for the reminder).
+ */
+const sendRenewalReminders: MessageJob = async (sender, now) => {
+  const due = await prisma.roommateProfile.findMany({
+    where: {
+      status: 'active',
+      renewalRemindedAt: null,
+      expiresAt: { lte: new Date(now.getTime() + RENEWAL_REMINDER_DAYS * DAY_MS) },
+      chat: { blockedAt: null },
+    },
+    select: {
+      id: true,
+      expiresAt: true,
+      chat: { select: { chatId: true, blockedAt: true, locale: true } },
+    },
+    orderBy: { expiresAt: 'asc' },
+    take: MAX_MESSAGES_PER_RUN,
+  });
+
+  for (const row of due) {
+    if (sender.stopped) return;
+    const { expiresAt } = row;
+    if (!expiresAt) continue; // never: the `lte` filter leaves out null
+    const locale = roommateLocale(row.chat.locale);
+    await sender.send({
+      chatId: row.chat.chatId,
+      blockedAt: row.chat.blockedAt,
+      claim: async () => {
+        const { count } = await prisma.roommateProfile.updateMany({
+          where: { id: row.id, status: 'active', renewalRemindedAt: null, expiresAt },
+          data: { renewalRemindedAt: now },
+        });
+        return count === 1;
+      },
+      release: async () => {
+        await prisma.roommateProfile.updateMany({
+          where: { id: row.id, renewalRemindedAt: now },
+          data: { renewalRemindedAt: null },
+        });
+      },
+      text: rt(locale, 'renewalReminder', { date: formatWarsawDate(expiresAt, locale) }),
+      options: { reply_markup: renewalReminderKeyboard(locale) },
+    });
+  }
+};
+
 /**
  * The send-hour jobs in the priority order of spec 06 §Daily cron step 2, so the important ones go
  * first when the cap or the time budget runs out. Each later task adds its job at its place:
  * 1. the retry of unsent statements of reasons (spec 07 FR-33, T095);
  * 2. the retry of waiting reveals (`retryPendingReveals`, spec 07 §Reveal, T089);
  * 3. the retry of unsent hide notices to reporters (spec 07 §Automatic hiding, T095);
- * 4. the renewal reminders (§Renewal, T078);
+ * 4. the renewal reminders (§Renewal, `sendRenewalReminders`);
  * 5. the outcome question (spec 07 FR-29, T091);
  * 6. switch on only: the one-time message (§Matching is open, `sendMatchingOpenMessages`, T082);
  * 7. switch on only: the daily push (spec 07 FR-27, `sendDailyPushes`, T090).
  * The retries and the outcome question run with the switch on or off.
  */
-const MESSAGE_JOBS: readonly MessageJob[] = [];
+const MESSAGE_JOBS: readonly MessageJob[] = [sendRenewalReminders];
 
 export type RoommateDailyResult = {
   housekeeping: HousekeepingCounts;
