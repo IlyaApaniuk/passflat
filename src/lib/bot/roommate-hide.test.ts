@@ -265,7 +265,7 @@ vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }
 
 import { loadRoommateCounts } from '@/lib/roommate/counts';
 import { HIDE_AT_REPORTERS } from '@/lib/roommate/rules';
-import { deleteProfile, findCompatible } from '@/lib/roommate/store';
+import { deleteProfile, findCompatible, liftHide } from '@/lib/roommate/store';
 
 import { escapeHtml, webLink } from './format';
 import { runRoommateDaily, type CronClock } from './roommate-daily';
@@ -384,23 +384,14 @@ const snapshot = () => structuredClone(db.state);
 const switchTo = (value: string) => vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
 
 /**
- * The owner's unhide and unban of `bot/README.md` §Owner review (steps 2 and 3), applied in
- * memory: back to active (or expired, with `expired_at`), the hide fields cleared, the target's
- * reports lifted by a person, the chat's ban cleared; `appealed_at` kept.
+ * The owner's `lifted` decision (`bot/README.md` §Owner review, D73): the real `liftHide` that
+ * `POST /api/cron/roommate-appeal` runs, over this fake. Back to active (or expired, with
+ * `expired_at`), the hide fields cleared, the target's reports lifted by a person, the chat's ban
+ * cleared; `appealed_at` kept. The decision message itself is tested in
+ * `roommate-appeal-decision.test.ts`.
  */
-function ownerUnhide(id: string, now: Date) {
-  const target = row(id)!;
-  const live = (target.expiresAt as Date).getTime() > now.getTime();
-  Object.assign(target, {
-    status: live ? 'active' : 'expired',
-    expiredAt: live ? target.expiredAt : (target.expiredAt ?? target.expiresAt),
-    hiddenAt: null,
-    hiddenReason: null,
-  });
-  for (const report of reportsOn(id)) {
-    Object.assign(report, { decision: 'lifted', automated: false, decidedAt: now });
-  }
-  chatRow(id).roommateBannedAt = null;
+async function ownerUnhide(id: string, now: Date) {
+  expect(await liftHide(id, now)).toBe(true);
 }
 
 type Button = { text: string; callback_data?: string };
@@ -692,7 +683,7 @@ describe('which reports count toward the 2', () => {
     await hideXByReports();
     const LATER = new Date(NOW.getTime() + 2 * DAY);
     vi.setSystemTime(LATER);
-    ownerUnhide(X, LATER);
+    await ownerUnhide(X, LATER);
     vi.clearAllMocks();
 
     expect(await report(R3, 'other', X)).toEqual([RECEIPT]);
@@ -1119,7 +1110,7 @@ describe('the statement of reasons (spec 07 §Statement of reasons, FR-33)', () 
     await hideXByReports();
     const LATER = new Date(NOW.getTime() + 2 * DAY);
     vi.setSystemTime(LATER);
-    ownerUnhide(X, LATER);
+    await ownerUnhide(X, LATER);
     api.sendMessage.mockClear();
 
     await report(R3, 'other', X);
@@ -1231,7 +1222,7 @@ describe('the notice to reporters (spec 07 §Automatic hiding, FR-32 criterion 4
     failSendsTo(502, R1, R2);
     await hideXByReports();
     expect(notifiedAt(X)).toEqual([null, null]);
-    ownerUnhide(X, NOW);
+    await ownerUnhide(X, NOW);
     api.sendMessage.mockImplementation(async () => ({}));
     api.sendMessage.mockClear();
 
@@ -1391,7 +1382,7 @@ describe('a report stored just after another request hid the target (FR-32 crite
 
   it("an owner's unhide: the lifted reports stay lifted when a later report does not hide", async () => {
     await hideXByReports();
-    ownerUnhide(X, NOW);
+    await ownerUnhide(X, NOW);
     await report(R3, 'other', X);
 
     expect(row(X)).toMatchObject({ status: 'active', hiddenAt: null });
@@ -1418,7 +1409,7 @@ describe("/appeal after a real hide (spec 07 §Appeals and the owner's review, F
 
     const LATER = new Date(NOW.getTime() + 2 * DAY);
     vi.setSystemTime(LATER);
-    ownerUnhide(X, LATER);
+    await ownerUnhide(X, LATER);
     expect(row(X)).toMatchObject({ status: 'active', appealedAt: NOW });
     expect(await appeal({ who: X })).toEqual([rt('ru', 'appealNothing')]);
 
@@ -1442,7 +1433,7 @@ describe("/appeal after a real hide (spec 07 §Appeals and the owner's review, F
 
   it('an unhide that keeps the ban: the e-mail address, as /mate is still refused', async () => {
     await hideXByReports();
-    ownerUnhide(X, NOW);
+    await ownerUnhide(X, NOW);
     chatRow(X).roommateBannedAt = NOW;
 
     expect(await appeal({ who: X })).toEqual([rt('ru', 'appealByEmail')]);

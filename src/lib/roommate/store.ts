@@ -526,6 +526,78 @@ export async function recordAppeal(profileId: string, now: Date): Promise<boolea
 }
 
 /**
+ * The owner's `lifted` decision on an appeal (spec 07 §Appeals and the owner's review, D73;
+ * `POST /api/cron/roommate-appeal`, `src/lib/bot/README.md` §Owner review): one transaction.
+ * The profile goes back to `active` while `expires_at` is in the future, else to `expired` with
+ * `expired_at` (as it was, else `expires_at`, so the daily cron still deletes it 14 days after
+ * expiry); `hidden_at` and `hidden_reason` are cleared and `appealed_at` is kept. Every report on
+ * it becomes `decision=lifted`, `automated=false`, `decided_at=now` (never counted toward a hide
+ * again), and the chat's ban is cleared. The unhide is conditional on `status=hidden`, so of two
+ * calls only one changes anything: true only for that one (the claim of the decision message).
+ */
+export async function liftHide(profileId: string, now: Date): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const profile = await tx.roommateProfile.findUnique({
+      where: { id: profileId },
+      select: { chatId: true, status: true, expiresAt: true, expiredAt: true },
+    });
+    if (!profile || profile.status !== 'hidden') return false;
+    const active = profile.expiresAt !== null && profile.expiresAt > now;
+    const { count } = await tx.roommateProfile.updateMany({
+      where: { id: profileId, status: 'hidden' },
+      data: {
+        status: active ? 'active' : 'expired',
+        ...(active ? {} : { expiredAt: profile.expiredAt ?? profile.expiresAt ?? now }),
+        hiddenAt: null,
+        hiddenReason: null,
+      },
+    });
+    if (count !== 1) return false;
+    await tx.roommateReport.updateMany({
+      where: { targetProfileId: profileId },
+      data: { decision: 'lifted', automated: false, decidedAt: now },
+    });
+    await tx.telegramChat.updateMany({
+      where: { id: profile.chatId },
+      data: { roommateBannedAt: null },
+    });
+    return true;
+  });
+}
+
+/**
+ * The owner's `upheld` decision on an appeal (spec 07 §Appeals, D73): the hide and the ban stay.
+ * The claim of the decision message reuses `roommate_reports.automated` (the spec's Assumption: no
+ * new column): the reports the hide decided (`decision=hidden`) are marked as reviewed by a person
+ * (`automated=false`; `decision` and `decided_at` stay), in one statement conditional on the
+ * profile still being hidden. True when any changed, so a repeat call finds none and sends nothing.
+ */
+export async function upholdHide(profileId: string): Promise<boolean> {
+  const { count } = await prisma.roommateReport.updateMany({
+    where: {
+      targetProfileId: profileId,
+      decision: 'hidden',
+      automated: true,
+      targetProfile: { status: 'hidden' },
+    },
+    data: { automated: false },
+  });
+  return count > 0;
+}
+
+/**
+ * Gives back `upholdHide`'s claim when the decision message did not go out (a failed send, or a
+ * 403), so the owner can call the route again. Only that claim writes `automated=false` on a
+ * `decision=hidden` report, so this restores exactly what it took.
+ */
+export async function releaseUpheldHide(profileId: string): Promise<void> {
+  await prisma.roommateReport.updateMany({
+    where: { targetProfileId: profileId, decision: 'hidden', automated: false },
+    data: { automated: true },
+  });
+}
+
+/**
  * Stores "Skip" (spec 07 §Cards): one `skip` reaction from `fromProfileId` to `toProfileId`. The
  * pair is unique, so a repeat (a double tap) inserts nothing; a profile deleted since the
  * visibility check leaves nothing to store.

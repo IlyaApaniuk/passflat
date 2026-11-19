@@ -26,7 +26,8 @@ import { peopleWord, type BotLocale } from './texts';
  * adds "<N> new people fit you"; its buttons reuse "Show" and "Stop daily messages". The
  * outcome question (§Outcome question) adds the question and its four answers.
  * A hide (§Statement of reasons, §Automatic hiding) adds the statement's parts and
- * the reporters' notice; `/appeal` (§Appeals) its four replies. `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
+ * the reporters' notice; `/appeal` (§Appeals) its four replies, and the owner's decision on an
+ * appeal (D73) its two messages. `introMatching` is the intro with the switch on (§Switch): the PRD's sentence
  * that nobody sees the profile until matching opens is replaced by who sees what.
  */
 
@@ -343,6 +344,21 @@ const RU = {
     'Обжалование уже получено. Если хочешь что-то добавить, напиши на contact@passflat.com.',
   appealByEmail: 'Обжаловать решение по подбору соседей можно письмом на contact@passflat.com.',
   appealNothing: 'Обжаловать нечего: по этому чату нет решений о подборе соседей.',
+
+  // --- the owner's decision on an appeal (spec 07 §Appeals, D73, DSA Art. 20; agent drafts, D56),
+  // sent once by the owner's `POST /api/cron/roommate-appeal` (`roommate-appeal-decision.ts`):
+  // `lifted` → `appealLifted`; `upheld` → `appealUpheld`, the hide's rule as the statement of
+  // reasons names it (`hidden_reason`), and the redress left after an appeal ---
+  appealLifted:
+    'Твоё обжалование рассмотрел человек: скрытие отменено. Анкета для подбора соседей восстановлена, ограничение для этого чата снято. Открыть анкету: /mate.',
+  appealUpheld:
+    'Твоё обжалование рассмотрел человек: решение остаётся в силе. Анкета по-прежнему скрыта, и в этом чате нельзя создать новую анкету.',
+  appealUpheldGroundReports:
+    'Почему: на анкету пожаловались два разных человека, а по правилам подбора такую анкету скрывают. Правила — в <a href="{termsUrl}">условиях использования</a>.',
+  appealUpheldGroundUnder18:
+    'Почему: на анкету поступила жалоба «Похоже, младше 18», а подбор только для 18+. Правила — в <a href="{termsUrl}">условиях использования</a>.',
+  appealUpheldRedress:
+    'Если решение тебя не устраивает, можно подать жалобу координатору цифровых услуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — или обратиться в суд.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -592,6 +608,17 @@ const UK: Record<Key, string> = {
   appealAlready: 'Оскарження вже отримано. Якщо хочеш щось додати, напиши на contact@passflat.com.',
   appealByEmail: 'Оскаржити рішення щодо підбору сусідів можна листом на contact@passflat.com.',
   appealNothing: 'Оскаржувати нічого: щодо цього чату немає рішень про підбір сусідів.',
+
+  appealLifted:
+    'Твоє оскарження розглянула людина: приховування скасовано. Анкету для підбору сусідів відновлено, обмеження для цього чату знято. Відкрити анкету: /mate.',
+  appealUpheld:
+    'Твоє оскарження розглянула людина: рішення залишається в силі. Анкета й далі прихована, і в цьому чаті не можна створити нову анкету.',
+  appealUpheldGroundReports:
+    'Чому: на анкету поскаржилися дві різні людини, а за правилами підбору таку анкету приховують. Правила — в <a href="{termsUrl}">умовах використання</a>.',
+  appealUpheldGroundUnder18:
+    'Чому: на анкету надійшла скарга «Схоже, молодше 18», а підбір лише для 18+. Правила — в <a href="{termsUrl}">умовах використання</a>.',
+  appealUpheldRedress:
+    'Якщо рішення тебе не влаштовує, можна подати скаргу координатору цифрових послуг — Prezes UKE (Urząd Komunikacji Elektronicznej) — або звернутися до суду.',
 };
 
 const EN: Record<Key, string> = {
@@ -843,6 +870,17 @@ const EN: Record<Key, string> = {
     'Your appeal has already been received. If you want to add anything, write to contact@passflat.com.',
   appealByEmail: 'To appeal the matching decision, write to contact@passflat.com.',
   appealNothing: "There's nothing to appeal: this chat has no matching decision.",
+
+  appealLifted:
+    'A person reviewed your appeal: the hide is lifted. Your roommate-matching profile is restored, and the restriction on this chat is removed. Your profile: /mate.',
+  appealUpheld:
+    'A person reviewed your appeal: the decision stands. Your profile stays hidden, and no new profile can be created in this chat.',
+  appealUpheldGroundReports:
+    'Why: two different people reported the profile, and under the matching rules such a profile is hidden. The rules are in the <a href="{termsUrl}">terms of use</a>.',
+  appealUpheldGroundUnder18:
+    'Why: the profile got a \'Looks under 18\' report, and matching is for adults only. The rules are in the <a href="{termsUrl}">terms of use</a>.',
+  appealUpheldRedress:
+    'If you disagree with the decision, you can complain to the Digital Services Coordinator, the President of UKE (Prezes Urzędu Komunikacji Elektronicznej), or go to court.',
 };
 
 const DICTS: Record<BotLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

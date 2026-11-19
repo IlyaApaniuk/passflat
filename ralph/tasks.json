@@ -661,13 +661,13 @@
       "title": "Telling the person the appeal decision (Q-16, DSA Art. 20)",
       "spec": "docs/specs/07-roommate-matching.md#appeals-and-the-owners-review",
       "dependsOn": ["T096"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Built as the owner answers: either a manual POST /api/cron/roommate-appeal (cron secret, { profileId, decision: 'lifted' | 'upheld', confirm: true }) that applies the decision (lifted: unhide, unban, reports lifted) and sends one fixed message in the chat's locale, never scheduled; or only the README and terms say the decision comes by e-mail",
         "Tests: 401, 400 without confirm, each decision, one message, a repeat sending nothing"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: Q-16 (prd-3-decision-review.md, architect gaps). DSA Art. 20 requires telling the complainant the decision on an appeal; the bot is the only channel to a person who appealed with /appeal, and the README SQL of T096 unhides silently. A route that sends a message is a new outward message and legal text (D56 drafts, owner approves). Options: (a) the manual route above, the owner triggers it per decision; (b) the owner answers appeals only by e-mail, and the /appeal acknowledgement says so. Proposal: (a).\nFrom T096: handleAppeal and recordAppeal (roommate-safety.ts, store.ts); the acknowledgement appealReceived (roommate-texts.ts) says a person reviews it and names contact@passflat.com, nothing about how the decision is told: option (b) changes that text. The README Owner review steps 2 – 3 are the unhide and unban such a route would apply (lifted reports also get automated=false, decided_at=now; expired_at set when the profile goes back to expired); appealed_at is kept by the unhide and cleared by the next hide.\nOwner answer: Owner (D73, Q-16 (a)): build the manual owner-triggered POST /api/cron/roommate-appeal that applies lifted or upheld and sends one fixed message; texts are agent drafts for owner approval (D56); time counts in the D65 weekly review."
     },
     {

@@ -85,7 +85,7 @@ every FR-1 – FR-44 row is Done. Built and tested on `chore/agent-harness`, not
 owner's handoff is the T105 entry of `ralph/progress.md`. The owner answered the four questions
 on 2026-11-19 (D71 – D74) and the rows are Planned until their task is done: Q-17 (T107, Done)
 the per-person split uses apartments with 2 or more rooms only (D71); Q-18 (T108, Done) the opt-in's closing promise is reworded
-to an active profile (D72); Q-16 (T109) a manual route tells the person the appeal decision in
+to an active profile (D72); Q-16 (T109, Done) a manual route tells the person the appeal decision in
 the bot (D73); Q-15 (T110) qualifying persons for the E15 match rate are those active at the
 switch or created after it, at least 14 days old at the readout (D74).
 
@@ -137,7 +137,7 @@ switch or created after it, at least 14 days old at the readout (D74).
 | FR-32 (gap)  | A report stored just after a hide is decided and told  | [07 §Automatic hiding](07-roommate-matching.md#automatic-hiding)                                                                   | T113                   | Done    |
 | FR-17 (Q-17) | Per-person split without studios, as the owner decided | [06 §Room cost reference](06-roommate-profiles.md#room-cost-reference)                                                             | T107                   | Done    |
 | FR-18 (Q-18) | The closing promise for profiles that expire first     | [06 §Opt-in](06-roommate-profiles.md#opt-in)                                                                                       | T108                   | Done    |
-| FR-35 (Q-16) | Telling the person the appeal decision (DSA Art. 20)   | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T109                   | Planned |
+| FR-35 (Q-16) | Telling the person the appeal decision (DSA Art. 20)   | [07 §Appeals](07-roommate-matching.md#appeals-and-the-owners-review)                                                               | T109                   | Done    |
 | FR-43 (Q-15) | E15 qualifying persons                                 | [05 §Stage 2 readout](05-measurement-docs.md#stage-2-readout)                                                                      | T110                   | Planned |
 
 ## Requirement map (PRD 1, done)

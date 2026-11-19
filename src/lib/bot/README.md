@@ -329,9 +329,33 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   `expires_at`, or unhidden with the ban kept) → `appealByEmail`; any other chat
   → `appealNothing`. The username is stored; no event; the switch is not read.
   A hide clears `appealed_at`, so a hide after an owner's unhide can be appealed
-  again. The bot does not tell the person the owner's decision (PRD 3 Q-16,
-  T109, blocked). The review itself is the owner's, by hand: see
-  [Owner review](#owner-review).
+  again. The review is the owner's, by hand; the owner's decision reaches the
+  person through the manual `POST /api/cron/roommate-appeal` (D73): see
+  **Appeal decision** below and [Owner review](#owner-review).
+- **Appeal decision** (spec 07 §Appeals and the owner's review, D73, DSA Art.
+  20; `roommate-appeal-decision.ts`): the owner's manual
+  `POST /api/cron/roommate-appeal`, never scheduled (not in `vercel.json`), with
+  the cron secret and the JSON body
+  `{ "profileId": "<uuid>", "decision": "lifted" | "upheld", "confirm": true }`.
+  Without the secret → 401; without `confirm: true`, an unknown decision or a
+  profile id that is not a uuid → 400; without a bot → 503; none of these change
+  anything. An unknown profile, or one that is not hidden, changes and sends
+  nothing. `lifted` runs `liftHide` (`../roommate/store.ts`, one transaction:
+  back to `active` while `expires_at` is ahead, else `expired` with
+  `expired_at`; hide fields cleared, `appealed_at` kept; every report on it
+  `lifted`, `automated=false`, `decided_at=now`; the chat's ban cleared), then
+  sends `appealLifted`. `upheld` keeps the hide and the ban and sends
+  `appealUpheld`, the hide's rule by `hidden_reason` (`appealUpheldGroundReports`
+  / `appealUpheldGroundUnder18`, with the terms link) and `appealUpheldRedress`
+  (Prezes UKE, court). One message in the chat's language, through
+  `createCronSender`. The claim: for `lifted` the unhide itself (a repeat finds
+  the profile visible), applied for a blocked chat too (the message skipped) and
+  never retried after a failed send; for `upheld` the reports the hide decided
+  get `automated=false` (`upholdHide`, reviewed by a person; `decision` and
+  `decided_at` stay), and a blocked chat is skipped before the claim while a 403
+  or any other failure gives it back (`releaseUpheldHide`), so the owner can call
+  again. The response is counts only (`decided`, `messages`). No event; the switch
+  is not read.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -474,6 +498,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `roommate-hide-messages.ts`                      | A hide's statement of reasons and reporters' notices, the retries  |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
+| `roommate-appeal-decision.ts`                    | The owner's appeal decision (D73): lift or uphold, one message     |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
@@ -488,6 +513,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
 | `../../app/api/cron/roommate-daily/route.ts`     | Daily roommate housekeeping and messages                           |
 | `../../app/api/cron/roommate-close/route.ts`     | Owner's manual closing route (POST, confirm, never scheduled)      |
+| `../../app/api/cron/roommate-appeal/route.ts`    | Owner's manual appeal decision (POST, confirm, never scheduled)    |
 
 ## Going live
 
@@ -539,20 +565,25 @@ working (`roommate-switch.test.ts`).
 
 ## Owner review
 
-Spec 07 §Appeals and the owner's review, FR-35, D65. Hiding is automatic and
-immediate; the owner's review can only lift a hide and a ban. Nothing here is
-automated, and the build loop runs none of it: the owner runs the SQL by hand in
-the Supabase SQL editor of the production project.
+Spec 07 §Appeals and the owner's review, FR-35, D65, D73. Hiding is automatic
+and immediate; the owner's review can only lift a hide and a ban, or keep them.
+Nothing here is automated, and the build loop runs none of it: the owner reads
+the hidden profiles with the SQL below in the Supabase SQL editor of the
+production project, and decides each appeal with one call of the appeal route
+(step 2).
 
 - **Time:** up to 10 minutes a week, inside the 30-minute weekly cap of manual
-  handling (D52). Log the minutes as manual-handling minutes in the posting log
+  handling (D52); deciding appeals through the route counts in these 10 minutes
+  (D65, D73). Log the minutes as manual-handling minutes in the posting log
   (`docs/marketing/roommate-posting-log.md`, spec 05 §Posting kit); a week
   without an entry counts as "missing" in the readout.
 - **Police (DSA Art. 18):** when a report, a profile's short text or an appeal
   suggests a threat to the life or safety of a person, inform the police. The bot
   never decides this and sends nothing to anyone about it.
-- **Telling the person the decision** is not built (PRD 3 Q-16, T109, blocked):
-  the unhide below is silent. Answer an appeal that came by e-mail by e-mail.
+- **Telling the person the decision (DSA Art. 20):** always decide through the
+  route (step 2): it applies the decision and sends the one message in the bot,
+  the only channel to the person. Answer an appeal that came by e-mail by e-mail
+  as well.
 
 **1. Hidden profiles (read-only).** One row per hidden profile, oldest hide
 first: the hide reason, the reports with their reasons and how many still count
@@ -587,43 +618,37 @@ select p.id,
  order by p.hidden_at;
 ```
 
-**2. Unhide one profile.** Replace `<profile id>` with the `id` from query 1.
-The profile goes back to `active` while `expires_at` is in the future, else to
-`expired` (with `expired_at`, so the daily cron still deletes it 14 days after
-expiry); the hide fields are cleared and every report on it becomes
-`decision='lifted'` (decided by a person), so those reports never count toward a
-hide again. `appealed_at` is kept as the record of the appeal; the next hide
-clears it. The ban stays until step 3.
+**2. Decide one appeal and tell the person (the route).** Replace
+`<profile id>` with the `id` from query 1 and `<decision>` with `lifted` or
+`upheld`. Decide while the profile still exists: once the daily cron has deleted
+it (14 days after `expires_at`) nothing in the database links the ban to a
+person, and the route finds no profile.
 
-```sql
-begin;
-update roommate_profiles
-   set status = case when expires_at > now() then 'active' else 'expired' end,
-       expired_at = case when expires_at > now() then expired_at
-                         else coalesce(expired_at, expires_at) end,
-       hidden_at = null,
-       hidden_reason = null
- where id = '<profile id>'
-   and status = 'hidden';
-update roommate_reports
-   set decision = 'lifted',
-       automated = false,
-       decided_at = now()
- where target_profile_id = '<profile id>';
-commit;
+```sh
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  -H 'content-type: application/json' \
+  -d '{"profileId":"<profile id>","decision":"<decision>","confirm":true}' \
+  https://passflat.com/api/cron/roommate-appeal
 ```
 
-**3. Clear the chat's ban.** Run it after step 2 to lift the ban too (D55 keeps
-it otherwise; while it stays, `/mate` gives the FR-14 reply even to an unhidden
-profile). It finds the chat through the profile, so run it while the profile
-still exists: once the daily cron has deleted the profile (14 days after
-`expires_at`) nothing in the database links the ban to a person.
-
-```sql
-update telegram_chats
-   set roommate_banned_at = null
- where id = (select chat_id from roommate_profiles where id = '<profile id>');
-```
+- `lifted`: in one transaction the profile goes back to `active` while
+  `expires_at` is in the future, else to `expired` (with `expired_at`, so the
+  daily cron still deletes it 14 days after expiry); the hide fields are cleared
+  and every report on it becomes `decision='lifted'`, `automated=false` (decided
+  by a person), so those reports never count toward a hide again; `appealed_at`
+  is kept as the record of the appeal (the next hide clears it); the chat's ban
+  is cleared. Then the person gets `appealLifted`.
+- `upheld`: the hide and the ban stay; the reports the hide decided get
+  `automated=false` (reviewed by a person). The person gets `appealUpheld` with
+  the hide's rule and the redress left (Prezes UKE, court).
+- **Reading the answer** (counts only): `decided` 1 with `messages.sent` 1 is
+  done. `decided` 0 with every count 0: the profile is unknown or not hidden, or
+  this decision was already sent; nothing changed. `upheld` with `skipped` or
+  `blocked` 1: the chat blocked the bot, nothing changed; call again once query
+  1 shows `blocked_at` null. `upheld` with `failed` 1: nothing changed, call
+  again. `lifted` with `skipped`, `blocked` or `failed` 1: the profile is
+  restored but the message did not go out, and calling again sends nothing (the
+  person sees the restored profile in `/mate`).
 
 ## Deep links
 
@@ -761,6 +786,9 @@ contract reading is such a reply, sent later from the `after()` task).
     see **Statement of reasons**.
 - **The closing message**, only from the owner's manual
   `POST /api/cron/roommate-close` (see **Closing route**); never scheduled.
+- **The appeal decision** to a hidden person, only from the owner's manual
+  `POST /api/cron/roommate-appeal`, one call per decision (see **Appeal
+  decision**); never scheduled.
 
 Nothing else: no figure or building news, no marketing, nothing from saved
 interests. Each of these sends is claimed on its row before it goes out, so
@@ -884,7 +912,8 @@ No roommate event carries a username, the short text, gender, "live with", a
 district slug or list, a profile, partner or match id, or a chat id (which is
 only in the distinct id). The opt-out of the one-time message, a skip, the
 counts, the renewal reminder, the outcome question itself, `/appeal`, the
-statement of reasons and the hide notice send no event.
+statement of reasons, the hide notice and the owner's appeal decision send no
+event.
 
 The website side of the roommate entry is `telegram_bot_opened` with
 `source=roommate` (the block on `/warsaw/roommate`, which links
@@ -910,7 +939,8 @@ joined (`docs/analytics/activation-funnels.md`).
   the send, so a crash between the claim and the send loses it. A failed send
   releases its claim for the next send-hour run as **Roommate daily cron**
   describes (a 403 keeps it, except for the statement of reasons; the closing
-  message is never retried). One sender sends at most `MAX_MESSAGES_PER_RUN`
+  message and the "profile restored" appeal decision are never retried; an
+  "upheld" decision gives its claim back for the owner's next call). One sender sends at most `MAX_MESSAGES_PER_RUN`
   (1,000) messages, `MESSAGES_PER_SECOND` (25) a second, and starts none after
   `SEND_BUDGET_MS` (45 s) (`roommate-daily.ts`).
 - **Rate limit.** The 12 messages a minute per chat apply to typed text; button
@@ -926,9 +956,8 @@ ever built.
 
 Roommate matching (PRD 3 §10): paid speed or any payment (stage 3, H16), a
 Polish bot locale (D50; `pl` chats get English, D68), web profiles, photos and
-any chat or e-mail relay (D49), groups of three or more, matching outside
-Warsaw, and telling a person the owner's appeal decision (PRD 3 Q-16, T109,
-blocked).
+any chat or e-mail relay (D49), groups of three or more, and matching outside
+Warsaw.
 
 ## Deposit recovery ("Верни залог")
 

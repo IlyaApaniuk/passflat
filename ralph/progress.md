@@ -3417,3 +3417,81 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Draft copy to approve before the deploy (replaces the T083 `optInClosing` in the T105 handoff list):** `optInClosing` RU / UK / EN as above. The RU / UK say «твоя анкета» («ты» / «ти», D42) and «её» / «її» for "it". The EN keeps D72's "we'll" while `optInConfirm` says "I'll", as worded.
   - No new column, no second migration, no event, no table.
 - Next: `node scripts/ralph-tasks.mjs next` (T109, T110).
+
+### 2026-11-19 22:40 · T109 · done
+
+- Done:
+  - New `POST /api/cron/roommate-appeal` (`src/app/api/cron/roommate-appeal/route.ts`), manual, not in `vercel.json`, D73.
+    - `requireCronAuth` → 401.
+    - Without `{ "profileId": "<uuid>", "decision": "lifted" | "upheld", "confirm": true }` → 400. That covers a missing or false confirm, an unknown decision, and a profile id that is not a uuid (it would make Prisma throw on the uuid column).
+    - Without a bot → 503, because a decision must reach the person.
+    - The switch is not read. The response is counts only: `{ decided, messages }`.
+  - New `src/lib/bot/roommate-appeal-decision.ts`:
+    - `runRoommateAppeal` reads the profile. An unknown profile, or one that is not hidden, changes and sends nothing.
+    - It sends one message through `createCronSender`, in the chat's locale. `appealDecisionText` builds it. No event.
+  - `src/lib/roommate/store.ts`:
+    - `liftHide`: one interactive transaction. It does what the old README SQL steps 2 and 3 did:
+      - back to active, or expired with `expired_at` set to the old value or `expires_at`;
+      - the hide fields cleared, `appealed_at` kept;
+      - every report on the profile becomes `lifted`, `automated=false`, `decided_at=now`;
+      - the ban cleared.
+      - The update is conditional on `status=hidden` and is the lifted claim.
+    - `upholdHide` / `releaseUpheldHide`: the upheld claim.
+  - Copy: 5 new keys in `roommate-texts.ts`, RU / UK / EN (listed under Owner review).
+  - `roommate-hide.test.ts`: `ownerUnhide` now calls the real `liftHide` instead of an in-memory copy of the README SQL. All 50 tests pass, including the re-hide after an unhide.
+  - Docs:
+    - bot README:
+      - a new **Appeal decision** bullet;
+      - the `/appeal` bullet;
+      - Owner review: the time counts in D65's 10 minutes, and step 2 is now the route (a curl call and how to read the answer) instead of the silent unhide and unban SQL;
+      - Promises, Layout, Known limits, events note, Not built yet.
+    - `docs/architecture.md`: the cron table row, the bot row, the moderation line.
+    - `docs/specs/README.md`: FR-35 (Q-16) → Done.
+- Tests:
+  - `roommate-appeal-decision.test.ts` (32 tests): the real sender and real store functions over an in-memory Prisma fake (relation filter, `$transaction`):
+    - lifted: active or expired, `expired_at` kept, undecided reports lifted, the other profile untouched, one transaction;
+    - upheld: only `automated` changes; the under-18 ground; no reporter or count in the text;
+    - RU / UK / EN, and an unknown stored locale → RU;
+    - a repeat sends nothing, and so do two calls at once;
+    - upheld then lifted;
+    - unknown, active, expired or draft profiles → nothing;
+    - a blocked chat, a 403 and other failures, for each decision;
+    - the result holds no ids.
+  - Route test (21 tests): 401; 400 in 14 shapes; 503; each decision passed through; the switch not read; POST only; not in `vercel.json`.
+  - Mutation checks, both reverted:
+    - with `automated: true` dropped from `upholdHide`, the 2 repeat tests fail;
+    - with an unconditional unhide, the concurrent-lift test fails.
+  - Local DB, scratchpad `npx tsx --env-file=.env` with a guard on 127.0.0.1:54322, two throwaway chats with negative ids, cleaned:
+    - uphold true, then a repeat false; the release restores `automated`;
+    - two concurrent `liftHide` → `[true, false]`; a repeat false; uphold on the visible profile false;
+    - the reports lifted with `decided_at` set; the ban null; an expired profile → `expired_at = expires_at`.
+- Checks:
+  - `npm run verify` exit 0, twice (the second after formatting and comment edits):
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 142 files / 3030 tests;
+    - build OK; `ƒ /api/cron/roommate-appeal` is listed.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: Prettier re-padded the whole architecture cron table when the new row's cell was too wide; a shorter cell fixed it.
+- Owner review:
+  - **Draft copy, approve before the switch (D56; no lawyer has reviewed it, D69), RU / UK / EN in `roommate-texts.ts`:**
+    - `appealLifted`: RU «Твоё обжалование рассмотрел человек: скрытие отменено. Анкета для подбора соседей восстановлена, ограничение для этого чата снято. Открыть анкету: /mate.»
+    - `appealUpheld`: RU «Твоё обжалование рассмотрел человек: решение остаётся в силе. Анкета по-прежнему скрыта, и в этом чате нельзя создать новую анкету.»
+    - `appealUpheldGroundReports`: RU «Почему: на анкету пожаловались два разных человека, а по правилам подбора такую анкету скрывают. Правила — в условиях использования» (a link to `/terms#matching`).
+    - `appealUpheldGroundUnder18`: RU «Почему: на анкету поступила жалоба «Похоже, младше 18», а подбор только для 18+. …»
+    - `appealUpheldRedress`: RU «Если решение тебя не устраивает, можно подать жалобу координатору цифровых услуг — Prezes UKE … — или обратиться в суд.»
+    - An upheld message is the last four joined in that order, with the ground chosen by `hidden_reason`.
+  - **Assumption applied (spec 07: "the claim reuses an existing field"):**
+    - The upheld claim is `roommate_reports.automated`: true → false on the target's `decision=hidden` reports. `decision` and `decided_at` stay.
+    - A 403 or any other failure releases the claim, so the owner calls again. A blocked chat is skipped before the claim.
+    - The lifted claim is the conditional unhide itself. It is applied for a blocked chat too (the message is skipped). A failed "profile restored" message is never retried, because the profile is no longer hidden.
+    - No new column and no second migration.
+  - **Agent's readings:**
+    - A profile id that is not a uuid → 400.
+    - The route needs a configured bot (503), like the closing route.
+    - Upheld does not require `appealed_at`, so an appeal that came by e-mail works too.
+    - Upheld and then lifted is allowed (the profile is still hidden). Lifted and then upheld sends nothing.
+    - `appealReceived` is unchanged: it still promises no time and no message.
+  - **Lawyer question to add to the D69 list:** DSA Art. 20(5) asks to name out-of-court dispute settlement (Art. 21). The upheld redress names only UKE and court, as the statement of reasons and the terms do. Also: whether Art. 19 (micro and small enterprises) exempts Passflat from Art. 20 at all.
+  - No new table, migration or event. The new route needs `CRON_SECRET`, which already exists.
+- Next: `node scripts/ralph-tasks.mjs next` (T110).
