@@ -7,6 +7,7 @@ import { track } from './analytics';
 import {
   cancelDepositFlow,
   handleDepositText,
+  hasOpenIntake,
   maybeOfferDeposit,
   registerDepositFlow,
   startDepositFlow,
@@ -29,6 +30,7 @@ import {
   getDistrictBySlug,
   getDistrictTable,
   lookupAddress,
+  lookupBuilding,
   type AddressLookup,
 } from './lookup';
 import {
@@ -142,6 +144,21 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
     return;
   }
 
+  await replyCard(ctx, chatId, lookup, locale);
+}
+
+/**
+ * A lookup's card with its buttons, the one way an address answer is sent, so a
+ * typed address and a building link look the same. `note` is one extra line
+ * after the card.
+ */
+async function replyCard(
+  ctx: Context,
+  chatId: number,
+  lookup: AddressLookup,
+  locale: BotLocale,
+  note: string | null = null,
+) {
   track(chatId, 'tg_address_checked', {
     level: lookup.level,
     district: lookup.districtSlug,
@@ -149,10 +166,53 @@ async function replyLookup(ctx: Context, locale: BotLocale, query: string) {
     report_count: lookup.building?.reportCount ?? 0,
   });
 
-  await ctx.reply(renderLookup(lookup, locale), {
+  const card = renderLookup(lookup, locale);
+  await ctx.reply(note ? `${card}\n\n${note}` : card, {
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
     reply_markup: lookupKeyboard(lookup, locale),
+  });
+}
+
+/**
+ * `/start b_<id>` (the website's checker link): that building's card at once,
+ * as if its address had been typed (spec 04 §Building deep link). A link that
+ * opens nothing says so and asks for the address; a malformed id (`buildingId`
+ * null) is never looked up. An open deposit intake stays open, and the reply
+ * says that /cancel leaves it, since the next typed message answers it.
+ */
+async function replyBuildingLink(
+  ctx: Context,
+  chatDbId: string,
+  locale: BotLocale,
+  buildingId: string | null,
+) {
+  const chatId = ctx.chat!.id;
+
+  let lookup: AddressLookup | null;
+  let intakeOpen: boolean;
+  try {
+    [lookup, intakeOpen] = await Promise.all([
+      buildingId ? lookupBuilding(buildingId) : Promise.resolve(null),
+      hasOpenIntake(chatDbId),
+    ]);
+  } catch (error) {
+    console.error('[bot] building link lookup failed', error);
+    await ctx.reply(t(locale, 'genericError'));
+    return;
+  }
+
+  const note = intakeOpen ? t(locale, 'intakeStillOpen') : null;
+  if (lookup) {
+    await replyCard(ctx, chatId, lookup, locale, note);
+    return;
+  }
+
+  const lines = [t(locale, 'buildingLinkFailed'), '', t(locale, 'startAfterPayload')];
+  if (note) lines.push('', note);
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    link_preview_options: { is_disabled: true },
   });
 }
 
@@ -213,8 +273,18 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
     return;
   }
 
-  // Building links ("b_<uuid>", the website CTA) and "web_*" still get the
-  // generic reply below; the building is not opened from the link yet.
+  // "b_<uuid>": the website checker's link opens that building.
+  if (start.kind === 'building' || start.kind === 'invalid_building') {
+    await replyBuildingLink(
+      ctx,
+      chat.id,
+      locale,
+      start.kind === 'building' ? start.buildingId : null,
+    );
+    return;
+  }
+
+  // "web_*" and other payloads get the generic reply below.
   if (start.kind === 'district') {
     const district = await getDistrictBySlug(start.slug);
     if (district) {

@@ -4,7 +4,9 @@ const h = vi.hoisted(() => ({
   cityFindUnique: vi.fn(),
   districtFindUnique: vi.fn(),
   buildingFindFirst: vi.fn(),
+  buildingFindUnique: vi.fn(),
   buildingFindMany: vi.fn(),
+  buildingWrite: vi.fn(),
   costReportFindMany: vi.fn(),
   resolveDistrictByPoint: vi.fn(),
 }));
@@ -13,7 +15,15 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     city: { findUnique: h.cityFindUnique },
     district: { findUnique: h.districtFindUnique },
-    building: { findFirst: h.buildingFindFirst, findMany: h.buildingFindMany },
+    building: {
+      findFirst: h.buildingFindFirst,
+      findUnique: h.buildingFindUnique,
+      findMany: h.buildingFindMany,
+      // Any write fails the "never creates a building" assertions below.
+      create: h.buildingWrite,
+      upsert: h.buildingWrite,
+      update: h.buildingWrite,
+    },
     // The figure contract's loaders: the building, its district or city, deposits.
     costReport: { findMany: h.costReportFindMany },
   },
@@ -28,7 +38,7 @@ vi.mock('@/lib/geo/district', () => ({ resolveDistrictByPoint: h.resolveDistrict
 
 import { summarizeDepositReturns, summarizeFigures, type FigureReport } from '@/lib/cost-figures';
 import type { GeocodedAddress } from './geocode';
-import { getCityDepositFacts, lookupAddress } from './lookup';
+import { getCityDepositFacts, lookupAddress, lookupBuilding } from './lookup';
 
 type Where = {
   buildingId?: string;
@@ -64,6 +74,9 @@ const buildingRow = {
   districtId: 'district-mokotow',
   district: { slug: 'mokotow', nameKey: 'Mokotów' },
 };
+
+/** The same building as stored, for a lookup by id: its city and the geocoded point. */
+const storedBuilding = { ...buildingRow, cityId: 'city-1', lat: geo.lat, lng: geo.lng };
 
 function report(source: string, fields: Partial<FigureReport> = {}): FigureReport {
   return { source, rentalType: 'apartment', utilitiesComplete: true, ...fields };
@@ -127,6 +140,7 @@ beforeEach(() => {
   h.cityFindUnique.mockResolvedValue(city);
   h.districtFindUnique.mockResolvedValue({ slug: 'mokotow', nameKey: 'Mokotów' });
   h.buildingFindFirst.mockResolvedValue(buildingRow);
+  h.buildingFindUnique.mockResolvedValue(storedBuilding);
   h.buildingFindMany.mockResolvedValue([]);
   h.resolveDistrictByPoint.mockReturnValue('mokotow');
   serveReports({ building: buildingReports, district: districtReports, city: cityReports });
@@ -308,6 +322,126 @@ describe('lookupAddress on the figure contract', () => {
     h.cityFindUnique.mockResolvedValue({ ...city, isActive: false });
     await expect(lookupAddress(geo)).resolves.toBeNull();
     expect(h.costReportFindMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('lookupBuilding (the b_<id> link)', () => {
+  const neighbour = {
+    slug: 'pulawska-12',
+    addressFull: 'Puławska 12',
+    lat: 52.2009,
+    lng: 21.02,
+    costReports: [{ source: 'user', totalMonthlyAvg: 4_000, rent: 3_000 }],
+  };
+
+  it('returns the same answer as typing the building’s address', async () => {
+    h.buildingFindMany.mockResolvedValue([neighbour]);
+
+    const byId = await lookupBuilding('building-1');
+    const byAddress = await lookupAddress(geo);
+
+    expect(byId).toEqual(byAddress);
+    expect(byId).toMatchObject({
+      level: 'building',
+      address: 'Puławska 10',
+      buildingId: 'building-1',
+      districtSlug: 'mokotow',
+      reference: { level: 'district', slug: 'mokotow' },
+      imprecise: false,
+    });
+    expect(byId!.neighbours).toHaveLength(1);
+    expect(h.buildingFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'building-1' } }),
+    );
+    expect(h.buildingFindUnique.mock.calls[0][0].select).not.toHaveProperty('costReports');
+  });
+
+  it('never creates or changes a building', async () => {
+    await lookupBuilding('building-1');
+    h.buildingFindUnique.mockResolvedValue(null);
+    await lookupBuilding('building-404');
+
+    expect(h.buildingWrite).not.toHaveBeenCalled();
+  });
+
+  it('answers with the district card for a building nobody reported on', async () => {
+    serveReports({ building: [], district: districtReports, city: cityReports });
+
+    const lookup = await lookupBuilding('building-1');
+
+    expect(lookup).toMatchObject({
+      level: 'district',
+      buildingId: 'building-1',
+      building: { reportCount: 0 },
+      reference: { level: 'district', slug: 'mokotow' },
+    });
+  });
+
+  it('uses the city reference and no neighbours for a building without coordinates', async () => {
+    h.buildingFindUnique.mockResolvedValue({ ...storedBuilding, lat: null, lng: null });
+    serveReports({ building: [], district: districtReports, city: cityReports });
+
+    const lookup = await lookupBuilding('building-1');
+
+    expect(lookup).toMatchObject({
+      level: 'city',
+      address: 'Puławska 10',
+      buildingId: 'building-1',
+      districtSlug: null,
+      districtName: null,
+      reference: { level: 'city', slug: 'warsaw' },
+      neighbours: [],
+    });
+    expect(h.buildingFindMany).not.toHaveBeenCalled();
+    expect(h.resolveDistrictByPoint).not.toHaveBeenCalled();
+    expect(depositQueries()).toEqual([{ isVisible: true, building: { cityId: 'city-1' } }]);
+  });
+
+  it('uses the city reference for a building in no district', async () => {
+    h.buildingFindUnique.mockResolvedValue({ ...storedBuilding, districtId: null, district: null });
+    h.resolveDistrictByPoint.mockReturnValue(null);
+    serveReports({ building: [], district: districtReports, city: cityReports });
+
+    const lookup = await lookupBuilding('building-1');
+
+    expect(lookup).toMatchObject({
+      level: 'city',
+      districtSlug: null,
+      reference: { level: 'city', slug: 'warsaw' },
+    });
+  });
+
+  it('keeps a reported building without coordinates at the building level', async () => {
+    h.buildingFindUnique.mockResolvedValue({ ...storedBuilding, lat: null, lng: null });
+
+    const lookup = await lookupBuilding('building-1');
+
+    expect(lookup!.level).toBe('building');
+    expect(lookup!.reference).toMatchObject({ level: 'city' });
+  });
+
+  it.each([
+    ['an unknown or deleted building', null],
+    ['a building of another city', { ...storedBuilding, cityId: 'city-krakow' }],
+    ['a building outside the city bounds', { ...storedBuilding, lat: 50.06, lng: 19.94 }],
+  ])('returns null for %s, reading no report', async (_label, row) => {
+    h.buildingFindUnique.mockResolvedValue(row);
+
+    await expect(lookupBuilding('building-1')).resolves.toBeNull();
+    expect(h.costReportFindMany).not.toHaveBeenCalled();
+  });
+
+  it('returns null when the city is not live, without a building query', async () => {
+    h.cityFindUnique.mockResolvedValue({ ...city, isActive: false });
+
+    await expect(lookupBuilding('building-1')).resolves.toBeNull();
+    expect(h.buildingFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('lets a database error through to the caller', async () => {
+    h.buildingFindUnique.mockRejectedValue(new Error('connection refused'));
+
+    await expect(lookupBuilding('building-1')).rejects.toThrow('connection refused');
   });
 });
 

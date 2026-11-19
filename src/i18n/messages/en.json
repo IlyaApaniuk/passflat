@@ -863,7 +863,7 @@
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
       "followHint": "Not ready to share? Follow the building for updates.",
-      "telegramCta": "Follow this building on Telegram"
+      "telegramCta": "Open this building in the Telegram bot"
     },
     "nuisances": {
       "title": "Worth knowing",

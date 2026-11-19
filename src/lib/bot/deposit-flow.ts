@@ -71,6 +71,15 @@ async function findOpenCase(chatDbId: string) {
   });
 }
 
+/**
+ * True while the chat is answering the intake questions, i.e. its next typed
+ * message is read as an answer, not as an address. Changes nothing.
+ */
+export async function hasOpenIntake(chatDbId: string): Promise<boolean> {
+  const row = await findOpenCase(chatDbId);
+  return row?.status === 'intake';
+}
+
 /** A case id from a button, but only if it belongs to the chat pressing it. */
 async function findOwnCase(chatDbId: string, caseId: string) {
   return prisma.depositCase.findFirst({ where: { id: caseId, chatId: chatDbId } });

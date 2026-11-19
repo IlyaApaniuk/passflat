@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+
 import { normalizeAddress } from '@/lib/address';
 import { getDistrictCostStats } from '@/lib/cost-baselines';
 import type { AreaReference, DepositReturns, FigureSummary } from '@/lib/cost-figures';
@@ -85,11 +87,37 @@ const neighbourReportSelect = {
   rent: true,
 } as const;
 
+/** The building fields an answer reads, whichever way the building was found. */
+const buildingSelect = {
+  id: true,
+  slug: true,
+  placeId: true,
+  addressFull: true,
+  districtId: true,
+  district: { select: { slug: true, nameKey: true } },
+} as const;
+
+type BuildingRow = Prisma.BuildingGetPayload<{ select: typeof buildingSelect }>;
+
+interface DistrictRef {
+  id: string;
+  slug: string;
+  nameKey: string;
+}
+
 export async function getCity(citySlug = LOCATION_CHECKER_CITY_SLUG) {
   return prisma.city.findUnique({
     where: { slug: citySlug },
     include: { districts: { select: { id: true, slug: true, nameKey: true } } },
   });
+}
+
+type CheckerCity = NonNullable<Awaited<ReturnType<typeof getCity>>>;
+
+/** The checker city when it is live, else null: both lookups answer only there. */
+async function getActiveCity(): Promise<CheckerCity | null> {
+  const city = await getCity();
+  return city && city.isActive ? city : null;
 }
 
 /**
@@ -151,53 +179,42 @@ async function findNeighbours(
     .slice(0, NEIGHBOUR_LIMIT);
 }
 
+/** The district a point lies in, among the city's districts. */
+function districtOfPoint(city: CheckerCity, lat: number, lng: number): DistrictRef | null {
+  const slug = resolveDistrictByPoint(city.slug, lat, lng);
+  return (slug && city.districts.find((d) => d.slug === slug)) || null;
+}
+
 /**
- * Resolve a geocoded address into the richest answer the data supports.
- *
- * Read-only on purpose: unlike the website's checker this never creates a
- * building row. A chat message is a much cheaper action than a deliberate
- * search on the site, so persisting every typo would pollute the buildings
- * table that the map and SEO pages read from.
+ * The one place an answer is put together, so a typed address and a building
+ * link to the same building render identically (spec 04 §Building deep link).
  */
-export async function lookupAddress(geo: GeocodedAddress): Promise<AddressLookup | null> {
-  const city = await getCity();
-  if (!city || !city.isActive) return null;
-
-  const bounds = parseCityBounds(city.bounds);
-  if (bounds && !isInsideCityBounds(geo.lat, geo.lng, bounds)) return null;
-
-  const districtSlug = resolveDistrictByPoint(city.slug, geo.lat, geo.lng);
-  const district = districtSlug ? city.districts.find((d) => d.slug === districtSlug) : null;
-
-  const addressNormalized = geo.buildingNumber
-    ? normalizeAddress(geo.street, geo.buildingNumber)
-    : null;
-
-  const building = await prisma.building.findFirst({
-    where: {
-      cityId: city.id,
-      OR: [{ placeId: geo.placeId }, ...(addressNormalized ? [{ addressNormalized }] : [])],
-    },
-    select: {
-      id: true,
-      slug: true,
-      placeId: true,
-      addressFull: true,
-      districtId: true,
-      district: { select: { slug: true, nameKey: true } },
-    },
-  });
+async function assembleLookup(input: {
+  city: CheckerCity;
+  building: BuildingRow | null;
+  /** The district of the point; the building's own district wins over it. */
+  pointDistrict: DistrictRef | null;
+  /** Where neighbours are searched from; null finds none. */
+  point: { lat: number; lng: number } | null;
+  /** Shown and used when there is no building row. */
+  address: string;
+  placeId: string | null;
+  imprecise: boolean;
+}): Promise<AddressLookup> {
+  const { city, building, pointDistrict, point } = input;
 
   // Two districts (Rembertów, Wesoła) hold no reports at all, and a thin one
   // would answer with a median drawn from a couple of flats. The reference
   // falls back to the city below MIN_AREA_REPORTS district reports (spec 03),
   // which keeps the reply worth reading rather than technically correct and
   // empty — the message says which level it is speaking at.
-  const districtId = building?.districtId ?? district?.id ?? null;
+  const districtId = building?.districtId ?? pointDistrict?.id ?? null;
   const [figures, area, neighbours] = await Promise.all([
     building ? loadBuildingFigures(building.id) : Promise.resolve(null),
     loadAreaFacts(districtId, city.id),
-    findNeighbours(city.id, geo.lat, geo.lng, building?.id ?? null),
+    point
+      ? findNeighbours(city.id, point.lat, point.lng, building?.id ?? null)
+      : Promise.resolve([]),
   ]);
 
   const level: LookupLevel =
@@ -209,19 +226,97 @@ export async function lookupAddress(geo: GeocodedAddress): Promise<AddressLookup
 
   return {
     level,
-    address: building?.addressFull ?? geo.formatted,
+    address: building?.addressFull ?? input.address,
     citySlug: city.slug,
     buildingId: building?.id ?? null,
     buildingSlug: building?.slug ?? null,
-    placeId: building?.placeId ?? geo.placeId,
-    districtSlug: building?.district?.slug ?? district?.slug ?? null,
-    districtName: building?.district?.nameKey ?? district?.nameKey ?? null,
+    placeId: building?.placeId ?? input.placeId,
+    districtSlug: building?.district?.slug ?? pointDistrict?.slug ?? null,
+    districtName: building?.district?.nameKey ?? pointDistrict?.nameKey ?? null,
     building: figures,
     reference: area.reference,
     neighbours,
     deposit: area.deposit,
-    imprecise: !geo.isPrecise,
+    imprecise: input.imprecise,
   };
+}
+
+/**
+ * Resolve a geocoded address into the richest answer the data supports.
+ *
+ * Read-only on purpose: unlike the website's checker this never creates a
+ * building row. A chat message is a much cheaper action than a deliberate
+ * search on the site, so persisting every typo would pollute the buildings
+ * table that the map and SEO pages read from.
+ */
+export async function lookupAddress(geo: GeocodedAddress): Promise<AddressLookup | null> {
+  const city = await getActiveCity();
+  if (!city) return null;
+
+  const bounds = parseCityBounds(city.bounds);
+  if (bounds && !isInsideCityBounds(geo.lat, geo.lng, bounds)) return null;
+
+  const addressNormalized = geo.buildingNumber
+    ? normalizeAddress(geo.street, geo.buildingNumber)
+    : null;
+
+  const building = await prisma.building.findFirst({
+    where: {
+      cityId: city.id,
+      OR: [{ placeId: geo.placeId }, ...(addressNormalized ? [{ addressNormalized }] : [])],
+    },
+    select: buildingSelect,
+  });
+
+  return assembleLookup({
+    city,
+    building,
+    pointDistrict: districtOfPoint(city, geo.lat, geo.lng),
+    point: { lat: geo.lat, lng: geo.lng },
+    address: geo.formatted,
+    placeId: geo.placeId,
+    imprecise: !geo.isPrecise,
+  });
+}
+
+/**
+ * The answer for a building opened by its id (the website's `b_<id>` link):
+ * the same answer as typing that building's address. Read-only, like
+ * `lookupAddress`: it never creates a building.
+ *
+ * Null when the building does not exist (or was deleted), lies in another city
+ * or outside the checker city's bounds, or the city is not live. A building
+ * without coordinates cannot be placed in a district or checked against the
+ * bounds, so it answers with the city reference and no neighbours (spec 04).
+ */
+export async function lookupBuilding(buildingId: string): Promise<AddressLookup | null> {
+  const city = await getActiveCity();
+  if (!city) return null;
+
+  const building = await prisma.building.findUnique({
+    where: { id: buildingId },
+    select: { ...buildingSelect, cityId: true, lat: true, lng: true },
+  });
+  if (!building) return null;
+
+  const { cityId, lat, lng, ...row } = building;
+  if (cityId !== city.id) return null;
+
+  const point = lat != null && lng != null ? { lat: Number(lat), lng: Number(lng) } : null;
+  const bounds = parseCityBounds(city.bounds);
+  if (point && bounds && !isInsideCityBounds(point.lat, point.lng, bounds)) return null;
+
+  return assembleLookup({
+    city,
+    // Unplaced (no coordinates): no district either, so the city reference.
+    building: point ? row : { ...row, districtId: null, district: null },
+    pointDistrict: point ? districtOfPoint(city, point.lat, point.lng) : null,
+    point,
+    address: row.addressFull,
+    placeId: row.placeId,
+    // A building row always has a house number.
+    imprecise: false,
+  });
 }
 
 export interface DistrictRow {

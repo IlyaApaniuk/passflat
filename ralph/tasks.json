@@ -564,7 +564,7 @@
       "title": "Open the building from /start b_<uuid> with safe fallbacks",
       "spec": "docs/specs/04-telegram-bot.md#building-deep-link",
       "dependsOn": ["T031", "T033"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "lookupBuilding(buildingId) returns the same AddressLookup as lookupAddress through a shared internal function and never creates a building",
         "/start b_<known id> replies at once with that building's card and buttons; a building without reports gives the area card starting with noBuildingData; null coordinates or no district give the city reference",
@@ -573,7 +573,7 @@
         "The /start handler body is exported and tested with a fake context and mocked lookup for every case above"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

@@ -600,3 +600,64 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Next:
   - T035 (`b_` deep link) and T049 (`renderDistrict` on the contract; it already calls `depositLine`).
   - T037 should also align the command menu's `/deposit` description in `scripts/tg-webhook.ts` («Залог: сколько и как часто возвращают»), since the typical amount is no longer shown.
+
+### 2026-11-19 04:26 · T035 · done
+
+- Done:
+  - `src/lib/bot/lookup.ts`:
+    - New private `assembleLookup` builds every `AddressLookup`: building figures, area facts, neighbours, level and fields. `lookupAddress` now finds the building and calls it.
+    - New exported `lookupBuilding(buildingId)` reads `building.findUnique` (shared `buildingSelect` plus `cityId`, `lat`, `lng`) and calls the same function. It is read-only.
+    - It returns null for an unknown or deleted id, another city, a point outside the city bounds, or a city that is not live.
+    - Without coordinates there are no neighbours and no district, so the reference is the city. With coordinates the district is the stored one, else the district of the point (as for a typed address). `imprecise` is false.
+    - Private helpers `getActiveCity` and `districtOfPoint`.
+  - `src/lib/bot/deposit-flow.ts`: new exported `hasOpenIntake(chatDbId)`. It is read-only: true when the latest open case is in `intake`.
+  - `src/lib/bot/bot.ts`:
+    - `handleStart` sends `building` and `invalid_building` payloads to the new `replyBuildingLink`. It looks up the building (a malformed id skips the lookup) and checks for an open intake in parallel.
+    - Card: the same card and keyboard as a typed address, via the new shared `replyCard`. That helper also sends `tg_address_checked`, so a `b_` open fires it once, with the existing properties.
+    - Nothing opened: `buildingLinkFailed`, then `startAfterPayload` (the address prompt).
+    - DB error: `genericError`, plus a `console.error` with no chat id.
+    - Open intake: the reply (card or fallback) ends with `intakeStillOpen`. The intake is not touched.
+  - `src/lib/bot/texts.ts`: new keys `buildingLinkFailed` and `intakeStillOpen` (RU and UK).
+  - `checker.costs.telegramCta` is updated in all four locale files with the spec's drafts.
+  - Docs: `src/lib/bot/README.md` has a paragraph on the building link; the bot line in `docs/architecture.md` §3 names `lookupBuilding`.
+- Tests:
+  - `bot.test.ts`: 13 new or changed tests, all on `handleStart` with a fake context and mocked `lookupBuilding` / `hasOpenIntake`:
+    - known building: the card equals `renderLookup`, the buttons include `sub:b:<id>` and the building page, there is no address prompt, and exactly one `tg_address_checked` fires;
+    - a building without reports: the card starts with `📍 <address>` and `noBuildingData`, then the district header and the `sub:d:` button;
+    - city reference;
+    - unknown, deleted and outside-city ids: the fallback, with no `tg_address_checked`;
+    - 4 malformed ids: the fallback, and the lookup is not called;
+    - UK replies;
+    - DB error: `genericError`;
+    - open intake: the card or the fallback ends with the `/cancel` line, and neither `cancelDepositFlow` nor `startDepositFlow` is called;
+    - no intake: no line.
+      The old "building link keeps the generic reply" cases are removed.
+  - `lookup.test.ts`: 11 new tests on `lookupBuilding` with Prisma mocked (`create` / `upsert` / `update` are spied and never called):
+    - it equals `lookupAddress` for the same building, neighbours included;
+    - the select reads no reports, and nothing is written;
+    - zero reports give district level;
+    - null coordinates give the city reference, with no neighbour query and no point lookup;
+    - no district gives the city reference;
+    - a reported building without coordinates stays at building level;
+    - unknown, other-city and out-of-bounds ids give null with no report query;
+    - a city that is not live gives null with no building query;
+    - a DB error is rethrown.
+- Checks:
+  - `npx vitest run src/lib/bot src/i18n/messages.test.ts src/components/costs` passed (12 files / 206 tests).
+  - `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types / 1 duplicate export, as before), Vitest 64 files / 816 tests, build OK.
+  - `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started, and no Telegram or Google call was made. Not checked against the local database.
+- Owner review:
+  - Draft copy, bot (RU and UK, `texts.ts`):
+    - `buildingLinkFailed`: «🤔 Не получилось открыть этот дом по ссылке — пришли его адрес.» / «🤔 Не вдалося відкрити цей будинок за посиланням — надішли його адресу.»
+    - `intakeStillOpen`: «ℹ️ Вопросы о залоге пока открыты — чтобы выйти из них, отправь /cancel.» / «ℹ️ Питання про заставу поки відкриті — щоб вийти з них, надішли /cancel.»
+  - Draft copy, website: `checker.costs.telegramCta` (four locales, the spec's drafts): EN "Open this building in the Telegram bot", RU «Открыть этот дом в Telegram-боте», UK «Відкрити цей будинок у Telegram-боті», PL «Otwórz ten budynek w bocie Telegram».
+  - Choices to confirm:
+    - (1) Following the spec literally, a building with null coordinates gets the city reference even when its row has a district. Typing its address would show the district. Changing this is one line in `lookupBuilding`.
+    - (2) The fallback reply is `buildingLinkFailed` followed by the whole `startAfterPayload` greeting, so "пришли адрес" appears twice.
+    - (3) The `/cancel` line is also added to the fallback while an intake is open: the next typed address would otherwise be read as an intake answer.
+  - Analytics: a `b_` open now fires the existing `tg_address_checked`, once, with its current properties. `entry_source=link_building` comes in T038.
+  - No assumptions, tables or migrations.
+- Next:
+  - T038 adds `entry_source` to `tg_address_checked`. `replyCard` in `bot.ts` is the single place that tracks it: pass the source from `replyLookup` (`typed_address`) and from `replyBuildingLink` (`link_building`).
+  - T039 `submitLink` already gets `buildingId` from `lookupBuilding` cards.

@@ -80,6 +80,14 @@ Every non-building answer ends with the "be the first report for this building"
 prompt, which is how an uncovered address feeds the north-star metric instead of
 being a dead end.
 
+The website checker's link `?start=b_<buildingId>` opens that building at once:
+`lookupBuilding` builds the same answer as typing its address (one shared
+function in `lookup.ts`, read-only). A building without coordinates answers with
+the city reference. An unknown, deleted or out-of-city id, or a malformed one
+(never looked up), gets a short "send its address" reply; a database error gets
+`genericError`. An open deposit intake stays open, and the reply says `/cancel`
+leaves it.
+
 ## Events
 
 `tg_bot_started` (with the `?start=` payload — the attribution for which post or

@@ -177,6 +177,10 @@ const RU = {
   waitlistSuffix: 'ждём запуска',
   tooManyRequests: 'Слишком много запросов подряд. Подожди минуту.',
   genericError: 'Что-то пошло не так. Попробуй ещё раз через минуту.',
+  /** `/start b_<id>` that opens no building (unknown, deleted, another city, malformed). */
+  buildingLinkFailed: '🤔 Не получилось открыть этот дом по ссылке — пришли его адрес.',
+  /** Added to a `/start b_<id>` reply while the deposit questions wait for an answer. */
+  intakeStillOpen: 'ℹ️ Вопросы о залоге пока открыты — чтобы выйти из них, отправь /cancel.',
 
   // --- districts ---
   districtTableHeader: '📊 <b>Районы Варшавы: сколько реально уходит в месяц</b>',
@@ -310,6 +314,8 @@ const UK: Record<Key, string> = {
   waitlistSuffix: 'чекаємо запуску',
   tooManyRequests: 'Забагато запитів поспіль. Зачекай хвилину.',
   genericError: 'Щось пішло не так. Спробуй ще раз за хвилину.',
+  buildingLinkFailed: '🤔 Не вдалося відкрити цей будинок за посиланням — надішли його адресу.',
+  intakeStillOpen: 'ℹ️ Питання про заставу поки відкриті — щоб вийти з них, надішли /cancel.',
 
   districtTableHeader: '📊 <b>Райони Варшави: скільки реально йде на місяць</b>',
   districtTableFooter:
