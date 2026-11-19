@@ -151,6 +151,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Every stored report that does not hide runs `roommateReport.updateMany` with `targetProfile: { hiddenAt: { not: null } }` (`decideLateReports`, `store.ts`): a Prisma fake serving report taps needs `updateMany` and a `targetProfile` key in its `matches`.
 - A race between a request's check and its write is tested by holding that request at the write: `mockImplementationOnce` that awaits a gate, then the real `getMockImplementation()`; run the other request in the gap (example: `reportAcrossHide` in `roommate-hide.test.ts`).
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
+- Under `--permission-mode dontAsk` every binary missing from `permissions.allow` in `ralph/settings.json` is denied (`sips`, `date`, `psql`, ...): a task that needs one blocks with the exact commands for the owner (T114), or the owner adds a `Bash(<tool> *)` rule first. A PNG's width and height are readable without a tool: `node -e` over bytes 16 - 23 of the header.
+- A task that ends `failed` or `blocked` with work in the tree gets that work stashed by the loop as `ralph-wip <task> <status> <timestamp>` (untracked files too, and any unrelated uncommitted file such as an owner edit) and popped when the task runs again; a prepared test file can wait there, but never leave a failing test in the tree for another task.
 - **2026-11-19, evening (D75 – D77), a note on the T105 handoff below; the entry itself is not rewritten.** Deploy step 3 is superseded: `ROOMMATE_MATCHING_ENABLED=true` is set in Vercel **at the PRD 3 deploy** (D75), so stage 2 is live from day 0 and the daily go check from 2027-01-04 is not run; the stage 1 readout of 2027-01-18 still decides whether the test continues. The "approve before the switch" copy of the handoff (terms, safety lines, statement of reasons, report and appeal texts, the rest of stage 2) is therefore approved before the deploy, with the privacy section. Deploy step 5 uses a **separate production bot** (D76): `@passflatdev_bot` stays the dev bot with its token only in `.env.local`; the production token goes only into Vercel; its username is Open (task T117) and until then `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` stays unset. Deploy step 6 (BotFather by hand) is replaced by `npm run bot:profile` (D77, task T115), which also sets the name and the photo (`public/bot-avatar.png`, task T114). Step 7's `<bot>` placeholder is handled by task T116. The posting kit's "matching isn't open yet" sentence is deleted before the first slot, not on a switch day.
 
 ## Log
@@ -3550,3 +3552,29 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The query is unrun. Check that HogQL accepts `argMaxIf(event, timestamp, …) IN (…)` on the first readout. Query I already uses `argMaxIf`.
   - No copy, event, table, migration or constant changed.
 - Next: `node scripts/ralph-tasks.mjs next`. T107 – T110 are all done, so PRD 3 has no task left. The owner's handoff is T105's entry plus the Owner review lines of T107 – T110.
+
+### 2026-11-19 23:59 · T114 · blocked
+
+- Done:
+  - `public/bot-avatar.png` is **not** made: `sips` is missing from `permissions.allow` in `ralph/settings.json`, and the loop runs with `--permission-mode dontAsk`, so Bash denies every `sips` call. The task's notes say to block in that case; no image dependency was added.
+  - `src/lib/bot/bot-avatar.test.ts` is written and left uncommitted (the loop keeps it in the `ralph-wip T114 blocked …` stash and restores it when T114 runs again): it reads `public/bot-avatar.png`, checks the 8-byte PNG signature and the `IHDR` type at bytes 12 – 15, the big-endian width and height at bytes 16 – 23 (= 512), and the length (< 200 × 1024 bytes). No new dependency.
+  - Proof with throwaway files from a scratchpad PNG generator (pure Node + zlib), all deleted afterwards: a white 512 × 512 PNG → 3 passed; a 512 × 1024 PNG → "is 512 x 512" fails ("expected 1024 to be 512"); no file → ENOENT in all three. No placeholder is left in `public/`.
+  - Logo facts for the crop (header read with `node`, image looked at): `public/logo.png` is 1536 × 1024, 8-bit RGB, no alpha, 1,121,395 bytes. The rounded-square mark spans about x 270 – 1265 and the full height 0 – 1024, so the centred 1024 × 1024 crop (x 256 – 1280) keeps the whole mark with about 14 px of white on each side and nothing cut.
+- Checks: `npx vitest run src/lib/bot/bot-avatar.test.ts` (3 failed with ENOENT without the file; 3 passed on a 512 × 512 PNG; 1 failed on 512 × 1024); `npx eslint src/lib/bot/bot-avatar.test.ts` clean; `npm run typecheck` exit 0. `npm run verify` was not run: with the test in the tree it fails on the missing PNG. Nothing deployed, no message sent.
+- Did not work: `sips -g pixelWidth -g pixelHeight … public/logo.png` → denied by the sandbox (not in the allow list), so the exact `sips` output could not be checked.
+- Owner review:
+  - **Owner action, then unblock T114 ("ответ на T114" / `ralph-answer`):** either run in the repo root (macOS `sips`, nothing to install)
+
+    ```sh
+    sips -c 1024 1024 public/logo.png --out public/bot-avatar.png
+    sips -z 512 512 public/bot-avatar.png
+    ```
+
+    (the first centre-crops the 1536 × 1024 logo to the 1024 × 1024 square, `-c` takes height then width; the second resamples the file in place to 512 × 512; both keep PNG, 8-bit RGB and the white background), then `git add public/bot-avatar.png` and commit it on the branch so the next loop start finds a clean tree. Or add `"Bash(sips *)"` to `permissions.allow` in `ralph/settings.json` and unblock: the loop then runs those exact commands itself.
+
+  - **Size risk:** the test wants under 200 kB (204,800 bytes). The whole logo compresses to 0.71 bytes per pixel because most of it is white; the crop is mostly gradient, so the 512 × 512 result may land anywhere between about 100 and 350 kB (`ls -l public/bot-avatar.png`). If it is over the limit, the limit is in the acceptance criteria, so it is the owner's call: a palette (8-bit) export from another tool, or raise `MAX_BYTES` in the test and the task (one line each).
+  - The owner may replace `public/bot-avatar.png` with another 512 × 512 PNG before running `npm run bot:profile` (T115); the test passes for any 512 × 512 PNG under 200 kB.
+  - This iteration ran on Claude Fable 5.1 (the session's model; the `RALPH_MODEL` pin to Opus 5.5 landed during the run), so the commit's `Co-Authored-By` names Fable 5.1 rather than the prompt's Opus 5.5 line.
+  - **Stash note:** when this iteration ends, the loop stashes the untracked test as `ralph-wip T114 blocked <timestamp>` and pops it when T114 runs again (the `scripts/ralph.sh` change that was uncommitted at the start was committed by the owner during the iteration, 7797659, so only the test is stashed). Do not pop the stash by hand before T114 runs: the restored test fails `npm test` for every other task while the PNG is missing.
+
+- Next: after the owner's action, `node scripts/ralph-tasks.mjs next` picks T114 again. That iteration finds the test restored from the stash and `public/bot-avatar.png` in the tree, runs `npm run verify`, commits the PNG (if the owner did not) and the test with `tasks.json` and `progress.md` as `T114: Bot avatar …`, names the two `sips` commands in its entry and repeats the "may replace the file" line. If the PNG is over 200 kB, see the size note above.
