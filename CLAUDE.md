@@ -2,6 +2,8 @@
 
 ## Product and scope
 
+Read `docs/product/thesis.md` first (D48): roommate matching in the Telegram bot with honest per-person figures.
+
 Passflat (passflat.com) helps tenants in Poland, Warsaw first, with the money side of renting:
 what tenants actually pay per building, district and city (rent plus utilities and extra
 charges), an address checker, a cost calculator, guides, document templates, and a Telegram

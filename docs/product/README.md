@@ -4,9 +4,13 @@ Everything about why and what Passflat builds lives here, in English, next to th
 no Notion: one home per document, and agents read the same files the owner edits. The owner
 discusses them in Russian in chat; agents record the outcome here in English.
 
+**Start with [thesis.md](thesis.md)**: the thesis, who it is for, what is in and out of focus,
+the ladder with its thresholds and the fallback (D48). It is the top product document.
+
 ## Document chain
 
 ```text
+thesis.md                     the thesis, focus, ladder and fallback; read first
 BRD (brd.md)                  idea, segments, model, limits, assumption registry A1, A2, …
   ├─ hypotheses.md            H1, H2, …: what we believe would create demand or revenue
   │    └─ experiments.md      E1, E2, …: cheap tests with a metric, a threshold and dates
@@ -37,7 +41,7 @@ prd-rules.md                  how to write a PRD the loop can build without gues
 
 ## Precedence
 
-Latest decision in `decisions.md` > PRD > BRD > research and reviews > archive. A PRD that
+Latest decision in `decisions.md` > thesis > PRD > BRD > research and reviews > archive. A PRD that
 contradicts the BRD or relies on a contradicted assumption goes back to the owner through the
 decision review; agents do not resolve it.
 

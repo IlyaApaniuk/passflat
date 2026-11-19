@@ -14,9 +14,10 @@ slices (T028, T052 – T054), and milestone M6 "Owner follow-ups" holds T055 –
 T060 (Q-17, D47) and T061 (the bot's «ты», D42), followed by a second final check (T059).
 Harness tasks of milestone M0 are archived in `../../ralph/archive/harness-tasks.json`.
 
-**Next PRD:** none. PRD 2 (`../product/prd/prd-2-deposit-sprint.md`) is On hold since
-2026-11-19 (D39) and is not decomposed; the specs keep their "PRD 2 later adds" notes as
-history.
+**Next PRD:** PRD 3, "Roommate matching" (`../product/prd/prd-3-roommate-matching.md`),
+Evaluated on 2026-11-19 and awaiting the owner's review (D49); not decomposed, so no spec covers
+it yet. PRD 2 (`../product/prd/prd-2-deposit-sprint.md`) is On hold since 2026-11-19 (D39) and is
+not decomposed; the specs keep their "PRD 2 later adds" notes as history.
 
 ## How iterations work
 
