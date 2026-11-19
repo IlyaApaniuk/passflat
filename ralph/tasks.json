@@ -214,14 +214,14 @@
       "title": "Keep the query string when sign-in protects /create-listing",
       "spec": "docs/specs/02-roommate-and-waitlist.md#offer-a-room-across-sign-in",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/middleware.ts builds next from pathname plus search for protected paths, through a pure function that keeps safeNextPath's rules",
         "Unit tests: /ru/create-listing?type=roommate gives next=/ru/create-listing?type=roommate; a path without a query is unchanged; an unsafe value is still rejected",
         "The empty state's direct sign-in link and the other protected paths (/dashboard, /messages) keep working"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

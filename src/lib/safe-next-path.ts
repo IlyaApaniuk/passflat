@@ -55,3 +55,13 @@ export function safeNextPath(value: unknown): string | null {
     return null;
   }
 }
+
+/**
+ * The `next` value the middleware puts on its sign-in redirect for a protected
+ * path: the path plus its query string (`?type=roommate` survives sign-in), or
+ * the bare path when the query fails `safeNextPath`, or `null` (no `next`) when
+ * the path itself is unsafe. `search` is `URL.search` (`''` or `?…`).
+ */
+export function loginNextPath(pathname: string, search: string): string | null {
+  return safeNextPath(`${pathname}${search}`) ?? safeNextPath(pathname);
+}

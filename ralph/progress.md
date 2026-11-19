@@ -45,6 +45,8 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - A component with `useState`/`useEffect` can be called the same way when the test mocks `react`
   (spread `importOriginal`, stub the two hooks) and walks `props.children` to the handler
   (example: `src/components/listings/listings-empty-state.test.ts`, with `fetch` stubbed).
+- `src/middleware.ts` is testable in Vitest only with `next-intl/middleware` mocked (its ESM build
+  fails to resolve `next/server`) and `@supabase/ssr` stubbed (example: `src/middleware.test.ts`).
 
 ## Log
 
@@ -152,4 +154,12 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Checks: `npx vitest run` on the two new files and `src/i18n/messages.test.ts` passed (13/13). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new files, Vitest 42 files / 473 tests, build OK); `next-env.d.ts` restored.
 - Did not work: nothing. `ListingsPageClient` itself has no test (too many hooks); the intent prop path into `ListingsEmptyState` is covered by its existing test.
 - Owner review: draft copy (Q-8) — `listings.roommateRoles.find` (PL/RU given; EN "I'm looking for a room", UK «Шукаю кімнату»), `.offer` (PL/RU given; EN "I have a free room", UK «Маю вільну кімнату»), `.findChosen` (chip; EN "Looking for a room", PL «Szukam pokoju», RU «Ищу комнату», UK «Шукаю кімнату» — all drafts), `.change` (chip; EN "change", PL «zmień», RU «изменить», UK «змінити» — all drafts). No assumptions, tables or migrations. A logged-out "I have a free room" click goes through the middleware sign-in redirect, which still drops `?type=roommate` until the "Offer a room across sign-in" task ships. After deploy: in PostHog Live Events each role click on `/warsaw/roommate` sends one `roommate_intent_selected` with `intent`, and a waitlist save after "find" carries `intent: find_room`.
+- Next: the next `todo` task of M2 in `ralph/tasks.json`.
+
+### 2026-11-19 01:36 · T014 · done
+
+- Done: new pure `loginNextPath(pathname, search)` in `src/lib/safe-next-path.ts` → `safeNextPath(pathname + search) ?? safeNextPath(pathname)` (an unsafe query is dropped and the path kept; an unsafe path gives `null`). `src/middleware.ts` sign-in redirect sets `next` from `loginNextPath(pathname, request.nextUrl.search)` and omits `next` when it is `null` (before: always the bare `pathname`, unvalidated; the login page then rejected unsafe values, so an unsafe path behaves the same). Protected paths, the deleted-account redirect and every other branch unchanged. Tests: `src/lib/safe-next-path.test.ts` (+4 `loginNextPath` cases: `/ru/create-listing?type=roommate` and unprefixed `pl`, no query unchanged for create-listing/dashboard/messages, four unsafe paths → `null` with and without a query, control-character and over-long query dropped) and new `src/middleware.test.ts` (10: mocked `@supabase/ssr` and a pass-through `next-intl/middleware`; logged-out `/ru/create-listing?type=roommate` → 307 to `/ru/auth/login` with `next=/ru/create-listing?type=roommate`, `/create-listing?type=roommate` → `/pl/auth/login`, `/en/dashboard`, `/ru/messages`, `/uk/create-listing` keep `next` unchanged, `/en/dashboard?tab=costs` keeps its query, unsafe query dropped, signed-in user passes, the empty state's direct `/ru/auth/login?next=…` link is served without an auth call). `docs/architecture.md` middleware step 4 describes the `next` value.
+- Checks: `npx vitest run src/lib/safe-next-path.test.ts src/middleware.test.ts` passed (30/30). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new export, Vitest 43 files / 489 tests, build OK); `next-env.d.ts` restored.
+- Did not work: importing the real `next-intl/middleware` in Vitest fails (its ESM build imports `next/server` without an extension), so the middleware test mocks it as a pass-through.
+- Owner review: nothing (no copy, assumptions, tables or migrations). After deploy: a logged-out "I have a free room" click on `/ru/warsaw/roommate` lands on `/ru/create-listing?type=roommate` after sign-in.
 - Next: the next `todo` task of M2 in `ralph/tasks.json`.

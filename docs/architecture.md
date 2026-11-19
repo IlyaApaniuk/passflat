@@ -120,7 +120,7 @@ How each source is counted:
   1. Runs next-intl locale routing.
   2. Sets the first-touch `pf_ref` cookie from `?ref=` (`src/lib/referral.ts`).
   3. Sets the `pf_anon` cookie only on `/costs/submit` and `/review` paths. Setting it on every page would put a Set-Cookie on every response and defeat the CDN/ISR cache.
-  4. Runs a Supabase `getUser()` only for `/dashboard`, `/create-listing` and `/messages` (redirect to `/auth/login?next=`) and for `/account-deleted`. Soft-deleted users are bounced to `/account-deleted`. All other pages skip the auth round-trip.
+  4. Runs a Supabase `getUser()` only for `/dashboard`, `/create-listing` and `/messages` (redirect to `/auth/login?next=<path + query>`, built by `loginNextPath` in `src/lib/safe-next-path.ts` under the `safeNextPath` rules: an unsafe query is dropped, an unsafe path gives no `next`) and for `/account-deleted`. Soft-deleted users are bounced to `/account-deleted`. All other pages skip the auth round-trip.
 
   The matcher excludes `/api`, `/_next`, `/_vercel` and files. `/admin` is not a protected path; the admin pages check `getAdminUser()` themselves.
 
