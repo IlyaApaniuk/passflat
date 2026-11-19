@@ -264,6 +264,23 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   tap → "already reported", nothing else; a target already hidden →
   `reportReceiptHidden` only (nothing stored, no event). The switch is not read:
   Report keeps working with it off.
+- **Automatic hiding** (spec 07 §Automatic hiding, FR-32, FR-34, D62;
+  `hideAfterReport` in `../roommate/store.ts`, called by `roommate-safety.ts` after
+  a stored report and its event, before the receipt): the target is hidden at
+  reports from `HIDE_AT_REPORTERS` (2, `../roommate/rules.ts`) different people, or
+  at once on `under_18`. A report counts only while its reporter's profile exists
+  and its decision is not `lifted`, so a deleted and re-created profile is still one
+  reporter and an owner's unhide is not undone by the old reports. The hide is one
+  conditional update `where { id, hidden_at: null }` (`status=hidden`, `hidden_at`,
+  `hidden_reason` `reports` / `under_18`) in a transaction with the chat's ban
+  marker (`roommate_banned_at`, only when null; it stays, D55) and the target's
+  reports (`decision=hidden`, `automated=true`, `decided_at`; lifted ones keep
+  theirs). Only the request whose update hid the row sends
+  `tg_roommate_profile_hidden` (`reason` only) as the hidden person, so two reports
+  at once hide once. From then on the profile is out of every count, card and push
+  (`activeProfilesWhere`), `/mate` and `mate` links give the FR-14 reply, and the
+  daily cron deletes it 14 days after `expires_at` with the ban kept. The statement
+  of reasons and the notice to reporters are not sent yet (T095).
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of
@@ -379,7 +396,7 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-matching.ts`                           | Stage 2 (spec 07): cards, Interested, Done, steps, push, outcome   |
 | `roommate-reveal.ts`                             | The reveal of a pair and its retry (`retryPendingReveals`)         |
-| `roommate-safety.ts`                             | Moderation (spec 07): Report and its reasons (FR-31)               |
+| `roommate-safety.ts`                             | Moderation (spec 07): Report (FR-31), automatic hiding (FR-32)     |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, claim-send-release, the message jobs  |
 | `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |

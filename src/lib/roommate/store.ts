@@ -4,7 +4,14 @@ import { prisma } from '@/lib/prisma';
 
 import { isCompatible, type CompatibilityProfile } from './compatibility';
 import { activeProfilesWhere, notReportedWith } from './counts';
-import { INTAKE_STEPS, type DistrictPick, type Outcome, type ReportReason } from './rules';
+import {
+  HIDE_AT_REPORTERS,
+  INTAKE_STEPS,
+  type DistrictPick,
+  type HiddenReason,
+  type Outcome,
+  type ReportReason,
+} from './rules';
 import { computeExpiresAt } from './time';
 
 /**
@@ -393,6 +400,65 @@ export async function storeReport(
     }
     throw error;
   }
+}
+
+/**
+ * The reports that count toward `HIDE_AT_REPORTERS` (spec 07 §Automatic hiding): those of a
+ * reporter whose profile still exists and whose decision the owner has not lifted. The pair is
+ * unique, so each is a different reporter; a chat holds one profile at a time, so deleting and
+ * re-creating a profile adds no second reporter (the old report's reference is null).
+ */
+function countingReportsWhere(targetProfileId: string) {
+  return {
+    targetProfileId,
+    reporterProfileId: { not: null },
+    decision: { not: 'lifted' },
+  } satisfies Prisma.RoommateReportWhereInput;
+}
+
+/**
+ * Automatic hiding after a stored report (spec 07 §Automatic hiding, FR-32, FR-34, D62): the
+ * target is hidden when the new report's reason is `under_18` (at once, `hidden_reason=under_18`)
+ * or when `HIDE_AT_REPORTERS` reports count (`countingReportsWhere`, `hidden_reason=reports`).
+ *
+ * The hide is one conditional update `where { id, hidden_at: null }`, so of two reports in the
+ * same moment only one request hides. That request, in the same transaction, sets the chat's ban
+ * marker `roommate_banned_at` (when null; it stays, D55) and marks the target's reports
+ * `decision=hidden`, `automated=true`, `decided_at=now`; reports the owner lifted keep their
+ * decision. Returns the reason for that one request, null for every other (not hidden, or hidden
+ * by another request).
+ */
+export async function hideAfterReport(
+  target: Pick<RoommateProfile, 'id' | 'chatId'>,
+  reason: ReportReason,
+  now: Date,
+): Promise<HiddenReason | null> {
+  const hiddenReason: HiddenReason | null =
+    reason === 'under_18'
+      ? 'under_18'
+      : (await prisma.roommateReport.count({ where: countingReportsWhere(target.id) })) >=
+          HIDE_AT_REPORTERS
+        ? 'reports'
+        : null;
+  if (!hiddenReason) return null;
+
+  const hid = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.roommateProfile.updateMany({
+      where: { id: target.id, hiddenAt: null },
+      data: { status: 'hidden', hiddenAt: now, hiddenReason },
+    });
+    if (count !== 1) return false;
+    await tx.telegramChat.updateMany({
+      where: { id: target.chatId, roommateBannedAt: null },
+      data: { roommateBannedAt: now },
+    });
+    await tx.roommateReport.updateMany({
+      where: { targetProfileId: target.id, decision: { not: 'lifted' } },
+      data: { decision: 'hidden', automated: true, decidedAt: now },
+    });
+    return true;
+  });
+  return hid ? hiddenReason : null;
 }
 
 /**

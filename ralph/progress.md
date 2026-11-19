@@ -138,6 +138,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The switch across every roommate flow is `src/lib/bot/roommate-switch.test.ts`: a new stage 2 button goes into its `STAGE_2_BUTTONS` (switch off → exactly "matching is paused", unchanged database); a switch-off "paused" reply goes through `replyPaused` (`roommate-matching.ts`), which stores the username.
 - `loadRoommateCounts(viewer)` and `candidatesWhere` both spread `notReportedWith(id)` (`counts.ts`: `reportsReceived` / `reportsMade` `none`): a Prisma fake that serves the counts reply must apply those relations; a report tap reads the target with `roommateProfile.findUnique({ where: { id } })`, so a fake's `findUnique` serves `id` as well as `chatId` (example: `src/lib/bot/roommate-report.test.ts`).
 - With the switch on, every default `runRoommateDaily` run also sends the daily push to each active profile that has a compatible profile newer than its `coalesce(last_push_at, activated_at)`: a whole-run test whose rows differ in `activatedAt` / `renewedAt` gets pushes too; give the other rows `pushOff: true` or filter by recipient (example: `seedNew` in `src/lib/bot/roommate-push.test.ts`).
+- A stored report now runs `hideAfterReport` (`store.ts`): a Prisma fake that serves report taps needs `telegramChat.updateMany`, `roommateReport.updateMany` and `$transaction` (callback over the fake itself; `Object.assign(fake.prisma, { $transaction })` avoids TS7022 and a re-indented fake), and two reporters or one `under_18` on the same target now hide it (example: `src/lib/bot/roommate-hide.test.ts`).
 
 ## Log
 
@@ -2461,3 +2462,38 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - No new event (`tg_roommate_reported` is spec 07 §Events), no tables, no migrations.
 
 - Next: T094 (automatic hiding). Call the hide in `handleReportReason` (`roommate-safety.ts`) after a `stored` report and its event, before the receipt. `roommate-report.test.ts` has a fake for taps over profiles, reactions and reports to extend with the hide's `updateMany` on `hidden_at` and the chat's ban.
+
+### 2026-11-19 19:25 · T094 · done
+
+- Done:
+  - `src/lib/roommate/rules.ts`: `HIDE_AT_REPORTERS = 2` (D62) and `HiddenReason` (`reports` / `under_18`).
+  - `src/lib/roommate/store.ts`: `hideAfterReport(target, reason, now)`.
+    - The rule: `under_18` hides at once. Otherwise it hides when `roommateReport.count` over `countingReportsWhere` reaches 2. That filter is the target's reports with `reporterProfileId: { not: null }` and `decision: { not: 'lifted' }`. The pair is unique, so each row is a different reporter.
+    - The hide runs in an interactive `prisma.$transaction`. First the one conditional update `roommateProfile.updateMany where { id, hiddenAt: null }` sets `status=hidden`, `hiddenAt`, `hiddenReason`. Only when it changed the row: `telegramChat.updateMany where { id: chatId, roommateBannedAt: null }` sets the ban, and `roommateReport.updateMany where { targetProfileId, decision: { not: 'lifted' } }` sets `decision=hidden`, `automated=true`, `decidedAt`.
+    - Returns the reason for that one request, null for the others.
+  - `src/lib/bot/roommate-safety.ts`: `hideIfDue` runs after `tg_roommate_reported` and before the receipt. Only when the hide landed, it sends `tg_roommate_profile_hidden {reason}` as the hidden person (`telegramChatIdOf(target.chatId)`). The receipt is unchanged.
+  - Already in place, now covered end to end: the hidden profile is out of the counts, cards, `findCompatible` and the push (`activeProfilesWhere`). The FR-14 reply comes through `openRoommate` / `browsingProfile`. The cron deletes the profile at `expires_at` + 14 days.
+  - Docs: `src/lib/bot/README.md` (new **Automatic hiding** bullet, file table row); `docs/specs/README.md` FR-34 → Done. FR-32 stays Planned until T095. `ralph/tasks.json`: a T095 note naming where the statement and notices go.
+- Tests:
+  - `src/lib/bot/roommate-hide.test.ts` (new, 22). Taps go through flow + matching + safety and the cron through `runRoommateDaily`. The in-memory fake has `$transaction` and a `deleteMany` that applies the FKs.
+    - Golden cases: R1 "fake" → X still visible; R1 again → "already reported", unchanged DB; R2 "money" → hidden, `reports`, ban, reports decided, the exact event list. R3 "under_18" on Y → hidden at once.
+    - Concurrency: two concurrent reports → both reach `$transaction`, one hide, one ban write, one event. The same for two concurrent `under_18`.
+    - Counting: R1 deletes and re-creates a profile and reports again → no second count; R2 then hides it. A deleted reporter's report does not count. After an owner unhide (lifted reports), two new reporters are needed, and the lifted rows keep their decision. `under_18` after an earlier report → `under_18`. The other reasons alone hide nothing.
+    - Writes: the exact `updateMany` calls. An expired target is hidden; an earlier ban keeps its time. The hidden person's own reports and other targets' reports are untouched. The event is the hidden person's and holds the reason only. A later report → `reportReceiptHidden` only. The switch off still hides.
+    - After a hide: counts (bot and website), cards, `findCompatible`, card buttons → "no longer available". A daily run sends X nothing, and C's push counts Y only. `/mate`, a `mate` link and `rm:show:c` → the FR-14 reply in RU / UK / EN, no event. The deletion 14 days after `expires_at` → `tg_roommate_profile_deleted {moderation}`; the ban stays and `/mate` is still refused.
+  - `roommate-report.test.ts`: the fake gains `telegramChat.updateMany`, `roommateReport.updateMany` and `$transaction`. The per-reason "stored report" case leaves out `under_18` (it hides now; covered above). The overlapping-taps case uses `money` + `fake`.
+  - Mutation check, in two rounds, then reverted: (1) no `hiddenAt: null` and no counting filters → 6 failures; (2) no `roommateBannedAt: null` and `under_18` swapped for `money` → 12 failures.
+  - Local DB (scratchpad `npx tsx --env-file=.env` script, throwaway chats with negative ids, deleted in `finally`): three concurrent `hideAfterReport` calls → `[null, null, 'reports']`. The ban and the decisions were written once. A deleted reporter's report did not count; `under_18` hid at once.
+- Checks: `npm run verify` exit 0 (lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 133 files / 2713 tests, build OK). `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: the first verify failed typecheck (a `RoommateLocale` passed as `BotLocale` in the new test); fixed with a cast.
+- Owner review:
+  - **Assumption / constant:** `HIDE_AT_REPORTERS = 2` in `src/lib/roommate/rules.ts` (Decided, D62).
+  - **Agent's readings to confirm:**
+    1. **Lifted reports keep "lifted".** Spec 07 says a hide marks "every report of the target" `decision=hidden`. I mark only those not `lifted`, so an earlier unhide stays on record and old reports do not count again. Reports of deleted reporters (reference null) are marked `hidden`.
+    2. **`under_18` wins over `reports`.** When one report reaches 2 reporters and is `under_18`, `hidden_reason=under_18`.
+    3. **Who the event belongs to.** `tg_roommate_profile_hidden` is sent as the hidden person (`tg_<their chatId>`), like `tg_roommate_matched role=waiting`, not as the reporter whose report hid them.
+    4. **One transaction.** The hide, the ban and the decisions commit together, so a failed write cannot leave a hidden profile without a ban. This is the first interactive `$transaction` in the code; production runs through the Supabase pooler. Prisma interactive transactions should work in transaction pooling mode, but I could only prove it on the local direct connection. Please watch the first real hide.
+    5. **The receipt text is unchanged** when the report itself hid the profile ("I'll tell you when that happens"). T095's notice to every reporter then follows.
+    6. **An already-banned chat whose profile is not hidden** (only possible after an owner unhide that kept the ban) is hidden again by reports with its first ban time kept.
+  - No new copy, no tables, no migrations. The event is spec 07 §Events.
+- Next: T095. Send the statement of reasons and the reporters' notices from `hideIfDue` (`roommate-safety.ts`), after the event; it runs only for the request that hid. The send-hour retries go into `MESSAGE_JOBS`. Back `reportReceipt`'s promise in `texts.test.ts`. `roommate-hide.test.ts` has the fake for taps plus whole runs.

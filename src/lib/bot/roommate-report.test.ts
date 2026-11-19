@@ -78,7 +78,7 @@ const db = vi.hoisted(() => {
     return { count: hits.length };
   }
 
-  return {
+  const fake = {
     state,
     prisma: {
       telegramChat: {
@@ -92,6 +92,10 @@ const db = vi.hoisted(() => {
             roommateProfile: profile ? structuredClone(profile) : null,
           };
         }),
+        /** The ban marker of an automatic hide (`hideAfterReport`). */
+        updateMany: vi.fn(async (args: { where: Where; data: Row }) =>
+          updateMany(state.chats, args),
+        ),
       },
       roommateProfile: {
         findUnique: vi.fn(async ({ where }: { where: { chatId?: string; id?: string } }) => {
@@ -171,9 +175,18 @@ const db = vi.hoisted(() => {
             return { count };
           },
         ),
+        /** The decisions of an automatic hide (`hideAfterReport`). */
+        updateMany: vi.fn(async (args: { where: Where; data: Row }) =>
+          updateMany(state.reports, args),
+        ),
       },
     },
   };
+  /** An interactive transaction (`hideAfterReport`) runs its callback over the same fake. */
+  Object.assign(fake.prisma, {
+    $transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) => run(fake.prisma)),
+  });
+  return fake;
 });
 const mocks = vi.hoisted(() => ({
   touchChat: vi.fn(),
@@ -445,7 +458,8 @@ describe('"Report" (rm:r:<id>): the reasons', () => {
 });
 
 describe('a stored report', () => {
-  it.each(REPORT_REASONS)(
+  // `under_18` also hides the target at once: `roommate-hide.test.ts` (spec 07 §Automatic hiding).
+  it.each(REPORT_REASONS.filter((reason) => reason !== 'under_18'))(
     '"%s": one row, one tg_roommate_reported with the reason, the receipt',
     async (reason) => {
       const { replies } = await tap(`rm:rr:${reason}:${B}`);
@@ -656,7 +670,7 @@ describe('a repeat changes nothing', () => {
   );
 
   it('two overlapping taps store one report and send one event', async () => {
-    const results = await Promise.all([texts(`rm:rr:money:${B}`), texts(`rm:rr:under_18:${B}`)]);
+    const results = await Promise.all([texts(`rm:rr:money:${B}`), texts(`rm:rr:fake:${B}`)]);
     expect(db.state.reports).toHaveLength(1);
     expect(events()).toHaveLength(1);
     expect(results.flat().sort()).toEqual([ALREADY.ru, RECEIPT.ru].sort());

@@ -49,6 +49,15 @@ export type Outcome = (typeof OUTCOMES)[number];
 export const REPORT_REASONS = ['money', 'fake', 'offensive', 'under_18', 'other'] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
+/**
+ * Reports from this many different people hide a profile from everyone (spec 07 §Automatic
+ * hiding, FR-32; Decided, D62); one `under_18` report hides it at once.
+ */
+export const HIDE_AT_REPORTERS = 2;
+
+/** Why a profile was hidden automatically: `hidden_reason` and `tg_roommate_profile_hidden.reason`. */
+export type HiddenReason = 'reports' | 'under_18';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**

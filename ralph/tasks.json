@@ -593,7 +593,7 @@
       "title": "Automatic hiding and the ban marker (FR-32, FR-34)",
       "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
       "dependsOn": ["T069", "T093"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "A report counts toward the 2 only while its reporter's profile exists and its decision is not lifted (spec 07 §Automatic hiding); a test re-creates a reporter's profile and finds no second count",
         "After each stored report the target is hidden at reports from 2 different reporters or at once on under_18, through one conditional update on hidden_at; only that request sets roommate_banned_at, marks the reports decided, and sends tg_roommate_profile_hidden with reason",
@@ -601,7 +601,7 @@
         "The golden cases of spec 07 §Automatic hiding are tests, including two concurrent reports giving one hide"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D62 (the rule), D55 (the ban marker is kept). The messages of a hide are T095.\nFrom T093: the hide runs in handleReportReason (src/lib/bot/roommate-safety.ts) after storeReport returns 'stored' and the tg_roommate_reported event, before the receipt; a report on an already hidden target stores nothing (reportReceiptHidden only). roommate-report.test.ts has a fake for taps over profiles, reactions and reports (createMany with the unique pair and P2003)."
     },
     {
@@ -619,7 +619,7 @@
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "DSA Art. 16(6), Art. 17; D56.\nFrom T093: the report receipt (reportReceipt, roommate-texts.ts) promises 'I'll tell you when that happens'; it is a ROOMMATE_PROMISE_EXCEPTIONS entry in src/lib/bot/texts.test.ts naming this notice. Once the notice sender exists, add its file and code strings to a backing map there (like DAILY_PUSH_PROMISE_BACKING) so a rename fails the check."
+      "notes": "DSA Art. 16(6), Art. 17; D56.\nFrom T093: the report receipt (reportReceipt, roommate-texts.ts) promises 'I'll tell you when that happens'; it is a ROOMMATE_PROMISE_EXCEPTIONS entry in src/lib/bot/texts.test.ts naming this notice. Once the notice sender exists, add its file and code strings to a backing map there (like DAILY_PUSH_PROMISE_BACKING) so a rename fails the check.\nFrom T094: send the statement and the notices from hideIfDue (src/lib/bot/roommate-safety.ts), after tg_roommate_profile_hidden: it runs only for the one request whose hideAfterReport (src/lib/roommate/store.ts) returned a reason, so a statement goes out once. roommate-hide.test.ts has a fake for taps plus whole default runs over profiles, chats, reactions and reports ($transaction, FK-applying deleteMany)."
     },
     {
       "id": "T096",

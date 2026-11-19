@@ -5,7 +5,9 @@ import { REPORT_REASONS, type ReportReason } from '@/lib/roommate/rules';
 import {
   findReportableProfile,
   findRoommateProfile,
+  hideAfterReport,
   storeReport,
+  telegramChatIdOf,
   type ReportableProfile,
 } from '@/lib/roommate/store';
 
@@ -18,12 +20,13 @@ import type { BotLocale } from './texts';
 /**
  * Moderation of roommate matching in the bot (spec 07 §Report – §Appeals; spec 06 §Module
  * layout): for now "Report" (`rm:r:<id>`, under every card and every reveal) and its reasons
- * (`rm:rr:<reason>:<id>`, §Report, FR-31). The switch is not read: moderation keeps working with
- * it off (§Switch), so a Report under a card or a reveal sent before a switch-off still works.
+ * (`rm:rr:<reason>:<id>`, §Report, FR-31), and the automatic hide a stored report may trigger
+ * (§Automatic hiding, FR-32, FR-34). The switch is not read: moderation keeps working with it off
+ * (§Switch), so a Report under a card or a reveal sent before a switch-off still works.
  *
  * Who may report whom is `findReportableProfile` (a reaction to the target, a reveal of it, or a
  * card it may show now), never the callback id alone. No event carries a reporter, a target, a
- * username or an id; `tg_roommate_reported` carries the reason only.
+ * username or an id; `tg_roommate_reported` and `tg_roommate_profile_hidden` carry the reason only.
  */
 
 const REPORT_TAP = /^rm:r:([^:]+)$/;
@@ -91,9 +94,9 @@ const handleReportTap = roommateCallback(async (ctx, chat, locale) => {
 
 /**
  * `rm:rr:<reason>:<id>` (a reason under "Report", spec 07 §Report, FR-31): one report per reporter
- * and target (`storeReport`, unique). A stored report sends `tg_roommate_reported` with `reason`
- * and the receipt; from then on the pair is out of each other's counts, cards and compatibility
- * (`notReportedWith`). A repeat (or the second of two overlapping taps) → "already reported" and
+ * and target (`storeReport`, unique). A stored report sends `tg_roommate_reported` with `reason`,
+ * runs the automatic hide (`hideIfDue`) and replies with the receipt; from then on the pair is out
+ * of each other's counts, cards and compatibility (`notReportedWith`). A repeat (or the second of two overlapping taps) → "already reported" and
  * nothing else; a target already hidden → the receipt of a hidden profile only, nothing stored and
  * no event; a target deleted since the check → "this profile is no longer available".
  */
@@ -116,8 +119,23 @@ const handleReportReason = roommateCallback(async (ctx, chat, locale) => {
     return;
   }
   track(ctx.chat!.id, 'tg_roommate_reported', { reason });
+  await hideIfDue(found.target, reason, now);
   await ctx.reply(rt(locale, 'reportReceipt'));
 });
+
+/**
+ * §Automatic hiding after a stored report (FR-32, FR-34): `hideAfterReport` hides the target, bans
+ * its chat and decides its reports; only the request that hid it sends `tg_roommate_profile_hidden`
+ * with the reason, as the hidden person (`tg_<their chatId>`), never naming a reporter. From then on
+ * the profile is out of every count, card and push (`activeProfilesWhere`), and `/mate` and `mate`
+ * links give the FR-14 reply (`openRoommate`).
+ */
+async function hideIfDue(target: RoommateProfile, reason: ReportReason, now: Date): Promise<void> {
+  const hidden = await hideAfterReport(target, reason, now);
+  if (!hidden) return;
+  const hiddenChatId = await telegramChatIdOf(target.chatId);
+  if (hiddenChatId !== null) track(hiddenChatId, 'tg_roommate_profile_hidden', { reason: hidden });
+}
 
 export function registerRoommateSafety(bot: Bot): void {
   bot.callbackQuery(REPORT_TAP, handleReportTap);
