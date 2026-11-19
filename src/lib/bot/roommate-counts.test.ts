@@ -63,6 +63,7 @@ const mocks = vi.hoisted(() => ({
   track: vi.fn(),
   hasOpenIntake: vi.fn(),
   getCity: vi.fn(),
+  roomCostsReply: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: db.prisma }));
@@ -70,6 +71,9 @@ vi.mock('./store', () => ({ touchChat: mocks.touchChat }));
 vi.mock('./analytics', () => ({ track: mocks.track }));
 vi.mock('./deposit-flow', () => ({ hasOpenIntake: mocks.hasOpenIntake }));
 vi.mock('./lookup', () => ({ getCity: mocks.getCity }));
+// The room cost reference has its own tests (`roommate-room-costs.test.ts`); here it is left out
+// (null) unless a test gives it a text.
+vi.mock('./roommate-room-costs', () => ({ roomCostsReply: mocks.roomCostsReply }));
 
 import { registerRoommateFlow } from './roommate-flow';
 import { rt, type RoommateLocale } from './roommate-texts';
@@ -250,6 +254,7 @@ beforeEach(() => {
   db.state.fail = null;
   mocks.hasOpenIntake.mockResolvedValue(false);
   mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: DISTRICTS });
+  mocks.roomCostsReply.mockResolvedValue(null);
   errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -451,6 +456,62 @@ describe('zero', () => {
     seed({ districtSlugs: ['old<slug>'] }, [{ id: 'A', districts: ['old<slug>'] }]);
     const { texts } = await tap('rm:c:counts');
     expect(texts[0]).toContain('old&lt;slug&gt; — 1 человек,');
+  });
+});
+
+describe('the room cost reference (spec 06 §Room cost reference)', () => {
+  const ROOM = '📊 <b>Для ориентира — комнаты</b>\n<b>Mokotów</b>:\n   …';
+
+  it('follows the counts in the same message after the save', async () => {
+    mocks.roomCostsReply.mockResolvedValue(ROOM);
+    seed(DRAFT_AT_ADULT, EXAMPLE_1);
+    const { reply, texts } = await tap('rm:a:yes');
+
+    expect(texts).toHaveLength(2);
+    expect(texts[1]).toBe(`${RU_GOLDEN}\n\n${ROOM}`);
+    expect(reply.mock.calls[1][1]).toEqual({ parse_mode: 'HTML' });
+    expect(mocks.roomCostsReply).toHaveBeenCalledTimes(1);
+    expect(mocks.roomCostsReply.mock.calls[0][0]).toMatchObject({
+      districtSlugs: ['mokotow', 'wola'],
+      anyDistrict: false,
+    });
+    expect(mocks.roomCostsReply.mock.calls[0][1]).toBe('ru');
+  });
+
+  it('follows the counts on "How many are looking?", for "any" and in the chat locale', async () => {
+    mocks.roomCostsReply.mockResolvedValue(ROOM);
+    seed({ districtSlugs: [], anyDistrict: true }, EXAMPLE_1);
+    const { texts } = await tap('rm:c:counts', 'uk');
+
+    expect(texts).toEqual([`${UK_ANY}\n\n${ROOM}`]);
+    expect(mocks.roomCostsReply.mock.calls[0][0]).toMatchObject({ anyDistrict: true });
+    expect(mocks.roomCostsReply.mock.calls[0][1]).toBe('uk');
+  });
+
+  it('follows "nobody else yet" too', async () => {
+    mocks.roomCostsReply.mockResolvedValue(ROOM);
+    seed({});
+    const { texts } = await tap('rm:c:counts');
+    expect(texts).toEqual([
+      `Кроме тебя, анкет пока ни у кого нет. Подбор откроется, когда людей станет больше.\n\n${ROOM}`,
+    ]);
+  });
+
+  it('is not loaded when the counts failed', async () => {
+    mocks.roomCostsReply.mockResolvedValue(ROOM);
+    seed({}, EXAMPLE_1);
+    db.state.fail = new Error('timeout');
+    const { texts } = await tap('rm:c:counts');
+    expect(texts).toEqual([rt('ru', 'countsUnavailable')]);
+    expect(mocks.roomCostsReply).not.toHaveBeenCalled();
+  });
+
+  it('is not loaded for a refused tap (no profile, hidden, draft)', async () => {
+    for (const own of [null, { status: 'hidden' }, { ...DRAFT_AT_ADULT, step: 'budget' }]) {
+      seed(own, EXAMPLE_1);
+      await tap('rm:c:counts');
+    }
+    expect(mocks.roomCostsReply).not.toHaveBeenCalled();
   });
 });
 

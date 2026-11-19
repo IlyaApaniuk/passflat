@@ -11,6 +11,7 @@ import {
   type AreaReference,
   type DepositReturns,
   type FigureGroup,
+  type FigureSummary,
   type SingleNumberFigure,
 } from '@/lib/cost-figures';
 import {
@@ -259,6 +260,38 @@ function groupLines(group: FigureGroup, scope: CardScope, locale: BotLocale): st
 
   if (knownPart) lines.push(t(locale, 'knownPartHint'));
   return lines;
+}
+
+/** What a one-line area figure adds after the group label: the headline's own label. */
+const AREA_LINE_METRIC_KEY: Partial<Record<GroupFigureKey, TextKey>> = {
+  completeTotal: 'areaLineTotal',
+  knownPartTotal: 'referenceKnownPart',
+  rent: 'referenceRent',
+};
+
+/**
+ * An area's figures in one line per group, tenant reports first (the room cost
+ * reference of the roommate counts reply, spec 06): the group, the headline's
+ * label ("всего в месяц", "известная часть расходов", "аренда"), its value and
+ * its N, as the area cards pick and word them. One observation shows its value
+ * without a median or N. A group without a headline value has no line.
+ */
+export function areaGroupLines(summary: FigureSummary, locale: BotLocale): string[] {
+  return orderedFigureGroups(summary).flatMap((group) => {
+    const { headline } = groupFigureRows(group);
+    const metricKey = headline && AREA_LINE_METRIC_KEY[headline.key];
+    if (!headline || !metricKey) return [];
+    return [
+      t(locale, 'areaGroupLine', {
+        source: t(locale, group.key === 'tenant' ? 'figureSourceTenant' : 'figureSourceAsking'),
+        metric: t(locale, metricKey),
+        value: money(headline.figure.median) ?? '—',
+        n: isOneObservation(group)
+          ? t(locale, 'oneObservationN')
+          : headlineN(group, headline.figure.n, locale),
+      }),
+    ];
+  });
 }
 
 /** Blocks of every group with reports, tenant reports first, separated by a blank line. */

@@ -136,6 +136,18 @@ the migrations are missing (`docs/architecture.md` §9).
   districts, a percentage or a count combined with another field; zero is "nobody
   yet", an empty Warsaw "nobody else yet". A database error keeps the saved profile
   and replies that the counts are not available now. No event.
+- **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
+  message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
+  each chosen district (Warsaw for "any") the room figures of
+  `loadAreaReference({ rentalType: 'room' })` through `loadRoomCostAreas`
+  (`../roommate/room-costs.ts`): one line per group with its N (`areaGroupLines` in
+  `format.ts`, the cards' headline rule and labels, one observation without a
+  median), the Warsaw lines once for every district below `MIN_AREA_REPORTS` room
+  reports, "no room figures" when the city has none. Then D61's "for two people
+  about X each" from the tenant all-in median of whole flats (its own level, N ≥ 2,
+  half rounded half up to 10 zł; never a known part or asking prices). A loader
+  error leaves only this part out; an English chat gets none until `texts.ts` has
+  English (`hasBotTexts`).
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
@@ -199,8 +211,10 @@ the migrations are missing (`docs/architecture.md` §9).
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
+| `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
+| `../roommate/room-costs.ts`                      | Room figures and the D61 per-person split per area (FR-17)         |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |

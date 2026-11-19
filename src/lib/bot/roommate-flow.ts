@@ -82,6 +82,7 @@ import { hasOpenIntake } from './deposit-flow';
 import { matchDistrict } from './districts';
 import { escapeHtml, webLink } from './format';
 import { getCity } from './lookup';
+import { roomCostsReply } from './roommate-room-costs';
 import { rt, rtPeople } from './roommate-texts';
 import { ROOMMATE_ENTRY_SOURCE, type RoommateEntrySource } from './start-payload';
 import { touchChat, type TouchedChat } from './store';
@@ -711,9 +712,10 @@ function countsText(
 
 /**
  * The counts reply (spec 06 §Counts) for the person's saved profile, which is never
- * counted: after the save and on "How many are looking?" (`rm:c:counts`). A database
+ * counted: after the save and on "How many are looking?" (`rm:c:counts`), followed by
+ * the room cost reference (§Room cost reference) in the same message. A database
  * error keeps the saved profile and says the counts are not available now; only the
- * error's message is logged.
+ * error's message is logged. A failed room cost reference leaves only itself out.
  */
 async function sendCounts(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
   let text: string;
@@ -727,9 +729,11 @@ async function sendCounts(ctx: Context, profile: RoommateProfile, locale: BotLoc
       '[bot/roommate] counts failed',
       error instanceof Error ? error.message : 'unknown error',
     );
-    text = rt(locale, 'countsUnavailable');
+    await ctx.reply(rt(locale, 'countsUnavailable'), { parse_mode: 'HTML' });
+    return;
   }
-  await ctx.reply(text, { parse_mode: 'HTML' });
+  const room = await roomCostsReply(profile, locale);
+  await ctx.reply(room ? `${text}\n\n${room}` : text, { parse_mode: 'HTML' });
 }
 
 /**

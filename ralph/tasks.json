@@ -330,7 +330,7 @@
       "title": "Room cost reference and the per-person split in the counts reply (FR-17, D61)",
       "spec": "docs/specs/06-roommate-profiles.md#room-cost-reference",
       "dependsOn": ["T079"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "For each chosen district (or Warsaw for 'any') the reply shows loadAreaReference({ rentalType: 'room' }) per group with its N through the bot's existing area helpers, the fallback wording, the shared Warsaw lines for several fallbacks, 'one observation' and 'no room figures'",
         "The per-person line follows D61 exactly (tenant all-in apartment median, N ≥ 2, roundHalfUpTo10, labelled, never asking prices or a known part)",
@@ -338,7 +338,7 @@
         "No 'market', percentage or blended number appears (a test over the rendered reply)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Honesty rules of CLAUDE.md apply; D23, D61."
     },
     {

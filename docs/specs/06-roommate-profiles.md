@@ -45,6 +45,7 @@ or sends a real message. Every value from data or from the user passes through `
 | `src/lib/roommate/time.ts`                 | Europe/Warsaw calendar: move-in options, month end, expiry, the send hour                    |
 | `src/lib/roommate/text-filter.ts`          | The contact filter of the short text (FR-10)                                                 |
 | `src/lib/roommate/counts.ts`               | The counting rule (FR-16) and its loader, shared by the bot and the website                  |
+| `src/lib/roommate/room-costs.ts`           | The room cost areas and the per-person split (FR-17), shared by the bot and the website      |
 | `src/lib/roommate/store.ts`                | Prisma access for profiles, reactions and reports (server only)                              |
 | `src/lib/roommate/switch.ts`               | `isMatchingEnabled()` (spec 07 §Switch)                                                      |
 | `src/lib/roommate/compatibility.ts`        | The compatibility rule (spec 07)                                                             |

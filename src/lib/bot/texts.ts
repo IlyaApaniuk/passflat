@@ -171,6 +171,10 @@ const RU = {
   figureSourceTenant: 'отчёты жильцов',
   figureSourceAsking: 'цены из объявлений',
   neighbourLine: '• {address}, {source}{metric}: {value} <i>({count} {word}, {distance} м)</i>',
+  /** One group of an area in one line (`areaGroupLines`, the roommate room cost reference). */
+  areaGroupLine: '   {source}{metric}: <b>{value}</b>{n}',
+  areaLineTotal: ', всего в месяц',
+  oneObservationN: ' <i>(одно наблюдение)</i>',
 
   // --- area answers: an address without its own data, and a typed district (renderDistrict) ---
   areaHeader: '📊 <b>{area}</b> — данные по району:',
@@ -309,6 +313,9 @@ const UK: Record<Key, string> = {
   figureSourceTenant: 'звіти мешканців',
   figureSourceAsking: 'ціни з оголошень',
   neighbourLine: '• {address}, {source}{metric}: {value} <i>({count} {word}, {distance} м)</i>',
+  areaGroupLine: '   {source}{metric}: <b>{value}</b>{n}',
+  areaLineTotal: ', разом на місяць',
+  oneObservationN: ' <i>(одне спостереження)</i>',
 
   areaHeader: '📊 <b>{area}</b> — дані по району:',
   cityHeader: '📊 <b>{area}</b> — дані по місту:',
@@ -414,6 +421,15 @@ export const COMMAND_MENU: Record<BotLocale, readonly MenuCommand[]> = {
     { command: 'help', description: 'Що вміє бот' },
   ],
 };
+
+/**
+ * True when this file holds the locale's texts. A roommate reply can be in a
+ * locale these texts do not have yet (`roommate-texts.ts` has English, spec 04
+ * §English bot locale adds it here); a part built from these texts checks first.
+ */
+export function hasBotTexts(locale: string): locale is BotLocale {
+  return locale in DICTS;
+}
 
 export function t(locale: BotLocale, key: Key, vars?: Vars): string {
   const template = DICTS[locale][key] ?? DICTS.ru[key];
