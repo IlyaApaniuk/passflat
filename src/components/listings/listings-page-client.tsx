@@ -39,6 +39,7 @@ import { Map, List } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
+import { filterListings } from '@/lib/listings-filter';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'area-desc';
@@ -108,66 +109,20 @@ function ListingsPageInner({
           type: listingType,
           city: citySlug,
           filters_used: activeFilters,
-          results_count: listings.length,
+          // Counted with the new filters: the filter state has not applied yet.
+          results_count: filterListings(listings, newFilters).length,
         });
       }
     },
-    [setFilters, posthog, listingType, citySlug, listings.length],
+    [setFilters, posthog, listingType, citySlug, listings],
   );
 
   const districtNames = useMemo(() => districts.map((d) => d.name), [districts]);
 
-  const filteredListings = useMemo(() => {
-    return listings.filter((listing) => {
-      if (deferredFilters.priceMin && listing.totalCost < deferredFilters.priceMin) return false;
-      if (deferredFilters.priceMax && listing.totalCost > deferredFilters.priceMax) return false;
-      if (
-        deferredFilters.bedrooms?.length &&
-        !deferredFilters.bedrooms.some((b) => listing.bedrooms >= b)
-      )
-        return false;
-      if (
-        deferredFilters.districts?.length &&
-        !deferredFilters.districts.includes(listing.district)
-      )
-        return false;
-      if (deferredFilters.areaMin && listing.area < deferredFilters.areaMin) return false;
-      if (deferredFilters.areaMax && listing.area > deferredFilters.areaMax) return false;
-      if (deferredFilters.availableFrom) {
-        const filterDate = new Date(deferredFilters.availableFrom);
-        const listingDate = new Date(listing.availableFrom);
-        if (listingDate > filterDate) return false;
-      }
-      if (
-        deferredFilters.amenities?.length &&
-        !deferredFilters.amenities.every((a) => listing.features.includes(a))
-      )
-        return false;
-      if (deferredFilters.roomType && listing.roomType !== deferredFilters.roomType) return false;
-      if (
-        deferredFilters.preferredGender &&
-        deferredFilters.preferredGender !== 'any' &&
-        listing.preferredGender !== deferredFilters.preferredGender &&
-        listing.preferredGender !== 'any'
-      )
-        return false;
-      if (deferredFilters.availableTo) {
-        const filterDate = new Date(deferredFilters.availableTo);
-        if (!listing.availableTo) return false;
-        const listingDate = new Date(listing.availableTo);
-        if (listingDate < filterDate) return false;
-      }
-      if (deferredFilters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
-      if (deferredFilters.internetIncluded && !listing.internetIncluded) return false;
-      if (deferredFilters.floorMin != null && listing.floor < deferredFilters.floorMin)
-        return false;
-      if (deferredFilters.floorMax != null && listing.floor > deferredFilters.floorMax)
-        return false;
-      if (deferredFilters.hasPhotos && listing.photoCount === 0) return false;
-      if (deferredFilters.registrationPossible && !listing.registrationPossible) return false;
-      return true;
-    });
-  }, [listings, deferredFilters]);
+  const filteredListings = useMemo(
+    () => filterListings(listings, deferredFilters),
+    [listings, deferredFilters],
+  );
 
   const sortedListings = useMemo(() => {
     const sorted = [...filteredListings];

@@ -95,7 +95,7 @@
       "title": "Count search_performed results after the active filters",
       "spec": "docs/specs/01-analytics-context.md#listing-events",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The inline useMemo filter of listings-page-client.tsx (about lines 120-170) moves into a pure filterListings(listings, filters) used by the memo and by the event",
         "search_performed.results_count is filterListings(listings, newFilters).length, computed with the new filters inside handleFiltersChange",
@@ -103,7 +103,7 @@
         "Map moves still fire no event; replacement and sublet pages behave as before"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

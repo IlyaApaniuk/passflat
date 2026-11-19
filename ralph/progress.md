@@ -89,3 +89,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing.
 - Owner review: nothing (no copy, assumptions, tables or migrations). After deploy: check in PostHog Live Events that the three events carry `listing_type` equal to `type`.
 - Next: the next `todo` task of M1 (FR-12, `filterListings` for `search_performed.results_count`, is in the same spec section).
+
+### 2026-11-19 01:06 · T007 · done
+
+- Done: new pure `filterListings(listings, filters)` in `src/lib/listings-filter.ts`, the inline `useMemo` filter of `src/components/listings/listings-page-client.tsx` moved verbatim (price on `totalCost`, bedrooms ≥, districts by display name, area, availableFrom/To, amenities all-of, roomType, preferredGender with `any`, utilities, internet, floor with `!= null`, photos, registration). The memo calls it with `deferredFilters`; `search_performed.results_count` is now `filterListings(listings, newFilters).length` inside `handleFiltersChange` (callback deps `listings.length` → `listings`). Other event properties, `handleBoundsChange` (map moves fire nothing) and the roommate/sublet/replacement pages (same component) are otherwise unchanged. `src/lib/listings-filter.test.ts` (14 cases): 10 listings → 3, → 0, no filters → 10, one case per filter incl. price on `totalCost` vs base price, district display name vs slug, gender `any`, floor 0, input not mutated. No doc change: spec 05 documents the 50-listing cap.
+- Checks: `npx vitest run src/lib/listings-filter.test.ts` passed (14/14). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 33 files / 381 tests, build OK); `next-env.d.ts` restored.
+- Did not work: nothing. The capture call itself has no component test (no React testing library in the repo; not added).
+- Owner review: nothing (no copy, assumptions, tables or migrations). After deploy: check in PostHog Live Events that `search_performed.results_count` changes with the filters (counted within the 50-listing server cap).
+- Next: the next `todo` task of M1 in `ralph/tasks.json`.
