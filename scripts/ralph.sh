@@ -13,6 +13,8 @@
 #   RALPH_MAX_FAILURES   failed iterations in a row before stopping (default 2); a blocked task
 #                        does not count, the loop skips it and goes on
 #   RALPH_BUDGET_USD     spending cap per iteration, passed to --max-budget-usd (default 10)
+#   RALPH_MODEL          model for iterations, passed to --model (default claude-opus-5-5), so the
+#                        loop does not follow the model chosen in the owner's interactive session
 #   RALPH_LIMIT_WAIT_SECONDS  pause after an iteration ended by a usage or rate limit (default 1200)
 #   RALPH_MAX_LIMIT_WAITS     pauses in a row before stopping (default 30, about ten hours)
 #   RALPH_ALLOW_DIRTY=1  start even when the working tree has uncommitted changes
@@ -31,6 +33,7 @@ fi
 MAX_ITERATIONS="${1:-20}"
 MAX_FAILURES="${RALPH_MAX_FAILURES:-2}"
 BUDGET_USD="${RALPH_BUDGET_USD:-10}"
+MODEL="${RALPH_MODEL:-claude-opus-5-5}"
 LIMIT_WAIT_SECONDS="${RALPH_LIMIT_WAIT_SECONDS:-1200}"
 MAX_LIMIT_WAITS="${RALPH_MAX_LIMIT_WAITS:-30}"
 LOG_DIR="ralph/logs"
@@ -173,6 +176,7 @@ for ((i = 1; i <= MAX_ITERATIONS; i++)); do
   "$CLAUDE_BIN" -p "$(sed "s/{{TASK_ID}}/$task/g" ralph/PROMPT.md)" \
     --settings ralph/settings.json \
     --permission-mode dontAsk \
+    --model "$MODEL" \
     --max-budget-usd "$BUDGET_USD" \
     --output-format stream-json --verbose >"$log" 2>&1
   code=$?

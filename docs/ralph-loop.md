@@ -60,6 +60,8 @@ Each iteration is a separate `claude -p` process, so its context starts empty. T
 - refuses `main`, a dirty working tree (unless `RALPH_ALLOW_DIRTY=1`) and a second loop;
 - keeps the Mac awake with `caffeinate` for the whole run;
 - starts the local Supabase stack when it is not running;
+- runs iterations on `claude-opus-5-5` (`RALPH_MODEL`), independent of the model chosen in the
+  owner's session;
 - caps usage per iteration with `--max-budget-usd` (`RALPH_BUDGET_USD`, default 10; on the
   owner's subscription this is an API-equivalent estimate, not a charge);
 - stashes the uncommitted work of a task that ends failed or blocked as `ralph-wip <task> ...`
