@@ -45,7 +45,12 @@ import {
   setChatLocale,
   touchChat,
 } from './store';
-import { ENTRY_SOURCE, parseStartPayload, type EntrySource } from './start-payload';
+import {
+  ENTRY_SOURCE,
+  parseStartPayload,
+  recordedStartPayload,
+  type EntrySource,
+} from './start-payload';
 import { normalizeLocale, peopleWord, t, type BotLocale } from './texts';
 
 /**
@@ -279,14 +284,16 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
   const chatId = ctx.chat.id;
   const payload = commandPayload(ctx);
   const start = parseStartPayload(payload);
+  // Raw only when it has a deep link's shape; typed text is recorded as 'invalid'.
+  const recorded = recordedStartPayload(payload);
   const chat = await touchChat({
     chatId,
     locale: normalizeLocale(ctx.from?.language_code),
-    startPayload: payload || null,
+    startPayload: recorded,
   });
   const locale = chat.locale as BotLocale;
 
-  track(chatId, 'tg_bot_started', { payload: payload || null, is_new: chat.isNew });
+  track(chatId, 'tg_bot_started', { payload: recorded, is_new: chat.isNew });
 
   // "?start=dep" — shared in chats under "they won't return my deposit".
   if (start.kind === 'deposit') {

@@ -1,8 +1,27 @@
 /**
  * The `/start` deep-link payload, parsed once so every branch of the handler
  * reads the same decision (spec 04 §Start payloads). The raw string stays the
- * attribution value of `tg_bot_started`; this only says what the link opens.
+ * attribution value of `tg_bot_started` (see `recordedStartPayload`); this only
+ * says what the link opens.
  */
+
+/**
+ * `source` of the roommate entry: where a `mate` link was posted, or the bot
+ * menu (spec 04 §Start payloads, values are an Assumption, D68). Kept apart
+ * from `ENTRY_SOURCE` so `entry_source` keeps one meaning per event family.
+ */
+export const ROOMMATE_ENTRY_SOURCE = {
+  direct: 'direct',
+  tg: 'tg',
+  fb: 'fb',
+  ig: 'ig',
+  threads: 'threads',
+  web: 'web',
+  botMenu: 'bot_menu',
+  other: 'other',
+} as const;
+
+type RoommateEntrySource = (typeof ROOMMATE_ENTRY_SOURCE)[keyof typeof ROOMMATE_ENTRY_SOURCE];
 
 export type StartPayload =
   | { kind: 'none' }
@@ -11,6 +30,7 @@ export type StartPayload =
   | { kind: 'invalid_building' }
   | { kind: 'district'; slug: string }
   | { kind: 'web'; source: string }
+  | { kind: 'roommate'; source: RoommateEntrySource; detail?: string }
   | { kind: 'unknown' };
 
 /**
@@ -24,9 +44,40 @@ const PAYLOAD_CHARS = /^[A-Za-z0-9_-]+$/;
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DISTRICT_SLUG = /^[a-z0-9-]{1,48}$/;
 
+/**
+ * `mate_<source>` or `mate_<source>_<detail>`; the detail is the posting kit's
+ * group key (spec 04 §Start payloads, an Assumption, D68).
+ */
+const MATE_LINK = /^mate_([a-z]+)(?:_([a-z0-9]{1,24}))?$/;
+const MATE_LINK_SOURCES: ReadonlySet<string> = new Set<RoommateEntrySource>([
+  ROOMMATE_ENTRY_SOURCE.tg,
+  ROOMMATE_ENTRY_SOURCE.fb,
+  ROOMMATE_ENTRY_SOURCE.ig,
+  ROOMMATE_ENTRY_SOURCE.threads,
+  ROOMMATE_ENTRY_SOURCE.web,
+]);
+
+/** The only shape a deep link can carry (`[A-Za-z0-9_-]{1,64}`). */
+function isDeepLinkShape(raw: string): boolean {
+  return raw.length <= MAX_PAYLOAD_LENGTH && PAYLOAD_CHARS.test(raw);
+}
+
+/** Any payload that starts with `mate`; an unrecognised one is `other`, never an error. */
+function parseRoommate(raw: string): StartPayload {
+  if (raw === 'mate') return { kind: 'roommate', source: ROOMMATE_ENTRY_SOURCE.direct };
+
+  const match = MATE_LINK.exec(raw);
+  if (match && MATE_LINK_SOURCES.has(match[1])) {
+    const source = match[1] as RoommateEntrySource;
+    return match[2] ? { kind: 'roommate', source, detail: match[2] } : { kind: 'roommate', source };
+  }
+
+  return { kind: 'roommate', source: ROOMMATE_ENTRY_SOURCE.other };
+}
+
 export function parseStartPayload(raw: string): StartPayload {
   if (raw === '') return { kind: 'none' };
-  if (raw.length > MAX_PAYLOAD_LENGTH || !PAYLOAD_CHARS.test(raw)) return { kind: 'unknown' };
+  if (!isDeepLinkShape(raw)) return { kind: 'unknown' };
 
   if (raw === 'dep') return { kind: 'deposit' };
 
@@ -46,7 +97,22 @@ export function parseStartPayload(raw: string): StartPayload {
     return { kind: 'web', source: raw.slice('web_'.length) };
   }
 
+  if (raw.startsWith('mate')) return parseRoommate(raw);
+
   return { kind: 'unknown' };
+}
+
+const INVALID_START_PAYLOAD = 'invalid';
+
+/**
+ * The payload as `tg_bot_started.payload` and `TelegramChat.startPayload` store
+ * it: null without one, the raw string when it has a deep link's shape, else
+ * `'invalid'`. Text that fails the guard can only be typed after `/start`, and
+ * free text never goes into an event (spec 04 §Start payloads, CLAUDE.md).
+ */
+export function recordedStartPayload(raw: string): string | null {
+  if (raw === '') return null;
+  return isDeepLinkShape(raw) ? raw : INVALID_START_PAYLOAD;
 }
 
 /**

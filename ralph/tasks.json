@@ -29,7 +29,7 @@
       "title": "`mate` deep-link payloads and the roommate entry-source constant (FR-2 parser)",
       "spec": "docs/specs/04-telegram-bot.md#start-payloads",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "parseStartPayload returns { kind: 'roommate', source, detail? } for every `mate` row of spec 04 §Start payloads, after the 64-character and character-set guard",
         "ROOMMATE_ENTRY_SOURCE (direct, tg, fb, ig, threads, web, bot_menu, other) is exported from start-payload.ts separately from ENTRY_SOURCE",
@@ -37,7 +37,7 @@
         "Privacy fix of spec 04 §Start payloads: tg_bot_started.payload and TelegramChat.startPayload carry the raw payload only when it passes the guard, else 'invalid'; a test sends a typed sentence after /start"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Parser only; handleStart routes the new kind in T069."
     },
     {

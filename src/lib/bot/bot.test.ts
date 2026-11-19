@@ -228,6 +228,48 @@ describe('handleStart', () => {
     });
     expect(mocks.lookupBuilding).toHaveBeenCalledWith(UUID);
   });
+
+  it('tracks and stores a roommate link as it is', async () => {
+    const { ctx } = fakeContext('/start mate_fb_wawapolki2');
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith(
+      expect.objectContaining({ startPayload: 'mate_fb_wawapolki2' }),
+    );
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: 'mate_fb_wawapolki2',
+      is_new: true,
+    });
+  });
+
+  // Spec 04 §Start payloads, privacy fix: text that is not a deep link's shape
+  // can only be typed after /start, and free text never goes into an event.
+  it.each([
+    ['a typed sentence', 'my landlord keeps my deposit, jan@example.com +48 600 100 200'],
+    ['a payload with a space', 'dep now'],
+    ['a 65-character payload', `web_${'x'.repeat(61)}`],
+    ['a non-ASCII word', 'mokotów'],
+  ])('records %s after /start as invalid, never the text', async (_label, typed) => {
+    const { ctx, reply } = fakeContext(`/start ${typed}`);
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith({
+      chatId: CHAT_ID,
+      locale: 'ru',
+      startPayload: 'invalid',
+    });
+    expect(mocks.track).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: 'invalid',
+      is_new: true,
+    });
+    const recorded = JSON.stringify([mocks.touchChat.mock.calls, mocks.track.mock.calls]);
+    expect(recorded).not.toContain(typed);
+    for (const word of typed.split(/\s+/).filter((w) => w.length >= 4)) {
+      expect(recorded).not.toContain(word);
+    }
+    expect(replyKey(reply)).toBe(t('ru', 'startAfterPayload'));
+  });
 });
 
 describe('handleStart with a building link (b_<uuid>)', () => {

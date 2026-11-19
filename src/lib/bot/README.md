@@ -128,7 +128,14 @@ The deposit flow's contract step also needs `ANTHROPIC_API_KEY`.
 The website sends `web_checker` and `web_empty` (`TelegramBotSource` in
 `src/lib/analytics/telegram-events.ts`). Every payload is attribution: the raw
 string is `tg_bot_started.payload`, and the first one a chat brings is kept in
-`TelegramChat.startPayload` (a later `/start` does not overwrite it).
+`TelegramChat.startPayload` (a later `/start` does not overwrite it). Both keep
+the raw string only when it has a deep link's shape (`[A-Za-z0-9_-]{1,64}`);
+anything else can only be text typed after `/start` and is recorded as
+`invalid` (`recordedStartPayload` in `start-payload.ts`).
+
+`parseStartPayload` also reads PRD 3's `mate` links (`mate`, `mate_<source>`,
+`mate_<source>_<detail>`; sources in `ROOMMATE_ENTRY_SOURCE`). Until the
+roommate entry is built they get the `startAfterPayload` reply.
 
 The building link `b_<uuid>` builds the same answer as typing that building's
 address: `lookupBuilding` and `lookupAddress` share one function in
@@ -211,7 +218,7 @@ holds the bot funnels.
 
 | Event                         | Sent when                                     | Properties                                                                                                                                                                                                         |
 | ----------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tg_bot_started`              | `/start`, with or without a payload           | `payload` (the raw payload or null), `is_new` (first time the chat is seen)                                                                                                                                        |
+| `tg_bot_started`              | `/start`, with or without a payload           | `payload` (the raw payload when it has a deep link's shape, `invalid` for typed text, or null), `is_new` (first time the chat is seen)                                                                             |
 | `tg_address_checked`          | an address card is sent (typed or `b_` link)  | `level` (`building` \| `district` \| `city`), `district` (slug), `has_building`, `report_count`, `entry_source` (`typed_address` \| `link_building`), `lookup_level` (= `level`), `source_kind`, `n`, `incomplete` |
 | `tg_address_not_found`        | geocoding found nothing                       | none                                                                                                                                                                                                               |
 | `tg_address_outside_city`     | the address is outside the checker city       | `city` (the geocoded city name); absent when geocoding resolved no city                                                                                                                                            |
