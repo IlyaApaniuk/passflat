@@ -96,6 +96,17 @@ district card with its save-interest button (`sub:d:<slug>`). Opening the link
 saves nothing; a `TelegramSubscription` is created only by a button tap
 (`handleSubscribe`). An unknown slug gets the generic start reply.
 
+## Links to the website
+
+Every link the bot sends carries `utm_source=telegram`, `utm_medium=bot` and a
+`utm_campaign` (`webLink` / `submitLink` in `format.ts`), and nothing that names
+the chat. The cost-form button (`submitLink`) adds `source=tgbot`, which the
+form accepts as `cost_form_started`'s `source` (`src/lib/cost-submit-params.ts`),
+plus `b=<buildingId>` whenever the lookup found a building row (at any level)
+and `p=<placeId>` as before. The form prefills only from an existing building,
+`b` first, and the bot never creates one, so an address without a row opens the
+form empty.
+
 ## Promises and capabilities
 
 The bot sends nothing on its own except the deposit follow-ups a person asked

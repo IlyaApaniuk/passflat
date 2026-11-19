@@ -768,3 +768,46 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - T049 renders the district card from `getDistrictBySlug().reference` (already loaded and tested) and drops `stats` and `getCityCostStats`.
   - T050 flushes at the end of `runInBackground` in `deposit-flow.ts`.
   - T039 (`submitLink` with `b=`) is independent.
+
+### 2026-11-19 04:53 · T039 · done
+
+- Done:
+  - New `src/lib/cost-submit-params.ts`, pure:
+    - `SUBMIT_SOURCES` (`checker`, `review`, `building`, `tgbot`) and the `SubmitSource` type.
+    - `parseSubmitParams(search)` → `isEditMode`, `reportId`, `source`, `prefillBuildingId`, `prefillPlaceId`.
+    - `prefillBuildingWhere(params, cityId)` → the city-scoped Prisma `where`, or null.
+  - Precedence change: when both `b` and `p` are present, `b` now wins (it was `p`). Only the bot sends both. Website sources send one (checker and review send `p`, the building page sends `b`), so their behaviour is unchanged. Reason: a bot lookup's building may have no `placeId`, in which case `p` is the geocoded place id and matches no row.
+  - `src/app/[locale]/[city]/costs/submit/page.tsx` uses the module. The prefill object and the edit flow are unchanged. When the prefill comes by `b`, `prefill.placeId` is the building's own (or `''`), never the URL's `p`.
+  - `client.tsx`: the `source` prop is typed `SubmitSource`. `cost_form_started` / `cost_form_address_selected` send it as before (`source ?? 'direct'`).
+  - `src/lib/bot/format.ts`: `submitLink` takes `buildingId` and sets `b` whenever it is set, at any level, before `p`, `source=tgbot` and the UTM, which are unchanged. `deposit-flow.ts` passes `buildingId: null`.
+  - `src/lib/bot/README.md`: a "Links to the website" section.
+- Tests:
+  - New `src/lib/cost-submit-params.test.ts` (21 tests):
+    - every source, plus `tgbot`; unknown, wrong-case and repeated sources are dropped;
+    - prefill by `p` for checker, review and tgbot; by `b` for building and tgbot; by `b` without a source;
+    - `p` without a source is ignored; `b` beats `p`; a malformed `b` falls back to `p`;
+    - trimming and length limits; no prefill without a building; none in edit mode.
+  - New `src/app/[locale]/[city]/costs/submit/page.test.ts` (6 tests). The page is called with Prisma, Supabase, next-intl, seo and import-constants mocked, and `./client` stubbed; the test inspects the returned element's props:
+    - `source: 'tgbot'` with `b`+`p` → `findFirst` where `{cityId, id}` and the full prefill;
+    - a building without a place id → `placeId: ''`;
+    - `p`-only → where `{cityId, placeId}`;
+    - an unmatched `p` → `prefill: null`;
+    - no building → no lookup and `prefill: null`;
+    - an unknown source → no source and no `p` prefill.
+  - `format.test.ts` (6 tests):
+    - `submitLink` parameters (exact sets): `b` at every level, `b` without `p`, `p` only, attribution only;
+    - `webLink` with and without a campaign;
+    - the https fallback;
+    - a guard that only `b`, `p`, `source` and `utm_*` appear, with no `chat`, `tg_` or 6+ digit run.
+  - `bot.test.ts` (3 tests): the card's form button carries `b`, `p`, `source=tgbot` and the UTM, with no chat id, for a `b_` open (reported, and the unreported area card). A typed address without a building row sends no `b`.
+- Checks:
+  - `npx vitest run` on the four files passed (107 tests).
+  - `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 70 files / 903 tests, build OK.
+  - `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started, and no Telegram, Google or PostHog call was made. `cost_form_started` with `source: 'tgbot'` is proven only through the page's `source` prop. The client's capture call itself was not unit-tested (it uses the prop verbatim). Check it in PostHog Live Events after deploy.
+- Owner review:
+  - No copy, assumptions, tables or migrations.
+  - Choice to confirm: `b` wins over `p` when both are present (see Done).
+  - Not changed, outside the spec: the district card's «Добавить» button (`webLink(..., 'district')`) and the deposit «Оставить отчёт» button (`webLink(..., 'deposit')`) also open the cost form, but without `source=tgbot`. Their `cost_form_started` therefore says `direct`, and only `utm_*` marks them as bot traffic. Adding `source=tgbot` there (keeping their `utm_campaign`) is a one-line change each if wanted.
+  - After deploy: open a bot card's «Добавить расходы» button and check `cost_form_started` with `source: tgbot` in Live Events.
+- Next: nothing from this task. Remaining M4 tasks per `ralph/tasks.json` (T049, T050 and the others).

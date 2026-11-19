@@ -628,6 +628,72 @@ describe('handleText (typed address or district)', () => {
   });
 });
 
+describe('links to the cost form (spec 04 §Links to the website)', () => {
+  /** The card's button that opens the cost form, parsed. */
+  function submitButton(reply: ReturnType<typeof vi.fn>): URL {
+    const url = buttons(reply).find((value) => value.includes('/costs/submit'));
+    expect(url).toBeDefined();
+    return new URL(url as string);
+  }
+
+  function expectNoChatId(url: URL) {
+    expect(url.toString()).not.toContain(String(CHAT_ID));
+    expect(url.toString()).not.toContain('tg_');
+  }
+
+  it('sends the building id from a b_ link with a reported building', async () => {
+    mocks.lookupBuilding.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const url = submitButton(reply);
+    expect(url.pathname).toBe('/ru/warsaw/costs/submit');
+    expect(url.searchParams.get('b')).toBe(UUID);
+    expect(url.searchParams.get('p')).toBe('place-1');
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expect(url.searchParams.get('utm_source')).toBe('telegram');
+    expect(url.searchParams.get('utm_medium')).toBe('bot');
+    expect(url.searchParams.get('utm_campaign')).toBe('submit');
+    expectNoChatId(url);
+  });
+
+  it('sends the building id for a building without reports (area card)', async () => {
+    mocks.lookupBuilding.mockResolvedValue(unreportedLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const url = submitButton(reply);
+    expect(url.searchParams.get('b')).toBe(UUID);
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expectNoChatId(url);
+  });
+
+  it('sends only p for a typed address without a building row', async () => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-9', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(
+      buildingLookup({
+        level: 'district',
+        buildingId: null,
+        buildingSlug: null,
+        placeId: 'place-9',
+        building: null,
+      }),
+    );
+    const { ctx, reply } = fakeText('Puławska 99');
+    await handleText(ctx);
+
+    const url = submitButton(reply);
+    expect(url.searchParams.has('b')).toBe(false);
+    expect(url.searchParams.get('p')).toBe('place-9');
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expect(url.searchParams.get('utm_campaign')).toBe('submit');
+    expectNoChatId(url);
+  });
+});
+
 describe('handleSubscribe (save-interest buttons)', () => {
   beforeEach(() => {
     mocks.getDistrictBySlug.mockResolvedValue(district());

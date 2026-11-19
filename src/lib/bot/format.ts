@@ -72,12 +72,21 @@ export function webLink(path: string, locale: BotLocale, source = 'tgbot'): stri
   return url.toString();
 }
 
+/**
+ * The cost form, prefilled with the looked-up building (spec 04 §Links to the
+ * website). The form prefills only from an existing building row, and the bot
+ * never creates one, so `b` is the building id whenever the lookup found a row
+ * (at any answer level) and `p` stays as before; without a row the form opens
+ * empty. `source=tgbot` attributes `cost_form_started`. Nothing identifying the
+ * chat goes into the URL.
+ */
 export function submitLink(
-  lookup: Pick<AddressLookup, 'citySlug' | 'placeId'>,
+  lookup: Pick<AddressLookup, 'citySlug' | 'placeId' | 'buildingId'>,
   locale: BotLocale,
 ): string {
   const path = `/${lookup.citySlug}/costs/submit`;
   const url = new URL(appUrl(`/${locale}${path}`));
+  if (lookup.buildingId) url.searchParams.set('b', lookup.buildingId);
   if (lookup.placeId) url.searchParams.set('p', lookup.placeId);
   url.searchParams.set('source', 'tgbot');
   url.searchParams.set('utm_source', 'telegram');

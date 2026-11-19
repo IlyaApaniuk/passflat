@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   summarizeDepositReturns,
@@ -7,7 +7,14 @@ import {
   type FigureReport,
 } from '@/lib/cost-figures';
 
-import { depositStatement, money, renderDistrict, renderLookup } from './format';
+import {
+  depositStatement,
+  money,
+  renderDistrict,
+  renderLookup,
+  submitLink,
+  webLink,
+} from './format';
 import type { AddressLookup } from './lookup';
 import { plural, reportsWord, t } from './texts';
 
@@ -86,6 +93,88 @@ function buildingPart(text: string): string {
 }
 
 const VERDICT = /дороже|дешевле|на уровне района|дорожче|дешевше|на рівні району/;
+
+describe('links to the website (spec 04 §Links to the website)', () => {
+  const BUILDING_ID = '3f2b8c1e-9a4d-4e6f-8b1a-2c3d4e5f6a7b';
+  const UTM = { utm_source: 'telegram', utm_medium: 'bot' };
+
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://passflat.com');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function params(link: string): Record<string, string> {
+    return Object.fromEntries(new URL(link).searchParams);
+  }
+
+  /** Only these parameters may ever leave the bot: nothing names the chat. */
+  function expectOnlyKnownParams(link: string) {
+    const allowed = ['b', 'p', 'source', 'utm_source', 'utm_medium', 'utm_campaign'];
+    expect(Object.keys(params(link)).every((key) => allowed.includes(key))).toBe(true);
+    expect(link).not.toMatch(/chat|tg_|\d{6,}/);
+  }
+
+  it('submitLink sends b, p, source=tgbot and the UTM when the lookup has a building', () => {
+    const link = submitLink(lookup({ buildingId: BUILDING_ID, placeId: 'place-1' }), 'ru');
+
+    expect(new URL(link).origin + new URL(link).pathname).toBe(
+      'https://passflat.com/ru/warsaw/costs/submit',
+    );
+    expect(params(link)).toEqual({
+      b: BUILDING_ID,
+      p: 'place-1',
+      source: 'tgbot',
+      ...UTM,
+      utm_campaign: 'submit',
+    });
+    expectOnlyKnownParams(link);
+  });
+
+  it('submitLink sends b at every answer level and for a building without a place id', () => {
+    for (const level of ['building', 'district', 'city'] as const) {
+      expect(params(submitLink(lookup({ level, buildingId: BUILDING_ID }), 'uk')).b).toBe(
+        BUILDING_ID,
+      );
+    }
+    const link = submitLink(lookup({ buildingId: BUILDING_ID, placeId: null }), 'uk');
+    expect(params(link)).toEqual({
+      b: BUILDING_ID,
+      source: 'tgbot',
+      ...UTM,
+      utm_campaign: 'submit',
+    });
+    expect(new URL(link).pathname).toBe('/uk/warsaw/costs/submit');
+  });
+
+  it('submitLink without a building row sends p only, so the form opens without a prefill', () => {
+    const link = submitLink(lookup({ buildingId: null, placeId: 'place-9' }), 'ru');
+    expect(params(link)).toEqual({ p: 'place-9', source: 'tgbot', ...UTM, utm_campaign: 'submit' });
+    expectOnlyKnownParams(link);
+  });
+
+  it('submitLink without a building or a place id sends only the attribution', () => {
+    const link = submitLink({ citySlug: 'warsaw', placeId: null, buildingId: null }, 'ru');
+    expect(params(link)).toEqual({ source: 'tgbot', ...UTM, utm_campaign: 'submit' });
+    expectOnlyKnownParams(link);
+  });
+
+  it('webLink carries the UTM with its campaign and nothing else', () => {
+    const link = webLink('/warsaw/building/pulawska-10', 'uk', 'building');
+    expect(new URL(link).pathname).toBe('/uk/warsaw/building/pulawska-10');
+    expect(params(link)).toEqual({ ...UTM, utm_campaign: 'building' });
+    expectOnlyKnownParams(link);
+
+    expect(params(webLink('warsaw/costs/submit', 'ru'))).toEqual({ ...UTM, utm_campaign: 'tgbot' });
+  });
+
+  it('links to the public site when the configured origin is not https', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+    expect(new URL(submitLink(lookup(), 'ru')).origin).toBe('https://passflat.com');
+    expect(new URL(webLink('/warsaw', 'ru')).origin).toBe('https://passflat.com');
+  });
+});
 
 describe('plural', () => {
   it('agrees with Slavic count forms', () => {

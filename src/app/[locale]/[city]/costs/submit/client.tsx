@@ -39,6 +39,7 @@ import { ShareButton } from '@/components/costs/share-button';
 import { OwnCostsReference } from '@/components/costs/own-costs-reference';
 import type { OwnReportFigures, OwnReportReference } from '@/lib/own-report-reference';
 import type { CityBounds } from '@/lib/listings-data';
+import type { SubmitSource } from '@/lib/cost-submit-params';
 import { FIELD_RANGES } from '@/lib/cost-validation';
 import {
   PERIODIC_CATEGORIES,
@@ -240,7 +241,7 @@ interface CostSubmitClientProps {
   existingReport?: ExistingReport | null;
   prefill?: CostFormPrefill | null;
   /** Attribution for `cost_form_started`; anything else lands as "direct". */
-  source?: 'checker' | 'review' | 'building';
+  source?: SubmitSource;
   canFillOnBehalf?: boolean;
   adminImportMode?: AdminImportMode;
 }

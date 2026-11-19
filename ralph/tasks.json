@@ -633,14 +633,14 @@
       "title": "Keep the bot's address prefill and UTM on links to the cost form",
       "spec": "docs/specs/04-telegram-bot.md#links-to-the-website",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "costs/submit/page.tsx accepts source=tgbot (parsing extracted into a pure function with tests): prefill by b and by p as for other sources; cost_form_started gets source tgbot",
         "submitLink sends b=<buildingId> whenever the lookup has one, plus p and the UTM parameters as today",
         "Tests of submitLink and webLink assert utm_source=telegram, utm_medium=bot, utm_campaign and the absence of any chat id; without a building there is no prefill and the form works"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

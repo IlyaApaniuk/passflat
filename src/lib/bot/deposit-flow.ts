@@ -691,7 +691,7 @@ export function registerDepositFlow(bot: Bot) {
       }
       keyboard.url(
         dt(locale, 'btnLeaveReport'),
-        submitLink({ citySlug: 'warsaw', placeId: null }, locale),
+        submitLink({ citySlug: 'warsaw', placeId: null, buildingId: null }, locale),
       );
       await ctx.reply(dt(locale, 'outcomeFull'), { reply_markup: keyboard });
       return;
