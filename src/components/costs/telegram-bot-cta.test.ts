@@ -47,6 +47,16 @@ describe('TelegramBotCta', () => {
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
     const link = renderLink({ source: 'empty' });
     expect(link?.props.href).toBe('https://t.me/passflat_test_bot?start=web_empty');
+    expect(renderLink({ source: 'checker' })?.props.href).toBe(
+      'https://t.me/passflat_test_bot?start=web_checker',
+    );
+  });
+
+  it('takes its payload from botStartPayload (roommate → mate_web_roommate)', () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+    expect(renderLink({ source: 'roommate' })?.props.href).toBe(
+      'https://t.me/passflat_test_bot?start=mate_web_roommate',
+    );
   });
 
   it('fires one telegram_bot_opened per click with source and building context', () => {

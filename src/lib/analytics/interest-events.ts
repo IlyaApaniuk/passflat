@@ -1,7 +1,10 @@
 import type { ListingType } from '@/lib/listings-data';
 
-/** The visitor's role on `/[city]/roommate` (spec 02, FR-3), passed to the interest form. */
-export type RoommateIntent = 'find_room' | 'offer_room';
+/**
+ * The visitor's role on `/[city]/roommate` (spec 02, FR-3; `find_flatmate` is PRD 3 FR-21),
+ * passed to the interest form.
+ */
+export type RoommateIntent = 'find_room' | 'offer_room' | 'find_flatmate';
 
 /**
  * The stable `code` values `POST /api/city-notify` returns on an error (spec 02 §Interest API).

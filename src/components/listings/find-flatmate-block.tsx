@@ -1,0 +1,75 @@
+'use client';
+
+import { Send } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
+
+import { Button } from '@/components/ui/button';
+import { botStartUrl, telegramBotOpenedProperties } from '@/lib/analytics/telegram-events';
+import { type FlatmateBlockCounts, flatmateBlockView } from '@/lib/roommate/flatmate-block';
+
+/**
+ * "Looking for someone to rent with?" on `/warsaw/roommate` (spec 02 §Find a flatmate, PRD 3
+ * FR-21): who already has a profile, how matching works in the bot, the bot's languages and a
+ * button into the bot's roommate entry. Not `TelegramBotCta`: that one reads the `checker`
+ * namespace, which this route does not receive; these keys live in `listings`. Renders nothing
+ * until the bot username is configured.
+ */
+export function FindFlatmateBlock({
+  counts,
+  districts,
+}: {
+  counts: FlatmateBlockCounts;
+  /** The city's districts as the listings district filter names them. */
+  districts: readonly { slug: string; name: string }[];
+}) {
+  const t = useTranslations('listings.findFlatmate');
+  const posthog = usePostHog();
+  const username = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+  if (!username) return null;
+
+  const view = flatmateBlockView(counts, districts);
+
+  return (
+    <section
+      aria-labelledby="find-flatmate-title"
+      className="mb-4 space-y-3 rounded-lg border bg-primary/5 p-4 text-sm"
+    >
+      <h2 id="find-flatmate-title" className="text-base font-semibold">
+        {t('title')}
+      </h2>
+      {view.countLine === 'count' && (
+        <p className="font-medium">{t('count', { count: view.total })}</p>
+      )}
+      {view.countLine === 'first' && <p className="font-medium">{t('first')}</p>}
+      {view.districts.length > 0 && (
+        <div>
+          <p className="text-muted-foreground">{t('topLabel')}</p>
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            {view.districts.map((district) => (
+              <li key={district.slug}>
+                {t('topItem', { name: district.name, count: district.count })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="text-muted-foreground">{t('how')}</p>
+      <p className="text-muted-foreground">{t('languages')}</p>
+      <Button asChild className="h-auto min-h-11 whitespace-normal">
+        <a
+          href={botStartUrl(username, 'roommate')}
+          target="_blank"
+          rel="noopener noreferrer"
+          // Fire-and-forget: no preventDefault, so the link opens as usual.
+          onClick={() =>
+            posthog?.capture('telegram_bot_opened', telegramBotOpenedProperties('roommate'))
+          }
+        >
+          <Send className="h-4 w-4" />
+          {t('button')}
+        </a>
+      </Button>
+    </section>
+  );
+}

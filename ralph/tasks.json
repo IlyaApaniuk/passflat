@@ -413,7 +413,7 @@
       "title": "Roommate page: the 'looking for someone to rent with' role and the bot block (FR-21)",
       "spec": "docs/specs/02-roommate-and-waitlist.md#find-a-flatmate",
       "dependsOn": ["T079"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The role selector has the third choice find_flatmate with one roommate_intent_selected and the chip; RoommateIntent and TelegramBotSource gain find_flatmate and roommate",
         "Choosing it shows the block of spec 02 §Find a flatmate with server-loaded counts (unstable_cache, 1 hour), localized district names, the zero and error states, the bot languages and its own button (not TelegramBotCta, whose checker namespace is kept off this route) using the pure botStartPayload (roommate → mate_web_roommate, also used by TelegramBotCta) and capturing telegram_bot_opened with source=roommate and has_building_context=false; no block without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME or outside warsaw",
@@ -421,7 +421,7 @@
         "Tests for the pure helper, the event properties, botStartPayload for a building, roommate and checker, the block states, and that the roommate page's client tree does not use the checker namespace"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48, D49, D50. The page flow is not covered by e2e/."
     },
     {

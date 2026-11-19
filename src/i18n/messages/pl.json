@@ -387,7 +387,18 @@
       "find": "Szukam pokoju",
       "offer": "Mam wolny pokój",
       "findChosen": "Szukam pokoju",
-      "change": "zmień"
+      "change": "zmień",
+      "findFlatmate": "Szukam współlokatora do wynajmu"
+    },
+    "findFlatmate": {
+      "title": "Szukasz kogoś do wspólnego wynajmu?",
+      "count": "{count, plural, one {W Warszawie profil ma już # osoba.} few {W Warszawie profil mają już # osoby.} many {W Warszawie profil ma już # osób.} other {W Warszawie profil ma już # osoby.}}",
+      "first": "Bądź wśród pierwszych.",
+      "topLabel": "Najczęściej wybierane dzielnice:",
+      "topItem": "{name}: {count, plural, one {# profil} few {# profile} many {# profili} other {# profilu}}",
+      "how": "Załóż profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu.",
+      "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku.",
+      "button": "Otwórz bota w Telegramie"
     },
     "titleSublet": "Tymczasowy podnajem",
     "listingsInCity": "<b>{count}</b> {count, plural, one {oferta} few {oferty} many {ofert} other {ofert}}",

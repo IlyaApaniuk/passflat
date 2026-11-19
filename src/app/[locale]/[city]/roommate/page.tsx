@@ -13,6 +13,7 @@ import {
   getCityWithDistricts,
 } from '@/lib/listings-query';
 import type { CityBounds } from '@/lib/listings-data';
+import { loadFlatmateBlockCounts, pageHasFlatmateBlock } from '@/lib/roommate/website-counts';
 
 interface PageProps {
   params: Promise<{ locale: string; city: string }>;
@@ -54,10 +55,12 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
 
   const parsed = parseSearchParams(search);
   // The count ignores the URL filters, so a reload with strict filters never reads as an
-  // empty city (spec 02 §Empty states).
-  const [listings, cityOfferCount] = await Promise.all([
+  // empty city (spec 02 §Empty states). The "Looking for someone to rent with" block's counts
+  // (spec 02 §Find a flatmate) are loaded only where the block can show.
+  const [listings, cityOfferCount, flatmateCounts] = await Promise.all([
     queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
     countCityListings({ cityId: city.id, type: 'roommate' }),
+    pageHasFlatmateBlock(citySlug) ? loadFlatmateBlockCounts() : undefined,
   ]);
   const serialized = listings.map(serializeListing);
 
@@ -81,6 +84,7 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
       cityBounds={cityBounds ?? undefined}
       listingType="roommate"
       cityOfferCount={cityOfferCount}
+      flatmateCounts={flatmateCounts}
       isLoggedIn={!!user}
     />
   );

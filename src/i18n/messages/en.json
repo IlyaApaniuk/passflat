@@ -387,7 +387,18 @@
       "find": "I'm looking for a room",
       "offer": "I have a free room",
       "findChosen": "Looking for a room",
-      "change": "change"
+      "change": "change",
+      "findFlatmate": "Looking for someone to rent with"
+    },
+    "findFlatmate": {
+      "title": "Looking for someone to rent with?",
+      "count": "{count, plural, one {# person in Warsaw already has a profile.} other {# people in Warsaw already have a profile.}}",
+      "first": "Be among the first.",
+      "topLabel": "Districts named most often:",
+      "topItem": "{name}: {count, plural, one {# profile} other {# profiles}}",
+      "how": "Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. Contacts appear only when the interest is mutual.",
+      "languages": "The bot speaks English, Russian and Ukrainian.",
+      "button": "Open the bot in Telegram"
     },
     "titleSublet": "Temporary Sublets",
     "listingsInCity": "<b>{count}</b> {count, plural, one {listing} other {listings}}",

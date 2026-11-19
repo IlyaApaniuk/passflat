@@ -34,7 +34,7 @@ function findAll(node: ReactNode, match: (el: AnyElement) => boolean): AnyElemen
 function render(state: RoommateRoleState) {
   const onStateChange = vi.fn();
   const onFindRoom = vi.fn();
-  const tree = RoommateRoleSelector({ state, onStateChange, onFindRoom });
+  const tree = RoommateRoleSelector({ state, onStateChange, onScrollListToTop: onFindRoom });
   return { tree, onStateChange, onFindRoom };
 }
 
@@ -52,18 +52,50 @@ describe('RoommateRoleSelector', () => {
     capture.mockClear();
   });
 
-  it('shows two equal choices in one two-column row with 44 px tap targets', () => {
+  it('shows three choices: two columns at 360 px, the third on its own line, 44 px tap targets', () => {
     const { tree } = render({ collapsed: false });
     const row = tree as AnyElement;
     expect(row.props.className).toContain('grid-cols-2');
+    expect(row.props.className).toContain('sm:grid-cols-3');
+    expect(row.props.className).not.toContain('overflow-x');
     const buttons = findAll(tree, (el) => el.type === Button);
-    expect(buttons).toHaveLength(2);
+    expect(buttons).toHaveLength(3);
     expect(buttons[0].props.className).toBe(buttons[1].props.className);
-    expect(buttons[0].props.className).toContain('min-h-11');
-    expect(buttons[0].props.className).toContain('min-w-0');
-    expect(buttons[0].props.className).toContain('whitespace-normal');
+    for (const button of buttons) {
+      expect(button.props.className).toContain('min-h-11');
+      expect(button.props.className).toContain('min-w-0');
+      expect(button.props.className).toContain('whitespace-normal');
+    }
+    // Spans both columns on a phone (the row wraps to two lines), one column from `sm`.
+    expect(buttons[2].props.className).toContain('col-span-2');
+    expect(buttons[2].props.className).toContain('sm:col-span-1');
     expect(textOf(buttons[0])).toBe('listings.roommateRoles.find');
     expect(textOf(buttons[1])).toBe('listings.roommateRoles.offer');
+    expect(textOf(buttons[2])).toBe('listings.roommateRoles.findFlatmate');
+  });
+
+  it('find_flatmate: one roommate_intent_selected, collapses into the chip, no navigation', () => {
+    const { tree, onStateChange, onFindRoom } = render({ collapsed: false });
+    const flatmate = findAll(tree, (el) => el.type === Button)[2];
+    expect(flatmate.props.asChild).toBeUndefined();
+    expect(findAll(flatmate, (el) => el.type === Link)).toHaveLength(0);
+    flatmate.props.onClick?.();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('roommate_intent_selected', { intent: 'find_flatmate' });
+    expect(onStateChange).toHaveBeenCalledWith({ intent: 'find_flatmate', collapsed: true });
+    // Scrolls the list container to its top, where the block is.
+    expect(onFindRoom).toHaveBeenCalledTimes(1);
+  });
+
+  it('the find_flatmate chip names the role and reopens the choices without an event', () => {
+    const { tree, onStateChange } = render({ intent: 'find_flatmate', collapsed: true });
+    const chips = findAll(tree, (el) => el.type === Button);
+    expect(chips).toHaveLength(1);
+    expect(textOf(chips[0])).toContain('listings.roommateRoles.findFlatmate');
+    expect(textOf(chips[0])).toContain('listings.roommateRoles.change');
+    chips[0].props.onClick?.();
+    expect(onStateChange).toHaveBeenCalledWith({ intent: 'find_flatmate', collapsed: false });
+    expect(capture).not.toHaveBeenCalled();
   });
 
   it('find: one roommate_intent_selected, collapses into the chip and scrolls the list', () => {

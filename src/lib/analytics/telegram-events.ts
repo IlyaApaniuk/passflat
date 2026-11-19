@@ -1,9 +1,30 @@
 /**
  * The surfaces that link to the Telegram bot from the website. `source` of `telegram_bot_opened`
- * and the `web_<source>` start payload both come from this union, so a new surface (PRD 2 adds
- * `guide_deposit`) is added here once.
+ * and the start payload (`botStartPayload`) both come from this union, so a new surface (PRD 2
+ * adds `guide_deposit`) is added here once. `roommate` is the "Looking for someone to rent with"
+ * block on `/warsaw/roommate` (spec 02 §Find a flatmate).
  */
-export type TelegramBotSource = 'checker' | 'empty';
+export type TelegramBotSource = 'checker' | 'empty' | 'roommate';
+
+/**
+ * The `/start` payload of a website bot link (spec 02 §Find a flatmate): a building's link
+ * carries it into the bot (`b_<id>`), the roommate block opens the roommate entry with its
+ * source (`mate_web_roommate`, spec 04 §Start payloads), any other surface sends `web_<source>`.
+ */
+export function botStartPayload(source: TelegramBotSource, buildingId?: string): string {
+  if (buildingId) return `b_${buildingId}`;
+  if (source === 'roommate') return 'mate_web_roommate';
+  return `web_${source}`;
+}
+
+/** The `t.me` deep link for `username` with the payload of `botStartPayload`. */
+export function botStartUrl(
+  username: string,
+  source: TelegramBotSource,
+  buildingId?: string,
+): string {
+  return `https://t.me/${username}?start=${encodeURIComponent(botStartPayload(source, buildingId))}`;
+}
 
 /**
  * Properties of `telegram_bot_opened` (spec 01, FR-11), fired when a visitor clicks the website's

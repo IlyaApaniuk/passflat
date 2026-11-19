@@ -6,6 +6,7 @@ import { usePostHog } from 'posthog-js/react';
 
 import {
   type TelegramBotSource,
+  botStartUrl,
   telegramBotOpenedProperties,
 } from '@/lib/analytics/telegram-events';
 
@@ -32,11 +33,9 @@ export function TelegramBotCta({
 
   // The payload survives /start, so the bot knows which surface sent this
   // person and can subscribe them to the building they were already looking at.
-  const payload = buildingId ? `b_${buildingId}` : `web_${source}`;
-
   return (
     <a
-      href={`https://t.me/${username}?start=${encodeURIComponent(payload)}`}
+      href={botStartUrl(username, source, buildingId)}
       target="_blank"
       rel="noopener noreferrer"
       className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

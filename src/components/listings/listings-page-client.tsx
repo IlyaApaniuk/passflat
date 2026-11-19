@@ -16,6 +16,7 @@ import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
 import { ListingsNoMatch } from '@/components/listings/listings-no-match';
 import { RoommateRoleSelector } from '@/components/listings/roommate-role-selector';
+import { FindFlatmateBlock } from '@/components/listings/find-flatmate-block';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
 
@@ -43,7 +44,8 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import { filterListings } from '@/lib/listings-filter';
 import { listingsEmptyKind, serverListNarrowed } from '@/lib/listings-empty-kind';
-import { INITIAL_ROOMMATE_ROLE_STATE } from '@/lib/roommate-roles';
+import { INITIAL_ROOMMATE_ROLE_STATE, showsFlatmateBlock } from '@/lib/roommate-roles';
+import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'area-desc';
@@ -59,6 +61,12 @@ interface Props {
    * `/replacement` and `/sublet` do not pass it and keep their empty state.
    */
   cityOfferCount?: number;
+  /**
+   * `/warsaw/roommate` only (spec 02 §Find a flatmate): the server-loaded counts of the
+   * "Looking for someone to rent with" block. Absent on every other page, which then never
+   * shows the block.
+   */
+  flatmateCounts?: FlatmateBlockCounts;
   isLoggedIn?: boolean;
 }
 
@@ -77,6 +85,7 @@ function ListingsPageInner({
   cityBounds,
   listingType,
   cityOfferCount,
+  flatmateCounts,
   isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
@@ -303,7 +312,7 @@ function ListingsPageInner({
               <RoommateRoleSelector
                 state={roleState}
                 onStateChange={setRoleState}
-                onFindRoom={() => listRef.current?.scrollTo({ top: 0 })}
+                onScrollListToTop={() => listRef.current?.scrollTo({ top: 0 })}
               />
             </div>
           )}
@@ -353,6 +362,11 @@ function ListingsPageInner({
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
+                {/* Spec 02 §Find a flatmate: at the top of the scrolling list, so it
+                    scrolls with the list; the list stays rendered below. */}
+                {listingType === 'roommate' && flatmateCounts && showsFlatmateBlock(roleState) && (
+                  <FindFlatmateBlock counts={flatmateCounts} districts={districts} />
+                )}
                 {emptyKind === 'no_match_for_filters' ? (
                   <>
                     <ListingsNoMatch onClearFilters={clearFilters} />

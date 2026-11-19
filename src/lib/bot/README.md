@@ -328,7 +328,9 @@ moment in the posting log and as a PostHog annotation (spec 07 §Switch).
 | `web_<source>` | the website's bot link without a building              | the `startAfterPayload` reply; attribution only                                |
 | anything else  | campaign tags such as `thr_med`                        | the `startAfterPayload` reply; attribution only                                |
 
-The website sends `web_checker` and `web_empty` (`TelegramBotSource` in
+The website sends `web_checker` and `web_empty`, and the roommate page's
+"Looking for someone to rent with" block sends `mate_web_roommate`
+(`TelegramBotSource` and `botStartPayload` in
 `src/lib/analytics/telegram-events.ts`). Every payload is attribution: the raw
 string is `tg_bot_started.payload`, and the first one a chat brings is kept in
 `TelegramChat.startPayload` (a later `/start` does not overwrite it). Both keep
