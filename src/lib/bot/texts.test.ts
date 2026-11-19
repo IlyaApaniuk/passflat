@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { dt } from './deposit-texts';
@@ -45,17 +48,34 @@ const LATER_MESSAGE_PROMISES = [
 
 /**
  * Roommate keys that may promise a message, each with the code that sends it.
- * T084 adds the opt-in confirmation (`sendMatchingOpenMessages`,
- * roommate-daily.ts). Every other promise fails.
+ * Every other promise fails.
  */
 const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // Sent only with the switch on and the push on (`matchingOpenText`); the
   // switch stays off until T090 builds the push.
   openNobodyDaily: 'the daily push of spec 07 FR-27: sendDailyPushes, roommate-daily.ts (T090)',
+  // The opt-in reply's first sentence (spec 06 §Opt-in, FR-18): the send-hour
+  // run writes once to every active opted-in profile when the switch is on.
+  optInConfirm: 'the one-time message of FR-19: sendMatchingOpenMessages, roommate-daily.ts (T082)',
   // D64: the opt-in's closing sentence. The owner's manual route writes
   // `closingMessage` to every profile and deletes it (spec 06 §Closing route).
   optInClosing:
     'the closing route of FR-20: POST /api/cron/roommate-close, runRoommateClose, roommate-close.ts (T083)',
+};
+
+/**
+ * The opt-in's two sentences (spec 06 §Opt-in) and the source that must hold
+ * their backing code, so a renamed or removed sender fails here.
+ */
+const OPT_IN_PROMISE_BACKING: Record<string, { file: string; holds: string[] }> = {
+  optInConfirm: {
+    file: 'src/lib/bot/roommate-daily.ts',
+    holds: ['const sendMatchingOpenMessages: MessageJob', 'switchOnOnly(sendMatchingOpenMessages)'],
+  },
+  optInClosing: {
+    file: 'src/app/api/cron/roommate-close/route.ts',
+    holds: ['export async function POST', 'await runRoommateClose('],
+  },
 };
 
 const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];
@@ -174,6 +194,31 @@ describe('bot texts: no notification promises', () => {
           LATER_MESSAGE_PROMISES.some((phrase) => phrase.test(text)),
           `${locale}.${key}`,
         ).toBe(true);
+      }
+    }
+  });
+
+  it('allows exactly the three named promises, the opt-in two each with its backing code', () => {
+    expect(Object.keys(ROOMMATE_PROMISE_EXCEPTIONS).sort()).toEqual([
+      'openNobodyDaily',
+      'optInClosing',
+      'optInConfirm',
+    ]);
+    expect(ROOMMATE_PROMISE_EXCEPTIONS.optInConfirm).toMatch(/\bsendMatchingOpenMessages\b/);
+    expect(ROOMMATE_PROMISE_EXCEPTIONS.optInClosing).toMatch(/\/api\/cron\/roommate-close\b/);
+    for (const [key, { file, holds }] of Object.entries(OPT_IN_PROMISE_BACKING)) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+      for (const code of holds) expect(source, `${key}: ${file}`).toContain(code);
+    }
+  });
+
+  it('the opt-in reply promises only in its two keys; the "already on" lead-in promises nothing', () => {
+    for (const locale of ROOMMATE_LOCALES) {
+      const promising = (text: string) =>
+        [...REMOVED_PROMISES, ...LATER_MESSAGE_PROMISES].some((phrase) => phrase.test(text));
+      expect(promising(rt(locale, 'optInAlready')), `${locale}.optInAlready`).toBe(false);
+      for (const key of Object.keys(OPT_IN_PROMISE_BACKING)) {
+        expect(promising(rt(locale, key as (typeof ROOMMATE_TEXT_KEYS)[number])), key).toBe(true);
       }
     }
   });

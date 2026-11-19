@@ -52,6 +52,8 @@ import {
   isStepOpen,
   loadRoommateEntry,
   openEditStep,
+  optInToOpenMessage,
+  optOutOfOpenMessage,
   renewProfile,
   saveEdit,
   saveProfile,
@@ -94,9 +96,9 @@ import { normalizeLocale, type BotLocale } from './texts';
  * "live with", the short text, smoking and pets, 18+), the save, the own card,
  * its Edit (each field reuses its intake step as `edit_<field>`), its Delete
  * (with the optional reason) and Renew (with the move-in question as
- * `renew_month` when the month has passed or ends soon) and the counts reply
- * (after the save and on "How many are looking?"); the opt-in is added here by
- * its task.
+ * `renew_month` when the month has passed or ends soon), the counts reply
+ * (after the save and on "How many are looking?") and the opt-in to the one
+ * message when matching opens (under the counts reply and on the card).
  *
  * State lives in `roommate_profiles` (`status`, `step`), never in memory, because
  * the webhook runs on serverless functions. A profile holds personal data, so
@@ -115,6 +117,12 @@ const MAX_CALLBACK_BYTES = 64;
 
 /** The FR-14 reply's button; its handler is the delete flow (spec 06 §Delete). */
 const DELETE_CALLBACK = 'rm:c:del';
+
+/** "Message me when matching opens" under the counts reply and on the card (spec 06 §Opt-in). */
+const OPT_IN_CALLBACK = 'rm:c:optin';
+
+/** "Don't message me when matching opens" on the card of an opted-in profile. */
+const OPT_OUT_CALLBACK = 'rm:c:optout';
 
 /**
  * Stores `ctx.from.username` (or null) on the profile when it differs from the
@@ -595,9 +603,9 @@ function ownCardText(
 /**
  * The own card's buttons (spec 06 §Save and the own card): Renew only within
  * `RENEWAL_REMINDER_DAYS` of the hide date or while expired, then Edit and
- * Delete; with the switch off "How many are looking?" and the opt-in toggle,
- * with it on "Show people" and the daily-message toggle (spec 07). The handlers
- * of opt-in and stage 2 come with their tasks.
+ * Delete; with the switch off "How many are looking?" and the opt-in toggle
+ * (`rm:c:optin` / `rm:c:optout`), with it on "Show people" and the daily-message
+ * toggle (spec 07). The stage 2 handlers come with their tasks.
  */
 function ownCardKeyboard(
   profile: RoommateProfile,
@@ -626,8 +634,8 @@ function ownCardKeyboard(
       [InlineKeyboard.text(rt(locale, 'btnCounts'), 'rm:c:counts')],
       [
         profile.notifyOnOpenAt
-          ? InlineKeyboard.text(rt(locale, 'btnOptOut'), 'rm:c:optout')
-          : InlineKeyboard.text(rt(locale, 'btnOptIn'), 'rm:c:optin'),
+          ? InlineKeyboard.text(rt(locale, 'btnOptOut'), OPT_OUT_CALLBACK)
+          : InlineKeyboard.text(rt(locale, 'btnOptIn'), OPT_IN_CALLBACK),
       ],
     );
   }
@@ -713,17 +721,20 @@ function countsText(
 /**
  * The counts reply (spec 06 §Counts) for the person's saved profile, which is never
  * counted: after the save and on "How many are looking?" (`rm:c:counts`), followed by
- * the room cost reference (§Room cost reference) in the same message. A database
- * error keeps the saved profile and says the counts are not available now; only the
- * error's message is logged. A failed room cost reference leaves only itself out.
+ * the room cost reference (§Room cost reference) in the same message, with the opt-in
+ * button "Message me when matching opens" (§Opt-in) under it while the switch is off.
+ * A database error keeps the saved profile and says the counts are not available now;
+ * only the error's message is logged. A failed room cost reference leaves only itself
+ * out.
  */
 async function sendCounts(ctx: Context, profile: RoommateProfile, locale: BotLocale) {
+  const matchingEnabled = isMatchingEnabled();
   let text: string;
   try {
     const counts = await loadRoommateCounts(profile);
     const named = counts.kind === 'districts' ? counts.districts : counts.top;
     const districts = counts.total > 0 && named.length > 0 ? await cityDistricts() : [];
-    text = countsText(counts, districts, locale, isMatchingEnabled());
+    text = countsText(counts, districts, locale, matchingEnabled);
   } catch (error) {
     console.error(
       '[bot/roommate] counts failed',
@@ -733,7 +744,12 @@ async function sendCounts(ctx: Context, profile: RoommateProfile, locale: BotLoc
     return;
   }
   const room = await roomCostsReply(profile, locale);
-  await ctx.reply(room ? `${text}\n\n${room}` : text, { parse_mode: 'HTML' });
+  await ctx.reply(room ? `${text}\n\n${room}` : text, {
+    parse_mode: 'HTML',
+    ...(matchingEnabled
+      ? {}
+      : { reply_markup: new InlineKeyboard().text(rt(locale, 'btnOptIn'), OPT_IN_CALLBACK) }),
+  });
 }
 
 /**
@@ -1320,6 +1336,53 @@ const handleCountsTap = roommateCallback(async (ctx, chat, locale) => {
   await sendCounts(ctx, profile, locale);
 });
 
+// ---------------------------------------------------------------------------------------------
+// Opt-in (FR-18; spec 06 §Opt-in)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The opt-in reply (PRD 3 §8 "Opt-in"): the one message when matching opens, which comes only
+ * while the profile is active (FR-18 edge case: `sendMatchingOpenMessages` writes to active
+ * profiles only), then the D64 closing sentence; a repeat tap says "already on" first.
+ */
+function optInReply(locale: BotLocale, already: boolean): string {
+  const sentences = [rt(locale, 'optInConfirm'), rt(locale, 'optInClosing')];
+  if (already) sentences.unshift(rt(locale, 'optInAlready'));
+  return sentences.join(' ');
+}
+
+/**
+ * `rm:c:optin` ("Message me when matching opens", under the counts reply and on the card of a
+ * saved profile): sets `notify_on_open_at` through the conditional write of `optInToOpenMessage`.
+ * The write that lands sends `tg_roommate_browse_opted_in` with `already=false`; a repeat tap (or
+ * the second of two overlapping taps) changes nothing and sends it with `already=true`. With the
+ * switch on the button is not shown (people browse at once): an old one gets the card, with
+ * nothing stored and no event.
+ */
+const handleOptInTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+  if (isMatchingEnabled()) {
+    await sendOwnCard(ctx, profile, locale);
+    return;
+  }
+  const already = !(await optInToOpenMessage(profile.id, new Date()));
+  track(ctx.chat!.id, 'tg_roommate_browse_opted_in', { already });
+  await ctx.reply(optInReply(locale, already));
+});
+
+/**
+ * `rm:c:optout` (the card of an opted-in profile): clears `notify_on_open_at` and sends the card
+ * again, which shows the opt-in off with "Message me when matching opens". No event (spec 06
+ * §Events names none); a repeat tap changes nothing and sends the card again.
+ */
+const handleOptOutTap = roommateCallback(async (ctx, chat, locale) => {
+  const profile = await savedProfileFor(ctx, chat.id, locale);
+  if (!profile) return;
+  await optOutOfOpenMessage(profile.id);
+  await sendOwnCard(ctx, { ...profile, notifyOnOpenAt: null }, locale);
+});
+
 /** `rm:c:edit`: the field picker under "What do you want to change?". Opens no step yet. */
 const handleEditTap = roommateCallback(async (ctx, chat, locale) => {
   const profile = await savedProfileFor(ctx, chat.id, locale);
@@ -1619,6 +1682,8 @@ export function registerRoommateFlow(bot: Bot): void {
   bot.callbackQuery('rm:a:yes', handleAdultYes);
   bot.callbackQuery('rm:a:no', handleAdultNo);
   bot.callbackQuery('rm:c:counts', handleCountsTap);
+  bot.callbackQuery(OPT_IN_CALLBACK, handleOptInTap);
+  bot.callbackQuery(OPT_OUT_CALLBACK, handleOptOutTap);
   bot.callbackQuery('rm:c:edit', handleEditTap);
   bot.callbackQuery(EDIT_PICK, handleEditPick);
   bot.callbackQuery(DELETE_CALLBACK, handleDeleteTap);

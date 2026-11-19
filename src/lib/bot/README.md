@@ -97,7 +97,7 @@ the migrations are missing (`docs/architecture.md` §9).
   buttons are Renew (within `RENEWAL_REMINDER_DAYS` of the hide date or while
   expired, `showsRenew`), Edit, Delete, then "How many are looking?" and the
   opt-in toggle (switch off) or "Show people" and the daily-message toggle
-  (switch on). The handlers of the other card buttons come with their tasks.
+  (switch on). The handlers of the stage 2 card buttons come with their tasks.
 - **Edit from the own card** (spec 06 §Save and the own card, Edit): Edit
   (`rm:c:edit`) sends a field picker (`rm:e:<field>` for `EDIT_FIELDS`, then Back
   `rm:e:back`, which closes an open edit step and sends the card). A field opens
@@ -135,7 +135,20 @@ the migrations are missing (`docs/architecture.md` §9).
   total and the three most named districts (ties by slug). Never a sum of
   districts, a percentage or a count combined with another field; zero is "nobody
   yet", an empty Warsaw "nobody else yet". A database error keeps the saved profile
-  and replies that the counts are not available now. No event.
+  and replies that the counts are not available now. No event. With the switch
+  off the reply carries the opt-in button.
+- **Opt-in** (spec 06 §Opt-in, FR-18): "Message me when matching opens"
+  (`rm:c:optin`) under the counts reply and on the card, both only while the
+  switch is off. `optInToOpenMessage` sets `notify_on_open_at` (`updateMany where
+{ id, status in [active, expired], notify_on_open_at: null }`): the write that
+  lands sends `tg_roommate_browse_opted_in` with `already=false`, a repeat tap
+  `already=true` and "Already on." first. The reply is `optInConfirm` (the one
+  message, which comes only while the profile is active) and `optInClosing`
+  (D64); both are the promise check's exceptions, backed by
+  `sendMatchingOpenMessages` and the closing route. The card shows the state and
+  "Don't message me when matching opens" (`rm:c:optout`, `optOutOfOpenMessage`
+  clears it and sends the card again; no event). An old opt-in button with the
+  switch on stores nothing and gets the card.
 - **Room cost reference** (spec 06 §Room cost reference, FR-17): in the same
   message after the counts, `roomCostsReply` (`roommate-room-costs.ts`) shows for
   each chosen district (Warsaw for "any") the room figures of

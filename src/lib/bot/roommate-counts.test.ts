@@ -231,6 +231,14 @@ async function tap(data: string, locale: RoommateLocale = 'ru') {
 
 const events = () => mocks.track.mock.calls.map(([, event]) => event);
 
+/** The counts reply's options with the switch off: HTML and the opt-in button (spec 06 §Opt-in). */
+const WITH_OPT_IN = {
+  parse_mode: 'HTML',
+  reply_markup: {
+    inline_keyboard: [[{ text: rt('ru', 'btnOptIn'), callback_data: 'rm:c:optin' }]],
+  },
+};
+
 const RU_GOLDEN =
   'Кроме тебя, анкеты есть у: Mokotów — 2 человека, Wola — 1, готовы к любому району — 1. Всего в Варшаве — 5 человек. Подбор откроется, когда людей станет больше.';
 const UK_GOLDEN =
@@ -273,7 +281,7 @@ describe('after the save (golden case, PRD 3 §5 example 1)', () => {
     expect(texts).toHaveLength(2);
     expect(texts[0].startsWith(rt('ru', 'cardHeader'))).toBe(true);
     expect(texts[1]).toBe(RU_GOLDEN);
-    expect(reply.mock.calls[1][1]).toEqual({ parse_mode: 'HTML' });
+    expect(reply.mock.calls[1][1]).toEqual(WITH_OPT_IN);
   });
 
   it.each<[RoommateLocale, string]>([
@@ -327,7 +335,7 @@ describe('"How many are looking?" (rm:c:counts)', () => {
     const { reply, texts, answerCallbackQuery } = await tap('rm:c:counts');
 
     expect(texts).toEqual([RU_GOLDEN]);
-    expect(reply.mock.calls[0][1]).toEqual({ parse_mode: 'HTML' });
+    expect(reply.mock.calls[0][1]).toEqual(WITH_OPT_IN);
     expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
     expect(mocks.track).not.toHaveBeenCalled();
   });
@@ -469,7 +477,7 @@ describe('the room cost reference (spec 06 §Room cost reference)', () => {
 
     expect(texts).toHaveLength(2);
     expect(texts[1]).toBe(`${RU_GOLDEN}\n\n${ROOM}`);
-    expect(reply.mock.calls[1][1]).toEqual({ parse_mode: 'HTML' });
+    expect(reply.mock.calls[1][1]).toEqual(WITH_OPT_IN);
     expect(mocks.roomCostsReply).toHaveBeenCalledTimes(1);
     expect(mocks.roomCostsReply.mock.calls[0][0]).toMatchObject({
       districtSlugs: ['mokotow', 'wola'],

@@ -396,7 +396,7 @@
       "title": "Opt-in 'message me once when matching opens' with its promise exception (FR-18)",
       "spec": "docs/specs/06-roommate-profiles.md#opt-in",
       "dependsOn": ["T079", "T082", "T083"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The opt-in button under the counts reply (switch off only) sets notify_on_open_at and sends tg_roommate_browse_opted_in with already=false, a repeat replies 'already on' with already=true; the card shows the state and switches it off",
         "The confirmation says the one message and the D64 closing sentence in ru, uk and en",
@@ -404,7 +404,7 @@
         "With the switch on the button is not rendered (test)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D64."
     },
     {

@@ -196,6 +196,28 @@ export async function renewProfile(
   return count === 1 ? { renewed: true, expiresAt } : { renewed: false };
 }
 
+/**
+ * Switches the opt-in on (spec 06 §Opt-in, FR-18): `notify_on_open_at = now` on a saved (active or
+ * expired) profile that has not opted in. One conditional write on `notify_on_open_at` being
+ * null, so of two overlapping taps only one is the first: false means it was already on (or the
+ * profile is no longer saved), and nothing changed.
+ */
+export async function optInToOpenMessage(profileId: string, now: Date): Promise<boolean> {
+  const { count } = await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: { in: ['active', 'expired'] }, notifyOnOpenAt: null },
+    data: { notifyOnOpenAt: now },
+  });
+  return count === 1;
+}
+
+/** Switches the opt-in off from the own card (`rm:c:optout`): `notify_on_open_at` cleared. */
+export async function optOutOfOpenMessage(profileId: string): Promise<void> {
+  await prisma.roommateProfile.updateMany({
+    where: { id: profileId, status: { in: ['active', 'expired'] } },
+    data: { notifyOnOpenAt: null },
+  });
+}
+
 /** Leaves an edit or renewal step of a saved profile; the profile itself stays as it was. */
 export async function clearEditStep(profileId: string, step: string): Promise<boolean> {
   const { count } = await prisma.roommateProfile.updateMany({

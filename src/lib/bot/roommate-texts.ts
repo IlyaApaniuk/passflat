@@ -11,17 +11,17 @@ import { peopleWord } from './texts';
  *
  * Every text is a draft for the owner's review. PRD 3 §8 drafts are used
  * verbatim where they exist (intro, gender and "live with", short text, 18+,
- * counts, opt-in button, renewal reminder with the date in place of "in 3
- * days", delete). The bot says «ты» / «ти» (D42); the one «вы» / «ви» is the
- * PRD's "if you two already swapped contacts" in `deleteConfirm`.
+ * counts, opt-in button and the opt-in reply's first sentence, renewal reminder
+ * with the date in place of "in 3 days", delete). The bot says «ты» / «ти»
+ * (D42); the one «вы» / «ви» is the PRD's "if you two already swapped
+ * contacts" in `deleteConfirm`.
  *
  * Callers pass every value from data or from the person (district names, the
  * short text, the privacy URL) through `escapeHtml` first: the texts are HTML.
  * District names are the Polish `nameKey` in every locale ("Mokotów").
  *
- * Not here yet, by design: the opt-in confirmation (T084, which ends with
- * `optInClosing`) and the stage 2 texts (spec 07 tasks), each added with its
- * task.
+ * Not here yet, by design: the stage 2 texts (spec 07 tasks), each added with
+ * its task.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -218,10 +218,20 @@ const RU = {
   openNobodyDaily: 'Раз в день проверяю новые анкеты и напишу, когда появится подходящий человек.',
   btnShow: '👀 Показать',
 
+  // --- the opt-in reply (spec 06 §Opt-in, FR-18): optInConfirm, then optInClosing ---
+  /**
+   * PRD 3 §8 verbatim, then the FR-18 edge case (the message goes to active profiles only); backed
+   * by `sendMatchingOpenMessages` (roommate-daily.ts).
+   */
+  optInConfirm:
+    'Напишу один раз, когда подбор откроется. Если анкета скроется раньше, этого сообщения не будет.',
+  /** A repeat tap: put before the reply. */
+  optInAlready: 'Уже включено.',
+
   // --- the closing route (spec 06 §Closing route, FR-20, D64) ---
   /**
-   * The opt-in's closing sentence (D64, PRD 3 §8 verbatim), which the opt-in confirmation (T084)
-   * ends with; backed by `POST /api/cron/roommate-close` (`runRoommateClose`).
+   * The opt-in's closing sentence (D64, PRD 3 §8 verbatim), which the opt-in reply ends with;
+   * backed by `POST /api/cron/roommate-close` (`runRoommateClose`).
    */
   optInClosing: 'Если подбор не откроется, напишу об этом и удалю анкету.',
   /** Sent by the closing route after the profile is deleted (PRD 3 §8 verbatim). */
@@ -399,6 +409,10 @@ const UK: Record<Key, string> = {
     'Раз на день перевіряю нові анкети й напишу, коли зʼявиться людина, яка тобі підходить.',
   btnShow: '👀 Показати',
 
+  optInConfirm:
+    'Напишу один раз, коли підбір відкриється. Якщо анкета сховається раніше, цього повідомлення не буде.',
+  optInAlready: 'Уже ввімкнено.',
+
   optInClosing: 'Якщо підбір не відкриється, напишу про це й видалю анкету.',
   closingMessage:
     'Підбір так і не відкриється. Твою анкету вже видалено. Дякуємо, що спробував(-ла) Passflat.',
@@ -573,6 +587,10 @@ const EN: Record<Key, string> = {
   openNobody: 'Matching is open. Nobody fits you yet.',
   openNobodyDaily: "I check new profiles once a day and I'll message you when someone new fits.",
   btnShow: '👀 Show',
+
+  optInConfirm:
+    "I'll message you once when matching opens. If your profile hides before then, this message won't come.",
+  optInAlready: 'Already on.',
 
   optInClosing: "If matching does not open, we'll tell you and delete your profile.",
   closingMessage:
