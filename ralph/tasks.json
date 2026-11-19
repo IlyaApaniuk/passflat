@@ -742,14 +742,14 @@
         "T099",
         "T100"
       ],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/bot/README.md, docs/analytics/activation-funnels.md and docs/architecture.md describe what was built, as spec 05 §PRD 3: roommate docs lists, from the code as it is",
         "Every roommate event of specs 06 and 07 appears in the README 'Events' table with its properties",
         "The README says which messages the bot now sends on its own and that it sends nothing else"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

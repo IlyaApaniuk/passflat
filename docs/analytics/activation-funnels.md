@@ -1,11 +1,14 @@
-# Activation funnels (PRD 1)
+# Activation funnels (PRD 1, PRD 3)
 
-How to read the PRD 1 activation funnels in PostHog and in the database. Spec:
+How to read the PRD 1 activation funnels in PostHog and in the database, and the events of PRD 3's
+roommate matching (§1). Spec:
 `docs/specs/05-measurement-docs.md` §Activation funnels document (FR-47, FR-5). Experiments: E8
 (roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`.
 
-Written on 2026-11-19 from the code at `23e0c34`. Every event and property below was checked
-by a search of `src/` (see [How this was checked](#how-this-was-checked)), not copied from the
+Written on 2026-11-19 from the code at `23e0c34`; the PRD 3 roommate events (bot, and the web
+values `intent=find_flatmate` and `telegram_bot_opened` `source=roommate`) were added on
+2026-11-19 from the code at `541ae34` (spec 05 §PRD 3: roommate docs, FR-40). Every event and
+property below was checked by a search of `src/` (see [How this was checked](#how-this-was-checked)), not copied from the
 specs. None of the queries has been run: loop iterations never query PostHog. HogQL and SQL were
 checked by reading only, so run each one on a short interval before you rely on it.
 
@@ -100,6 +103,51 @@ city-launch save by rows only (§4).
 | `tg_deposit_letter_generated` | `deposit-flow.ts` (`dep:letter:` callback)                            | `reason`, `filled`                                                                                                                                                                                                        |
 | `tg_deposit_letter_sent`      | `deposit-flow.ts` (`dep:sent:` callback)                              | none. The person's own tap on "sent"; nobody checks that a letter went out.                                                                                                                                               |
 | `tg_deposit_outcome`          | `deposit-flow.ts` (`dep:o:` callback)                                 | `outcome` (`full` \| `partial` \| `none`), `after` (`deadline` \| `letter`, the follow-up it answers). Can fire more than once per case.                                                                                  |
+
+### Telegram bot, roommate matching (PRD 3; `tg_<chatId>`, `source: 'telegram_bot'`)
+
+The identity is the chat the event is about: the chat that tapped, except `tg_roommate_matched`
+with `role = 'waiting'` (sent under the other person's chat when a pair forms),
+`tg_roommate_profile_hidden` (under the hidden person's chat) and the cron and closing-route
+events (under the profile's chat). Each one is sent only by the database write or the delivery
+that landed, so a double tap or a doubled cron run counts once; `tg_roommate_cards_viewed` is one
+per "Show people" tap. No property holds a username, the short text, gender, "live with", a
+district slug, a profile or match id or a chat id. The stage 2 events (from
+`tg_roommate_cards_viewed` down) need a card or a match first, so they appear only after the
+switch goes on (`ROOMMATE_MATCHING_ENABLED=true`; unset at the deploy, D49; the owner records the
+moment, spec 07 §Switch). Next steps, push opt-outs, outcome answers, reports and hides keep
+coming after it goes off again. Values and the full rules: `src/lib/bot/README.md` ("Roommate
+events").
+
+| Event                           | Fires in                                                                                     | Properties                                                                                                                                                                                   |
+| ------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tg_roommate_flow_started`      | `src/lib/bot/roommate-flow.ts` (`openRoommate`, a new draft)                                 | `entry_source` (`direct` \| `tg` \| `fb` \| `ig` \| `threads` \| `web` \| `bot_menu` \| `other`; `ROOMMATE_ENTRY_SOURCE` in `start-payload.ts`), `entry_detail` (only when the link has one) |
+| `tg_roommate_profile_created`   | `roommate-flow.ts` ("I'm 18+"; `profileCreatedProperties` in `src/lib/roommate/rules.ts`)    | `district_count`, `any_district`, `budget_band` (`b1` – `b5`), `move_in_offset_months` (0 – 3), `language_count`, `has_text`, `rule_count`, `entry_source`, `has_username`                   |
+| `tg_roommate_profile_edited`    | `roommate-flow.ts` (`saveEdit` landed)                                                       | `field`                                                                                                                                                                                      |
+| `tg_roommate_profile_renewed`   | `roommate-flow.ts` (Renew landed)                                                            | none                                                                                                                                                                                         |
+| `tg_roommate_profile_expired`   | `src/lib/bot/roommate-daily.ts` (housekeeping)                                               | none                                                                                                                                                                                         |
+| `tg_roommate_profile_deleted`   | `roommate-flow.ts` (the person), `roommate-daily.ts` (cron), `roommate-close.ts` (the owner) | `reason` (`user` \| `expired` \| `moderation` \| `closed`)                                                                                                                                   |
+| `tg_roommate_browse_opted_in`   | `roommate-flow.ts` (`rm:c:optin`)                                                            | `already`                                                                                                                                                                                    |
+| `tg_roommate_open_notified`     | `roommate-daily.ts` (the one-time message delivered)                                         | `count_band` (`0` \| `1-2` \| `3-5` \| `6+`)                                                                                                                                                 |
+| `tg_roommate_cards_viewed`      | `src/lib/bot/roommate-matching.ts` (`rm:show:<via>`)                                         | `results_band` (bands as `count_band`), `via` (`card` \| `open_message` \| `push` \| `next`)                                                                                                 |
+| `tg_roommate_username_prompted` | `roommate-matching.ts`, `src/lib/bot/roommate-reveal.ts`                                     | `context` (`browse` \| `reveal`)                                                                                                                                                             |
+| `tg_roommate_username_set`      | `roommate-matching.ts` (Done found a username)                                               | `context` (`browse` \| `reveal`)                                                                                                                                                             |
+| `tg_roommate_interest_sent`     | `roommate-matching.ts` (a stored "Interested")                                               | none                                                                                                                                                                                         |
+| `tg_roommate_matched`           | `roommate-matching.ts` (`formMutualMatch` formed the pair)                                   | `role` (`completer` \| `waiting`): one event per person, so pairs = `role = 'completer'`                                                                                                     |
+| `tg_roommate_contact_revealed`  | `roommate-reveal.ts` (a reveal delivered)                                                    | none                                                                                                                                                                                         |
+| `tg_roommate_next_step`         | `roommate-matching.ts` (`rm:ns:*`)                                                           | `step` (`agreement` \| `address_check` \| `cost`)                                                                                                                                            |
+| `tg_roommate_push_sent`         | `roommate-daily.ts` (a daily push delivered)                                                 | `count_band`                                                                                                                                                                                 |
+| `tg_roommate_push_opted_out`    | `roommate-matching.ts` (`rm:push:off` landed)                                                | none                                                                                                                                                                                         |
+| `tg_roommate_outcome`           | `roommate-matching.ts` (`rm:o:*`), `roommate-flow.ts` (`rm:dr:here` after a delete)          | `outcome` (`renting_together` \| `talking` \| `no_fit` \| `dont_ask`), `asked` (`follow_up` \| `delete`). The person's own answer, not a verified move-in.                                   |
+| `tg_roommate_reported`          | `src/lib/bot/roommate-safety.ts` (a stored report)                                           | `reason` (`money` \| `fake` \| `offensive` \| `under_18` \| `other`)                                                                                                                         |
+| `tg_roommate_profile_hidden`    | `roommate-safety.ts` (`hideIfDue`: the automatic hide landed)                                | `reason` (`reports` \| `under_18`)                                                                                                                                                           |
+
+The website's way into the roommate flow is three separate counts, never one identified funnel:
+`roommate_intent_selected` with `intent = 'find_flatmate'` and `telegram_bot_opened` with
+`source = 'roommate'` (visitor id, the block on `/warsaw/roommate`), then `tg_bot_started` with
+`payload = 'mate_web_roommate'` and `tg_roommate_flow_started` with `entry_source = 'web'` and
+`entry_detail = 'roommate'` (`tg_<chatId>`). A chat that already has a profile or a draft sends no
+new `tg_roommate_flow_started`.
 
 ## 2. Funnels
 
@@ -413,6 +461,9 @@ ORDER BY payload_kind
 Break the check step down by `entry_source` of `tg_address_checked` / `tg_district_checked`
 (`typed_address`, `typed_district`, `link_building`, `link_district`) when needed.
 
+A `mate…` payload (the roommate entry) lands in `payload_kind = 'other'` here. Read the roommate
+entry from `tg_roommate_flow_started` (`entry_source`, `entry_detail`) instead.
+
 ### 2.5 Telegram deposit
 
 Steps, per chat: `tg_deposit_flow_started` → `tg_deposit_verdict` →
@@ -712,10 +763,16 @@ ORDER BY week, event, code
 - **Server and bot events cannot be joined** to client sessions: `listing_created`,
   `conversation_started` and `cost_report_submitted` use the account id or the `pf_anon` id, the
   bot `tg_<chatId>`.
-- **Bot events from the contract reading may be lost** until T050 ships: the reading runs in its
-  own `after()` task, concurrently with the webhook's flush, so `tg_deposit_contract` and the
-  `tg_deposit_verdict` sent after a read contract can miss the flush.
-- **The bot is not launched**, so there are no `tg_*` events in production yet.
+- **Bot events from the contract reading** were lost before T050: the reading runs in its own
+  `after()` task, concurrently with the webhook's flush. Since T050 that task awaits
+  `flushPostHog` itself, so `tg_deposit_contract` and the `tg_deposit_verdict` after a read
+  contract are delivered (unverified until the bot runs in production).
+- **The bot is not launched**, so there are no `tg_*` events in production yet. The roommate
+  events need the PRD 3 migration in production too, and the stage 2 ones the switch (see the
+  roommate table in §1).
+- **Roommate events are per profile life, not per person.** A person who deletes a profile and
+  starts again sends a new `tg_roommate_flow_started` and `tg_roommate_profile_created` under the
+  same `tg_<chatId>`; count persons with `count(DISTINCT distinct_id)`.
 - **`address_checked` is 0 since 2026-09-14**; unverified (see 2.2).
 - **Not run.** No query here has been run against PostHog or the production database.
 
@@ -733,6 +790,11 @@ Searches over `src/` (non-test files) on 2026-11-19:
 - then the property builders: `src/lib/analytics/{page-context,listing-events,interest-events,checker-events,building-events,telegram-events}.ts`,
   `src/lib/roommate-roles.ts`, `src/lib/cost-figures.ts` (`answerProperties`),
   `src/lib/bot/check-events.ts`, `src/lib/bot/start-payload.ts`, `src/lib/cost-submit-params.ts`;
+- for PRD 3: the `track(` calls of `src/lib/bot/roommate-{flow,matching,reveal,safety,daily,close}.ts`,
+  `src/lib/roommate/rules.ts` (`profileCreatedProperties`, `profileEditedProperties`,
+  `countBand`), `src/components/listings/find-flatmate-block.tsx` and
+  `src/components/listings/roommate-role-selector.tsx`; `src/lib/bot/roommate-readme.test.ts`
+  checks the bot README's events tables against the `track(` calls;
 - posthog-js 1.374 (`node_modules/posthog-js/lib/src/utils/event-utils.js`, `session-props.js`,
   `posthog-core.js`) for the automatic properties and `register_once`;
 - the tables in `prisma/schema.prisma` and their migrations.

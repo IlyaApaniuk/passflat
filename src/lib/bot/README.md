@@ -1,6 +1,9 @@
 # Telegram bot
 
-Address lookup over the same cost data the website's checker reads. Lives in
+Address lookup over the same cost data the website's checker reads, the
+deposit helper and, since PRD 3, roommate matching (a profile intake with
+honest counts, then mutual matching behind one switch), in Russian, Ukrainian
+and English (the deposit helper in Russian and Ukrainian only). Lives in
 this repo, not a separate project: an address answer reads the building's
 figures, the area reference and the deposit statistic through the figure
 contract's loaders (`@/lib/cost-figures-query`), the ones the checker and the
@@ -29,12 +32,20 @@ recorded (2026-10-05), and unknown since then until the owner confirms:
   `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` and `ANTHROPIC_API_KEY` are set in
   Vercel is not recorded.
 
+PRD 3 (roommate matching, the English locale) is built and tested on
+`chore/agent-harness`, not deployed: its migration
+`20261119122602_roommate_matching` is not applied to production, RLS is not
+on for its three tables, and `ROOMMATE_MATCHING_ENABLED` stays unset for the
+deploy (D49), so matching stage 2 is off.
+
 What the code does in that state: without `TELEGRAM_BOT_TOKEN` the webhook
-route answers 503 and the follow-ups cron sends nothing; without
-`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` the website's bot link
-(`components/costs/telegram-bot-cta.tsx`) renders nothing. The cron still runs
-`clearStaleLetterParties()` on `deposit_cases` first, so it would fail while
-the migrations are missing (`docs/architecture.md` §9).
+route answers 503, and the follow-ups cron and the roommate cron send nothing;
+without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` the website's bot links
+(`components/costs/telegram-bot-cta.tsx`,
+`components/listings/find-flatmate-block.tsx`) render nothing. The follow-ups
+cron still runs `clearStaleLetterParties()` on `deposit_cases` first, and the
+roommate cron its housekeeping on `roommate_profiles` and `roommate_reports`,
+so each fails while its migrations are missing (`docs/architecture.md` §9).
 
 ## What is implemented
 
@@ -325,8 +336,10 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   half rounded half up to 10 zł; never a known part or asking prices). A loader
   error leaves only this part out. An English chat gets it in English (the area
   texts of `texts.ts`).
-- **Compatibility** (spec 07 §Compatibility, FR-24; no handler uses it yet):
-  `isCompatible(a, b)` (`../roommate/compatibility.ts`, pure, symmetric) needs a
+- **Compatibility** (spec 07 §Compatibility, FR-24; read by the cards, the
+  card buttons' checks, the one-time message, the daily push and the report's
+  "may be shown" check): `isCompatible(a, b)` (`../roommate/compatibility.ts`,
+  pure, symmetric) needs a
   shared district (or "any" on either side), budget bands at most 1 apart, move-in
   months at most 1 calendar month apart, a shared language and "live with" accepted
   both ways (`women` / `men` only a stated gender). `findCompatible(profile, now)`
@@ -335,7 +348,7 @@ outcome_asked_at not null, outcome null }`): only the write that lands sends
   with no report either way, then filters them with `isCompatible` and orders them
   newest first by `coalesce(renewed_at, activated_at)` (ties by id). The filter and
   the order run in memory, which is fine up to about 2,000 active profiles
-  (**Assumption**); above that they must move into SQL.
+  (**Assumption**); above that they must move into SQL (see "Known limits").
 - **`/cancel`**: deletes a roommate draft or clears an edit step; without one,
   leaves the deposit questions and turns off pending reminders.
 - **`/deposit`**, **`/help`** (the capability list, its `/mate` line by the
@@ -454,6 +467,10 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 | `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
 | `../roommate/room-costs.ts`                      | Room figures and the D61 per-person split per area (FR-17)         |
 | `../roommate/compatibility.ts`                   | The compatibility rule (FR-24); `findCompatible` is in `store.ts`  |
+| `../roommate/rules.ts`                           | Constants, value sets, intake order, event property builders       |
+| `../roommate/time.ts`                            | Warsaw calendar: move-in months, hide dates, the send hour         |
+| `../roommate/switch.ts`                          | `isMatchingEnabled()`: `ROOMMATE_MATCHING_ENABLED`, read per call  |
+| `../roommate/text-filter.ts`                     | The short text's contact filter (`checkAboutText`, FR-10)          |
 | `contract.ts`                                    | Lease reading with Claude                                          |
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
@@ -608,6 +625,7 @@ update telegram_chats
 | `b_<uuid>`     | the website checker, when it has a building            | that building's card; a malformed or unknown id gets "send its address"        |
 | `d_<slug>`     | hand-made links (posts, chats)                         | the district card; saves nothing; an unknown slug gets the `startAfterPayload` |
 | `web_<source>` | the website's bot link without a building              | the `startAfterPayload` reply; attribution only                                |
+| `mate…`        | roommate posts, the roommate page's block              | the roommate flow, with a source (table below)                                 |
 | anything else  | campaign tags such as `thr_med`                        | the `startAfterPayload` reply; attribution only                                |
 
 The website sends `web_checker` and `web_empty`, and the roommate page's
@@ -620,10 +638,21 @@ the raw string only when it has a deep link's shape (`[A-Za-z0-9_-]{1,64}`);
 anything else can only be text typed after `/start` and is recorded as
 `invalid` (`recordedStartPayload` in `start-payload.ts`).
 
-`parseStartPayload` also reads PRD 3's `mate` links (`mate`, `mate_<source>`,
-`mate_<source>_<detail>`; sources in `ROOMMATE_ENTRY_SOURCE`). They open the
-roommate flow (`openRoommate`) with that source and detail; `/mate` and the
-`rm:start` button give `bot_menu`.
+`parseStartPayload` also reads PRD 3's `mate` links (spec 04 §Start payloads,
+**Assumption**: the source set and the detail pattern, D68). Every payload that
+starts with `mate` opens the roommate flow (`openRoommate`) with a source from
+`ROOMMATE_ENTRY_SOURCE` and an optional detail; they become
+`tg_roommate_flow_started`'s `entry_source` and `entry_detail` and the draft's
+`entry_source` (first touch of the intake):
+
+| Payload                                                                | Source and detail                                             |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `mate`                                                                 | `direct`                                                      |
+| `mate_tg`, `mate_fb`, `mate_ig`, `mate_threads`                        | `tg`, `fb`, `ig`, `threads`                                   |
+| `mate_<source>_<detail>`, source above, detail `[a-z0-9]{1,24}`        | that source and detail (the posting kit's group keys)         |
+| `mate_web`, `mate_web_<detail>`                                        | `web` (and the detail); the website sends `mate_web_roommate` |
+| any other payload starting `mate` (`mate_xyz`, `mate_tg_Bad`, `matey`) | `other`, no detail, no error                                  |
+| no payload: `/mate`, the `rm:start` button                             | `bot_menu`                                                    |
 
 The building link `b_<uuid>` builds the same answer as typing that building's
 address: `lookupBuilding` and `lookupAddress` share one function in
@@ -686,8 +715,41 @@ form empty. The district card's and `/deposit`'s cost-form buttons use
 
 ## Promises and capabilities
 
-The bot sends nothing on its own except the deposit reminders a person asked
-for. Saved interest sends nothing: the building and district buttons and the
+The bot sends a message on its own only in the cases below. Every other
+message is a reply to the person's own message or tap (the verdict after a
+contract reading is such a reply, sent later from the `after()` task).
+
+- **Deposit reminders** the person asked for (the deadline and the letter
+  follow-up, see "Reminders"): `/api/cron/telegram-followups`, daily at 09:00
+  UTC.
+- **Roommate cron**, `/api/cron/roommate-daily`, only in the run at 10:xx
+  Europe/Warsaw (`ROOMMATE_SEND_HOUR` in `../roommate/time.ts`; the 08:00 UTC
+  run in summer, the 09:00 UTC run in winter):
+  - the renewal reminder, once per profile period (a renewal resets it), from 3
+    days before the hide date (see **Renewal**);
+  - the one-time "matching is open" message, to opted-in active profiles,
+    switch on only (see **Matching is open**);
+  - the daily push "N new people fit you", while `push_off` is false and N > 0,
+    switch on only (see **Daily push**);
+  - the outcome question, once per profile life, 21 days after its first
+    match, switch on or off (see **Outcome question**);
+  - the retries of the three messages below that did not go out at the time.
+- **At the moment it happens**, sent while the bot handles a tap:
+  - the reveal to both people of a mutual match (or the username prompt to the
+    one without a username), from the "Interested" tap that completes the pair
+    or a Done after a username prompt, see **Reveal**;
+  - the statement of reasons to the person whose profile a report hid, and the
+    hide notice to that profile's reporters, from the report tap that hid it,
+    see **Statement of reasons**.
+- **The closing message**, only from the owner's manual
+  `POST /api/cron/roommate-close` (see **Closing route**); never scheduled.
+
+Nothing else: no figure or building news, no marketing, nothing from saved
+interests. Each of these sends is claimed on its row before it goes out, so
+overlapping runs send it once: the roommate ones through `createCronSender`
+(blocked chats skipped), the deposit reminders in `sendDueFollowUps`.
+
+Saved interest sends nothing: the building and district buttons and the
 city waitlist button save a `TelegramSubscription`, the reply says there are no
 automatic notifications, and no code reads those rows to send a message (only
 `/my` lists them, with a remove button each, `unsub:<targetKey>`). `start`,
@@ -703,7 +765,11 @@ write later, if a listed command is missing from the menu (or a menu command
 from the list), or if the roommate line does not name `/mate`, in RU, UK and EN.
 It also fails on a key without an EN value or with other placeholders than RU.
 `plural(locale, count, forms)` takes Slavic one / few / many for RU and UK and
-one / other for EN.
+one / other for EN. In `roommate-texts.ts` every promise to write later fails
+too, except the four keys of `ROOMMATE_PROMISE_EXCEPTIONS`: `optInConfirm`
+(the one-time message), `optInClosing` (the closing route), `openNobodyDaily`
+(the daily push) and `reportReceipt` (the hide notice); the test also fails
+when the code that sends each of them is renamed or removed.
 
 ## Events
 
@@ -752,11 +818,85 @@ text or the chat id (which is only in the distinct id). A new event adds no
 free text either.
 
 Events are flushed before the function ends: the webhook route registers
-`flushPostHog` with `after()` and the follow-ups cron awaits it. The contract
+`flushPostHog` with `after()`, and the follow-ups cron, the roommate cron and
+the closing route await it before they answer. The contract
 reading runs in its own `after()` task (`runInBackground` in `deposit-flow.ts`),
 concurrently with the route's flush, so that task awaits `flushPostHog` itself
 once it settles, also when it fails: the `tg_deposit_contract` and
 `tg_deposit_verdict` it tracks at its end are delivered.
+
+### Roommate events
+
+PRD 3, spec 06 §Events and spec 07 §Events (stage 2); names and properties are
+an **Assumption** (PRD 3 §6). Same `track`, distinct id and `source` as above.
+The distinct id is the chat the event is about: the tapping chat, except
+`tg_roommate_matched` `role=waiting` (the other person of the pair),
+`tg_roommate_profile_hidden` (the hidden person) and the cron and closing-route
+events (the profile's chat). Each event below is sent only by the write or the
+delivery that lands, so a double tap, a redelivered update or a doubled cron run
+sends it once (except `tg_roommate_cards_viewed`, one per "Show people" tap).
+`roommate-readme.test.ts` fails when a `tg_*` event in the code is missing here,
+or a roommate event of specs 06 and 07 or a property key the code sends is
+missing from its row.
+
+| Event                           | Sent when                                                                          | Properties                                                                                                                                                                                                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tg_roommate_flow_started`      | `openRoommate` creates a draft (`/mate`, `rm:start`, a `mate` link)                | `entry_source` (`direct` \| `tg` \| `fb` \| `ig` \| `threads` \| `web` \| `bot_menu` \| `other`), `entry_detail` (the link's detail, `[a-z0-9]{1,24}`; absent when none)                                                                                                                                           |
+| `tg_roommate_profile_created`   | "I'm 18+" whose save lands (`profileCreatedProperties` in `../roommate/rules.ts`)  | `district_count` (0 – 3), `any_district`, `budget_band` (`b1` – `b5`), `move_in_offset_months` (0 – 3, months from this Warsaw month), `language_count`, `has_text`, `rule_count` (0 – 2: smoking and pets answered), `entry_source` (the draft's, values above), `has_username` (a Telegram username at the save) |
+| `tg_roommate_profile_edited`    | an edit whose write lands (`profileEditedProperties`)                              | `field` (`districts` \| `budget` \| `month` \| `languages` \| `preferences` \| `about` \| `rules`), never the value                                                                                                                                                                                                |
+| `tg_roommate_profile_renewed`   | a renewal whose write lands                                                        | none                                                                                                                                                                                                                                                                                                               |
+| `tg_roommate_profile_expired`   | the daily cron marks an active profile `expired`                                   | none                                                                                                                                                                                                                                                                                                               |
+| `tg_roommate_profile_deleted`   | "Yes, delete"; the daily cron's deletion after the grace period; the closing route | `reason` (`user` \| `expired` \| `moderation` (a hidden profile) \| `closed`)                                                                                                                                                                                                                                      |
+| `tg_roommate_browse_opted_in`   | "Message me when matching opens" (`rm:c:optin`)                                    | `already` (true when the opt-in was on)                                                                                                                                                                                                                                                                            |
+| `tg_roommate_open_notified`     | a one-time "matching is open" message is delivered                                 | `count_band` (`0` \| `1-2` \| `3-5` \| `6+`: compatible profiles, `countBand` in `../roommate/rules.ts`)                                                                                                                                                                                                           |
+| `tg_roommate_cards_viewed`      | a "Show people" tap that reaches the cards (switch on, a live profile)             | `results_band` (`countBand` of `findCompatible` at that moment), `via` (`card` \| `open_message` \| `push` \| `next`: the button's message)                                                                                                                                                                        |
+| `tg_roommate_username_prompted` | the "set a username" prompt is sent                                                | `context` (`browse` \| `reveal`)                                                                                                                                                                                                                                                                                   |
+| `tg_roommate_username_set`      | Done under that prompt finds a username                                            | `context` (`browse` \| `reveal`)                                                                                                                                                                                                                                                                                   |
+| `tg_roommate_interest_sent`     | a stored "Interested"                                                              | none                                                                                                                                                                                                                                                                                                               |
+| `tg_roommate_matched`           | a pair forms (`formMutualMatch` changed both rows), once for each person           | `role` (`completer`: the tap that formed it \| `waiting`: the earlier interest)                                                                                                                                                                                                                                    |
+| `tg_roommate_contact_revealed`  | a reveal message is delivered                                                      | none                                                                                                                                                                                                                                                                                                               |
+| `tg_roommate_next_step`         | a next-step button under a reveal                                                  | `step` (`agreement` \| `address_check` \| `cost`)                                                                                                                                                                                                                                                                  |
+| `tg_roommate_push_sent`         | a daily push is delivered                                                          | `count_band` (new compatible profiles, bands above)                                                                                                                                                                                                                                                                |
+| `tg_roommate_push_opted_out`    | "Stop daily messages" whose write lands                                            | none                                                                                                                                                                                                                                                                                                               |
+| `tg_roommate_outcome`           | an answer to the outcome question that lands; "Found someone here" after a delete  | `outcome` (`renting_together` \| `talking` \| `no_fit` \| `dont_ask`; the delete gives `renting_together`), `asked` (`follow_up` \| `delete`)                                                                                                                                                                      |
+| `tg_roommate_reported`          | a stored report                                                                    | `reason` (`money` \| `fake` \| `offensive` \| `under_18` \| `other`)                                                                                                                                                                                                                                               |
+| `tg_roommate_profile_hidden`    | the automatic hide lands                                                           | `reason` (`reports` \| `under_18`)                                                                                                                                                                                                                                                                                 |
+
+No roommate event carries a username, the short text, gender, "live with", a
+district slug or list, a profile, partner or match id, or a chat id (which is
+only in the distinct id). The opt-out of the one-time message, a skip, the
+counts, the renewal reminder, the outcome question itself, `/appeal`, the
+statement of reasons and the hide notice send no event.
+
+The website side of the roommate entry is `telegram_bot_opened` with
+`source=roommate` (the block on `/warsaw/roommate`, which links
+`?start=mate_web_roommate`) and `roommate_intent_selected` with
+`intent=find_flatmate`, under the visitor id; they are counted next to
+`tg_bot_started` and `tg_roommate_flow_started` (`entry_source=web`), never
+joined (`docs/analytics/activation-funnels.md`).
+
+## Known limits
+
+- **Stored usernames.** `tg_username` (personal data, kept until the profile is
+  deleted) is the Telegram username the chat's last roommate update carried. A
+  person who changes it in Telegram without touching the bot keeps the old one
+  stored. Only the reveal shows a username, and it refreshes the name first
+  with `api.getChat`, because a stored name can be stale and a released name
+  can belong to someone else by now; a failed `getChat` falls back to the
+  stored name, which can then be stale.
+- **Compatibility in memory.** `findCompatible` loads every active candidate
+  in one query and filters and orders them in memory: fine up to about 2,000
+  active profiles (**Assumption**, `../roommate/store.ts`); above that the rule
+  must move into SQL.
+- **At most once.** Every message the bot sends on its own is claimed before
+  the send, so a crash between the claim and the send loses it. A failed send
+  releases its claim for the next send-hour run as **Roommate daily cron**
+  describes (a 403 keeps it, except for the statement of reasons; the closing
+  message is never retried). One sender sends at most `MAX_MESSAGES_PER_RUN`
+  (1,000) messages, `MESSAGES_PER_SECOND` (25) a second, and starts none after
+  `SEND_BUDGET_MS` (45 s) (`roommate-daily.ts`).
+- **Rate limit.** The 12 messages a minute per chat apply to typed text; button
+  taps are not counted.
 
 ## Not built yet
 
@@ -765,6 +905,12 @@ rozliczenie), conversational cost submission, and the push notifier that reads
 `TelegramSubscription` and messages chats when new reports land. Saved
 interests accumulate meanwhile; the copy must change again if a notifier is
 ever built.
+
+Roommate matching (PRD 3 §10): paid speed or any payment (stage 3, H16), a
+Polish bot locale (D50; `pl` chats get English, D68), web profiles, photos and
+any chat or e-mail relay (D49), groups of three or more, matching outside
+Warsaw, and telling a person the owner's appeal decision (PRD 3 Q-16, T109,
+blocked).
 
 ## Deposit recovery ("Верни залог")
 

@@ -145,6 +145,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `vi.clearAllMocks()` keeps a `mockImplementation`: a test that makes `api.sendMessage` fail leaks into the next one unless `beforeEach` resets it (example: `roommate-hide.test.ts`).
 - `node scripts/ralph-tasks.mjs add` needs an explicit `id` (the next free `T…`; check `grep -o '"id": "T1[0-9][0-9]"' ralph/tasks.json`).
 - A page render test proves its keys exist and parse in every locale when the mocked `useTranslations(namespace)` passes `namespace` and `onError: (e) => { throw e }` to `createTranslator` (a missing key otherwise renders its path silently); example: `src/app/[locale]/terms/matching-sections.test.ts`.
+- A new bot event (`track(…, 'tg_…')`) needs a row in a `src/lib/bot/README.md` events table naming every property key it sends; `src/lib/bot/roommate-readme.test.ts` checks it (a new property builder goes into its `PROPERTY_BUILDERS`).
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
 
 ## Log
@@ -2928,3 +2929,52 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: nothing. No copy changed, and no assumption, event, table or migration was added.
 - Next: `node scripts/ralph-tasks.mjs next` (T101, events and behaviour documented, FR-40).
+
+### 2026-11-19 20:52 · T101 · done
+
+- Done (docs only, from the code at `541ae34`, plus one test):
+  - `src/lib/bot/README.md`:
+    - intro and "Production status": PRD 3 built and tested, not deployed; the roommate migration is not applied, RLS is off on its tables, the switch stays unset; the roommate cron fails without its tables.
+    - "Compatibility" no longer says "no handler uses it yet": cards, card-button checks, the one-time message, the push and the report check use it.
+    - "Deep links": a `mate…` row and the `mate` table of spec 04, with `bot_menu` for `/mate` and `rm:start`.
+    - "Promises and capabilities": the bot sends on its own only:
+      - the deposit reminders;
+      - the roommate cron's 10:xx Warsaw messages (renewal reminder, one-time message, daily push, outcome question, the three retries);
+      - when they happen: the reveal, the statement of reasons and the hide notice;
+      - the closing message from the manual route.
+        It says "Nothing else" and names the four `ROOMMATE_PROMISE_EXCEPTIONS`.
+    - "Roommate events": a table of all 20 `tg_roommate_*` events with when they fire, properties and values; which chat each is sent under; which roommate actions send no event; the web side (`telegram_bot_opened` `source=roommate`, `intent=find_flatmate`). The flush paragraph now names the roommate cron and the close route.
+    - New "Known limits": stored usernames, compatibility in memory up to about 2,000 active profiles, at most once delivery with the sender caps, rate limit on typed text only.
+    - "Not built yet": paid speed, a Polish bot locale, web profiles, photos and chat, groups, outside Warsaw, telling the appeal decision (T109).
+    - Layout: `rules.ts`, `time.ts`, `switch.ts`, `text-filter.ts`.
+  - `docs/analytics/activation-funnels.md`:
+    - title (PRD 1, PRD 3) and provenance line;
+    - a "Telegram bot, roommate matching" table: file, properties, identity per event, the switch note;
+    - the website → bot roommate path as three separate counts;
+    - 2.4 notes that `mate…` payloads land in `other`;
+    - limitations: the stale "until T050 ships" line fixed, roommate events per profile life, the roommate migration and switch;
+    - "How this was checked" lists the roommate files.
+  - `docs/architecture.md`:
+    - §2 bot row: `find-flatmate-block.tsx`, `mate_web_roommate`, the manual close route;
+    - bot locales are ru/uk/en with the `pl` → `en` map and the deposit gate (was "RU/UK only");
+    - roommate stage 1, stage 2 and moderation bullets, and what the bot sends on its own;
+    - §3: 31 models (was 28), and the `RoommateProfile` statuses (was "no code reads it yet");
+    - §4: the `roommate-daily` cell points to a paragraph listing `MESSAGE_JOBS` and why the run is 08:00 and 09:00 UTC; a new `roommate-close` (POST) row;
+    - §5: roommate event privacy and identity, the flushes, the funnels-doc line, two event-list rows ("Roommate (bot)", "Matching (bot)");
+    - §6 bot copy locales; §7 `ROOMMATE_MATCHING_ENABLED`.
+  - `docs/specs/README.md`: FR-40 → Done.
+  - New `src/lib/bot/roommate-readme.test.ts`:
+    - collects every `track(…, 'tg_…', …)` call in `src/lib/bot`, `src/lib/roommate` and `src/app/api/{telegram,cron}` with its property keys (object literals, or the `profileCreatedProperties` / `profileEditedProperties` builders run for real);
+    - fails when an event has no README row, a roommate event of spec 06 §Events or spec 07 §Events (stage 2) has no row, a sent key is missing from the row, a row says "none" while the code sends properties (or the other way round), or a roommate call uses an unknown builder.
+- Checks:
+  - `npx vitest run src/lib/bot/roommate-readme.test.ts`: 5 passed.
+  - Mutation check: `via` un-backticked plus the `tg_lawyer_interest` row broken → 2 failures; reverted.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip: 26 unused exports / 17 types, as before;
+    - Vitest: 138 files / 2880 tests;
+    - build OK.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no message sent.
+- Did not work: chained shell commands (`; echo $?`, `git -C`) were denied; ran plain commands instead.
+- Owner review: no copy, assumption, event, table or migration changed. The README describes the existing assumptions (mate sources, event names and properties, the 2,000-profile in-memory limit) as **Assumption**.
+- Next: `node scripts/ralph-tasks.mjs next` (T102, posting kit and posting log, FR-41).
