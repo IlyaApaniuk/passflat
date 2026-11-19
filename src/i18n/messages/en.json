@@ -750,7 +750,7 @@
     "landingBody": "Someone compared their rent to the area and shared it. Check yours — it's free and takes two minutes.",
     "ctaCalculator": "Cost calculator",
     "ctaCosts": "Browse costs by district",
-    "landingDataLabel": "Monthly total in {district}, median of all reports",
+    "landingDataLabel": "Costs in {district}",
     "cardTitleArea": "Reported rental costs in {district}",
     "ogTitleNeutral": "What people pay for rent",
     "ogStatNeutralLabel": "{district} median",
@@ -794,7 +794,7 @@
     "anatomyUtilities": "Electricity and gas — metered; noticeably more in winter.",
     "anatomyInternet": "Internet — typically 60–100 zł.",
     "anatomyDoplaty": "Dopłaty (rozliczenie) — the twice-a-year settlement; the biggest surprise, more below.",
-    "anatomyMedian": "The median paid on top of rent in our data is ≈{expenses} zł a month. Add it to any listing price to get closer to reality.",
+    "anatomyMedian": "The median paid on top of rent in our data is ≈{expenses} zł a month. Add it to any listing price to get closer to reality. Source: {source}.",
     "kaucjaTitle": "The fourth payment listings never mention: the deposit",
     "kaucjaAmount": "The median deposit in tenant reports is ≈{deposit} zł.",
     "kaucjaReturnedLabel": "who answered got the deposit back, fully or partly",
@@ -815,7 +815,7 @@
     "faqQ1": "Why do prices here differ from Otodom?",
     "faqA1": "They measure different things: portals show the asking price without fees; we show the full monthly costs from reports, including czynsz and utilities.",
     "faqQ2": "How much should I budget on top of rent?",
-    "faqA2": "The median is ≈{expenses} zł a month. Older buildings cost more in winter, new builds with district heating less — check the specific building.",
+    "faqA2": "The median is ≈{expenses} zł a month. Older buildings cost more in winter, new builds with district heating less — check the specific building. Source: {source}.",
     "faqQ3": "Is it true you might not get the deposit back?",
     "faqA3": "In our data, {gotBack} of {answered} leavers who answered got the deposit back, fully or partly. A handover protocol with photos and meter readings is what improves the odds most."
   },
@@ -996,6 +996,7 @@
     "emptyDistrict": "No reports here yet — be the first to add yours.",
     "buildingMetaTitle": "{address}, {city} — real rental costs",
     "buildingMetaDescriptionWithData": "Reported costs of renting at {address}, {city}: ≈ {total} zł/mo in total (rent ≈ {rent}, utilities ≈ {expenses}). {reports}.",
+    "buildingMetaDescriptionPartial": "Reported costs of renting at {address}, {city}: {metric, select, knownPartTotal {the known part of the costs is ≈ {value} zł/mo} rent {rent ≈ {value} zł/mo, other costs unknown} other {≈ {value} zł/mo in total}}. {reports}.",
     "buildingMetaDescription": "Real rental costs for {address}, {city}: rent, utilities and deposit. See the data or add yours."
   },
   "costs": {

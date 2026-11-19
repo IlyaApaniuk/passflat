@@ -36,8 +36,8 @@ export type BuildingCostData = {
   rentalType: string | null;
   /** The building's single number under each rental-type filter (spec 03 §Single-number
    *  surfaces, D23): the tenant group, else the asking prices, with its metric and N; null = no
-   *  usable value. The costs overview and the district pages read only this. The blended fields
-   *  above still feed the surfaces of T053 – T054 until those tasks move them. */
+   *  usable value. The costs overview, the district pages and the blog report read only this.
+   *  The blended fields above are removed by T054 once nothing reads them. */
   figures: Record<RentalTypeFilter, SingleNumberFigure | null>;
 };
 
@@ -145,52 +145,3 @@ export const getBuildingsData = unstable_cache(
   [BUILDINGS_DATA_CACHE_KEY],
   { revalidate: 300, tags: ['costs'] },
 );
-
-export type DistrictRollup = {
-  slug: string;
-  name: string;
-  buildingCount: number;
-  reportCount: number;
-  medianTotal: number;
-  medianRent: number;
-  medianAdminFee: number;
-  medianRentPerM2: number;
-  medianTotalPerM2: number;
-  /** Real median czynsz/komunalka lump per m² — anchors the calculator's czynsz
-   *  estimate where a district has enough reports (else norms are used). */
-  medianAdminFeePerM2: number;
-  medianExpenses: number;
-};
-
-/**
- * Roll building-level medians up to a per-district median-of-medians. Districts
- * with no covered buildings are dropped; the rest are sorted by report volume.
- */
-export function rollUpDistricts(
-  buildings: BuildingCostData[],
-  districts: Array<{ slug: string; nameKey: string }>,
-): DistrictRollup[] {
-  const medianOf = (values: number[]) => median(values.filter((v) => v > 0)) ?? 0;
-
-  return districts
-    .map((d) => {
-      const dBuildings = buildings.filter((b) => b.districtSlug === d.slug);
-      if (dBuildings.length === 0) return null;
-      const reportCount = dBuildings.reduce((s, b) => s + b.reports, 0);
-      return {
-        slug: d.slug,
-        name: d.nameKey,
-        buildingCount: dBuildings.length,
-        reportCount,
-        medianTotal: medianOf(dBuildings.map((b) => b.medianTotal)),
-        medianRent: medianOf(dBuildings.map((b) => b.medianRent)),
-        medianAdminFee: medianOf(dBuildings.map((b) => b.medianAdminFee)),
-        medianRentPerM2: medianOf(dBuildings.map((b) => b.medianRentPerM2 ?? 0)),
-        medianTotalPerM2: medianOf(dBuildings.map((b) => b.medianTotalPerM2 ?? 0)),
-        medianAdminFeePerM2: medianOf(dBuildings.map((b) => b.medianAdminFeePerM2 ?? 0)),
-        medianExpenses: medianOf(dBuildings.map((b) => b.medianExpenses ?? 0)),
-      };
-    })
-    .filter((d): d is DistrictRollup => d !== null)
-    .sort((a, b) => b.reportCount - a.reportCount);
-}

@@ -16,19 +16,32 @@ import {
   faqPageJsonLd,
 } from '@/lib/json-ld';
 import { SITE_URL } from '@/lib/site-url';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
-import { median } from '@/lib/cost-stats';
+import { getBuildingsData } from '@/lib/cost-aggregates';
+import { loadCityFigure, loadDistrictFigures } from '@/lib/cost-figures-query';
+import { buildingsForRentalType } from '@/lib/costs-overview-filter';
 import { depositClaim } from '@/lib/deposit-claim';
+import {
+  areasWithFigure,
+  isAllInTotal,
+  singleNumberGroupLabel,
+  singleNumberHeadingKey,
+  singleNumberLabelText,
+} from '@/lib/single-number-view';
+import { figureOgCard } from '@/lib/single-number-metadata';
 import { ArrowRight, Calculator, Plus } from 'lucide-react';
 
 // A data report assembled from the live cost DB. Rendered on demand (not
-// statically prerendered at build, which would require a DB) — the heavy query
-// is cached at the data layer (getBuildingsData, 300s), so it stays auto-current
-// and cheap. Targets the head query "сколько стоит аренда в Варшаве [year]" and
-// funnels into the calculator + district pages. City is fixed (Warsaw) for now.
+// statically prerendered at build, which would require a DB) — the heavy queries
+// are cached at the data layer (the figure loaders and getBuildingsData, 300s),
+// so it stays auto-current and cheap. Targets the head query "сколько стоит
+// аренда в Варшаве [year]" and funnels into the calculator + district pages.
+// City is fixed (Warsaw) for now. Every number is one group's single number
+// (D23: tenant reports, else asking prices), labelled with its group and N.
 export const dynamic = 'force-dynamic';
 const CITY = 'warsaw';
 const SLUG = 'warsaw-rent-prices';
+/** The lead example needs this much between rent and the all-in total to make its point. */
+const EXAMPLE_MIN_GAP = 300;
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -37,7 +50,7 @@ interface PageProps {
 const getCity = cache(() =>
   prisma.city.findUnique({
     where: { slug: CITY },
-    select: { id: true, nameKey: true, districts: { select: { slug: true, nameKey: true } } },
+    select: { id: true, nameKey: true },
   }),
 );
 
@@ -49,50 +62,49 @@ const fmt = (n: number) =>
 async function getReport() {
   const city = await getCity();
   if (!city) return null;
-  const buildings = await getBuildingsData(city.id, null, null);
-  const districts = rollUpDistricts(buildings, city.districts);
-  const pos = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
+  const [cityFigure, districtFigures, buildings, depositReports] = await Promise.all([
+    loadCityFigure(city.id),
+    loadDistrictFigures(city.id),
+    getBuildingsData(city.id, null, null),
+    // Deposit reality — same definition as the landing hero (`depositClaim`): the
+    // tenant group's median amount and "X of N who answered got it back, fully
+    // or partly", or nothing below MIN_DEPOSIT_ANSWERS answers.
+    prisma.costReport.findMany({
+      where: { building: { cityId: city.id }, isVisible: true },
+      select: {
+        source: true,
+        depositAmount: true,
+        depositReturned: true,
+        depositReturnedAmount: true,
+        isCurrentTenant: true,
+      },
+      take: 5000,
+    }),
+  ]);
 
-  // The lead's listing-vs-reality example: a real building where the gap
-  // between rent and the full monthly cost is visible. Most-reported first so
-  // the pick is stable and backed by the strongest data; ≥300 zł of expenses
-  // keeps the contrast honest (a 50 zł gap would undermine the point).
+  // The lead's listing-vs-reality example: a real building whose single number is an
+  // all-in total with a visible gap to its rent (both from the same group). Most
+  // observed first so the pick is stable and backed by the strongest data; a gap of
+  // at least EXAMPLE_MIN_GAP keeps the contrast honest (a 50 zł gap would undermine it).
+  const gap = (figure: { value: number; rent: { value: number } | null }) =>
+    figure.rent ? figure.value - figure.rent.value : 0;
   const example =
-    buildings
-      .filter((b) => b.medianRent > 0 && (b.medianExpenses ?? 0) >= 300)
-      .sort((a, b) => b.reports - a.reports || (b.medianExpenses ?? 0) - (a.medianExpenses ?? 0))
+    buildingsForRentalType(buildings, 'all')
+      .filter((b) => isAllInTotal(b.figure) && b.figure.rent && gap(b.figure) >= EXAMPLE_MIN_GAP)
+      .sort((a, b) => b.figure.n - a.figure.n || gap(b.figure) - gap(a.figure))
       .at(0) ?? null;
-
-  // Deposit reality — same definition as the landing hero (`depositClaim`): the
-  // tenant group's median amount and "X of N who answered got it back, fully
-  // or partly", or nothing below MIN_DEPOSIT_ANSWERS answers.
-  const depositReports = await prisma.costReport.findMany({
-    where: { building: { cityId: city.id }, isVisible: true },
-    select: {
-      source: true,
-      depositAmount: true,
-      depositReturned: true,
-      depositReturnedAmount: true,
-      isCurrentTenant: true,
-    },
-    take: 5000,
-  });
 
   return {
     cityNameKey: city.nameKey,
-    districts,
-    reportCount: districts.reduce((s, d) => s + d.reportCount, 0),
-    medianTotal: pos(districts.map((d) => d.medianTotal)),
-    medianRent: pos(districts.map((d) => d.medianRent)),
-    medianExpenses: pos(districts.map((d) => d.medianExpenses)),
-    medianPerM2: pos(districts.map((d) => d.medianTotalPerM2)),
+    cityFigure,
+    districts: areasWithFigure(districtFigures),
     example: example
       ? {
           address: example.address,
-          districtSlug: example.districtSlug,
           district: example.district,
-          rent: example.medianRent,
-          total: example.medianTotal,
+          rent: example.figure.rent?.value ?? 0,
+          total: example.figure.value,
+          figure: example.figure,
         }
       : null,
     deposit: depositClaim(depositReports),
@@ -108,15 +120,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = t('rentReport.metaTitle', { city: cityName, year });
   const description = t('rentReport.metaDescription', { city: cityName, year });
 
-  const ogImage =
-    report && report.medianTotal > 0
-      ? getCostOgImage({
+  const ogImage = report?.cityFigure
+    ? getCostOgImage(
+        figureOgCard(t, report.cityFigure, {
           title: t('rentReport.ogTitle', { year }),
-          subtitle: `${cityName} · ${t('costs.overview.nReports', { count: report.reportCount })}`,
-          stat: `≈ ${report.medianTotal.toLocaleString()} zł`,
-          statLabel: t('costs.building.medianMonthlyTotal'),
-        })
-      : getOgImage(title, description);
+          subtitle: cityName,
+        }),
+      )
+    : getOgImage(title, description);
 
   return {
     title,
@@ -147,14 +158,34 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
   const description = t('rentReport.metaDescription', { city: cityName, year });
   const url = `${SITE_URL}/blog/${SLUG}`;
 
+  // The city's single number and that group's rent, expenses and per m² (the last
+  // two only beside an all-in total, as on the cards). Expenses carry their own N.
+  const { cityFigure } = report;
+  const cityAllIn = cityFigure ? isAllInTotal(cityFigure) : false;
+  const cityRent = cityFigure && cityFigure.metric !== 'rent' ? cityFigure.rent : null;
+  const cityExpenses = cityAllIn ? (cityFigure?.expenses ?? null) : null;
+  const cityPerM2 = cityAllIn ? (cityFigure?.completeTotalPerM2 ?? null) : null;
+  const expensesLabel =
+    cityFigure && cityExpenses
+      ? singleNumberGroupLabel({ group: cityFigure.group, n: cityExpenses.n })
+      : null;
+  const expensesSource = expensesLabel ? t(expensesLabel.key, expensesLabel.values) : null;
+
   // FAQ copy is assembled once so the visible block and the FAQPage schema can
   // never drift apart.
   const faq = [
     { question: t('rentReport.faqQ1'), answer: t('rentReport.faqA1') },
-    {
-      question: t('rentReport.faqQ2'),
-      answer: t('rentReport.faqA2', { expenses: fmt(report.medianExpenses) }),
-    },
+    ...(cityExpenses && expensesSource
+      ? [
+          {
+            question: t('rentReport.faqQ2'),
+            answer: t('rentReport.faqA2', {
+              expenses: fmt(cityExpenses.value),
+              source: expensesSource,
+            }),
+          },
+        ]
+      : []),
     ...(report.deposit
       ? [
           {
@@ -197,8 +228,7 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
               {t('rentReport.h1', { city: cityName, year })}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {t('rentReport.updated', { date: updatedLabel })} ·{' '}
-              {t('costs.overview.nReports', { count: report.reportCount })}
+              {t('rentReport.updated', { date: updatedLabel })}
             </p>
             <p className="mt-4 text-muted-foreground">{t('rentReport.lead', { city: cityName })}</p>
 
@@ -219,36 +249,50 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
                     diff: fmt(report.example.total - report.example.rent),
                   })}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  {singleNumberLabelText(t, report.example.figure)}
+                </p>
                 <p className="text-muted-foreground">{t('rentReport.storyNotException')}</p>
               </div>
             )}
 
-            {/* City-wide snapshot */}
-            <Card className="mt-6 border-primary/20 bg-primary/5">
-              <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {t('costs.overview.medianMonthlyTotal')}
-                  </p>
-                  <p className="text-3xl font-bold text-primary">≈ {fmt(report.medianTotal)} zł</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('costs.overview.rent')} ≈ {fmt(report.medianRent)}
-                    {report.medianExpenses > 0 && (
-                      <>
-                        {' · '}
-                        {t('costs.overview.expenses')} ≈ {fmt(report.medianExpenses)}
-                      </>
+            {/* City-wide snapshot: the city's single number with its group and N */}
+            {cityFigure && (
+              <Card className="mt-6 border-primary/20 bg-primary/5">
+                <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {t(singleNumberHeadingKey(cityFigure))}
+                    </p>
+                    <p className="text-3xl font-bold text-primary">≈ {fmt(cityFigure.value)} zł</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {singleNumberLabelText(t, cityFigure)}
+                    </p>
+                    {(cityRent || cityExpenses) && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {cityRent && (
+                          <>
+                            {t('costs.overview.rent')} ≈ {fmt(cityRent.value)}
+                          </>
+                        )}
+                        {cityRent && cityExpenses && ' · '}
+                        {cityExpenses && (
+                          <>
+                            {t('costs.overview.expenses')} ≈ {fmt(cityExpenses.value)}
+                          </>
+                        )}
+                      </p>
                     )}
-                  </p>
-                </div>
-                {report.medianPerM2 > 0 && (
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{t('rentReport.perM2')}</p>
-                    <p className="text-xl font-bold">≈ {fmt(report.medianPerM2)} zł/m²</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  {cityPerM2 && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">{t('rentReport.perM2')}</p>
+                      <p className="text-xl font-bold">≈ {fmt(cityPerM2.value)} zł/m²</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Anatomy of the real monthly cost */}
             <h2 className="mt-10 text-xl font-semibold">{t('rentReport.anatomyTitle')}</h2>
@@ -259,9 +303,12 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
               <li>{t('rentReport.anatomyInternet')}</li>
               <li>{t('rentReport.anatomyDoplaty')}</li>
             </ul>
-            {report.medianExpenses > 0 && (
+            {cityExpenses && expensesSource && (
               <p className="mt-4 font-medium">
-                {t('rentReport.anatomyMedian', { expenses: fmt(report.medianExpenses) })}
+                {t('rentReport.anatomyMedian', {
+                  expenses: fmt(cityExpenses.value),
+                  source: expensesSource,
+                })}
               </p>
             )}
 
@@ -283,33 +330,35 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
                         <th className="px-3 py-2 text-right font-medium">
                           {t('rentReport.colTotal')}
                         </th>
-                        <th className="hidden px-3 py-2 text-right font-medium sm:table-cell">
-                          {t('rentReport.colReports')}
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {report.districts.map((d) => (
-                        <tr key={d.slug} className="hover:bg-muted/30">
+                      {/* One group per district (tenant reports, else asking prices),
+                          named under the district with its N; rent and expenses come
+                          from that group, expenses only beside an all-in total. */}
+                      {report.districts.map(({ slug, name, figure }) => (
+                        <tr key={slug} className="hover:bg-muted/30">
                           <td className="px-3 py-2">
                             <Link
-                              href={`/${CITY}/${d.slug}`}
+                              href={`/${CITY}/${slug}`}
                               className="font-medium text-primary hover:underline"
                             >
-                              {d.name}
+                              {name}
                             </Link>
+                            <p className="text-xs text-muted-foreground">
+                              {singleNumberLabelText(t, figure)}
+                            </p>
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums">
-                            ≈ {fmt(d.medianRent)}
+                            {figure.rent ? `≈ ${fmt(figure.rent.value)}` : '—'}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums">
-                            {d.medianExpenses > 0 ? `≈ ${fmt(d.medianExpenses)}` : '—'}
+                            {isAllInTotal(figure) && figure.expenses
+                              ? `≈ ${fmt(figure.expenses.value)}`
+                              : '—'}
                           </td>
                           <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                            ≈ {fmt(d.medianTotal)}
-                          </td>
-                          <td className="hidden px-3 py-2 text-right tabular-nums text-muted-foreground sm:table-cell">
-                            {d.reportCount}
+                            {figure.metric === 'rent' ? '—' : `≈ ${fmt(figure.value)}`}
                           </td>
                         </tr>
                       ))}

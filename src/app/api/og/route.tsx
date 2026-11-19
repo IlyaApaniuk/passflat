@@ -16,6 +16,7 @@ const MAX_LENGTHS = {
   subtitle: 320,
   stat: 48,
   statLabel: 96,
+  figureLabel: 96,
   split: 120,
   scoreLabel: 96,
 } as const;
@@ -42,6 +43,9 @@ export async function GET(request: NextRequest) {
   // language-agnostic and does no number/locale formatting itself.
   const stat = readParam(searchParams, 'stat');
   const statLabel = readParam(searchParams, 'statLabel');
+  // The number's group and N ("Tenant reports (3)", D23): drawn on the stat's row so
+  // the card keeps its height.
+  const figureLabel = readParam(searchParams, 'figureLabel');
   const split = readParam(searchParams, 'split');
   const rawScoreParam = searchParams.get('score');
   const rawScore = rawScoreParam == null ? Number.NaN : Number(rawScoreParam);
@@ -151,16 +155,30 @@ export async function GET(request: NextRequest) {
               {statLabel}
             </div>
           ) : null}
-          <div
-            style={{
-              display: 'flex',
-              fontSize: '76px',
-              fontWeight: 800,
-              color: '#8bde54',
-              letterSpacing: '-0.03em',
-            }}
-          >
-            {stat}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                fontSize: '76px',
+                fontWeight: 800,
+                color: '#8bde54',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {stat}
+            </div>
+            {figureLabel ? (
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: '26px',
+                  color: '#94a3b8',
+                  marginBottom: '14px',
+                }}
+              >
+                {figureLabel}
+              </div>
+            ) : null}
           </div>
           {split ? (
             <div style={{ display: 'flex', fontSize: '26px', color: '#e2e8f0', marginTop: '10px' }}>

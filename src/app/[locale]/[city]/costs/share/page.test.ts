@@ -4,7 +4,7 @@ import { createElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AreaStats } from '@/lib/cost-baselines';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -18,9 +18,40 @@ const messages = Object.fromEntries(
   ]),
 ) as Record<Locale, Record<string, unknown>>;
 
+type District = { slug: string; nameKey: string; cityId: string };
+const MOKOTOW: District = { slug: 'mokotow', nameKey: 'Mokotów', cityId: 'c-warsaw' };
+
+// Mokotów's single number (D23): the tenant group's all-in total with its N, and that
+// group's rent, expenses and per m².
+const TENANT: SingleNumberFigure = {
+  group: 'tenant',
+  metric: 'completeTotal',
+  value: 4000,
+  n: 12,
+  reportCount: 12,
+  rent: { value: 3200, n: 12 },
+  expenses: { value: 800, n: 12 },
+  rentPerM2: { value: 64, n: 12 },
+  completeTotalPerM2: { value: 80, n: 12 },
+  adminFeePerM2: null,
+};
+const ASKING_PART: SingleNumberFigure = {
+  ...TENANT,
+  group: 'asking',
+  metric: 'knownPartTotal',
+  value: 4100,
+  n: 5,
+  reportCount: 5,
+  rent: { value: 3600, n: 5 },
+  expenses: null,
+  completeTotalPerM2: null,
+};
+
 const state = vi.hoisted(() => ({
   locale: 'en' as 'pl' | 'en' | 'ru' | 'uk',
-  district: { id: 'd-mokotow', nameKey: 'Mokotów' } as { id: string; nameKey: string } | null,
+  district: null as { slug: string; nameKey: string; cityId: string } | null,
+  figure: null as unknown,
+  loadedCities: [] as string[],
 }));
 
 vi.mock('next-intl/server', async () => {
@@ -37,15 +68,19 @@ vi.mock('next-intl/server', async () => {
 vi.mock('@/lib/prisma', () => ({
   prisma: { district: { findFirst: vi.fn(async () => state.district) } },
 }));
-const stats: AreaStats = {
-  total: { median: 4000, p25: 3600, p75: 4400 },
-  rentPerM2: { median: 64, p25: 60, p75: 70 },
-  totalPerM2: { median: 80, p25: 72, p75: 88 },
-  rentMedian: 3200,
-  expensesMedian: 800,
-  count: 12,
-};
-vi.mock('@/lib/cost-baselines', () => ({ getDistrictCostStats: vi.fn(async () => stats) }));
+vi.mock('@/lib/cost-figures-query', () => ({
+  loadDistrictFigures: vi.fn(async (cityId: string) => {
+    state.loadedCities.push(cityId);
+    return [
+      {
+        slug: 'mokotow',
+        name: 'Mokotów',
+        figures: { all: state.figure, apartment: null, room: null },
+      },
+      { slug: 'wola', name: 'Wola', figures: { all: null, apartment: null, room: null } },
+    ];
+  }),
+}));
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) =>
     createElement('a', { href }, children),
@@ -83,7 +118,9 @@ async function metadata(searchParams: Record<string, string>) {
 describe('share landing', () => {
   beforeEach(() => {
     state.locale = 'en';
-    state.district = { id: 'd-mokotow', nameKey: 'Mokotów' };
+    state.district = MOKOTOW;
+    state.figure = TENANT;
+    state.loadedCities = [];
   });
 
   it('an old brag link gets the neutral body, never the gap or the amount', async () => {
@@ -97,25 +134,54 @@ describe('share landing', () => {
     }
   });
 
-  it('shows the area figure labelled with its N', async () => {
+  it('shows the district figure (D23) with its group and N, and that group only', async () => {
     const page = await renderPage({ d: 'mokotow' });
-    expect(page).toContain('Monthly total in Mokotów, median of all reports');
-    expect(page).toContain('≈4,000 zł');
-    expect(page).toContain('Rent ≈3,200');
-    expect(page).toContain('Expenses ≈800');
-    expect(page).toContain('≈80 zł/m²');
-    expect(page).toContain('12 reports');
+    expect(page).toContain(
+      'Costs in Mokotów Median Monthly Total ≈ 4,000 zł Rent ≈ 3,200 Expenses ≈ 800 ≈ 80 zł/m² Tenant reports (12)',
+    );
+    expect(state.loadedCities).toEqual(['c-warsaw']);
+    // The blended card said "median of all reports" and counted every source.
+    expect(page).not.toMatch(/all reports|\d+ reports/);
   });
 
-  it('an old brag link previews the neutral area card', async () => {
+  it('an asking-price known part is labelled and shows no expenses or per m²', async () => {
+    state.figure = ASKING_PART;
+    const page = await renderPage({ d: 'mokotow' });
+    expect(page).toContain(
+      'Costs in Mokotów Known part of the costs ≈ 4,100 zł Rent ≈ 3,600 Asking prices (5), known part',
+    );
+    expect(page).not.toMatch(/Expenses|zł\/m²|Tenant reports/);
+
+    const { image } = await metadata({ d: 'mokotow' });
+    expect(image.searchParams.get('statLabel')).toBe('Known part of the costs');
+    expect(image.searchParams.get('figureLabel')).toBe('Asking prices (5), known part');
+    expect(image.searchParams.get('split')).toBe('Rent ≈ 3,600');
+  });
+
+  it('a district without a usable figure shows no card and a generic preview', async () => {
+    state.district = { ...MOKOTOW, slug: 'wola', nameKey: 'Wola' };
+    const page = await renderPage({ d: 'wola' });
+    expect(page).not.toContain('Costs in Wola');
+    expect(page).not.toContain('zł');
+    const { title, image } = await metadata({ d: 'wola' });
+    expect(title).toBe('Reported rental costs in Wola');
+    expect(image.searchParams.get('stat')).toBeNull();
+    expect(image.searchParams.get('figureLabel')).toBeNull();
+  });
+
+  it('an old brag link previews the neutral district card', async () => {
     for (const searchParams of [BELOW, ABOVE, { d: 'mokotow' }]) {
       const { title, image } = await metadata(searchParams);
       expect(title).toBe('Reported rental costs in Mokotów');
       expect(image.pathname).toBe('/api/og');
-      expect(image.searchParams.get('title')).toBe(share('en').ogTitleNeutral);
-      expect(image.searchParams.get('statLabel')).toBe('Mokotów median');
-      expect(image.searchParams.get('stat')).toBe('≈4,000 zł');
-      expect(image.searchParams.get('split')).toBe('≈80 zł/m²');
+      expect(Object.fromEntries(image.searchParams)).toEqual({
+        title: 'Mokotów',
+        subtitle: share('en').cardDescription,
+        stat: '≈ 4,000 zł',
+        statLabel: 'Median Monthly Total',
+        figureLabel: 'Tenant reports (12)',
+        split: 'Rent ≈ 3,200 · Expenses ≈ 800',
+      });
       for (const value of image.searchParams.values()) {
         expect(value).not.toMatch(/37|23|%/);
       }
@@ -165,8 +231,9 @@ describe('share landing', () => {
     expect(image.searchParams.get('subtitle')).toBe(
       'Monthly rent and expenses by district, from reports on Passflat',
     );
+    // The single number carries no p25–p75 range (the blended card's "half of the reports").
     const page = await renderPage({ d: 'mokotow' });
-    expect(page).toContain('Half of the reports are between 3,600 and 4,400 zł');
+    expect(page).not.toContain('Half of the reports');
   });
 
   it('share copy asks no overpay question and promises no median comparison (FR-29)', () => {

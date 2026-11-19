@@ -72,8 +72,10 @@ export function getOgImage(title: string, subtitle?: string) {
 
 /**
  * Rich cost share-card OG image (building / district / city). The caller passes
- * already-localized, already-formatted strings — `stat` is the headline median
- * (e.g. "≈ 4 200 zł"), `split` the rent/expenses breakdown — so the edge OG
+ * already-localized, already-formatted strings, built from one single number by
+ * `figureOgCard` (`single-number-metadata.ts`, D23): `stat` is the chosen group's
+ * headline (e.g. "≈ 4,200 zł"), `statLabel` what it is, `figureLabel` its group
+ * and N ("Tenant reports (3)"), `split` that group's rent/expenses. The edge OG
  * route does no formatting. This is the viral artifact people drop into chats.
  */
 export function getCostOgImage(opts: {
@@ -81,9 +83,14 @@ export function getCostOgImage(opts: {
   subtitle?: string;
   stat: string;
   statLabel?: string;
+  figureLabel: string;
   split?: string;
 }) {
-  const params = new URLSearchParams({ title: opts.title, stat: opts.stat });
+  const params = new URLSearchParams({
+    title: opts.title,
+    stat: opts.stat,
+    figureLabel: opts.figureLabel,
+  });
   if (opts.subtitle) params.set('subtitle', opts.subtitle);
   if (opts.statLabel) params.set('statLabel', opts.statLabel);
   if (opts.split) params.set('split', opts.split);

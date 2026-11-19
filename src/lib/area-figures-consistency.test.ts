@@ -2,11 +2,14 @@
 // the district page, the calculator baseline and the home page (hero city tiles, district
 // cards, featured building) show one group's figure with its label and N, and an area's
 // figure is a summary over the area's reports equal to `loadAreaReference`'s headline for the
-// same area and rental type. Every path reads one Prisma mock holding the same reports.
+// same area and rental type. T053 adds the OG cards and descriptions of the hub, the district
+// page and the building page, the blog data report and the share page. Every path reads one
+// Prisma mock holding the same reports.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Prisma } from '@prisma/client';
+import type { Metadata } from 'next';
 import { createElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -124,8 +127,35 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: async ({ where }: { where: Where }) =>
         DISTRICTS.find((district) => district.id === where.id) ?? null,
       findMany: async () => DISTRICTS,
+      // The share page's lookup by slug within the city.
+      findFirst: async ({ where }: { where: Where }) => {
+        const district = DISTRICTS.find((d) => d.slug === where.slug);
+        return district
+          ? { slug: district.slug, nameKey: district.nameKey, cityId: CITY.id }
+          : null;
+      },
     },
     building: {
+      // The building page's lookup by city and slug (the fixture's slug is its id).
+      findUnique: async ({ where }: { where: { cityId_slug?: { slug: string } } }) => {
+        const b = BUILDINGS.find((building) => building.id === where.cityId_slug?.slug);
+        if (!b) return null;
+        return {
+          id: b.id,
+          slug: b.id,
+          addressFull: b.address,
+          cityId: CITY.id,
+          districtId: b.district.id,
+          lat: 52.2,
+          lng: 21,
+          placeId: null,
+          district: { nameKey: b.district.nameKey, slug: b.district.slug },
+          city: { nameKey: CITY.nameKey },
+          locationScore: null,
+          costReports: [],
+          tags: [],
+        };
+      },
       findMany: async ({ where }: { where: Where }) =>
         BUILDINGS.filter(
           (b) => !where.district?.slug || b.district.slug === where.district.slug,
@@ -154,8 +184,13 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('next-intl/server', async () => {
   const { createTranslator } = await import('next-intl');
   return {
-    getTranslations: async (namespace?: string) =>
-      createTranslator({ locale: 'en', messages: en as never, namespace: namespace as never }),
+    // The blog report's metadata passes `{ locale }`, the pages a namespace or nothing.
+    getTranslations: async (arg?: string | { namespace?: string }) =>
+      createTranslator({
+        locale: 'en',
+        messages: en as never,
+        namespace: (typeof arg === 'string' ? arg : arg?.namespace) as never,
+      }),
     getLocale: async () => 'en',
     setRequestLocale: () => undefined,
   };
@@ -180,11 +215,23 @@ vi.mock('@/i18n/navigation', () => ({
 }));
 vi.mock('@/components/landing/footer', () => ({ Footer: () => null }));
 vi.mock('@/components/costs/share-button', () => ({ ShareButton: () => null }));
+vi.mock('@/app/[locale]/[city]/building/[slug]/client', () => ({
+  BuildingCostsClient: () => null,
+}));
 
 import { createTranslator } from 'next-intl';
 
-import CityCostsHub from '@/app/[locale]/[city]/page';
-import DistrictCostsPage from '@/app/[locale]/[city]/[district]/page';
+import CityCostsHub, { generateMetadata as cityHubMetadata } from '@/app/[locale]/[city]/page';
+import DistrictCostsPage, {
+  generateMetadata as districtMetadata,
+} from '@/app/[locale]/[city]/[district]/page';
+import { generateMetadata as buildingMetadata } from '@/app/[locale]/[city]/building/[slug]/page';
+import CostShareLandingPage, {
+  generateMetadata as shareMetadata,
+} from '@/app/[locale]/[city]/costs/share/page';
+import WarsawRentPricesReport, {
+  generateMetadata as blogMetadata,
+} from '@/app/[locale]/blog/warsaw-rent-prices/page';
 import { CalculatorClient } from '@/app/[locale]/[city]/calculator/client';
 import { CostTransparencyCard } from '@/components/landing/cost-transparency-card';
 import { Districts } from '@/components/landing/districts';
@@ -200,6 +247,7 @@ import {
   loadDistrictFigures,
 } from './cost-figures-query';
 import { loadFeaturedBuilding, loadHomeCityFigure, loadHomeDistrictFigures } from './home-figures';
+import { figureOgCard } from './single-number-metadata';
 
 const t = createTranslator({ locale: 'en', messages: en as never }) as unknown as (
   key: string,
@@ -435,5 +483,179 @@ describe('home page (D23)', () => {
     expect(featured?.figure).toEqual(singleNumberFigure(await loadBuildingFigures('b-och-1')));
     // Day 4 lands on b-bem-1 (no rent, no total) and moves on to the next building.
     expect((await loadFeaturedBuilding(4))?.address).toBe('ul. Puławska 1');
+  });
+});
+
+/** The `/api/og` parameters of a page's first OG image, and its description. */
+async function ogOf(metadata: Promise<Metadata>) {
+  const meta = await metadata;
+  const [image] = meta.openGraph?.images as Array<{ url: string }>;
+  const url = new URL(image.url);
+  expect(url.pathname).toBe('/api/og');
+  return { params: Object.fromEntries(url.searchParams), description: meta.description };
+}
+
+const districtFigure = async (slug: string) =>
+  (await loadDistrictFigures(CITY.id)).find((d) => d.slug === slug)!.figures.all!;
+
+describe('OG cards and descriptions (T053)', () => {
+  it('the hub card is the city figure with its group and N', async () => {
+    const { params, description } = await ogOf(
+      cityHubMetadata({ params: Promise.resolve({ locale: 'en', city: 'warsaw' }) }),
+    );
+    const city = (await loadCityFigure(CITY.id))!;
+    expect(params).toEqual(
+      figureOgCard(t, city, { title: 'Warszawa', subtitle: description as string }),
+    );
+    expect(params).toMatchObject({
+      stat: '≈ 3,200 zł',
+      statLabel: 'Median Monthly Total',
+      figureLabel: 'Tenant reports (5)',
+      split: 'Rent ≈ 2,600 · Expenses ≈ 600',
+    });
+    expect(Object.values(params).join(' ')).not.toMatch(/\d+ reports/);
+  });
+
+  it('the district card is the district figure the hub row and the header card show', async () => {
+    const card = (district: string) =>
+      ogOf(
+        districtMetadata({
+          params: Promise.resolve({ locale: 'en', city: 'warsaw', district }),
+        }),
+      ).then((og) => og.params);
+
+    expect(await card('mokotow')).toEqual({
+      title: 'Mokotów',
+      subtitle: 'Warszawa',
+      stat: '≈ 3,700 zł',
+      statLabel: 'Median Monthly Total',
+      figureLabel: 'Tenant reports (3)',
+      split: 'Rent ≈ 3,000 · Expenses ≈ 700',
+    });
+    expect(await card('wola')).toEqual(
+      figureOgCard(t, await districtFigure('wola'), { title: 'Wola', subtitle: 'Warszawa' }),
+    );
+    expect((await card('wola')).figureLabel).toBe('Asking prices (5), known part');
+    // No usable figure: the generic card, no number.
+    expect(await card('bemowo')).not.toHaveProperty('stat');
+  });
+
+  it('the building card and description are the building page headline, labelled', async () => {
+    const og = (slug: string) =>
+      ogOf(buildingMetadata({ params: Promise.resolve({ locale: 'en', city: 'warsaw', slug }) }));
+
+    const tenant = await og('b-mok-1');
+    const { headline } = referenceHeadline(await loadBuildingFigures('b-mok-1'));
+    expect(headline?.figure).toMatchObject({ median: 3700, n: 3 });
+    expect(tenant.params).toEqual({
+      title: 'ul. Puławska 1',
+      subtitle: 'Mokotów, Warszawa',
+      stat: '≈ 3,700 zł',
+      statLabel: 'Median Monthly Total',
+      figureLabel: 'Tenant reports (3)',
+      split: 'Rent ≈ 3,000 · Expenses ≈ 700',
+    });
+    expect(tenant.description).toBe(
+      'Reported costs of renting at ul. Puławska 1, Warszawa: ≈ 3,700 zł/mo in total (rent ≈ 3,000, utilities ≈ 700). Tenant reports (3).',
+    );
+
+    // Six asking prices, known part: never "in total", never a count over both groups.
+    const asking = await og('b-mok-2');
+    expect(asking.params).toMatchObject({
+      stat: '≈ 5,250 zł',
+      statLabel: 'Known part of the costs',
+      figureLabel: 'Asking prices (6), known part',
+    });
+    expect(asking.description).toBe(
+      'Reported costs of renting at ul. Puławska 2, Warszawa: the known part of the costs is ≈ 5,250 zł/mo. Asking prices (6).',
+    );
+
+    // No usable figure: no number in the description or the image.
+    const none = await og('b-bem-1');
+    expect(none.params).not.toHaveProperty('stat');
+    expect(none.description).not.toMatch(/zł|\d+ reports/);
+  });
+});
+
+describe('blog data report (T053)', () => {
+  const params = Promise.resolve({ locale: 'en' });
+
+  it('shows the city figure, each district figure with its group and N, and that group only', async () => {
+    const page = render((await WarsawRentPricesReport({ params })) as ReactElement);
+
+    // City card: the hub card's number.
+    expect(page).toMatch(
+      /Median Monthly Total ≈ 3\s?200 zł Tenant reports \(5\) Rent ≈ 2\s?600 · Expenses ≈ 600 Per m² ≈ 80 zł\/m²/,
+    );
+    // Table: most observed first, the label under the name, "—" where the group has no value.
+    expect(page).toMatch(/Wola Asking prices \(5\), known part ≈ 3\s?500 — ≈ 4\s?000/);
+    expect(page).toMatch(/Mokotów Tenant reports \(3\) ≈ 3\s?000 ≈ 700 ≈ 3\s?700/);
+    expect(page).toMatch(/Ochota Tenant reports \(2\) ≈ 2\s?500 ≈ 600 ≈ 3\s?100/);
+    expect(page.indexOf('Wola Asking')).toBeLessThan(page.indexOf('Mokotów Tenant'));
+    expect(page).not.toContain('Bemowo');
+    // The lead example is an all-in total with its gap to the same group's rent.
+    expect(page).toMatch(/The listing would say: 3\s?000 zł\./);
+    expect(page).toMatch(/ul\. Puławska 1, Mokotów — the monthly cost is ≈3\s?700 zł/);
+    expect(page).toContain('The ≈700 zł gap');
+    expect(page).toMatch(/≈700 zł gap appears nowhere in the listing\. Tenant reports \(3\)/);
+    // Expenses with their source, in the text and in the FAQPage JSON-LD.
+    expect(page).toContain('≈600 zł a month. Add it to any listing price');
+    expect(page).toContain('Source: Tenant reports (5).');
+    expect(page).toContain('"text":"The median is ≈600 zł a month.');
+    // The all-sources count ("N reports") is gone from the header and the table.
+    expect(page).not.toMatch(/\d+ reports/);
+    expect(page).not.toContain('Reports');
+  });
+
+  it('the OG card is the city figure', async () => {
+    const { params: og } = await ogOf(blogMetadata({ params }));
+    expect(og).toMatchObject({
+      subtitle: 'Warszawa',
+      stat: '≈ 3,200 zł',
+      statLabel: 'Median Monthly Total',
+      figureLabel: 'Tenant reports (5)',
+    });
+    const hub = await ogOf(
+      cityHubMetadata({ params: Promise.resolve({ locale: 'en', city: 'warsaw' }) }),
+    );
+    expect(og.stat).toBe(hub.params.stat);
+    expect(og.figureLabel).toBe(hub.params.figureLabel);
+  });
+});
+
+describe('share page (T053)', () => {
+  const props = (d: string) => ({
+    params: Promise.resolve({ locale: 'en', city: 'warsaw' }),
+    searchParams: Promise.resolve({ d }),
+  });
+
+  it('the page and its card show the district figure of the hub row and the district page', async () => {
+    for (const slug of ['mokotow', 'wola']) {
+      const figure = await districtFigure(slug);
+      const { params } = await ogOf(shareMetadata(props(slug)));
+      const district = DISTRICTS.find((d) => d.slug === slug)!;
+      expect(params).toEqual(
+        figureOgCard(t, figure, {
+          title: district.nameKey,
+          subtitle: (en.share as Record<string, string>).cardDescription,
+        }),
+      );
+      const districtCard = await ogOf(
+        districtMetadata({
+          params: Promise.resolve({ locale: 'en', city: 'warsaw', district: slug }),
+        }),
+      );
+      expect(params.stat).toBe(districtCard.params.stat);
+      expect(params.figureLabel).toBe(districtCard.params.figureLabel);
+    }
+
+    const mokotow = render((await CostShareLandingPage(props('mokotow'))) as ReactElement);
+    expect(mokotow).toContain('Costs in Mokotów Median Monthly Total ≈ 3,700 zł');
+    expect(mokotow).toContain('Rent ≈ 3,000 Expenses ≈ 700');
+    expect(mokotow).toContain('Tenant reports (3)');
+    const wola = render((await CostShareLandingPage(props('wola'))) as ReactElement);
+    expect(wola).toContain('Costs in Wola Known part of the costs ≈ 4,000 zł Rent ≈ 3,500');
+    expect(wola).toContain('Asking prices (5), known part');
+    expect(wola).not.toContain('Expenses');
   });
 });

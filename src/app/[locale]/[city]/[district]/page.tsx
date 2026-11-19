@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { getBuildingsData } from '@/lib/cost-aggregates';
 import type { SingleNumberFigure } from '@/lib/cost-figures';
 import { loadDistrictFigures } from '@/lib/cost-figures-query';
 import { buildingsForRentalType } from '@/lib/costs-overview-filter';
@@ -18,6 +18,7 @@ import {
   singleNumberHeadingKey,
   singleNumberLabelText,
 } from '@/lib/single-number-view';
+import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
 import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
 import { ArrowLeft, ArrowRight, Building2, Calculator, Plus } from 'lucide-react';
@@ -55,23 +56,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     city: cityName,
   });
 
-  // Rich cost share-card from the district roll-up; generic OG when no data. Still the
-  // blended roll-up: OG images move to the single-number rule in T053.
-  const buildings = await getBuildingsData(cityRec.id, district, null);
-  const [rollup] = rollUpDistricts(buildings, [districtRec]);
-  const ogImage =
-    rollup && rollup.medianTotal > 0
-      ? getCostOgImage({
-          title: districtRec.nameKey,
-          subtitle: `${cityName} · ${t('costs.overview.nReports', { count: rollup.reportCount })}`,
-          stat: `≈ ${rollup.medianTotal.toLocaleString()} zł`,
-          statLabel: t('costs.building.medianMonthlyTotal'),
-          split:
-            rollup.medianRent > 0 && (rollup.medianExpenses ?? 0) > 0
-              ? `${t('costs.building.rent')} ≈ ${rollup.medianRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${(rollup.medianExpenses ?? 0).toLocaleString()}`
-              : undefined,
-        })
-      : getOgImage(title, description);
+  // Rich cost share-card from the district's single number (D23), the figure the page's
+  // header card shows, labelled with the group and N; generic OG when no data.
+  const figure =
+    (await loadDistrictFigures(cityRec.id)).find((d) => d.slug === district)?.figures.all ?? null;
+  const ogImage = figure
+    ? getCostOgImage(figureOgCard(t, figure, { title: districtRec.nameKey, subtitle: cityName }))
+    : getOgImage(title, description);
 
   return {
     title,

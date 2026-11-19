@@ -885,13 +885,13 @@
         "Tests for the metadata and OG parameter builders as pure functions; draft label keys in all four locale files named in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Owner answer Q-2 option (a), D23, 2026-11-19: slice 3 of 4 (spec 03 §Single-number surfaces §Slices).",
       "id": "T053",
       "milestone": "M3",
       "title": "Single-number rule (slice 3): blog data report, OG images and the share page",
       "spec": "docs/specs/03-building-figures.md#single-number-surfaces",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T053"],

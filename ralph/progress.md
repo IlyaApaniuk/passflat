@@ -90,6 +90,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Deposit verdict lines are a `strength*` phrase key plus a `rule*` explanation key, composed by `RULE_LINES` in `deposit-flow.ts`; a general-rule case (FR-43) shows the `rule*` key alone. `renderVerdict` and `processContract` are exported for tests (example: `src/lib/bot/deposit-general-rule.test.ts`).
 - A new `FigureGroup` / `SingleNumberFigure` field means: bump every figure cache key (`cost-figures-building`, `-area-reference`, `-district-figures`, `cost-aggregates-buildings-figures`, the pinned one in `cost-aggregates.test.ts`) and add it to the `figure()` fixture factories of `single-number-surfaces.test.ts`, `CostsMap.test.ts` and `costs-overview-filter.test.ts`.
 - Area pages (`/[city]`, `/[city]/[district]`) and landing components render end-to-end in Vitest over one Prisma mock with `Footer` and `ShareButton` mocked to `null` (example: `src/lib/area-figures-consistency.test.ts`).
+- A cost OG card or meta description with a number goes through `figureOgCard` / `buildingMetaDescription` (`src/lib/single-number-metadata.ts`); `getCostOgImage` requires `figureLabel`. To look at an `/api/og` card, a temporary e2e spec can write the PNG to the scratchpad (then Read it and delete the spec).
 - `toLocaleString('pl-PL')` does not group four-digit numbers ("4000", but "12 000" with a no-break space): match with `\s?`; rendered HTML keeps `&amp;`, so assert on text without `&`.
 
 ## Log
@@ -1403,3 +1404,57 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Copy not changed, for the owner:** `calculator.intro` ("Rent comes from the median of tenant reports") and `calculator.disclaimer` ("tenant rent medians") are now wrong where a district falls back to asking prices; the badge line names the group. The featured card's sample numbers ("ul. Puławska 45", 4,199 PLN) still show when the database has no building (pre-existing).
   - No tables, migrations or events.
 - Next: T053 (blog data report, OG images including the hub's and district page's `generateMetadata`, the share page). `loadCityFigure`, `areasWithFigure` and `singleNumberLabelText` are ready for it.
+
+### 2026-11-19 10:35 · T053 · done
+
+- Done (slice 3 of D23):
+  - `src/lib/single-number-metadata.ts` (new, pure):
+    - `figureOgCard(t, figure, { title, subtitle })` gives the OG text of one single number: `stat` "≈ 3,700 zł", `statLabel` = `singleNumberHeadingKey` (no "median" for one value, "Known part of the costs", "Rent"), `figureLabel` = `singleNumberLabelText` ("Asking prices (5), known part"), and `split` = that group's rent, plus expenses beside an all-in total only.
+    - `buildingMetaDescription(t, { address, city, figure, format })`: an all-in total with rent and expenses uses `costsSeo.buildingMetaDescriptionWithData`, with `{reports}` now the group label with N. Known part, rent only, or a total without rent use the new `buildingMetaDescriptionPartial` (ICU `select` on the metric). With no figure, the generic description has no number.
+  - `src/lib/seo.ts`: `getCostOgImage` takes a required `figureLabel` and passes it to `/api/og`.
+  - `src/app/api/og/route.tsx`: reads `figureLabel` (capped at 96 characters like `statLabel`) and draws it on the stat's row, so the card keeps its height.
+  - Pages, each card built through `figureOgCard`:
+    - City hub `generateMetadata`: `loadCityFigure`; the subtitle is the meta description; the city select drops `districts`.
+    - District page `generateMetadata`: `loadDistrictFigures` (the header card's figure); subtitle is the city.
+    - Building page `generateMetadata`: `singleNumberFigure(loadBuildingFigures(id))`, the same cached summary the page shows. The OG subtitle drops the all-sources "N reports". `rent` / `totalMonthlyAvg` are gone from the page's report select, and so is the `median` import.
+  - Blog report (`blog/warsaw-rent-prices/page.tsx`):
+    - The city card is `loadCityFigure`: heading, value, label, that group's rent and expenses, and per m² (all-in only). It is hidden without a figure; before, it could show "≈ 0 zł".
+    - Table rows come from `loadDistrictFigures` via `areasWithFigure`. The label goes under the district name, "—" marks rent only and non-all-in expenses, and the "Reports" column is gone.
+    - The lead example is the building whose figure is an all-in total with total − rent ≥ `EXAMPLE_MIN_GAP` (300), most observed first. Its label is shown under the story.
+    - `anatomyMedian` and FAQ Q2 use the city group's expenses with their own N in `{source}`. FAQ Q2 is hidden without expenses; before, it could say "≈0 zł".
+    - The header drops the all-sources count. The OG card is the city figure.
+  - Share page (`costs/share/page.tsx`):
+    - It reads the district's `loadDistrictFigures` figure (district select: `slug`, `nameKey`, `cityId`) in place of `getDistrictCostStats`.
+    - The card shows heading, value, the same group's rent, expenses and per m², and the label. The p25–p75 range and the "N reports" footer are gone.
+    - The OG card is `figureOgCard` with the district name as the image title and `cardDescription` as the subtitle, the same numbers as the district page's card. It reads the root translator.
+  - `cost-aggregates.ts`: `rollUpDistricts` / `DistrictRollup` deleted (no consumer left); the blended per-building fields stay for T054.
+  - Docs: `docs/architecture.md` §3 (remaining blended surfaces = bot `/districts`, rank line, neighbours; share page; new T053 paragraph), `cost-baselines.ts` header comment.
+- Tests:
+  - `src/lib/single-number-metadata.test.ts` (new, 12). The OG card for tenant all-in, asking known part, rent only and one value. Four locales with the label and N and no raw key. `getCostOgImage` URL params. The description for all-in, known part ("in total" absent), rent only, total without rent and no figure, in four locales with no `{` or `..`.
+  - `area-figures-consistency.test.ts` (+6, same Prisma mock; it adds `district.findFirst` and `building.findUnique`, mocks the building `client`, and `getTranslations` accepts `{ locale }`):
+    - The hub, district and building OG params equal `figureOgCard` of the loader figures. The building's equal the building page headline.
+    - Descriptions: tenant all-in, asking known part, and none without a figure.
+    - The blog report renders the city card, labelled rows in display order, the example with its label, expenses with source in the text and the JSON-LD, and no "N reports". Its OG equals the hub's.
+    - The share page and its OG equal the district page's card, for Mokotów (tenant) and Wola (asking, known part).
+  - `share/page.test.ts` rewritten around a mocked `loadDistrictFigures`: tenant and asking-known-part cards, a district without a figure, old brag links, four locales, no range.
+  - `blog/.../page.test.ts` mocks the figure loaders.
+  - `e2e/og-image.spec.ts` (new): `/api/og` with `figureLabel` returns a PNG.
+- Checks: targeted Vitest runs passed. `npm run verify` exit 0: lint, typecheck, knip 26 unused exports / 17 types as before, Vitest 84 files / 1113 tests, build OK. `npm run test:e2e` exit 0: 7/7 on port 3100, stopped afterwards; the `fetch failed` lines are the fake PostHog host. Two cards were rendered through a temporary e2e probe (deleted) and looked at: the label row fits next to the stat, including the RU "Цены из объявлений (6), известная часть". `next-env.d.ts` restored. The pages were not looked at in a real browser.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (Q-8), four locales:**
+    - `costsSeo.buildingMetaDescriptionPartial` (new). EN "Reported costs of renting at {address}, {city}: {the known part of the costs is ≈ {value} zł/mo | rent ≈ {value} zł/mo, other costs unknown | ≈ {value} zł/mo in total}. {reports}." RU «… известная часть расходов ≈ … zł в месяц | аренда ≈ … zł в месяц, остальные расходы неизвестны | всего ≈ … zł в месяц». PL / UK follow the same pattern.
+    - `share.landingDataLabel`: "Costs in {district}" / «Расходы в районе {district}» / «Витрати в районі {district}» / «Koszty w dzielnicy {district}». It was "Monthly total in {district}, median of all reports".
+    - `rentReport.anatomyMedian` and `rentReport.faqA2` end with "Source: {source}." / «Источник: …» / «Джерело: …» / «Źródło: …», where `{source}` is the group label with the N of the expenses.
+    - `costsSeo.buildingMetaDescriptionWithData` is unchanged, but `{reports}` now renders "Tenant reports (3)" instead of "3 reports".
+  - **Unused keys left in place:** `share.ogTitleNeutral`, `share.ogStatNeutralLabel`, `share.ogMedianPerM2`, `share.landingRange`, `rentReport.colReports`.
+  - **Assumption:** `EXAMPLE_MIN_GAP = 300` in the blog page. It is the old "≥ 300 zł of expenses" pick, now measured as total − rent of the chosen group, the gap the story prints.
+  - **Display choices to confirm:**
+    - The share card image title is now the district name ("What people pay for rent" is untrue for asking prices). The share page lost its p25–p75 range, because a single number carries none.
+    - The blog table has no Reports column; the label sits under each district.
+    - The OG subtitle of the hub is the meta description.
+    - Stats use `toLocaleString()` ("3,700") as before.
+  - **Pre-existing, not changed:** in `/api/og` a title that wraps to two lines (long building addresses) is drawn over the subtitle (flex shrink in the fixed 630 px card). The new label adds no height.
+  - **Copy not changed, for the owner:** `rentReport.ogTitle` / `metaTitle` / `lead` still say "real data", and `rentReport.methodologyBody` still says "Rent is the typical (median) price in the district" (T029 left these).
+  - No tables, migrations or events.
+- Next: T054 (bot `/districts`, rank line, neighbours, then remove `cost-baselines.ts` and the blended `getBuildingsData` fields; `getDistrictCostStats` now has only the bot as consumer). Update `CLAUDE.md` "Cost data honesty" and the docs.

@@ -10,10 +10,9 @@ type AreaMetric = { median: number | null; p25: number | null; p75: number | nul
 
 /**
  * District cost statistics across all visible reports (one blended number).
- * Powers the personal share landing (the Аренда/Расходы split + the typical
- * range) and the bot's cheapest-first district table and rank, frozen by Q-2
- * (spec 03 §Single-number surfaces). Every other surface reads the figure
- * contract (`cost-figures-query.ts`).
+ * Powers only the bot's cheapest-first district table and rank, which T054
+ * moves to the single-number rule (spec 03 §Single-number surfaces). Every
+ * other surface reads the figure contract (`cost-figures-query.ts`).
  */
 export type AreaStats = {
   total: AreaMetric;

@@ -56,9 +56,11 @@ vi.mock('@/lib/prisma', () => ({
     },
   },
 }));
-vi.mock('@/lib/cost-aggregates', () => ({
-  getBuildingsData: vi.fn(async () => []),
-  rollUpDistricts: vi.fn(() => []),
+// The cost figures of the report are tested in `src/lib/area-figures-consistency.test.ts`.
+vi.mock('@/lib/cost-aggregates', () => ({ getBuildingsData: vi.fn(async () => []) }));
+vi.mock('@/lib/cost-figures-query', () => ({
+  loadCityFigure: vi.fn(async () => null),
+  loadDistrictFigures: vi.fn(async () => []),
 }));
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) =>

@@ -6,9 +6,9 @@ import { BuildingCostsClient } from './client';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd, buildingPlaceJsonLd } from '@/lib/json-ld';
 import { formatAddressDisplay } from '@/lib/address';
-import { median } from '@/lib/cost-stats';
 import { loadAreaReference, loadBuildingFigures } from '@/lib/cost-figures-query';
-import type { AreaReference, FigureSummary } from '@/lib/cost-figures';
+import { singleNumberFigure, type AreaReference, type FigureSummary } from '@/lib/cost-figures';
+import { buildingMetaDescription, figureOgCard } from '@/lib/single-number-metadata';
 import { buildingTenantDetails } from '@/lib/building-tenant-details';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { summarizeTagVotes } from '@/lib/building-tags';
@@ -40,13 +40,10 @@ interface PageProps {
 // React cache() wrappers — deduplicate across generateMetadata & page render
 // ---------------------------------------------------------------------------
 
-// The page's figures come from the figure contract (`loadBuildingFigures`). Its
-// own reports feed only generateMetadata (frozen by Q-2), the items spec 03
-// keeps on the page (`buildingTenantDetails`) and the freshness badge.
+// The page's figures and its metadata come from the figure contract
+// (`loadBuildingFigures`). Its own reports feed only the items spec 03 keeps on
+// the page (`buildingTenantDetails`) and the freshness badge.
 const costReportSelect = {
-  // generateMetadata
-  rent: true,
-  totalMonthlyAvg: true,
   // buildingTenantDetails
   source: true,
   electricityWinter: true,
@@ -147,51 +144,31 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const districtName = building.district?.nameKey ?? cityName;
   const address = formatAddressDisplay(building.addressFull);
 
-  const reports = building.costReports;
-  const num = (v: unknown) => (v == null ? null : Number(v));
-  const totalMedian = median(reports.map((r) => num(r.totalMonthlyAvg)));
-  const rentMedian = median(reports.map((r) => num(r.rent)));
-  const expensesMedian = median(
-    reports.map((r) => {
-      const tot = num(r.totalMonthlyAvg);
-      const rnt = num(r.rent);
-      return tot != null && rnt != null ? Math.max(0, tot - rnt) : null;
-    }),
-  );
+  // One number by D23 (spec 03 §Single-number surfaces): the building's tenant group,
+  // else its asking prices, from the same `loadBuildingFigures` summary the page shows,
+  // labelled with the group and N. Never a median over both groups.
+  const figure = singleNumberFigure(await loadBuildingFigures(building.id));
 
   // These pages are found by searching a bare street address — "pańska 96
   // warszawa" — so the city belongs in the title, in the searcher's own
-  // language, and the medians belong in the description: they are the only
+  // language, and the figure belongs in the description: it is the only
   // thing on offer that the ten results above cannot show.
   const title = t('costsSeo.buildingMetaTitle', { address, city: cityName });
   const money = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-  const description =
-    totalMedian != null && rentMedian != null && expensesMedian != null
-      ? t('costsSeo.buildingMetaDescriptionWithData', {
-          address,
-          city: cityName,
-          total: money.format(totalMedian),
-          rent: money.format(rentMedian),
-          expenses: money.format(expensesMedian),
-          reports: t('costs.overview.nReports', { count: reports.length }),
-        })
-      : t('costsSeo.buildingMetaDescription', { address, city: cityName });
+  const description = buildingMetaDescription(t, {
+    address,
+    city: cityName,
+    figure,
+    format: money.format,
+  });
 
   // Rich cost share-card when the building has data (the viral artifact people
   // drop into chats); generic title/subtitle OG otherwise.
-  const ogImage =
-    totalMedian != null
-      ? getCostOgImage({
-          title: address,
-          subtitle: `${districtName}, ${cityName} · ${t('costs.overview.nReports', { count: reports.length })}`,
-          stat: `≈ ${totalMedian.toLocaleString()} zł`,
-          statLabel: t('costs.building.medianMonthlyTotal'),
-          split:
-            rentMedian != null && expensesMedian != null
-              ? `${t('costs.building.rent')} ≈ ${rentMedian.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${expensesMedian.toLocaleString()}`
-              : undefined,
-        })
-      : getOgImage(address, cityName);
+  const ogImage = figure
+    ? getCostOgImage(
+        figureOgCard(t, figure, { title: address, subtitle: `${districtName}, ${cityName}` }),
+      )
+    : getOgImage(address, cityName);
 
   return {
     title,
