@@ -162,7 +162,7 @@
       "title": "Store the three waitlist classes in /api/city-notify with independent validation",
       "spec": "docs/specs/02-roommate-and-waitlist.md#interest-api-three-classes",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "listingType and districtSlug are validated independently; rows are stored as exactly one of: city launch ('' / ''), listings whole city (type / ''), listings district (type / slug); unique key unchanged",
         "Listings classes require an existing City slug (400 unknown_city) and, for a district, a district of that city (400 unknown_district); a district without type or an unknown type is 400 invalid_input; it never becomes a city-launch row",
@@ -171,7 +171,7 @@
         "Route tests with mocked @/lib/prisma, @/lib/email/send, @/lib/posthog-server and Supabase cover every case listed in the spec, including the old city form body {email, city: 'Kraków', consent, locale} and a repeat submission; no real e-mail is sent"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {
