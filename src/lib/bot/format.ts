@@ -1,5 +1,4 @@
 import type { AddressLookup, DistrictRow } from './lookup';
-import type { AreaStats } from '@/lib/cost-baselines';
 import {
   groupFigureRows,
   isOneObservation,
@@ -16,7 +15,6 @@ import {
 import {
   answeredWord,
   listingsWord,
-  observationsBasisWord,
   observationsWord,
   reportsWord,
   t,
@@ -382,57 +380,45 @@ export function renderDistrictTable(rows: DistrictRow[], locale: BotLocale): str
 
 export interface DistrictAnswer {
   name: string;
-  stats: AreaStats;
+  /**
+   * The district from MIN_AREA_REPORTS reports, else the city
+   * (`loadAreaReference`); null when the city has no report either.
+   */
+  reference: AreaReference | null;
+  /** The district's own deposit statistic. */
   deposit: DepositReturns;
-  /** 1-based position in the cheapest-first league table, when it has one. */
+  /**
+   * 1-based position in the cheapest-first league table, when it has one: the
+   * blended `cost-baselines` table, frozen by Q-2 (spec 03 §Single-number surfaces).
+   */
   rank: { position: number; total: number } | null;
-  /** Warsaw-wide median, the reference point when the district itself is thin. */
-  cityMedian: number | null;
 }
 
 /**
  * The answer to a district name typed on its own ("Мокотов", "wola") — the
  * question "how much does it cost to live here?" asked before there is an
- * address to ask about. Still the blended `cost-baselines` figure until T049
- * moves it to the contract, so its count is "observations", not tenant reports.
+ * address to ask about. The figures are the area card's: one block per group
+ * with its N and label. Below MIN_AREA_REPORTS district reports the reference
+ * is the city, and the answer says so before the numbers.
  */
-export function renderDistrict(
-  district: DistrictAnswer,
-  locale: BotLocale,
-  minReports: number,
-): string {
+export function renderDistrict(district: DistrictAnswer, locale: BotLocale): string {
   const name = escapeHtml(district.name);
+  const { reference } = district;
 
-  if (district.stats.count < minReports) {
-    const cityTotal = money(district.cityMedian);
-    return [
-      t(locale, 'districtThin', { district: name }),
-      ...(cityTotal ? ['', t(locale, 'districtThinCity', { total: cityTotal })] : []),
-      '',
-      t(locale, 'districtThinPrompt'),
-      '',
-      t(locale, 'cardFooter'),
-    ].join('\n');
+  if (reference?.level !== 'district') {
+    const lines = [t(locale, reference ? 'thinDistrict' : 'districtThin', { district: name })];
+    if (reference) {
+      lines.push('', t(locale, 'cityHeader', { area: t(locale, 'cityName') }));
+      lines.push(...groupBlocks(orderedFigureGroups(reference.summary), 'area', locale));
+    }
+    lines.push('', t(locale, 'districtThinPrompt'), '', t(locale, 'cardFooter'));
+    return lines.join('\n');
   }
 
-  const lines = [t(locale, 'areaHeader', { area: name })];
-  const total = money(district.stats.total.median);
-  const rent = money(district.stats.rentMedian);
-  const expenses = money(district.stats.expensesMedian);
-  if (total) lines.push(t(locale, 'areaTotal', { total }));
-  if (rent || expenses) {
-    lines.push(t(locale, 'splitLine', { rent: rent ?? '—', expenses: expenses ?? '—' }));
-  }
-  const { p25, p75 } = district.stats.total;
-  if (p25 != null && p75 != null) {
-    lines.push(t(locale, 'areaBand', { band: `${money(p25)} – ${money(p75)}` }));
-  }
-  lines.push(
-    t(locale, 'basedOn', {
-      count: String(district.stats.count),
-      word: observationsBasisWord(locale, district.stats.count),
-    }),
-  );
+  const lines = [
+    t(locale, 'areaHeader', { area: name }),
+    ...groupBlocks(orderedFigureGroups(reference.summary), 'area', locale),
+  ];
 
   if (district.rank) {
     lines.push(

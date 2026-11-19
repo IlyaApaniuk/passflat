@@ -42,12 +42,6 @@ const LISTING_FORMS: Record<BotLocale, [string, string, string]> = {
   uk: ['оголошенням', 'оголошеннями', 'оголошеннями'],
 };
 
-/** "по 12 наблюдениям": a count that blends tenant reports and asking prices (Q-2). */
-const OBSERVATION_BASIS_FORMS: Record<BotLocale, [string, string, string]> = {
-  ru: ['наблюдению', 'наблюдениям', 'наблюдениям'],
-  uk: ['спостереженням', 'спостереженнями', 'спостереженнями'],
-};
-
 /** "(2 наблюдения, 100 м)": a neighbour's own N. */
 const OBSERVATION_FORMS: Record<BotLocale, [string, string, string]> = {
   ru: ['наблюдение', 'наблюдения', 'наблюдений'],
@@ -66,10 +60,6 @@ export function reportsWord(locale: BotLocale, count: number): string {
 
 export function listingsWord(locale: BotLocale, count: number): string {
   return plural(count, LISTING_FORMS[locale]);
-}
-
-export function observationsBasisWord(locale: BotLocale, count: number): string {
-  return plural(count, OBSERVATION_BASIS_FORMS[locale]);
 }
 
 export function observationsWord(locale: BotLocale, count: number): string {
@@ -167,11 +157,7 @@ const RU = {
   referenceRent: ', аренда',
   neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
 
-  // --- the typed-district answer (renderDistrict) ---
-  splitLine: '   Аренда {rent} + расходы {expenses}',
-  basedOn: '   <i>по {count} {word}</i>',
-  areaTotal: '💸 Медиана: <b>{total}</b> в месяц',
-
+  // --- area answers: an address without its own data, and a typed district (renderDistrict) ---
   areaHeader: '📊 <b>{area}</b> — данные по району:',
   cityHeader: '📊 <b>{area}</b> — данные по городу:',
   areaBand: '   Обычный диапазон: {band}',
@@ -214,8 +200,6 @@ const RU = {
   districtRank: '🏷 {position}-е место из {total} по цене <i>(1 — самый дешёвый)</i>',
   districtAskAddress: '👉 Пришли адрес в этом районе — покажу конкретный дом и соседей.',
   districtThin: 'По району <b>{district}</b> отчётов пока мало, чтобы считать медиану.',
-  districtThinCity:
-    '📊 Для ориентира — медиана по Варшаве: <b>{total}</b> в месяц.\nВсе районы по цене: /districts',
   districtThinPrompt:
     '👉 Живёшь здесь? Твой отчёт станет одним из первых — и район появится в рейтинге.',
 
@@ -304,10 +288,6 @@ const UK: Record<Key, string> = {
   referenceRent: ', оренда',
   neighbourLine: '• {address} — {value} <i>({count} {word}, {distance} м)</i>',
 
-  splitLine: '   Оренда {rent} + витрати {expenses}',
-  basedOn: '   <i>за {count} {word}</i>',
-  areaTotal: '💸 Медіана: <b>{total}</b> на місяць',
-
   areaHeader: '📊 <b>{area}</b> — дані по району:',
   cityHeader: '📊 <b>{area}</b> — дані по місту:',
   areaBand: '   Звичайний діапазон: {band}',
@@ -346,8 +326,6 @@ const UK: Record<Key, string> = {
   districtRank: '🏷 {position}-е місце з {total} за ціною <i>(1 — найдешевший)</i>',
   districtAskAddress: '👉 Надішли адресу в цьому районі — покажу конкретний будинок і сусідів.',
   districtThin: 'По району <b>{district}</b> звітів поки замало, щоб рахувати медіану.',
-  districtThinCity:
-    '📊 Для орієнтиру — медіана по Варшаві: <b>{total}</b> на місяць.\nУсі райони за ціною: /districts',
   districtThinPrompt:
     '👉 Живеш тут? Твій звіт стане одним із перших — і район з’явиться в рейтингу.',
 

@@ -5,11 +5,12 @@ this repo, not a separate project: an address answer reads the building's
 figures, the area reference and the deposit statistic through the figure
 contract's loaders (`@/lib/cost-figures-query`), the ones the checker and the
 building page read, and `format.ts` shows them by group with each figure's N,
-as the checker does. The neighbours' single number (`@/lib/location-checker`),
-the `/districts` table and the typed-district answer (`@/lib/cost-baselines`)
-stay as they are until Q-2 (the district card moves to the contract in T049).
-A split would mean either duplicating that logic or maintaining an API between
-two deploys.
+as the checker does. The typed-district answer reads the same contract
+(`getDistrictBySlug` → `loadAreaReference`: the district from five reports,
+else the city, said so first). The neighbours' single number
+(`@/lib/location-checker`), the `/districts` table and the district's rank
+line (`@/lib/cost-baselines`) stay as they are until Q-2. A split would mean
+either duplicating that logic or maintaining an API between two deploys.
 
 ## Production status
 

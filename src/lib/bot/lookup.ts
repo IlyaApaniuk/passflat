@@ -31,8 +31,9 @@ import type { GeocodedAddress } from './geocode';
  *
  * Figures come from the shared contract's loaders (`cost-figures-query.ts`),
  * the ones the website's checker and building page read, so the bot never
- * aggregates reports itself (CLAUDE.md). The one exception is the neighbours'
- * single blended number, frozen by Q-2 (spec 03 §Single-number surfaces).
+ * aggregates reports itself (CLAUDE.md). The exceptions are the neighbours'
+ * single blended number and the cheapest-first district table, frozen by Q-2
+ * (spec 03 §Single-number surfaces).
  */
 
 type LookupLevel = 'building' | 'district' | 'city';
@@ -355,15 +356,18 @@ export async function getDistrictTable(
   return rows.filter((row) => row.median != null).sort((a, b) => (a.median ?? 0) - (b.median ?? 0));
 }
 
+/**
+ * A district of the checker city with its figures from the shared contract:
+ * `reference` is the district from MIN_AREA_REPORTS reports, else the city
+ * (null when the city has none), what the typed-district card renders and
+ * `tg_district_checked` describes. `deposit` is the district's own statistic.
+ */
 export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKER_CITY_SLUG) {
   const city = await getCity(citySlug);
   const district = city?.districts.find((d) => d.slug === slug);
   if (!city || !district) return null;
 
-  // `reference` (the district from MIN_AREA_REPORTS reports, else the city) is
-  // what `tg_district_checked` describes; the card still renders `stats` (T049).
-  const [stats, deposit, reference] = await Promise.all([
-    getDistrictCostStats(district.id),
+  const [deposit, reference] = await Promise.all([
     loadDepositReturns({ districtId: district.id }),
     loadAreaReference({ districtId: district.id, cityId: city.id }),
   ]);
@@ -372,7 +376,6 @@ export async function getDistrictBySlug(slug: string, citySlug = LOCATION_CHECKE
     citySlug: city.slug,
     slug: district.slug,
     name: district.nameKey,
-    stats,
     deposit,
     reference,
   };

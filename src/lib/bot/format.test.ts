@@ -358,20 +358,11 @@ describe('deposit statistic (spec 04 §Deposit statistics)', () => {
     const text = renderDistrict(
       {
         name: 'Wola',
-        stats: {
-          total: { median: 4_400, p25: 4_000, p75: 5_000 },
-          rentPerM2: { median: null, p25: null, p75: null },
-          totalPerM2: { median: null, p25: null, p75: null },
-          rentMedian: 3_500,
-          expensesMedian: 900,
-          count: 12,
-        },
+        reference: reference('district', areaReports, 'Wola'),
         deposit: example10,
         rank: null,
-        cityMedian: null,
       },
       'uk',
-      5,
     );
     expect(text).toContain(
       '🔐 Повернули заставу повністю або частково: 2 з 3 тих, хто відповів (Wola)',
@@ -534,27 +525,102 @@ describe('renderLookup: escaping and locales', () => {
   });
 });
 
-describe('renderDistrict', () => {
-  it('counts the blended district figure as observations, not as tenant reports', () => {
-    const text = renderDistrict(
-      {
-        name: 'Wola',
-        stats: {
-          total: { median: 4_400, p25: 4_000, p75: 5_000 },
-          rentPerM2: { median: null, p25: null, p75: null },
-          totalPerM2: { median: null, p25: null, p75: null },
-          rentMedian: 3_500,
-          expensesMedian: 900,
-          count: 12,
-        },
-        deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
-        rank: null,
-        cityMedian: null,
-      },
-      'ru',
-      5,
+describe('renderDistrict (typed district on the contract)', () => {
+  const noDeposit = { answered: 0, gotBack: 0, full: 0, medianDeposit: null };
+  const answer = (overrides: Partial<Parameters<typeof renderDistrict>[0]> = {}) => ({
+    name: 'Wola',
+    reference: reference('district', areaReports, 'Wola'),
+    deposit: noDeposit,
+    rank: null,
+    ...overrides,
+  });
+
+  /** The level header and the group blocks: what the district and area cards share. */
+  const figures = (text: string, header: string) =>
+    text.slice(text.indexOf(header), text.indexOf('\n\n👉'));
+
+  it('shows each group of the district with its N and label', () => {
+    const text = renderDistrict(answer(), 'ru');
+
+    expect(text.startsWith('📊 <b>Wola</b> — данные по району:\n')).toBe(true);
+    expect(text).toContain('👥 <b>Отчёты жильцов: 5</b> <i>(из них внесено Passflat: 1)</i>');
+    expect(text).toContain(`Всего в месяц: <b>${money(4400)}</b> <i>(медиана по 5 отчётам)</i>`);
+    expect(text).toContain(`Обычный диапазон: ${money(4000)} – ${money(5000)}`);
+    expect(text).toContain(`Аренда: ${money(3500)} <i>(5)</i>`);
+    expect(text).toContain('📰 <b>Цены из объявлений: 2</b>');
+    expect(text).toContain(
+      `Известная часть расходов: <b>${money(9250)}</b> <i>(медиана по 2 объявлениям)</i>`,
     );
-    expect(text).toContain('по 12 наблюдениям');
-    expect(text).not.toContain('жильцов');
+    // Asking prices are never counted as tenants, and no blended figure is left.
+    const asking = text.slice(text.indexOf('Цены из объявлений'), text.indexOf('\n\n👉'));
+    expect(asking).not.toMatch(/жильц|отчёт(ам|у)\b/);
+    expect(text).not.toMatch(/наблюдениям|Медиана:/);
+    expect(text).toContain('Пришли адрес в этом районе');
+    expect(text.endsWith(t('ru', 'cardFooter'))).toBe(true);
+  });
+
+  it('renders the same figures as the area card of an address in that district', () => {
+    const ref = reference('district', areaReports, 'Wola');
+    const header = '📊 <b>Wola</b> — данные по району:';
+    for (const locale of ['ru', 'uk'] as const) {
+      const localeHeader = locale === 'ru' ? header : '📊 <b>Wola</b> — дані по району:';
+      const district = figures(renderDistrict(answer({ reference: ref }), locale), localeHeader);
+      const area = figures(
+        renderLookup(lookup({ reference: ref, districtName: 'Wola', deposit: noDeposit }), locale),
+        localeHeader,
+      );
+      expect(district.length).toBeGreaterThan(localeHeader.length);
+      expect(district).toBe(area);
+    }
+  });
+
+  it('keeps the cheapest-first rank line from the league table', () => {
+    const text = renderDistrict(answer({ rank: { position: 2, total: 9 } }), 'ru');
+    expect(text).toContain('🏷 2-е место из 9 по цене');
+  });
+
+  it('says a thin district answers with the city, then shows the city groups with N', () => {
+    const text = renderDistrict(
+      answer({ name: 'Rembertów', reference: reference('city'), rank: { position: 9, total: 9 } }),
+      'ru',
+    );
+
+    expect(text.split('\n')[0]).toBe(
+      'По району <b>Rembertów</b> отчётов пока мало, чтобы считать медиану — показываю Варшаву целиком.',
+    );
+    expect(text).toContain('📊 <b>Варшава</b> — данные по городу:');
+    expect(text).toContain(`Всего в месяц: <b>${money(4400)}</b> <i>(медиана по 5 отчётам)</i>`);
+    expect(text).toContain('📰 <b>Цены из объявлений: 2</b>');
+    expect(text).not.toContain('данные по району');
+    // The city's figures carry no rank of the district.
+    expect(text).not.toContain('место из');
+    expect(text).toContain(t('ru', 'districtThinPrompt'));
+    expect(text.endsWith(t('ru', 'cardFooter'))).toBe(true);
+  });
+
+  it('renders the thin branch in Ukrainian', () => {
+    const text = renderDistrict(answer({ name: 'Wesoła', reference: reference('city') }), 'uk');
+    expect(text).toContain('По району <b>Wesoła</b> звітів поки замало');
+    expect(text).toContain('показую Варшаву цілком');
+    expect(text).toContain('📊 <b>Варшава</b> — дані по місту:');
+    expect(text).toContain('(медіана за 5 звітами)');
+    expect(text).not.toMatch(/[ыэъё]/);
+  });
+
+  it('still answers when the city has no reference either', () => {
+    const text = renderDistrict(answer({ reference: null }), 'ru');
+    expect(text.split('\n')[0]).toBe(
+      'По району <b>Wola</b> отчётов пока мало, чтобы считать медиану.',
+    );
+    expect(text).not.toContain('данные по');
+    expect(text).toContain(t('ru', 'districtThinPrompt'));
+  });
+
+  it('escapes the district name in both branches', () => {
+    for (const ref of [reference('district', areaReports, 'Wola'), reference('city'), null]) {
+      const text = renderDistrict(answer({ name: 'Wola <b>&</b>', reference: ref }), 'ru');
+      expect(text).toContain('Wola &lt;b&gt;&amp;&lt;/b&gt;');
+      expect(text).not.toContain('<b>&</b>');
+    }
   });
 });

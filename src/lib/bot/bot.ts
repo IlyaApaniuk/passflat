@@ -7,9 +7,6 @@ import {
   type Filter,
 } from 'grammy';
 
-import { getCityCostStats } from '@/lib/cost-baselines';
-import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
-
 import { track } from './analytics';
 import { checkEventProperties, districtCheckEventProperties } from './check-events';
 import {
@@ -236,16 +233,24 @@ async function replyDistrict(
   const chatId = ctx.chat?.id;
   if (!chatId) return false;
 
-  const [district, table, city] = await Promise.all([
-    getDistrictBySlug(slug),
-    getDistrictTable(),
-    getCity(),
-  ]);
+  const [district, table] = await Promise.all([getDistrictBySlug(slug), getDistrictTable()]);
   if (!district) return false;
-  const cityStats = city ? await getCityCostStats(city.id) : null;
 
+  // The rank and `report_count` come from the blended league table (Q-2); the
+  // card's figures come from the district's reference on the contract.
   const position = table.findIndex((row) => row.slug === slug);
-  track(chatId, 'tg_district_checked', districtCheckEventProperties(district, entrySource));
+  track(
+    chatId,
+    'tg_district_checked',
+    districtCheckEventProperties(
+      {
+        slug: district.slug,
+        reportCount: position >= 0 ? table[position].count : 0,
+        reference: district.reference,
+      },
+      entrySource,
+    ),
+  );
 
   const keyboard = new InlineKeyboard()
     .text(t(locale, 'subscribeDistrict', { district: district.name }), `sub:d:${district.slug}`)
@@ -257,13 +262,11 @@ async function replyDistrict(
     renderDistrict(
       {
         name: district.name,
-        stats: district.stats,
+        reference: district.reference,
         deposit: district.deposit,
         rank: position >= 0 ? { position: position + 1, total: table.length } : null,
-        cityMedian: cityStats?.total.median ?? null,
       },
       locale,
-      MIN_AREA_REPORTS,
     ),
     { parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: keyboard },
   );

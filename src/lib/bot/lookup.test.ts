@@ -456,17 +456,34 @@ describe('getCityDepositFacts', () => {
   });
 });
 
-describe('getDistrictBySlug reference (what tg_district_checked describes)', () => {
+/** Cost-report queries of the blended `cost-baselines` figures (`totalMonthlyAvg: { not: null }`). */
+function blendedQueries() {
+  return h.costReportFindMany.mock.calls.filter(
+    ([args]) => (args as { where: { totalMonthlyAvg?: unknown } }).where.totalMonthlyAvg,
+  );
+}
+
+describe('getDistrictBySlug on the figure contract (the typed-district card)', () => {
   it('carries the district reference from MIN_AREA_REPORTS reports', async () => {
     const district = await getDistrictBySlug('mokotow');
 
-    expect(district).toMatchObject({ citySlug: 'warsaw', slug: 'mokotow', name: 'Mokotów' });
-    expect(district!.reference).toEqual({
-      level: 'district',
+    expect(district).toEqual({
+      citySlug: 'warsaw',
       slug: 'mokotow',
       name: 'Mokotów',
-      summary: summarizeFigures(districtReports, { level: 'district', rentalType: 'all' }),
+      deposit: summarizeDepositReturns(districtReports),
+      reference: {
+        level: 'district',
+        slug: 'mokotow',
+        name: 'Mokotów',
+        summary: summarizeFigures(districtReports, { level: 'district', rentalType: 'all' }),
+      },
     });
+    expect(depositQueries()).toEqual([
+      { isVisible: true, building: { districtId: 'district-mokotow' } },
+    ]);
+    // No second aggregation: the blended district figure is no longer read.
+    expect(blendedQueries()).toEqual([]);
   });
 
   it('falls back to the city reference for a thin district', async () => {
@@ -477,6 +494,18 @@ describe('getDistrictBySlug reference (what tg_district_checked describes)', () 
     expect(district!.reference!.summary).toEqual(
       summarizeFigures(cityReports, { level: 'city', rentalType: 'all' }),
     );
+    // The deposit statistic stays the district's own, and nothing blended is read.
+    expect(depositQueries()).toEqual([
+      { isVisible: true, building: { districtId: 'district-mokotow' } },
+    ]);
+    expect(blendedQueries()).toEqual([]);
+  });
+
+  it('gives no reference when neither the district nor the city has a report', async () => {
+    serveReports({});
+    const district = await getDistrictBySlug('mokotow');
+
+    expect(district).toMatchObject({ slug: 'mokotow', reference: null });
   });
 
   it('gives null for a slug that is not a district of the city', async () => {

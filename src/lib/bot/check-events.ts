@@ -44,14 +44,17 @@ export function checkEventProperties(
 /**
  * `tg_district_checked`: the existing two properties, then the answer quality of
  * the district's reference (the city's for a district below MIN_AREA_REPORTS).
+ * `reportCount` is the district's count in the cost-baselines league table (its
+ * reports with a total; 0 when it is not in the table), the value the property
+ * always had, so a thin district can still be told apart from its city answer.
  */
 export function districtCheckEventProperties(
-  district: { slug: string; stats: { count: number }; reference: AreaReference | null },
+  district: { slug: string; reportCount: number; reference: AreaReference | null },
   entrySource: EntrySource,
 ) {
   return {
     district: district.slug,
-    report_count: district.stats.count,
+    report_count: district.reportCount,
     entry_source: entrySource,
     ...answerQuality(null, district.reference),
   };

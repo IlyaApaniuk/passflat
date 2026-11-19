@@ -180,7 +180,7 @@ describe('districtCheckEventProperties (tg_district_checked)', () => {
   const district = (ref: AreaReference | null) => ({
     slug: 'mokotow',
     name: 'Mokotów',
-    stats: { count: 12 },
+    reportCount: 12,
     reference: ref,
   });
 
@@ -210,7 +210,7 @@ describe('districtCheckEventProperties (tg_district_checked)', () => {
   });
 
   it('describes the city reference of a thin district', () => {
-    const thin = { ...district(reference('city', areaReports.slice(0, 2))), stats: { count: 2 } };
+    const thin = { ...district(reference('city', areaReports.slice(0, 2))), reportCount: 2 };
     expect(districtCheckEventProperties(thin, 'typed_district')).toMatchObject({
       report_count: 2,
       source_kind: 'tenant',

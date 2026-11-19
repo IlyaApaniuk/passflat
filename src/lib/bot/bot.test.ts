@@ -2,7 +2,6 @@ import type { CallbackQueryContext, CommandContext, Context } from 'grammy';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  MIN_AREA_REPORTS,
   summarizeDepositReturns,
   summarizeFigures,
   type AreaReference,
@@ -37,7 +36,6 @@ const mocks = vi.hoisted(() => ({
   lookupBuilding: vi.fn(),
   getCity: vi.fn(),
   getDistrictTable: vi.fn(),
-  getCityCostStats: vi.fn(),
   lookupAddress: vi.fn(),
   geocodeAddress: vi.fn(),
   handleDepositText: vi.fn(),
@@ -70,7 +68,6 @@ vi.mock('./lookup', () => ({
 }));
 // Geocoding is a paid Google call: never made from a test.
 vi.mock('./geocode', () => ({ geocodeAddress: mocks.geocodeAddress }));
-vi.mock('@/lib/cost-baselines', () => ({ getCityCostStats: mocks.getCityCostStats }));
 
 const UUID = '3f2c8a1e-9b4d-4c7a-8e21-5d6f0a9b1c3e';
 const CHAT_ID = 4242;
@@ -404,22 +401,14 @@ describe('handleStart with a building link (b_<uuid>)', () => {
   });
 });
 
-/** What `getDistrictBySlug('mokotow')` returns: a district with enough observations. */
-function district(name = 'Mokotów') {
+/** What `getDistrictBySlug('mokotow')` returns: by default a district with its own reference. */
+function district(name = 'Mokotów', reference: AreaReference | null = areaReference('district')) {
   return {
     citySlug: 'warsaw',
     slug: 'mokotow',
     name,
-    stats: {
-      total: { median: 4_400, p25: 4_000, p75: 5_000 },
-      rentPerM2: { median: null, p25: null, p75: null },
-      totalPerM2: { median: null, p25: null, p75: null },
-      rentMedian: 3_500,
-      expensesMedian: 900,
-      count: 12,
-    },
     deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
-    reference: areaReference('district'),
+    reference,
   };
 }
 
@@ -462,21 +451,13 @@ describe('handleStart with a district link (d_<slug>)', () => {
     mocks.getDistrictBySlug.mockResolvedValue(district());
     mocks.getDistrictTable.mockResolvedValue(districtTable);
     mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
-    mocks.getCityCostStats.mockResolvedValue({ total: { median: 4_500 } });
   });
 
-  const card = (locale: 'ru' | 'uk', name = 'Mokotów') =>
-    renderDistrict(
-      {
-        name,
-        stats: district().stats,
-        deposit: district().deposit,
-        rank: { position: 2, total: 2 },
-        cityMedian: 4_500,
-      },
-      locale,
-      MIN_AREA_REPORTS,
-    );
+  const card = (
+    locale: 'ru' | 'uk',
+    reference: AreaReference | null = areaReference('district'),
+    rank: { position: number; total: number } | null = { position: 2, total: 2 },
+  ) => renderDistrict({ name: 'Mokotów', reference, deposit: district().deposit, rank }, locale);
 
   it('answers with the district card and a save-interest button, saving nothing', async () => {
     const { ctx, reply } = fakeContext('/start d_mokotow');
@@ -484,6 +465,13 @@ describe('handleStart with a district link (d_<slug>)', () => {
 
     expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
     expect(replyKey(reply)).toBe(card('ru'));
+    // The district's groups with N, from its reference on the contract.
+    expect(replyKey(reply)).toContain('📊 <b>Mokotów</b> — данные по району:');
+    expect(replyKey(reply)).toContain('👥 <b>Отчёты жильцов: 5</b>');
+    expect(replyKey(reply)).toContain('(медиана по 5 отчётам)');
+    expect(replyKey(reply)).toContain('🏷 2-е место из 2 по цене');
+    // The blended city median is no longer read: the card needs no city lookup.
+    expect(mocks.getCity).not.toHaveBeenCalled();
     expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
     expect(buttons(reply)).toContain('sub:d:mokotow');
     expect(buttonTexts(reply)).toContain(t('ru', 'subscribeDistrict', { district: 'Mokotów' }));
@@ -518,6 +506,45 @@ describe('handleStart with a district link (d_<slug>)', () => {
 
     expect(replyKey(reply)).toContain('Mokotów &lt;i&gt;&amp;&lt;/i&gt;');
     expect(replyKey(reply)).not.toContain('<i>&</i>');
+  });
+
+  it('answers a thin district with the city reference; report_count stays the table count', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', areaReference('city')));
+    mocks.getDistrictTable.mockResolvedValue([districtTable[0], { ...districtTable[1], count: 2 }]);
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toBe(card('ru', areaReference('city')));
+    expect(text).toContain('показываю Варшаву целиком');
+    expect(text).toContain('📊 <b>Варшава</b> — данные по городу:');
+    expect(text).toContain('(медиана по 5 отчётам)');
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 2,
+      entry_source: 'link_district',
+      source_kind: 'tenant',
+      n: 5,
+      incomplete: false,
+    });
+  });
+
+  it('records report_count 0 and no rank for a district missing from the table', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', null));
+    mocks.getDistrictTable.mockResolvedValue([districtTable[0]]);
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('ru', null, null));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 0,
+      entry_source: 'link_district',
+      source_kind: 'none',
+      n: 0,
+      incomplete: false,
+    });
   });
 
   it('saves the interest only when its button is tapped', async () => {
@@ -563,7 +590,6 @@ describe('handleText (typed address or district)', () => {
     });
     mocks.getDistrictBySlug.mockResolvedValue(district());
     mocks.getDistrictTable.mockResolvedValue(districtTable);
-    mocks.getCityCostStats.mockResolvedValue({ total: { median: 4_500 } });
   });
 
   it('records a typed address as typed_address, once, with the answer quality', async () => {

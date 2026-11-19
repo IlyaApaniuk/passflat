@@ -9,9 +9,11 @@ import { computeStats, median, perAreaValues } from '@/lib/cost-stats';
 type AreaMetric = { median: number | null; p25: number | null; p75: number | null };
 
 /**
- * Area-level (district or city) cost statistics across all visible reports.
+ * District cost statistics across all visible reports (one blended number).
  * Powers the personal share landing (the Аренда/Расходы split + the typical
- * range) and the bot until they move to the figure contract (spec 03).
+ * range) and the bot's cheapest-first district table and rank, frozen by Q-2
+ * (spec 03 §Single-number surfaces). Every other surface reads the figure
+ * contract (`cost-figures-query.ts`).
  */
 export type AreaStats = {
   total: AreaMetric;
@@ -61,8 +63,6 @@ async function computeAreaStats(buildingWhere: Record<string, unknown>): Promise
 
 // React `cache()` = per-request memoization (NOT the Next data cache): a fresh
 // submit still recomputes on the next request, but repeated lookups of the same
-// district/city within one render (the dashboard fetches stats per report, many
-// sharing a district) dedupe to a single query.
+// district within one render (the share page reads it for its metadata and its
+// body) dedupe to a single query.
 export const getDistrictCostStats = cache((districtId: string) => computeAreaStats({ districtId }));
-
-export const getCityCostStats = cache((cityId: string) => computeAreaStats({ cityId }));

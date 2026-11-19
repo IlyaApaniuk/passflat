@@ -76,6 +76,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Conditional writes (claims, races) are tested over an in-memory Prisma fake whose `findMany` returns copies and whose `updateMany` applies its `where`; overlapping runs are `Promise.all` of two calls (example: `src/lib/bot/deposit-flow.test.ts`).
 - Never `console.error` a `GrammyError` object: its `payload` holds `chat_id`. Log `error.message`.
 - The shell is zsh: quote globs in flags (`--include='*.ts'`), or the command fails with "no matches found".
+- Compare knip's "Unused exports (N)" with the last log entry: a higher N means the task removed an export's last consumer; delete the dead export in the same task.
 - A task added with `ralph-tasks.mjs add` must also go into the PRD's final-check task's `dependsOn` (edit `ralph/tasks.json`): `next` picks the first runnable task in file order, so a final check runs before later-added tasks otherwise.
 
 ## Log
@@ -1009,3 +1010,48 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Kept unchanged, outside this task: `share.landingBody` ("Someone compared their rent to the area…") and `share.ctaSubmit` ("Compare your costs"). Neither gives a verdict.
   - No assumptions, tables or migrations. Analytics unchanged.
 - Next: T049, T050, T051, then T046 from a clean tree. T046's handoff should add T048's four draft keys under website draft copy.
+
+### 2026-11-19 05:48 · T049 · done
+
+- Done:
+  - `src/lib/bot/lookup.ts`: `getDistrictBySlug` returns `{ citySlug, slug, name, deposit, reference }` and no longer calls `getDistrictCostStats`. `reference` comes from `loadAreaReference` (district from `MIN_AREA_REPORTS` reports, else the city, null when the city has none); `deposit` stays the district's own.
+  - `src/lib/bot/format.ts`: `renderDistrict(district, locale)` (the `minReports` argument is gone). `DistrictAnswer` is `{ name, reference, deposit, rank }`; `stats` and `cityMedian` are gone.
+    - District reference: `areaHeader`, then the area card's `groupBlocks(…, 'area', …)` (groups with N and labels, band from 5 values, known-part hint), then the rank line (unchanged), the deposit line, `districtAskAddress`, footer.
+    - City reference (thin district): `thinDistrict` («… — показываю Варшаву целиком»), `cityHeader`, the city's groups, `districtThinPrompt`, footer. No rank and no deposit line, as before.
+    - No reference: `districtThin`, `districtThinPrompt`, footer.
+  - `src/lib/bot/bot.ts`: `replyDistrict` loads only `getDistrictBySlug` and `getDistrictTable`. No `getCity` / `getCityCostStats`. `tg_district_checked.report_count` is the district's count in the league table (0 when absent). That is the same `getDistrictCostStats` count the property always had.
+  - `src/lib/bot/check-events.ts`: `districtCheckEventProperties` takes `{ slug, reportCount, reference }`.
+  - `src/lib/bot/texts.ts` (RU and UK): removed `areaTotal`, `splitLine`, `basedOn`, `districtThinCity` and the `observationsBasisWord` plural set. No new or changed strings.
+  - `src/lib/cost-baselines.ts`: `getCityCostStats` removed; `bot.ts` was its last consumer, and knip listed it as a new unused export. The header comment names the remaining consumers.
+  - Docs: `src/lib/bot/README.md` intro; `docs/architecture.md` (the district-names bullet in the bot section and the post-submit bullet's `cost-baselines` sentence).
+- Remaining `cost-baselines.ts` consumers (spec 03 asks for the list): the share page (`getDistrictCostStats`); the bot's `getDistrictTable` (`/districts`, the typed-district rank line, `report_count`). Spec 03 line 260 still names `getCityCostStats`; the spec was not edited.
+- Tests:
+  - `format.test.ts`, new `renderDistrict` describe (7):
+    - mixed groups with N and labels;
+    - the same header + groups as the area card of an address in that district (RU and UK);
+    - rank kept;
+    - thin → city groups, with no district header and no rank;
+    - thin in UK;
+    - no reference;
+    - name escaped in all three branches.
+      The deposit case uses the new shape.
+  - `bot.test.ts`:
+    - `d_` card equals `renderDistrict` from the reference, with no `getCity` call;
+    - thin district → city card and `report_count` 2 from the table;
+    - district missing from the table → `report_count` 0, no rank, `source_kind none`.
+      The `getCityCostStats` mock is gone.
+  - `lookup.test.ts`, `getDistrictBySlug` (Prisma and `next/cache` mocked):
+    - exact shape (no `stats`), the district deposit query, and no blended query (`totalMonthlyAvg: { not: null }`), for the district and thin → city cases;
+    - null reference when nothing is reported.
+  - `check-events.test.ts`: fixture moved to `reportCount`.
+- Checks: `npx vitest run src/lib/bot` passed (11 files / 254 tests). `npm run verify` exit 0: lint, typecheck, knip (33 unused exports / 18 types, as before), Vitest 72 files / 935 tests, build OK. `next-env.d.ts` restored. A scratch render with `npx tsx` showed both branches as intended. The bot was not started and no Telegram call was made.
+- Did not work: one new test sliced the asking block up to the footer, which says «жильцы»; it now cuts at the prompt.
+- Owner review:
+  - Display change in the typed-district answer (RU and UK):
+    - Before: one blended median «Медиана: X в месяц», «Аренда + расходы», «по N наблюдениям».
+    - Now: the tenant and asking groups, each with its N, as in the address card.
+    - A thin district: before, a single city median line with «Все районы по цене: /districts»; now, the city's groups after «показываю Варшаву целиком». The /districts button stays in the keyboard.
+  - The rank line («7-е место из 16 по цене») is still the blended league table (Q-2). It now sits under group figures it was not computed from; Q-2 decides whether it stays.
+  - `tg_district_checked.report_count` keeps its old value (the blended count); `source_kind` / `n` / `incomplete` describe the reference, as since T038.
+  - No new copy, assumptions, tables or migrations.
+- Next: T050 (flush in `runInBackground`), T051, then T046 from a clean tree. T046's handoff: T049 removed four bot keys and changed no strings.
