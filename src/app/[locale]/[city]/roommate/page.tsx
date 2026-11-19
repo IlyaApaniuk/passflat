@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { ListingsPageClient } from '@/components/listings/listings-page-client';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import {
+  countCityListings,
   queryListings,
   serializeListing,
   parseSearchParams,
@@ -52,7 +53,12 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   if (!city) notFound();
 
   const parsed = parseSearchParams(search);
-  const listings = await queryListings({ cityId: city.id, type: 'roommate', ...parsed });
+  // The count ignores the URL filters, so a reload with strict filters never reads as an
+  // empty city (spec 02 §Empty states).
+  const [listings, cityOfferCount] = await Promise.all([
+    queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
+    countCityListings({ cityId: city.id, type: 'roommate' }),
+  ]);
   const serialized = listings.map(serializeListing);
 
   const districts = city.districts.map((d) => ({
@@ -74,6 +80,7 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
       citySlug={citySlug}
       cityBounds={cityBounds ?? undefined}
       listingType="roommate"
+      cityOfferCount={cityOfferCount}
       isLoggedIn={!!user}
     />
   );

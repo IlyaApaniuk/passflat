@@ -31,6 +31,7 @@ export function ListingsEmptyState({
   districtSlug,
   isLoggedIn,
   intent,
+  showTitle = true,
 }: {
   citySlug: string;
   /** District display name (already translated from nameKey), or undefined for whole-city. */
@@ -42,6 +43,11 @@ export function ListingsEmptyState({
   isLoggedIn: boolean;
   /** The role the visitor chose on this page (roommate), sent with `listing_interest_saved`. */
   intent?: RoommateIntent;
+  /**
+   * False below the "No offers match your filters" heading: there the district may have offers
+   * that other filters exclude, so "No listings in {district} yet" would not be true.
+   */
+  showTitle?: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -125,13 +131,15 @@ export function ListingsEmptyState({
       };
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <Bell className="h-7 w-7 text-primary" />
+    <div className={`mx-auto w-full max-w-md px-4 ${showTitle ? 'py-10' : 'pb-10'}`}>
+      {showTitle && (
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <Bell className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold">{title}</h3>
         </div>
-        <h3 className="text-lg font-semibold">{title}</h3>
-      </div>
+      )}
 
       <div className="space-y-3 text-left">
         {/* Demand — looking for a place */}

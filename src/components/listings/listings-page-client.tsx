@@ -14,6 +14,7 @@ import {
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
+import { ListingsNoMatch } from '@/components/listings/listings-no-match';
 import { RoommateRoleSelector } from '@/components/listings/roommate-role-selector';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
@@ -37,10 +38,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Map, List } from 'lucide-react';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import { filterListings } from '@/lib/listings-filter';
+import { listingsEmptyKind, serverListNarrowed } from '@/lib/listings-empty-kind';
 import { INITIAL_ROOMMATE_ROLE_STATE } from '@/lib/roommate-roles';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
@@ -52,6 +54,11 @@ interface Props {
   citySlug: string;
   cityBounds?: CityBounds;
   listingType: ListingType;
+  /**
+   * Roommate only: active offers in the city without the URL filters (spec 02 §Empty states).
+   * `/replacement` and `/sublet` do not pass it and keep their empty state.
+   */
+  cityOfferCount?: number;
   isLoggedIn?: boolean;
 }
 
@@ -69,10 +76,12 @@ function ListingsPageInner({
   citySlug,
   cityBounds,
   listingType,
+  cityOfferCount,
   isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
+  const router = useRouter();
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
   // Keep the filter controls (chips, inputs, sheet) snappy while the heavier
   // list re-filter runs at a lower priority.
@@ -193,6 +202,29 @@ function ListingsPageInner({
     : '';
   const showDemandCapture =
     filteredListings.length === 0 && (listings.length === 0 || !!selectedDistrict);
+
+  // Roommate (spec 02 §Empty states): the server's city count tells "no offers in the city"
+  // from "nothing matches your filters", also after a reload with strict URL filters (then
+  // `listings` is already narrowed). `/replacement` and `/sublet` keep the rule above.
+  const emptyKind =
+    listingType === 'roommate' && cityOfferCount !== undefined
+      ? listingsEmptyKind({
+          cityOfferCount,
+          filteredCount: filteredListings.length,
+          hasActiveFilters: activeFilterCount > 0,
+        })
+      : showDemandCapture
+        ? 'no_offers_in_city'
+        : 'none';
+
+  // The existing filter reset; when the server list was narrowed by URL params, fetch the
+  // whole city again (the reset already dropped the params from the URL).
+  const clearFilters = () => {
+    handleFiltersChange({});
+    if (serverListNarrowed({ serverCount: listings.length, cityOfferCount: cityOfferCount ?? 0 })) {
+      router.refresh();
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col overflow-hidden pt-24">
@@ -321,7 +353,22 @@ function ListingsPageInner({
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
-                {showDemandCapture ? (
+                {emptyKind === 'no_match_for_filters' ? (
+                  <>
+                    <ListingsNoMatch onClearFilters={clearFilters} />
+                    {selectedDistrict && (
+                      <ListingsEmptyState
+                        citySlug={citySlug}
+                        listingType={listingType}
+                        selectedDistrict={selectedDistrict}
+                        districtSlug={selectedDistrictSlug}
+                        isLoggedIn={isLoggedIn}
+                        intent={roleState.intent}
+                        showTitle={false}
+                      />
+                    )}
+                  </>
+                ) : emptyKind === 'no_offers_in_city' ? (
                   <ListingsEmptyState
                     citySlug={citySlug}
                     listingType={listingType}

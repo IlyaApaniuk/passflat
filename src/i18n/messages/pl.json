@@ -719,6 +719,10 @@
     "registrationPossible": "Możliwość zameldowania",
     "empty": "Nie znaleziono ofert",
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
+    "noMatch": {
+      "title": "Żadna oferta nie pasuje do Twoich filtrów",
+      "clearFilters": "Wyczyść filtry"
+    },
     "demandCapture": {
       "title": "Brak ogłoszeń",
       "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",

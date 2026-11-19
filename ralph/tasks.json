@@ -230,7 +230,7 @@
       "title": "Tell 'no offers in the city' from 'nothing matches your filters'",
       "spec": "docs/specs/02-roommate-and-waitlist.md#empty-states",
       "dependsOn": ["T007", "T013"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The roommate page server passes cityOfferCount (active roommate listings in the city without URL filters, one count query); replacement and sublet pages pass it too if the shared component needs it and render as before",
         "A pure listingsEmptyKind({ cityOfferCount, filteredCount, hasActiveFilters }) returns none, no_offers_in_city or no_match_for_filters, with the three spec examples as tests",
@@ -238,7 +238,7 @@
         "New copy keys in all four locale files (drafts listed in the progress entry)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

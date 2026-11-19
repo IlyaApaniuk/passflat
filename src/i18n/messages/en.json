@@ -719,6 +719,10 @@
     "registrationPossible": "Registration possible",
     "empty": "No listings found",
     "emptyDesc": "Try adjusting your filters to see more results",
+    "noMatch": {
+      "title": "No offers match your filters",
+      "clearFilters": "Clear filters"
+    },
     "demandCapture": {
       "title": "No listings yet",
       "titleWithDistrict": "No listings in {district} yet",

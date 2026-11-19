@@ -136,6 +136,19 @@ describe('ListingsEmptyState interest events', () => {
     expect(setState).toHaveBeenCalledWith('error');
   });
 
+  it('shows the district title by default and hides it below the no-match heading', () => {
+    const isTitle = (el: AnyElement) => el.type === 'h3';
+    expect(findElement(ListingsEmptyState(baseProps), isTitle)?.props.children).toBe(
+      'listings.demandCapture.titleWithDistrict',
+    );
+    const below = ListingsEmptyState({ ...baseProps, showTitle: false });
+    expect(findElement(below, isTitle)).toBeNull();
+    // The district interest capture itself stays.
+    expect(findElement(below, (el) => el.type === Button && Boolean(el.props.onClick))).not.toBe(
+      null,
+    );
+  });
+
   it('sends the email to the API but never to the event (logged-out form)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ success: true }));
     vi.stubGlobal('fetch', fetchMock);
