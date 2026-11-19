@@ -69,6 +69,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The bot's data layer is tested with `@/lib/prisma` (city, district, building, costReport), `next/cache` (pass-through) and `@/lib/geo/district` mocked, and reports served by `where`; deposit queries are the `costReport.findMany` calls whose `select` has `depositReturned` (example: `src/lib/bot/lookup.test.ts`).
 - Bot cards pick each group's headline with `groupFigureRows` (`building-figures-view.ts`, pure and importable by the bot), so web and bot agree; a module can be rendered for a visual check with `npx tsx --tsconfig tsconfig.json <scratchpad script>` (path aliases resolve).
 - Web-vs-bot consistency tests call `POST /api/location-score` and `lookupAddress` over one Prisma mock (example: `src/lib/bot/checker-consistency.test.ts`).
+- Bot callback handlers are tested the same way: export the body (e.g. `handleSubscribe`) and its regex, and fake `{ chat, match: data.match(REGEX), answerCallbackQuery, reply }` cast to `CallbackQueryContext<Context>` (example: `fakeCallback` in `src/lib/bot/bot.test.ts`).
 
 ## Log
 
@@ -661,3 +662,25 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Next:
   - T038 adds `entry_source` to `tg_address_checked`. `replyCard` in `bot.ts` is the single place that tracks it: pass the source from `replyLookup` (`typed_address`) and from `replyBuildingLink` (`link_building`).
   - T039 `submitLink` already gets `buildingId` from `lookupBuilding` cards.
+
+### 2026-11-19 04:31 · T036 · done
+
+- Done:
+  - `src/lib/bot/bot.ts`:
+    - `replyDistrict` now returns `true` when it replied and `false` for a slug that is not a district of the checker city. It is the one reply for a typed district name and for a `d_<slug>` link: `renderDistrict`, the `sub:d:<slug>` button (`subscribeDistrict` text), `/districts` and the submit link. It sends `tg_district_checked` as before.
+    - `handleStart`, `d_<slug>`: calls `replyDistrict`. `addSubscription` and `subscribedDistrict` are no longer called from the link. An unknown slug falls through to `startAfterPayload`. `dep`, `b_`, `web_*` and other payloads are unchanged.
+    - The `sub:(b|d)` callback body is now the exported `handleSubscribe(ctx)`, registered with the exported `SUBSCRIBE_CALLBACK` regex. It is the only place a building or district `TelegramSubscription` is created. `subscribedBuilding` / `subscribedDistrict` interpolate `escapeHtml(name)`.
+  - `src/lib/bot/README.md`: one paragraph on the district link.
+- Tests: `src/lib/bot/bot.test.ts`, 10 new tests. The old "subscribes to a known district as before" test was removed.
+  - `d_` link (4): the reply equals `renderDistrict` (rank 2 of 2, city median) with a `sub:d:mokotow` button carrying the `subscribeDistrict` text, `addSubscription` is not called, and `tg_district_checked` fires. UK. The escaped name in the card. Open, then tap the reply's own `sub:d:` button through `handleSubscribe`: `addSubscription` is called once, only on the tap.
+  - `handleSubscribe` (6): district save plus `tg_subscribed`; building save; escaped district and building names; repeat tap → `alreadySubscribed`; unknown district → nothing saved, the tap answered, no reply; UK.
+  - The existing unknown-slug, malformed-slug, `dep` and `web_*` tests pass unchanged.
+- Checks: `npx vitest run src/lib/bot/bot.test.ts` passed (36/36). `npm run verify` exit 0: lint clean, typecheck clean, knip exit 0 (33 unused exports / 18 unused types, as before), Vitest 64 files / 825 tests, build OK. `next-env.d.ts` restored.
+- Did not work: nothing. The bot was not started, and no Telegram call was made.
+- Owner review:
+  - Behaviour change: `?start=d_<slug>` no longer subscribes the chat. It shows the district card, and interest is saved only by its button.
+  - The button keeps the current `subscribeDistrict` text («🔔 Следить за районом …»). T037 renames it and the subscription replies.
+  - No copy, assumptions, tables or migrations. Analytics unchanged: a `d_` open now fires the existing `tg_district_checked`, and `tg_subscribed` fires only on the tap.
+- Next:
+  - T037 rewrites `subscribeBuilding`, `subscribeDistrict`, `subscribedBuilding` and `subscribedDistrict` in `texts.ts`. The handler already escapes the names.
+  - T038 adds `entry_source` to `tg_district_checked`. `replyDistrict` is the single place that tracks it: pass `typed_district` from the `message:text` path and `link_district` from `handleStart`.

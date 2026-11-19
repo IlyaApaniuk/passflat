@@ -1,15 +1,16 @@
-import type { CommandContext, Context } from 'grammy';
+import type { CallbackQueryContext, CommandContext, Context } from 'grammy';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  MIN_AREA_REPORTS,
   summarizeDepositReturns,
   summarizeFigures,
   type AreaReference,
   type FigureReport,
 } from '@/lib/cost-figures';
 
-import { handleDeposit, handleStart } from './bot';
-import { renderLookup } from './format';
+import { SUBSCRIBE_CALLBACK, handleDeposit, handleStart, handleSubscribe } from './bot';
+import { renderDistrict, renderLookup } from './format';
 import type { AddressLookup } from './lookup';
 import { t } from './texts';
 
@@ -23,6 +24,9 @@ const mocks = vi.hoisted(() => ({
   getDistrictBySlug: vi.fn(),
   getCityDepositFacts: vi.fn(),
   lookupBuilding: vi.fn(),
+  getCity: vi.fn(),
+  getDistrictTable: vi.fn(),
+  getCityCostStats: vi.fn(),
 }));
 
 vi.mock('./store', () => ({
@@ -43,13 +47,13 @@ vi.mock('./deposit-flow', () => ({
 }));
 vi.mock('./lookup', () => ({
   getDistrictBySlug: mocks.getDistrictBySlug,
-  getCity: vi.fn(),
+  getCity: mocks.getCity,
   getCityDepositFacts: mocks.getCityDepositFacts,
-  getDistrictTable: vi.fn(),
+  getDistrictTable: mocks.getDistrictTable,
   lookupAddress: vi.fn(),
   lookupBuilding: mocks.lookupBuilding,
 }));
-vi.mock('@/lib/cost-baselines', () => ({ getCityCostStats: vi.fn() }));
+vi.mock('@/lib/cost-baselines', () => ({ getCityCostStats: mocks.getCityCostStats }));
 
 const UUID = '3f2c8a1e-9b4d-4c7a-8e21-5d6f0a9b1c3e';
 const CHAT_ID = 4242;
@@ -130,6 +134,8 @@ beforeEach(() => {
   mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'ru', isNew: true });
   mocks.hasOpenIntake.mockResolvedValue(false);
   mocks.lookupBuilding.mockResolvedValue(null);
+  mocks.getDistrictTable.mockResolvedValue([]);
+  mocks.getCity.mockResolvedValue(null);
 });
 
 describe('handleStart', () => {
@@ -160,23 +166,6 @@ describe('handleStart', () => {
       payload: 'dep',
       is_new: true,
     });
-  });
-
-  it('subscribes to a known district as before', async () => {
-    mocks.getDistrictBySlug.mockResolvedValue({
-      citySlug: 'warsaw',
-      slug: 'mokotow',
-      name: 'Mokotów',
-    });
-    const { ctx, reply } = fakeContext('/start d_mokotow');
-    await handleStart(ctx);
-
-    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
-    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, {
-      districtSlug: 'mokotow',
-      citySlug: 'warsaw',
-    });
-    expect(replyKey(reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
   });
 
   it('falls back to the generic reply for an unknown district', async () => {
@@ -365,6 +354,232 @@ describe('handleStart with a building link (b_<uuid>)', () => {
     await handleStart(ctx);
 
     expect(replyKey(reply)).not.toContain('/cancel');
+  });
+});
+
+/** What `getDistrictBySlug('mokotow')` returns: a district with enough observations. */
+function district(name = 'Mokotów') {
+  return {
+    citySlug: 'warsaw',
+    slug: 'mokotow',
+    name,
+    stats: {
+      total: { median: 4_400, p25: 4_000, p75: 5_000 },
+      rentPerM2: { median: null, p25: null, p75: null },
+      totalPerM2: { median: null, p25: null, p75: null },
+      rentMedian: 3_500,
+      expensesMedian: 900,
+      count: 12,
+    },
+    deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
+  };
+}
+
+/** The district league table, cheapest first: Mokotów is 2nd of 2. */
+const districtTable = [
+  { slug: 'wola', name: 'Wola', median: 4_100, rentMedian: 3_300, expensesMedian: 800, count: 9 },
+  {
+    slug: 'mokotow',
+    name: 'Mokotów',
+    median: 4_400,
+    rentMedian: 3_500,
+    expensesMedian: 900,
+    count: 12,
+  },
+];
+
+/** The texts of a reply's inline buttons. */
+function buttonTexts(reply: ReturnType<typeof vi.fn>): string[] {
+  const markup = reply.mock.calls[0][1]?.reply_markup as
+    | { inline_keyboard: { text: string }[][] }
+    | undefined;
+  return (markup?.inline_keyboard ?? []).flat().map((b) => b.text);
+}
+
+/** A tap on an inline button with this callback data, matched as the bot matches it. */
+function fakeCallback(data: string) {
+  const reply = vi.fn();
+  const answerCallbackQuery = vi.fn();
+  const ctx = {
+    chat: { id: CHAT_ID },
+    match: data.match(SUBSCRIBE_CALLBACK),
+    answerCallbackQuery,
+    reply,
+  } as unknown as CallbackQueryContext<Context>;
+  return { ctx, reply, answerCallbackQuery };
+}
+
+describe('handleStart with a district link (d_<slug>)', () => {
+  beforeEach(() => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.getDistrictTable.mockResolvedValue(districtTable);
+    mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
+    mocks.getCityCostStats.mockResolvedValue({ total: { median: 4_500 } });
+  });
+
+  const card = (locale: 'ru' | 'uk', name = 'Mokotów') =>
+    renderDistrict(
+      {
+        name,
+        stats: district().stats,
+        deposit: district().deposit,
+        rank: { position: 2, total: 2 },
+        cityMedian: 4_500,
+      },
+      locale,
+      MIN_AREA_REPORTS,
+    );
+
+  it('answers with the district card and a save-interest button, saving nothing', async () => {
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(replyKey(reply)).toBe(card('ru'));
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    expect(buttonTexts(reply)).toContain(t('ru', 'subscribeDistrict', { district: 'Mokotów' }));
+    expect(buttons(reply)).toContain('districts');
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(replyKey(reply)).not.toContain(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 12,
+    });
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('uk'));
+    expect(buttonTexts(reply)).toContain(t('uk', 'subscribeDistrict', { district: 'Mokotów' }));
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+  });
+
+  it('escapes the district name in the card', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów <i>&</i>'));
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toContain('Mokotów &lt;i&gt;&amp;&lt;/i&gt;');
+    expect(replyKey(reply)).not.toContain('<i>&</i>');
+  });
+
+  it('saves the interest only when its button is tapped', async () => {
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+
+    const data = buttons(reply).find((b) => b.startsWith('sub:d:'))!;
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+    const tap = fakeCallback(data);
+    await handleSubscribe(tap.ctx);
+
+    expect(mocks.addSubscription).toHaveBeenCalledTimes(1);
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, {
+      districtSlug: 'mokotow',
+      citySlug: 'warsaw',
+    });
+    expect(replyKey(tap.reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+  });
+});
+
+describe('handleSubscribe (save-interest buttons)', () => {
+  beforeEach(() => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+  });
+
+  it('saves a district interest and tracks it', async () => {
+    const { ctx, reply, answerCallbackQuery } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, {
+      districtSlug: 'mokotow',
+      citySlug: 'warsaw',
+    });
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'district',
+      district: 'mokotow',
+      already: false,
+    });
+    expect(replyKey(reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+  });
+
+  it('saves a building interest and tracks it', async () => {
+    mocks.addSubscription.mockResolvedValue({
+      created: true,
+      name: 'Puławska 10',
+      targetKey: `b:${UUID}`,
+    });
+    const { ctx, reply } = fakeCallback(`sub:b:${UUID}`);
+    await handleSubscribe(ctx);
+
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, { buildingId: UUID });
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'building',
+      already: false,
+    });
+    expect(replyKey(reply)).toBe(t('ru', 'subscribedBuilding', { name: 'Puławska 10' }));
+  });
+
+  it('escapes district and building names in the reply', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów <i>&</i>'));
+    const districtTap = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(districtTap.ctx);
+    expect(replyKey(districtTap.reply)).toBe(
+      t('ru', 'subscribedDistrict', { name: 'Mokotów &lt;i&gt;&amp;&lt;/i&gt;' }),
+    );
+
+    mocks.addSubscription.mockResolvedValue({
+      created: true,
+      name: 'Puławska 10 <b>A & B</b>',
+      targetKey: `b:${UUID}`,
+    });
+    const buildingTap = fakeCallback(`sub:b:${UUID}`);
+    await handleSubscribe(buildingTap.ctx);
+    const text = replyKey(buildingTap.reply);
+    expect(text).toBe(
+      t('ru', 'subscribedBuilding', { name: 'Puławska 10 &lt;b&gt;A &amp; B&lt;/b&gt;' }),
+    );
+    expect(text).not.toContain('<b>A & B</b>');
+  });
+
+  it('says it is already saved on a repeat tap', async () => {
+    mocks.addSubscription.mockResolvedValue({ created: false, name: 'Mokotów', targetKey: 'd:x' });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'alreadySubscribed'));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'district',
+      district: 'mokotow',
+      already: true,
+    });
+  });
+
+  it('saves nothing for an unknown district and only answers the tap', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(null);
+    const { ctx, reply, answerCallbackQuery } = fakeCallback('sub:d:atlantis');
+    await handleSubscribe(ctx);
+
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(replyKey(reply)).toBe(t('uk', 'subscribedDistrict', { name: 'Mokotów' }));
   });
 });
 

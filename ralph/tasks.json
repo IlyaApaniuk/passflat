@@ -582,7 +582,7 @@
       "title": "Stop /start d_<slug> from subscribing; offer an explicit save-interest button",
       "spec": "docs/specs/04-telegram-bot.md#district-deep-link",
       "dependsOn": ["T031"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "/start d_<known slug> replies with renderDistrict and a save-interest button (sub:d:<slug>); no TelegramSubscription is created by the link",
         "Unknown slug gives the generic start reply; dep and web_* behave as before",
@@ -590,7 +590,7 @@
         "Handler tests with a fake context and mocked store assert that addSubscription is not called on open and is called on the button"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

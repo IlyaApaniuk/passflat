@@ -1,4 +1,10 @@
-import { Bot, InlineKeyboard, type CommandContext, type Context } from 'grammy';
+import {
+  Bot,
+  InlineKeyboard,
+  type CallbackQueryContext,
+  type CommandContext,
+  type Context,
+} from 'grammy';
 
 import { getCityCostStats } from '@/lib/cost-baselines';
 import { MIN_AREA_REPORTS } from '@/lib/cost-figures';
@@ -216,16 +222,22 @@ async function replyBuildingLink(
   });
 }
 
-async function replyDistrict(ctx: Context, locale: BotLocale, slug: string) {
+/**
+ * A district's answer (`renderDistrict`) with its buttons, the one way a typed
+ * district name and a `d_<slug>` link are answered. The save-interest button
+ * (`sub:d:<slug>`) is the only thing that saves interest. False when the slug is
+ * not a district of the checker city, so the caller can reply otherwise.
+ */
+async function replyDistrict(ctx: Context, locale: BotLocale, slug: string): Promise<boolean> {
   const chatId = ctx.chat?.id;
-  if (!chatId) return;
+  if (!chatId) return false;
 
   const [district, table, city] = await Promise.all([
     getDistrictBySlug(slug),
     getDistrictTable(),
     getCity(),
   ]);
-  if (!district) return;
+  if (!district) return false;
   const cityStats = city ? await getCityCostStats(city.id) : null;
 
   const position = table.findIndex((row) => row.slug === slug);
@@ -251,6 +263,7 @@ async function replyDistrict(ctx: Context, locale: BotLocale, slug: string) {
     ),
     { parse_mode: 'HTML', link_preview_options: { is_disabled: true }, reply_markup: keyboard },
   );
+  return true;
 }
 
 /** `/start [payload]`; exported so tests can call it with a fake context. */
@@ -284,17 +297,10 @@ export async function handleStart(ctx: CommandContext<Context>): Promise<void> {
     return;
   }
 
-  // "web_*" and other payloads get the generic reply below.
-  if (start.kind === 'district') {
-    const district = await getDistrictBySlug(start.slug);
-    if (district) {
-      await addSubscription(chatId, { districtSlug: district.slug, citySlug: district.citySlug });
-      await ctx.reply(t(locale, 'subscribedDistrict', { name: district.name }), {
-        parse_mode: 'HTML',
-      });
-      return;
-    }
-  }
+  // "d_<slug>": that district's answer. Opening the link saves nothing; its
+  // button does (spec 04 §District deep link). An unknown slug, "web_*" and
+  // other payloads get the generic reply below.
+  if (start.kind === 'district' && (await replyDistrict(ctx, locale, start.slug))) return;
 
   await ctx.reply(t(locale, start.kind === 'none' ? 'start' : 'startAfterPayload'), {
     parse_mode: 'HTML',
@@ -332,6 +338,56 @@ export async function handleDeposit(ctx: CommandContext<Context>): Promise<void>
       .row()
       .url(t(locale, 'btnSubmit'), webLink('/warsaw/costs/submit', locale, 'deposit')),
   });
+}
+
+/** Callback data of the save-interest buttons: `sub:b:<buildingId>`, `sub:d:<districtSlug>`. */
+export const SUBSCRIBE_CALLBACK = /^sub:(b|d):(.+)$/;
+
+/**
+ * A save-interest button tap: the only place a building or district
+ * `TelegramSubscription` is created. Names come from data, so they are escaped
+ * for the HTML reply. Exported so tests can call it with a fake context.
+ */
+export async function handleSubscribe(ctx: CallbackQueryContext<Context>): Promise<void> {
+  const chatId = ctx.chat!.id;
+  const chat = await touchChat({ chatId });
+  const locale = chat.locale as BotLocale;
+  const [, kind, id] = ctx.match;
+
+  if (kind === 'b') {
+    const result = await addSubscription(chatId, { buildingId: id });
+    await ctx.answerCallbackQuery();
+    track(chatId, 'tg_subscribed', { target: 'building', already: !result.created });
+    await ctx.reply(
+      result.created
+        ? t(locale, 'subscribedBuilding', { name: escapeHtml(result.name) })
+        : t(locale, 'alreadySubscribed'),
+      { parse_mode: 'HTML' },
+    );
+    return;
+  }
+
+  const district = await getDistrictBySlug(id);
+  if (!district) {
+    await ctx.answerCallbackQuery();
+    return;
+  }
+  const result = await addSubscription(chatId, {
+    districtSlug: district.slug,
+    citySlug: district.citySlug,
+  });
+  await ctx.answerCallbackQuery();
+  track(chatId, 'tg_subscribed', {
+    target: 'district',
+    district: district.slug,
+    already: !result.created,
+  });
+  await ctx.reply(
+    result.created
+      ? t(locale, 'subscribedDistrict', { name: escapeHtml(district.name) })
+      : t(locale, 'alreadySubscribed'),
+    { parse_mode: 'HTML' },
+  );
 }
 
 export function createBot(token: string): Bot {
@@ -422,47 +478,7 @@ export function createBot(token: string): Bot {
     });
   });
 
-  bot.callbackQuery(/^sub:(b|d):(.+)$/, async (ctx) => {
-    const chatId = ctx.chat!.id;
-    const chat = await touchChat({ chatId });
-    const locale = chat.locale as BotLocale;
-    const [, kind, id] = ctx.match!;
-
-    if (kind === 'b') {
-      const result = await addSubscription(chatId, { buildingId: id });
-      await ctx.answerCallbackQuery();
-      track(chatId, 'tg_subscribed', { target: 'building', already: !result.created });
-      await ctx.reply(
-        result.created
-          ? t(locale, 'subscribedBuilding', { name: result.name })
-          : t(locale, 'alreadySubscribed'),
-        { parse_mode: 'HTML' },
-      );
-      return;
-    }
-
-    const district = await getDistrictBySlug(id);
-    if (!district) {
-      await ctx.answerCallbackQuery();
-      return;
-    }
-    const result = await addSubscription(chatId, {
-      districtSlug: district.slug,
-      citySlug: district.citySlug,
-    });
-    await ctx.answerCallbackQuery();
-    track(chatId, 'tg_subscribed', {
-      target: 'district',
-      district: district.slug,
-      already: !result.created,
-    });
-    await ctx.reply(
-      result.created
-        ? t(locale, 'subscribedDistrict', { name: district.name })
-        : t(locale, 'alreadySubscribed'),
-      { parse_mode: 'HTML' },
-    );
-  });
+  bot.callbackQuery(SUBSCRIBE_CALLBACK, handleSubscribe);
 
   bot.callbackQuery(/^cw:(.+)$/, async (ctx) => {
     const chatId = ctx.chat!.id;

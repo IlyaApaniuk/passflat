@@ -88,6 +88,11 @@ the city reference. An unknown, deleted or out-of-city id, or a malformed one
 `genericError`. An open deposit intake stays open, and the reply says `/cancel`
 leaves it.
 
+A district link `?start=d_<slug>` answers like typing the district's name: the
+district card with its save-interest button (`sub:d:<slug>`). Opening the link
+saves nothing; a `TelegramSubscription` is created only by a button tap
+(`handleSubscribe`). An unknown slug gets the generic start reply.
+
 ## Events
 
 `tg_bot_started` (with the `?start=` payload — the attribution for which post or
