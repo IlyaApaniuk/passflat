@@ -79,14 +79,14 @@
       "title": "Send listing_type next to type on listing detail events",
       "spec": "docs/specs/01-analytics-context.md#listing-events",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "listing_detail_viewed, interest_modal_opened (both call sites) and listing_external_contact_clicked in src/app/[locale]/[city]/replacement/[id]/client.tsx send listing_type with the same value as type; type stays",
         "The property object is built by a small pure function with a unit test (roommate, sublet, replacement)",
         "listing_detail_viewed still fires once per listing id (effect deps unchanged)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": ""
     },
     {

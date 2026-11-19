@@ -81,3 +81,11 @@ Written by every loop iteration. Read "Learnings" and the last entries before st
 - Did not work: nothing.
 - Owner review: Assumption applied — the mechanism (SDK `before_send`, entry from `$session_entry_pathname` with the in-memory first-event fallback) lives in `src/lib/analytics/page-context.ts`; `$snapshot` (session recordings) is passed through untouched. No copy, tables or migrations. After deploy: check in PostHog Live Events that events carry `page_type`, `locale`, `city`, `entry_page_type`.
 - Next: the next `todo` task of M1; events need no own `page_type`/`locale`/`city` now, the hook adds them.
+
+### 2026-11-19 01:03 · T006 · done
+
+- Done: new pure `listingEventProperties(listingId, listingType, extra?)` in `src/lib/analytics/listing-events.ts` → `{ ...extra, listing_id, type, listing_type }` (base fields applied last, so `listing_type` always equals `type`). `src/app/[locale]/[city]/replacement/[id]/client.tsx` (rendered for all three listing types) uses it for `listing_detail_viewed`, both `interest_modal_opened` call sites (CTA and `source: 'sticky_bar'`) and `listing_external_contact_clicked` (via `trackContactClick`); every other property is unchanged, `type` stays, and the `listing_detail_viewed` effect still depends on `[listing.id]` only. `src/lib/analytics/listing-events.test.ts` (5 cases): roommate, sublet, replacement, extras kept, extras cannot override the base fields. No doc change: `docs/architecture.md` lists event names only.
+- Checks: `npx vitest run src/lib/analytics/listing-events.test.ts` passed (5/5). `npm run verify` exit 0 (lint clean, typecheck clean, knip exit 0 with the pre-existing warnings only and none for the new module, Vitest 32 files / 367 tests, build OK); `next-env.d.ts` restored.
+- Did not work: nothing.
+- Owner review: nothing (no copy, assumptions, tables or migrations). After deploy: check in PostHog Live Events that the three events carry `listing_type` equal to `type`.
+- Next: the next `todo` task of M1 (FR-12, `filterListings` for `search_performed.results_count`, is in the same spec section).

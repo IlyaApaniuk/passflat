@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
 import { AMENITY_CATEGORIES, getThingsToKnowSentiment } from '@/lib/amenities';
+import { listingEventProperties } from '@/lib/analytics/listing-events';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -214,12 +215,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
     channel: 'telegram' | 'phone' | 'facebook',
     source: 'cta' | 'sticky_bar',
   ) => {
-    posthog?.capture('listing_external_contact_clicked', {
-      listing_id: listing.id,
-      type: listingType,
-      channel,
-      source,
-    });
+    posthog?.capture(
+      'listing_external_contact_clicked',
+      listingEventProperties(listing.id, listingType, { channel, source }),
+    );
   };
   const backRoute = TYPE_ROUTE[listingType];
 
@@ -252,17 +251,18 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
   };
 
   useEffect(() => {
-    posthog?.capture('listing_detail_viewed', {
-      listing_id: listing.id,
-      type: listingType,
-      city: listing.citySlug,
-      source:
-        document.referrer.includes('/replacement') ||
-        document.referrer.includes('/roommate') ||
-        document.referrer.includes('/sublet')
-          ? 'search'
-          : 'direct',
-    });
+    posthog?.capture(
+      'listing_detail_viewed',
+      listingEventProperties(listing.id, listingType, {
+        city: listing.citySlug,
+        source:
+          document.referrer.includes('/replacement') ||
+          document.referrer.includes('/roommate') ||
+          document.referrer.includes('/sublet')
+            ? 'search'
+            : 'direct',
+      }),
+    );
   }, [listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1068,10 +1068,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                     className="mt-4 w-full gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() => {
                       setInterestModalOpen(true);
-                      posthog?.capture('interest_modal_opened', {
-                        listing_id: listing.id,
-                        type: listingType,
-                      });
+                      posthog?.capture(
+                        'interest_modal_opened',
+                        listingEventProperties(listing.id, listingType),
+                      );
                     }}
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -1158,11 +1158,10 @@ export function ListingDetailClient({ listing, isLoggedIn, isOwner = false }: Pr
                   className="shrink-0 gap-2"
                   onClick={() => {
                     setInterestModalOpen(true);
-                    posthog?.capture('interest_modal_opened', {
-                      listing_id: listing.id,
-                      type: listingType,
-                      source: 'sticky_bar',
-                    });
+                    posthog?.capture(
+                      'interest_modal_opened',
+                      listingEventProperties(listing.id, listingType, { source: 'sticky_bar' }),
+                    );
                   }}
                 >
                   <MessageSquare className="h-4 w-4" />
