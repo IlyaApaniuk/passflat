@@ -54,6 +54,7 @@ or sends a real message. Every value from data or from the user passes through `
 | `src/lib/bot/roommate-matching.ts`         | Spec 07: cards, interest, reveal, push and outcome handlers                                  |
 | `src/lib/bot/roommate-safety.ts`           | Spec 07: report, hide, statement of reasons, appeal                                          |
 | `src/lib/bot/roommate-daily.ts`            | The jobs of the daily cron (housekeeping and messages)                                       |
+| `src/lib/bot/roommate-close.ts`            | The closing run (FR-20) behind the closing route, through the daily cron's sender            |
 | `src/app/api/cron/roommate-daily/route.ts` | The daily cron route                                                                         |
 | `src/app/api/cron/roommate-close/route.ts` | The manual closing route (FR-20)                                                             |
 

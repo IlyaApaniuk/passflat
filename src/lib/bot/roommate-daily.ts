@@ -165,7 +165,7 @@ export type CronClock = {
   sleep: (ms: number) => Promise<void>;
 };
 
-const SYSTEM_CLOCK: CronClock = {
+export const SYSTEM_CLOCK: CronClock = {
   now: () => Date.now(),
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
@@ -185,6 +185,11 @@ export type CronMessage = {
   options?: Parameters<Api['sendMessage']>[2];
   /** Runs once the message was delivered (its event, for example). */
   onSent?: () => void;
+  /**
+   * The claim runs for a blocked chat too, and only the message is skipped: the closing route
+   * (`roommate-close.ts`) deletes every profile whether or not its chat can be written to.
+   */
+  claimWhenBlocked?: boolean;
 };
 
 /** `taken`: another run (or the person) claimed the row first; nothing was sent. */
@@ -243,6 +248,7 @@ export function createCronSender(
     if (stopped) return 'stopped';
 
     if (message.blockedAt || blockedChats.has(message.chatId)) {
+      if (message.claimWhenBlocked && !(await message.claim())) return 'taken';
       counts.skipped += 1;
       return 'skipped';
     }
@@ -304,7 +310,7 @@ export function createCronSender(
 export type MessageJob = (sender: CronSender, now: Date) => Promise<void>;
 
 /** Roommate copy in the chat's stored bot language (`telegram_chats.locale`). */
-function roommateLocale(locale: string): RoommateLocale {
+export function roommateLocale(locale: string): RoommateLocale {
   return locale === 'uk' || locale === 'en' ? locale : 'ru';
 }
 

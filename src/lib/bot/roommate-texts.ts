@@ -19,8 +19,9 @@ import { peopleWord } from './texts';
  * short text, the privacy URL) through `escapeHtml` first: the texts are HTML.
  * District names are the Polish `nameKey` in every locale ("Mokotów").
  *
- * Not here yet, by design: the opt-in confirmation (T084), the closing message
- * (T083) and the stage 2 texts (spec 07 tasks), each added with its task.
+ * Not here yet, by design: the opt-in confirmation (T084, which ends with
+ * `optInClosing`) and the stage 2 texts (spec 07 tasks), each added with its
+ * task.
  */
 
 export type RoommateLocale = 'ru' | 'uk' | 'en';
@@ -216,6 +217,16 @@ const RU = {
   /** Backed by the daily push (spec 07 FR-27); left out when the push is off. */
   openNobodyDaily: 'Раз в день проверяю новые анкеты и напишу, когда появится подходящий человек.',
   btnShow: '👀 Показать',
+
+  // --- the closing route (spec 06 §Closing route, FR-20, D64) ---
+  /**
+   * The opt-in's closing sentence (D64, PRD 3 §8 verbatim), which the opt-in confirmation (T084)
+   * ends with; backed by `POST /api/cron/roommate-close` (`runRoommateClose`).
+   */
+  optInClosing: 'Если подбор не откроется, напишу об этом и удалю анкету.',
+  /** Sent by the closing route after the profile is deleted (PRD 3 §8 verbatim). */
+  closingMessage:
+    'Подбор так и не откроется. Твоя анкета уже удалена. Спасибо, что попробовал(а) Passflat.',
 } as const;
 
 type Key = keyof typeof RU;
@@ -387,6 +398,10 @@ const UK: Record<Key, string> = {
   openNobodyDaily:
     'Раз на день перевіряю нові анкети й напишу, коли зʼявиться людина, яка тобі підходить.',
   btnShow: '👀 Показати',
+
+  optInClosing: 'Якщо підбір не відкриється, напишу про це й видалю анкету.',
+  closingMessage:
+    'Підбір так і не відкриється. Твою анкету вже видалено. Дякуємо, що спробував(-ла) Passflat.',
 };
 
 const EN: Record<Key, string> = {
@@ -558,6 +573,10 @@ const EN: Record<Key, string> = {
   openNobody: 'Matching is open. Nobody fits you yet.',
   openNobodyDaily: "I check new profiles once a day and I'll message you when someone new fits.",
   btnShow: '👀 Show',
+
+  optInClosing: "If matching does not open, we'll tell you and delete your profile.",
+  closingMessage:
+    'Matching will not open after all. Your profile is deleted now. Thanks for trying Passflat.',
 };
 
 const DICTS: Record<RoommateLocale, Record<Key, string>> = { ru: RU, uk: UK, en: EN };

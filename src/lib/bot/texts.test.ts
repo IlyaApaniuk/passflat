@@ -46,13 +46,16 @@ const LATER_MESSAGE_PROMISES = [
 /**
  * Roommate keys that may promise a message, each with the code that sends it.
  * T084 adds the opt-in confirmation (`sendMatchingOpenMessages`,
- * roommate-daily.ts) and its closing sentence (the roommate-close route,
- * T083). Every other promise fails.
+ * roommate-daily.ts). Every other promise fails.
  */
 const ROOMMATE_PROMISE_EXCEPTIONS: Record<string, string> = {
   // Sent only with the switch on and the push on (`matchingOpenText`); the
   // switch stays off until T090 builds the push.
   openNobodyDaily: 'the daily push of spec 07 FR-27: sendDailyPushes, roommate-daily.ts (T090)',
+  // D64: the opt-in's closing sentence. The owner's manual route writes
+  // `closingMessage` to every profile and deletes it (spec 06 §Closing route).
+  optInClosing:
+    'the closing route of FR-20: POST /api/cron/roommate-close, runRoommateClose, roommate-close.ts (T083)',
 };
 
 const ROOMMATE_LOCALES: RoommateLocale[] = ['ru', 'uk', 'en'];

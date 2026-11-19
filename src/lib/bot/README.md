@@ -198,6 +198,22 @@ the migrations are missing (`docs/architecture.md` §9).
   claim also sets `last_push_at` to the run's time so no push follows the same
   day, and a release restores both. Earliest opt-ins first; each delivered
   message sends `tg_roommate_open_notified` with `count_band`.
+- **Closing route** (spec 06 §Closing route, FR-20, D64): the owner's manual
+  `POST /api/cron/roommate-close` when matching will not open; never scheduled
+  (not in `vercel.json`). Call it with the cron secret and the JSON body
+  `{ "confirm": true }`: `curl -X POST -H "Authorization: Bearer $CRON_SECRET"
+-H 'content-type: application/json' -d '{"confirm":true}'
+https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
+  without the body → 400, with the switch on → 409, without a bot → 503; none
+  of these change anything. `runRoommateClose` (`roommate-close.ts`) deletes
+  drafts silently; every other profile is deleted first by its id (the claim),
+  then one `tg_roommate_profile_deleted` with `reason=closed`, then
+  `closingMessage` in the chat's language unless the chat is blocked (through
+  `createCronSender` with `claimWhenBlocked`, so the cap, the 45 s budget, the
+  403 and the 429 rules apply; a failed send is not retried, the row is gone).
+  Reports are deleted only when no profile row is left; ban markers stay. A run
+  cut short answers `remaining` > 0: call it again until it is 0. It backs the
+  opt-in's closing sentence (`optInClosing`, the promise check's exception).
 - **Renewal** (spec 06 §Renewal, FR-15): from the first send-hour run at or after
   `expires_at` − 3 days, each active profile with `renewal_reminded_at` null gets
   one reminder naming its hide date, with Renew (`rm:c:renew`) and Delete
@@ -232,6 +248,7 @@ the migrations are missing (`docs/architecture.md` §9).
 | `roommate-texts.ts`                              | RU/UK/EN roommate-matching copy (`rt`), spec 06                    |
 | `roommate-flow.ts`                               | Roommate entry and routing, intake steps, `/mate`, `rm:` buttons   |
 | `roommate-daily.ts`                              | Roommate cron: housekeeping, the claim-send-release helper         |
+| `roommate-close.ts`                              | The manual closing run (FR-20): closing message, delete everything |
 | `roommate-room-costs.ts`                         | Room cost reference under the counts (FR-17), one line per group   |
 | `../roommate/store.ts`                           | Prisma access for roommate profiles                                |
 | `../roommate/counts.ts`                          | The counting rule and its loader (FR-16), shared with the website  |
@@ -241,6 +258,7 @@ the migrations are missing (`docs/architecture.md` §9).
 | `../../app/api/telegram/webhook/route.ts`        | Production entry point                                             |
 | `../../app/api/cron/telegram-followups/route.ts` | Daily reminders and clean-up                                       |
 | `../../app/api/cron/roommate-daily/route.ts`     | Daily roommate housekeeping and messages                           |
+| `../../app/api/cron/roommate-close/route.ts`     | Owner's manual closing route (POST, confirm, never scheduled)      |
 
 ## Going live
 

@@ -571,6 +571,25 @@ describe('createCronSender: claim, send, release', () => {
     expect(s.counts().skipped).toBe(1);
   });
 
+  it('claimWhenBlocked: a blocked chat is still claimed, only the message is skipped', async () => {
+    const row = seedProfile({ id: 'p' });
+    h.chats.find((c) => c.id === row.chatId)!.blockedAt = ago(DAY);
+    const { api, sendMessage } = fakeApi();
+    const onSent = vi.fn();
+    const s = sender(api);
+
+    expect(await s.send({ ...reminderMessage(row, onSent), claimWhenBlocked: true })).toBe(
+      'skipped',
+    );
+    // Claimed already: a second send of the same row is taken, not skipped again.
+    expect(await s.send({ ...reminderMessage(row, onSent), claimWhenBlocked: true })).toBe('taken');
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(onSent).not.toHaveBeenCalled();
+    expect(profile('p')?.renewalRemindedAt).toEqual(NOW);
+    expect(s.counts()).toEqual({ sent: 0, blocked: 0, failed: 0, skipped: 1, stopped: null });
+  });
+
   it('a 403 marks the chat blocked and keeps the claim; that chat gets nothing more this run', async () => {
     const row = seedProfile({ id: 'p' });
     const other = seedProfile({ id: 'q' });

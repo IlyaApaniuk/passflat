@@ -379,7 +379,7 @@
       "title": "Manual closing route for matching that does not open (FR-20)",
       "spec": "docs/specs/06-roommate-profiles.md#closing-route",
       "dependsOn": ["T062", "T064", "T068", "T077"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "POST /api/cron/roommate-close, not in vercel.json: 401 without the secret, 400 without { confirm: true }, 409 with the switch on",
         "With confirmation: drafts deleted silently; every other profile deleted first (the claim), one tg_roommate_profile_deleted with reason=closed, then the closing message of PRD 3 §8 in the chat locale when the chat is not blocked; reports deleted only when no profile row is left (a run cut short by the cap, time budget or a 429 says how many remain); ban markers kept",
@@ -387,7 +387,7 @@
         "Tests: each status code, one message and one event per profile, drafts without a message, a second run sending nothing"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D64: the owner triggers it by hand; never scheduled. Checks never call it for real."
     },
     {
