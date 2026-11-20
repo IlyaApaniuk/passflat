@@ -37,7 +37,9 @@ vi.mock('@/lib/listings-query', () => ({
 }));
 vi.mock('@/components/listings/listings-page-client', () => ({ ListingsPageClient: () => null }));
 
-import RoommatePage from './page';
+import { getLocale } from 'next-intl/server';
+import { getAlternates, getOgImage } from '@/lib/seo';
+import RoommatePage, { generateMetadata } from './page';
 
 type ClientProps = {
   citySlug: string;
@@ -199,5 +201,38 @@ describe('/[city]/roommate page: the room money block figures (spec 02 §Room mo
     expect(costReportFindMany).not.toHaveBeenCalled();
     expect(cityFindUnique).not.toHaveBeenCalled();
     expect(props.roomMoney).toBeUndefined();
+  });
+});
+
+describe('/[city]/roommate metadata (spec 08 §Roommate page shell and metadata, PRD 4 FR-3)', () => {
+  beforeEach(() => {
+    cityFindUnique.mockReset();
+    vi.mocked(getLocale).mockResolvedValue('pl');
+  });
+
+  const metadata = () =>
+    generateMetadata({
+      params: Promise.resolve({ locale: 'pl', city: 'warsaw' }),
+      searchParams: Promise.resolve({}),
+    });
+
+  it('the title is the key itself: no " — {city}" (the layout template adds " — Passflat")', async () => {
+    const result = await metadata();
+    expect(result.title).toBe('listings.titleRoommate');
+    expect(result.description).toBe('listings.roommateMetaDescription');
+    expect(result.openGraph).toMatchObject({
+      title: 'listings.titleRoommate',
+      description: 'listings.roommateMetaDescription',
+    });
+    // The city name is no longer looked up: both keys name Warsaw themselves.
+    expect(cityFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('keeps the URL, canonical, hreflang and the OG image call', async () => {
+    const result = await metadata();
+    expect(result.alternates).toEqual(getAlternates('/warsaw/roommate', 'pl'));
+    expect(result.openGraph?.images).toEqual([
+      getOgImage('listings.titleRoommate', 'listings.roommateMetaDescription'),
+    ]);
   });
 });

@@ -104,6 +104,10 @@ vi.mock('@/components/listings/find-flatmate-block', async () => {
       el('div', { 'data-marker': 'flatmate', 'data-counts': counts ? 'yes' : 'no' }),
   };
 });
+vi.mock('@/components/landing/footer', async () => {
+  const { createElement: el } = await import('react');
+  return { Footer: () => el('footer', { 'data-shell': 'footer' }) };
+});
 vi.mock('./room-money-block', async () => {
   const { createElement: el } = await import('react');
   return {
@@ -308,5 +312,74 @@ describe('ListingsPageClient: the roommate page default view (spec 08, PRD 4 FR-
 
   it('another city: no flatmate block even with counts passed', () => {
     expect(render({ offers: true, citySlug: 'krakow' }).markers).toEqual(['list']);
+  });
+});
+
+describe('ListingsPageClient: the page shell (spec 08 §Roommate page shell, PRD 4 FR-3, FR-4)', () => {
+  beforeEach(() => {
+    h.initial = { collapsed: false };
+  });
+
+  const count = (page: string, pattern: RegExp) =>
+    [...page.matchAll(new RegExp(pattern.source, 'g'))].length;
+
+  /** The opening tags of `main` and `h1`, the header rows, the list markers and the footer in order. */
+  function shell(options: RenderOptions): string[] {
+    return [
+      ...html(options).matchAll(
+        /<(main|h1)\b[^>]*>|data-row="([^"]+)"|data-marker="([^"]+)"|data-shell="([^"]+)"/g,
+      ),
+    ].map((match) => match[1] ?? match[2] ?? match[3] ?? match[4]);
+  }
+
+  it('the roommate page: one main landmark, one h1 first in it with listings.roommateH1, then the selector', () => {
+    for (const offers of [false, true]) {
+      const page = html({ offers, roomMoney: FIGURES });
+      expect(count(page, /<main\b/)).toBe(1);
+      expect(page).toContain('<main id="main"');
+      expect(count(page, /<h1\b/)).toBe(1);
+      expect(page).toMatch(/<h1\b[^>]*>Find a flatmate in Warsaw<\/h1>/);
+      expect(shell({ offers, roomMoney: FIGURES }).slice(0, 3)).toEqual(['main', 'h1', 'selector']);
+    }
+  });
+
+  it('the h1 stays whatever the role chosen', () => {
+    for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
+      expect(count(html({ intent, offers: true, roomMoney: FIGURES }), /<h1\b/)).toBe(1);
+    }
+  });
+
+  it('/replacement and /sublet: the main landmark and the footer, no h1', () => {
+    for (const listingType of ['replacement', 'sublet'] as const) {
+      for (const offers of [false, true]) {
+        const page = html({ offers, listingType });
+        expect(count(page, /<main id="main"/)).toBe(1);
+        expect(count(page, /<h1\b/)).toBe(0);
+        expect(count(page, /data-shell="footer"/)).toBe(1);
+      }
+    }
+  });
+
+  it('the footer renders once, after the grid or the empty state, inside main', () => {
+    expect(shell({ offers: true, roomMoney: FIGURES }).slice(-2)).toEqual(['list', 'footer']);
+    expect(shell({ offers: false, roomMoney: FIGURES }).slice(-2)).toEqual([
+      'empty-state',
+      'footer',
+    ]);
+    const page = html({ offers: true, roomMoney: FIGURES });
+    expect(count(page, /data-shell="footer"/)).toBe(1);
+    expect(page.indexOf('data-shell="footer"')).toBeLessThan(page.indexOf('</main>'));
+  });
+
+  it('the source: h-dvh instead of h-screen, one main id="main", one Footer element', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/components/listings/listings-page-client.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('h-dvh');
+    expect(source).not.toContain('h-screen');
+    expect(count(source, /<main id="main"/)).toBe(1);
+    expect(count(source, /<Footer\b/)).toBe(1);
+    expect(source).toContain("import { Footer } from '@/components/landing/footer'");
   });
 });

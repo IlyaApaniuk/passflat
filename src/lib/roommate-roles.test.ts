@@ -123,6 +123,7 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
       showCountLine: false,
       showBotButton: true,
       selectorAboveTabs: true,
+      showH1: true,
     });
   });
 
@@ -152,6 +153,7 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
       showCountLine: true,
       showBotButton: true,
       selectorAboveTabs: true,
+      showH1: true,
     });
     // Filters that match nothing in a city with offers: still offers, so the count line shows.
     expect(layout({ cityOfferCount: 3, emptyKind: 'no_match_for_filters' }).showCountLine).toBe(
@@ -166,6 +168,7 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
       showCountLine: false,
       showBotButton: false,
       selectorAboveTabs: true,
+      showH1: true,
     });
   });
 
@@ -176,6 +179,7 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
       showCountLine: false,
       showBotButton: false,
       selectorAboveTabs: true,
+      showH1: true,
     });
   });
 
@@ -187,7 +191,39 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
         showCountLine: true,
         showBotButton: false,
         selectorAboveTabs: false,
+        showH1: false,
       });
     }
+  });
+});
+
+describe('roommatePageLayout: the page shell (spec 08 §Roommate page shell and metadata)', () => {
+  const at = (
+    listingType: 'roommate' | 'replacement' | 'sublet',
+    overrides: Partial<Parameters<typeof roommatePageLayout>[0]> = {},
+  ) =>
+    roommatePageLayout({
+      listingType,
+      citySlug: 'warsaw',
+      cityOfferCount: listingType === 'roommate' ? 0 : undefined,
+      roleState: INITIAL_ROOMMATE_ROLE_STATE,
+      emptyKind: 'no_offers_in_city',
+      hasUsername: true,
+      ...overrides,
+    });
+
+  it('the h1 is on the roommate page only (PRD 4 FR-3)', () => {
+    expect(at('roommate').showH1).toBe(true);
+    expect(at('replacement').showH1).toBe(false);
+    expect(at('sublet').showH1).toBe(false);
+  });
+
+  it('the h1 does not depend on the role, the offers, the username or the city', () => {
+    for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
+      expect(at('roommate', { roleState: chooseRoommateRole(intent).state }).showH1).toBe(true);
+    }
+    expect(at('roommate', { cityOfferCount: 3, emptyKind: 'none' }).showH1).toBe(true);
+    expect(at('roommate', { hasUsername: false }).showH1).toBe(true);
+    expect(at('roommate', { citySlug: 'krakow' }).showH1).toBe(true);
   });
 });

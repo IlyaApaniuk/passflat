@@ -379,8 +379,9 @@
     },
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
-    "titleRoommate": "Szukam współlokatora",
-    "roommateMetaDescription": "Ogłoszenia współlokatorów — {city}: pokoje we wspólnych mieszkaniach, bez pośredników. Zanim się wprowadzisz, sprawdź zgłoszone koszty budynku: czynsz, opłaty i kaucję.",
+    "titleRoommate": "Szukam współlokatora w Warszawie: koszty na osobę",
+    "roommateMetaDescription": "Znajdź współlokatora do wynajmu w Warszawie: profil w bocie Telegram (EN/RU/UK), dzielnica, budżet na osobę. Koszty pokoju: zgłoszenia i ogłoszenia.",
+    "roommateH1": "Szukam współlokatora w Warszawie",
     "roommateCostsBridge": "Masz ofertę na oku?",
     "roommateCostsBridgeCta": "Sprawdź adres i znane koszty",
     "roommateRoles": {

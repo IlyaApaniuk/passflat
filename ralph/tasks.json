@@ -102,7 +102,7 @@
       "title": "Roommate page title, description and H1; main landmark, h-dvh and the footer (FR-3, FR-4)",
       "spec": "docs/specs/08-site-structure-and-entries.md#roommate-page-shell-and-metadata",
       "dependsOn": ["T118"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "listings.titleRoommate and listings.roommateMetaDescription are rewritten in four locales from appendix seo.md table A (the one source; the PL title starts with 'Szukam współlokatora'); new key listings.roommateH1 from PRD 4 §8; no value says free or bezpłatnie (Q-12) or promises a match, a date or a result; the three keys join REWRITTEN_KEYS in src/i18n/honesty-copy.test.ts and pass",
         "generateMetadata drops the ' — {cityName}' concatenation (the layout template adds ' — Passflat') and keeps getAlternates('/${city}/roommate', locale) and getOgImage(title, description); URL, canonical and hreflang are unchanged",
@@ -112,7 +112,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D41, D48, D50. The footer keeps its useTranslations() hook (spec 08 §Current state); never switch it to getTranslations."
     },
     {

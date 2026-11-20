@@ -379,8 +379,9 @@
     },
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
-    "titleRoommate": "Roommate Search",
-    "roommateMetaDescription": "Flatmate listings in {city} — rooms in shared flats, no agents. Before you move in, check the costs reported for the building: rent, utilities and deposit.",
+    "titleRoommate": "Find a flatmate in Warsaw — rent per person",
+    "roommateMetaDescription": "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest. Room costs: reports and listings.",
+    "roommateH1": "Find a flatmate in Warsaw",
     "roommateCostsBridge": "Found a place?",
     "roommateCostsBridgeCta": "Check the address and known costs",
     "roommateRoles": {

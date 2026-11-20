@@ -155,6 +155,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A task that ends `failed` or `blocked` with work in the tree gets that work stashed by the loop as `ralph-wip <task> <status> <timestamp>` (untracked files too, and any unrelated uncommitted file such as an owner edit) and popped when the task runs again; a prepared test file can wait there, but never leave a failing test in the tree for another task.
 - `Bash(npm run bot:*)` is denied by `ralph/settings.json`, and so is a `VAR=value npx tsx …` prefix: prove a script that needs a given environment from a scratchpad Node runner (`spawnSync('npx', ['tsx', '--env-file-if-exists=<scratchpad env file>', 'scripts/<x>.ts'], { cwd, env })`, example: T116), never by enabling the npm script.
 - Node's `--env-file` / `--env-file-if-exists` never overrides a variable already set in the environment: a value on the command line wins over `.env.local` (proven in T116 for `npm run bot:posts`).
+- Tailwind's `sm:not-sr-only` resets padding and margin to 0 at that breakpoint: put the spacing of a `sr-only sm:not-sr-only` heading on a wrapper (example: the roommate h1 in `listings-page-client.tsx`). `ListingsPageClient` render tests mock `Footer` to a `data-shell` marker (`room-money-placement.test.ts`).
 - **2026-11-19, evening (D75 – D77), a note on the T105 handoff below; the entry itself is not rewritten.** Deploy step 3 is superseded: `ROOMMATE_MATCHING_ENABLED=true` is set in Vercel **at the PRD 3 deploy** (D75), so stage 2 is live from day 0 and the daily go check from 2027-01-04 is not run; the stage 1 readout of 2027-01-18 still decides whether the test continues. The "approve before the switch" copy of the handoff (terms, safety lines, statement of reasons, report and appeal texts, the rest of stage 2) is therefore approved before the deploy, with the privacy section. Deploy step 5 uses a **separate production bot** (D76): `@passflatdev_bot` stays the dev bot with its token only in `.env.local`; the production token goes only into Vercel; its username is Open (task T117) and until then `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` stays unset. Deploy step 6 (BotFather by hand) is replaced by `npm run bot:profile` (D77, task T115), which also sets the name and the photo (`public/bot-avatar.png`, task T114). Step 7's `<bot>` placeholder is handled by task T116. The posting kit's "matching isn't open yet" sentence is deleted before the first slot, not on a switch day.
 
 ## Log
@@ -3664,3 +3665,69 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - Production today has no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, so after this deploy `/warsaw/roommate` shows the block with the "not connected" line by default. Setting the username (T117, D76) brings back the button and counts.
   - No new table, migration or event.
 - Next: `node scripts/ralph-tasks.mjs next`. T119 (roommate page shell and metadata) adds `showH1` to `roommatePageLayout` and builds on this layout.
+
+### 2026-11-20 07:26 · T119 · done
+
+- Done (PRD 4 FR-3, FR-4, spec 08 §Roommate page shell and metadata):
+  - Copy: `listings.titleRoommate` and `listings.roommateMetaDescription` rewritten in four locales from appendix seo.md table A; new `listings.roommateH1` from PRD 4 §8. Neither key holds `{city}` any more: both name Warsaw literally.
+  - `src/app/[locale]/[city]/roommate/page.tsx` `generateMetadata`: the title is `t('listings.titleRoommate')` (no ` — {cityName}`; the layout's `%s — Passflat` template adds the brand). The description has no `{city}` value. The city lookup (`prisma.city.findUnique`) and the `prisma` import are gone, because nothing used them after that. `getAlternates('/${city}/roommate', locale)` and `getOgImage(title, description)` are unchanged.
+  - `src/lib/roommate-roles.ts`: `roommatePageLayout` gains `showH1` (= `listingType === 'roommate'`, for any role, offer count, username or city).
+  - `src/components/listings/listings-page-client.tsx`:
+    - The root is `h-dvh` (was `h-screen`).
+    - The content column `div` is now `<main id="main">` on all three listing types, with the same classes.
+    - On `showH1`, the first child of `main` is `<div className="bg-card sm:px-4 sm:pt-3"><h1 className="sr-only text-lg font-semibold tracking-tight sm:not-sr-only">`. It sits above the role selector row. The wrapper exists because `not-sr-only` resets padding to 0, so padding on the h1 would be lost at `sm+`.
+    - `<Footer />` is imported directly. It renders at the end of the scrolling list `motion.div`, after the grid or the empty state, inside `<div className="-mx-4 -mb-4 mt-8">` so its border spans the column.
+    - The filter sidebar's `h2` is unchanged.
+  - `docs/specs/README.md` PRD 4 map: FR-3, FR-4 → Done.
+- Tests:
+  - `roommate-roles.test.ts`: every `toEqual` layout case now has `showH1` (true on roommate, false on `/replacement` and `/sublet`). New describe: the h1 only on the roommate page, independent of role, offers, username and city.
+  - `room-money-placement.test.ts`: `Footer` is mocked to a `data-shell` marker. New "page shell" describe:
+    - Roommate, at 0 and 1 offers: one `<main id="main"`, one `<h1>` with "Find a flatmate in Warsaw", in the order `main` → `h1` → selector row. The h1 stays for every intent.
+    - `/replacement` and `/sublet`: `main` and the footer, no h1.
+    - The footer renders once, last after `list` / `empty-state`, before `</main>`.
+    - A static read of `listings-page-client.tsx`: `h-dvh`, no `h-screen`, exactly one `<main id="main"`, exactly one `<Footer`, and the direct import.
+  - `page.test.ts`: new metadata describe:
+    - The title and the OG title equal the key, with no `—`.
+    - The description equals its key, and no city lookup happens.
+    - `alternates` equals `getAlternates('/warsaw/roommate', 'pl')`, and `openGraph.images` equals `[getOgImage(title, description)]`.
+  - `honesty-copy.test.ts`: `listings.titleRoommate` and `listings.roommateH1` join `REWRITTEN_KEYS` (`roommateMetaDescription` was already there). A new test covers the three keys in four locales: no "free" / `bezpłat` / `darmow` / `бесплатн` / `безкоштовн` (Q-12), no promise wording per locale, no `{` placeholder, and Warsaw named. The PL title starts with "Szukam współlokatora".
+- Checks:
+  - Focused run (honesty, messages parity, bot languages, roommate-roles, room-money-placement, the roommate route's `page.test.ts` and `client-namespaces.test.ts`): 7 files, 84 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 143 files / 3114 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored.
+  - **The roommate page was not rendered in a browser** (it needs a database, so it is not e2e-testable). The render tests over `ListingsPageClient` and the metadata tests are the proof. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29), as given in appendix seo.md table A (title, description) and PRD 4 §8 (H1):**
+    - `listings.titleRoommate`:
+      - pl "Szukam współlokatora w Warszawie: koszty na osobę"
+      - en "Find a flatmate in Warsaw — rent per person"
+      - ru «Сосед по квартире в Варшаве — цена на человека»
+      - uk «Сусід по квартирі у Варшаві — ціна на особу»
+    - `listings.roommateMetaDescription` (148 / 153 / 155 / 154 characters):
+      - pl "Znajdź współlokatora do wynajmu w Warszawie: profil w bocie Telegram (EN/RU/UK), dzielnica, budżet na osobę. Koszty pokoju: zgłoszenia i ogłoszenia."
+      - en "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest. Room costs: reports and listings."
+      - ru «Найди, с кем снять квартиру в Варшаве: профиль в Telegram-боте (район, бюджет на человека), контакт при взаимном интересе. Цены комнат: отчёты, объявления.»
+      - uk «Знайди, з ким зняти квартиру у Варшаві: профіль у Telegram-боті (район, бюджет на особу), контакт за взаємного інтересу. Ціни кімнат: звіти та оголошення.»
+    - `listings.roommateH1` (new):
+      - pl "Szukam współlokatora w Warszawie"
+      - en "Find a flatmate in Warsaw"
+      - ru «Ищу соседа по квартире в Варшаве»
+      - uk «Шукаю сусіда по квартирі у Варшаві»
+  - Namespace and provider: `listings` (in `SHARED_CLIENT_NAMESPACES`, the shared locale layout's provider). `ListingsPageClient` reads `listings.roommateH1` through `useTranslations()`. The footer, now inside this client tree, reads `landing.footer.*` and `common.appName`; both namespaces are shared. `client-namespaces.test.ts` passes.
+  - **Assumptions applied (spec 08 FR-3 wording, FR-4 markup):**
+    - The h1 rule is `showH1` in `roommatePageLayout` (`src/lib/roommate-roles.ts`).
+    - The texts are the three keys.
+  - Agent's choices:
+    - The h1 is `sr-only` below `sm` (phones see the selector row first) and visible, `text-lg`, from `sm` up.
+    - The footer sits in a wrapper with negative margins.
+    - The content-column `div` itself became `<main>` rather than being wrapped, so the flex layout is untouched.
+  - **Every city's roommate page now says Warsaw:** the title, description and h1 name Warsaw literally (the spec's table A source). `/[city]/roommate` for a city other than Warsaw, if one exists in the cities table, shows the Warsaw title and h1. Changing that means a `{city}` template (spec 09 §Nominative-safe templates).
+  - The footer's `lg:grid-cols-4` grid follows the viewport, not the column. On desktop the list column is about half the width beside the map, so the four footer columns sit narrow there. The shared `Footer` was not changed.
+  - On mobile with the map toggled on, the list container is hidden, and so is the footer (it scrolls with the list, as the spec says).
+  - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next`.

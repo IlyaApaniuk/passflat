@@ -93,6 +93,8 @@ interface RoommatePageLayout {
   showBotButton: boolean;
   /** The role selector row stands above the type tabs row. */
   selectorAboveTabs: boolean;
+  /** The `listings.roommateH1` heading, first in the content column (spec 08 §Roommate page shell). */
+  showH1: boolean;
 }
 
 /**
@@ -119,5 +121,7 @@ export function roommatePageLayout({
     showCountLine: !(roommate && cityOfferCount === 0),
     showBotButton: showFlatmateBlock && hasUsername,
     selectorAboveTabs: roommate,
+    // PRD 4 FR-3: the page's one h1 is the roommate page's; `/replacement` and `/sublet` have none.
+    showH1: roommate,
   };
 }

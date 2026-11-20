@@ -20,6 +20,9 @@ import { FindFlatmateBlock } from '@/components/listings/find-flatmate-block';
 import { RoomMoneyBlock, type RoomMoneyFigures } from '@/components/listings/room-money-block';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
+// Isomorphic (no 'use client', the non-async `useTranslations`), imported directly as the
+// building client does (spec 08 §Current state).
+import { Footer } from '@/components/landing/footer';
 
 // Mapbox GL + react-map-gl is a large, WebGL-only dependency. Code-split it so
 // it loads as its own chunk after hydration instead of bloating the listings
@@ -269,8 +272,10 @@ function ListingsPageInner({
     }
   };
 
+  // Spec 08 §Roommate page shell (PRD 4 FR-3, FR-4): `h-dvh` so mobile browser bars never clip
+  // the page; the content column is the `main` landmark on all three listing types.
   return (
-    <div className="flex h-screen flex-col overflow-hidden pt-24">
+    <div className="flex h-dvh flex-col overflow-hidden pt-24">
       <div className="flex min-h-0 flex-1">
         <ListingFiltersDesktop
           filters={filters}
@@ -280,7 +285,18 @@ function ListingsPageInner({
           listingType={listingType}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main id="main" className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* The roommate page's one h1, its first heading, above the role selector; hidden
+              visually on phones, where the selector row carries the page. The filter sidebar's
+              heading stays h2. */}
+          {layout.showH1 && (
+            <div className="bg-card sm:px-4 sm:pt-3">
+              <h1 className="sr-only text-lg font-semibold tracking-tight sm:not-sr-only">
+                {t('listings.roommateH1')}
+              </h1>
+            </div>
+          )}
+
           {/* Spec 08 §Roommate page default view: the role selector stands above the frozen
               type tabs and the count/sort/filter row. */}
           {roleSelector}
@@ -438,6 +454,12 @@ function ListingsPageInner({
                     onToggleFavorite={toggleFavorite}
                   />
                 )}
+                {/* Spec 08 §Roommate page shell (FR-4): the footer scrolls with the list, after
+                    the grid or the empty state, so the page is not a dead end. The negative
+                    margins undo the container's padding so its border spans the column. */}
+                <div className="-mx-4 -mb-4 mt-8">
+                  <Footer />
+                </div>
               </motion.div>
             </AnimatePresence>
 
@@ -455,7 +477,7 @@ function ListingsPageInner({
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
