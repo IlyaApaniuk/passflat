@@ -37,6 +37,7 @@
       "Bash(lsof *)",
       "Bash(ls *)",
       "Bash(mkdir *)",
+      "Bash(sips *)",
       "Bash(pkill -f *-p 31*)"
     ],
     "deny": [

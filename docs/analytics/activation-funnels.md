@@ -5,7 +5,7 @@ roommate matching (§1) and the roommate stage 1 and stage 2 readouts (§7, §8)
 readout of the website's entries into the roommate flow (§9). Spec:
 `docs/specs/05-measurement-docs.md` §Activation funnels document (FR-47, FR-5). Experiments: E8
 (roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`; E14 (roommate stage 1) in
-§7; E15 (roommate stage 2) in §8; E16 (PRD 4, proposed) in §9.
+§7; E15 (roommate stage 2) in §8; E16 (PRD 4) in §9.
 
 Written on 2026-11-19 from the code at `23e0c34`; the PRD 3 roommate events (bot, and the web
 values `intent=find_flatmate` and `telegram_bot_opened` `source=roommate`) were added on
@@ -28,7 +28,7 @@ checked by reading only, so run each one on a short interval before you rely on 
 
 This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
 §6 and `docs/product/experiments.md`), and so are E14's (D52, D58, D59; quoted in §7) and E15's
-(D52, D60; quoted in §8); §9's thresholds are PRD 4's §1 Assumptions, proposed as E16. It contains no A/B
+(D52, D60; quoted in §8); §9's thresholds are PRD 4's §1 Assumptions, registered as E16 on 2026-11-20. It contains no A/B
 tests and no revenue forecasts. Read counts, not rates, while the samples are small.
 
 ## 1. Event table
@@ -1455,7 +1455,7 @@ the earlier E15 rule's rate is 8 ÷ 30 = 26.7 %, between 15 % and 30 %, where no
 - **Season.** The 14-day readout falls in January, before the February summer-semester wave
   (§7.6); a null result then is weak evidence and the readout says so.
 
-## 9. PRD 4 readout (E16, proposed)
+## 9. PRD 4 readout (E16)
 
 The readout of PRD 4 (FR-36, spec 05 §PRD 4: readout and docs): do the website's new entries
 (the flatmate callout, the header, the home thesis section) bring people into the roommate flow,
@@ -1628,7 +1628,7 @@ Read them with these facts:
 
 ### 9.3 Thresholds (Assumptions)
 
-PRD 4 §1, proposed as E16; the owner may change them. None is a stop rule: stage 1 of the thesis is
+PRD 4 §1, registered as E16 on 2026-11-20; the owner may change them. None is a stop rule: stage 1 of the thesis is
 decided by D52 on 2027-01-18 (§7.3) and D43 on 2027-01-20. A reading below a threshold goes into
 the next PRD as an item, not as a stop.
 

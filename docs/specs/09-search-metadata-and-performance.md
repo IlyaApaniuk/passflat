@@ -199,7 +199,7 @@ Three tasks: (1) the link lines, (2) the claims in the rest of the bodies, (3) t
   `https://passflat.com/` is rendered with the path part as href (`/en/warsaw/check`), no `target`,
   no `rel`; other absolute links keep `target="_blank" rel="noopener"`; the affiliate rule is
   unchanged. Unit test with four hrefs.
-- The cesja guide's `/replacement` links stay (Q-7).
+- The cesja guide's `/replacement` links stay (D84: the guide stays at its URL).
 
 ## Low-CTR titles
 
@@ -209,6 +209,10 @@ FR-25 (**Assumption**: drafts). Rewrite frontmatter `title` and `description` in
 `najem-okazjonalny-vs-standard-warsaw` (table J). `src/content/blog-frontmatter.test.ts` also asserts
 for these five slugs: `title.length ≤ 65` and `description.length ≤ 160` per locale. The deposit
 guide is §Blog frontmatter; the data report and calculator keys are §Honesty keys under test.
+
+The cesja guide stays at its URL (Q-7 (a), D84, answered 2026-11-20): no file is removed and no
+redirect is added; T145's table H description (without the tenant-replacement promise) is the whole
+change, and T146 closes with the answer in its progress entry.
 
 ## District section
 
@@ -270,13 +274,16 @@ FR-26 (**Decided**: D49, D51, D68; **Assumption**: the website count shape and t
 
 ## Sitemap, robots, structured data and the submit page's metadata
 
-FR-28 (**Assumption**); FR-29 **Open** (Q-1); the Instagram handle Q-8 (blocked task: when
-answered, `organizationJsonLd().sameAs` gets the right Instagram URL, one line and a test). The
+FR-28 (**Assumption**); FR-29 **Decided** (D78, Q-1 (a); task T150); the Instagram handle
+**Decided** (D85, Q-8: `passflatapp`; task T151: `organizationJsonLd().sameAs` →
+`https://instagram.com/passflatapp`, the footer's URL in `footer.tsx`, one line and a unit test that
+asserts the schema's Instagram URL equals the footer's). The
 structured-data part below is **Later** (PRD 4 §Later: 14 `breadcrumbJsonLd` callers make it its own
 piece of work); this PRD builds the sitemap, robots and the submit page's metadata in one task.
 
 - Sitemap: `/${city}/roommate` → `('weekly', 0.8)`; `/replacement` and `/sublet` → `0.4`; blog
-  entries get `lastModified: new Date(post.date)`; the listing-detail loop stays (Q-1). Test with
+  entries get `lastModified: new Date(post.date)`; the listing-detail loop stayed until D78 (T150
+  removes it). Test with
   mocked Prisma and `getAllPosts`: the three priorities and the blog `lastModified`.
 - **Later**, kept as the design for the next PRD: `src/lib/json-ld.tsx`: `webSiteJsonLd()` without
   `potentialAction`; `articleJsonLd` keeps its
@@ -296,9 +303,13 @@ piece of work); this PRD builds the sitemap, robots and the submit page's metada
 - `/[city]/costs/submit` `generateMetadata` returns `title: t('costs.submit.metaTitle')`,
   `description: t('costs.submit.metaDescription')` (new keys created here in four locales, PRD 4
   §8, and added to `REWRITTEN_KEYS` in the same task) and the existing `alternates`.
-- FR-29 (blocked task): when the owner answers (a), drop `/replacement`, `/sublet` and the
-  listing-detail loop from the sitemap and set `robots: { index: false, follow: true }` in the two
-  list pages' metadata; the sitemap test asserts their absence.
+- **FR-29** (**Decided**, D78; task T150): `/[city]/replacement`, `/[city]/sublet` and the
+  listing-detail loop leave `src/app/sitemap.ts`; the two list pages' `generateMetadata` returns
+  `robots: { index: false, follow: true }` (as `/costs/share` does today) with their alternates
+  unchanged; `/[city]/roommate` keeps `('weekly', 0.8)`. The sitemap test asserts the three are
+  absent and the roommate entry present; a unit test or a static read asserts the robots value of
+  both pages. No URL is removed or redirected; an active listing detail stays reachable by URL and
+  keeps its own metadata (non-active details are `noindex` already).
 
 ## Icons and the locale guard
 
@@ -330,7 +341,7 @@ s-maxage=604800`. `metadata.icons` in `src/app/layout.tsx` keeps `icon: '/icon.s
 
 ## HTTP headers
 
-FR-31 (**Assumption**: values; no CSP). The framing header is **Open** (Q-13, blocked task).
+FR-31 (**Assumption**: values). The framing header is **Decided** (D90, Q-13 (b); task T154).
 
 - `src/app/api/og/route.tsx`: `new ImageResponse(jsx, { width, height, headers: { 'Cache-Control':
 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' } })`; error paths unchanged
@@ -339,13 +350,13 @@ FR-31 (**Assumption**: values; no CSP). The framing header is **Open** (Q-13, bl
   `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(),
 microphone=(), geolocation=()` (the site uses none of the three, checked 2026-11-20).
   `e2e/home.spec.ts` asserts the three on `/`.
-- **Q-13 (blocked task):** a framing header (`X-Frame-Options: SAMEORIGIN`, or
-  `Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com`) would stop other sites
-  from framing Passflat, but `X-Frame-Options` also blocks PostHog's in-app heatmap and toolbar
-  views that load the site in a frame (not verified here). PostHog tooling is the owner's. Proposal
-  (b): `frame-ancestors 'self'` plus the PostHog EU app host as the only CSP directive; (a)
-  `X-Frame-Options: SAMEORIGIN`; (c) none. When answered, the task adds the header and an e2e
-  assertion.
+- **Framing header** (D90, Q-13 (b); task T154): the same `headers()` entry (`source: '/(.*)'`)
+  adds `Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com`, the only directive
+  (a full policy stays Later, PRD 4 §Later S-28); no `X-Frame-Options`, which would also block
+  PostHog's in-app heatmap and toolbar views that load the site in a frame from the EU app host
+  (not verified on the branch: if the toolbar is blocked after the deploy, the host list here is the
+  place to change). `e2e/home.spec.ts` asserts the header's exact value on `/` next to the three
+  headers of T153.
 
 ## Roommate page server work
 

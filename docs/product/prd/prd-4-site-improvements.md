@@ -1,10 +1,11 @@
 # PRD 4: Site improvements — the website as an entry into roommate matching
 
-- **Version:** 0.1, 2026-11-20
-- **Status:** In progress, 2026-11-20: decomposed into 40 tasks (T118 – T157), 30 to build and 10
-  blocked on the owner questions Q-1 – Q-13 (`prd-4-decision-review.md`: ready with assumptions;
-  written by Claude in the night run authorized by the owner on the evening of 2026-11-19: audit →
-  PRD 4 → specs and tasks; the owner has not reviewed it yet)
+- **Version:** 0.2, 2026-11-20
+- **Status:** In progress, 2026-11-20: decomposed into 40 tasks (T118 – T157; T158 and T159 added
+  later), 30 to build and 10 blocked on the owner questions Q-1 – Q-13 (`prd-4-decision-review.md`:
+  ready with assumptions; written by Claude in the night run authorized by the owner on the evening
+  of 2026-11-19: audit → PRD 4 → specs and tasks). The 30 are built (T157). The owner answered
+  Q-1 – Q-13 on 2026-11-20 (D78 – D91); the ten blocked tasks are back in the queue
 - **Serves:** H10 (the roommate page as an entry, E11, D41), H14 (stage 1 inflow: web entries into
   the bot's roommate flow, E14 `entry_source=web`) and, through a denser pool, H15 (E15); the
   thesis stage 1 inflow (`../thesis.md`, D48). H11 (sharper titles on page-1 guides) is Parked and
@@ -63,7 +64,7 @@ titles and snippets bring more of them?
    → persons with `tg_roommate_profile_created {entry_source: web}` (A23), reported next to the
    same funnel for `tg`, `fb` and the other sources of E14.
 
-**Thresholds — Assumptions** (the owner may change them; proposed in the decision review as E16):
+**Thresholds — Assumptions** (the owner may change them; registered as E16 on 2026-11-20):
 
 - Roommate page: CTR ≥ 3 % on `/warsaw/roommate` (**Decided**, D41, E11) and clicks at least twice
   the previous 4 full weeks (**Assumption**).
@@ -109,7 +110,10 @@ Ordered by impact on stage 1 inflow. Milestones only order the work (`../../spec
 Everything ships in one deploy. Every owner question (Q-1 – Q-13) is held by a blocked task:
 the Open requirements FR-7, FR-16, FR-19, FR-20, FR-29, the Open parts of FR-10 (Q-6), FR-25
 (Q-7), FR-28 (Q-8) and FR-31 (Q-13), and the copy questions Q-9 – Q-12 in one task; everything
-else proceeds (night rule, `prd-intake` §3).
+else proceeds (night rule, `prd-intake` §3). The owner answered every question on 2026-11-20
+(D78 – D91, `prd-4-decision-review.md` §Owner's answers): FR-7, FR-16, FR-29 and the Open parts of
+FR-10, FR-25, FR-28 and FR-31 are Decided as proposed (FR-10 with option (c)); FR-19 and FR-20 are
+Decided against the proposal (the form and the card stay); the ten tasks are back in the queue.
 
 ## 3. Requirements
 
@@ -150,7 +154,7 @@ Analytics: none new
 Screen: src/components/listings/listings-page-client.tsx, src/lib/roommate-roles.ts
 Copy: none
 Depends on: PRD 3 FR-21, FR-22; D5, D48, D68
-Open questions: Q-5 (type tabs; blocks nothing here)
+Open questions: none (Q-5 → D82, FR-7)
 ```
 
 ```text
@@ -299,20 +303,20 @@ Screen: src/components/landing/hero.tsx, for-whom.tsx, districts.tsx;
   src/app/[locale]/not-found.tsx; src/app/[locale]/dashboard/client.tsx
 Copy: agent draft, four locales (§8)
 Depends on: D5, D48; FR-5 (the common key)
-Open questions: Q-6 (the hero H1; blocks nothing: the H1 is not changed here)
+Open questions: none (Q-6 → D83: the H1 is rewritten by FR-10's Q-6 task)
 ```
 
 ```text
 FR-7. Footer product column without the frozen listings links
-Milestone: M1 · Priority: Should · Status: Open (Q-5: removing navigation to /replacement, /sublet
-  and /create-listing is a surface decision of the owner, although D5 says "not promoted")
+Milestone: M1 · Priority: Should · Status: Decided (D82, Q-5 (a), 2026-11-20: the footer drops the
+  three links and the roommate page hides the type tabs at 0 offers; the pages stay reachable)
 Findings: S-5 (the footer links), S-1 (the type tabs)
 Who and when: a visitor reads the footer on any page
-Result (proposal): the product column lists Find a flatmate, Costs by building (/warsaw/costs),
+Result (decided, D82): the product column lists Find a flatmate, Costs by building (/warsaw/costs),
   Costs by district (/warsaw), Check an address, Calculator, Guides, Building reviews, Templates;
   Lease Takeovers, Temporary Sublets and Post a Listing are removed; the pages stay reachable by
   URL; the roommate page's type tabs are hidden while cityOfferCount === 0
-Acceptance criteria (when the owner answers (a)):
+Acceptance criteria:
   1. The three links are removed in the footer; the dead keys `landing.footer.browseListings`,
      `temporarySublets`, `addListing` are deleted in four locales (parity test).
   2. On /warsaw/roommate with cityOfferCount === 0 the `ListingTypeTabs` row is not rendered;
@@ -323,7 +327,7 @@ Data: none · Analytics: none
 Screen: src/components/landing/footer.tsx, src/components/listings/listings-page-client.tsx
 Copy: none new
 Depends on: FR-5, FR-6; D5
-Open questions: Q-5 (owner; blocks this requirement only)
+Open questions: none (Q-5 → D82)
 ```
 
 ### M2. Roommate entry and funnel copy
@@ -394,15 +398,15 @@ Data: none · Analytics: `telegram_bot_opened {source: 'home'}`, `cta_click {pla
 Screen: src/app/[locale]/page.tsx
 Copy: agent draft, four locales (§8)
 Depends on: FR-8, FR-13
-Open questions: Q-6 (hero H1; blocks nothing)
+Open questions: none (Q-6 → D83)
 ```
 
 ```text
 FR-10. Home title, description, footer tagline, "for whom" copy and the templates sentence
 Milestone: M2 · Priority: Must · Status: Assumption (agent drafts for the owner's review; the
-  honesty rule of D25 and the test's forbidden list are Decided); Open (Q-6) for the thesis-first
-  positioning of the home title, description and tagline (appendix seo.md table K is headed
-  "owner decision (positioning)")
+  honesty rule of D25 and the test's forbidden list are Decided); Decided (D83, Q-6 (c),
+  2026-11-20) for the thesis-first positioning of the hero H1, the home title, description and
+  tagline (appendix seo.md table K; built by the Q-6 task after the interim cost-first rewrite)
 Findings: S-3 (home title, description, tagline), S-16 (the home keys), S-33
 Who and when: Google and a visitor read the home title and description, the footer tagline and
   the tools section's templates sentence
@@ -420,13 +424,13 @@ Acceptance criteria:
   3. The five keys of criterion 1 except the subtitle, and `templatesDescription`, join
      `REWRITTEN_KEYS`; no value matches the forbidden list of its locale.
   4. The thesis-first versions (table K, the §8 tagline) are not shipped here: they are the
-     blocked task of Q-6, together with the hero H1.
+     Q-6 task (D83), together with the hero H1.
 Edge cases: none
 Data: none · Analytics: none
 Screen: src/i18n/messages/{pl,en,ru,uk}.json
 Copy: agent draft, four locales (spec 08 §Home copy)
 Depends on: D25, D5; FR-6 (it owns the ForWhom keys)
-Open questions: Q-6 (owner; blocks the thesis-first values only)
+Open questions: none (Q-6 → D83)
 ```
 
 ```text
@@ -591,30 +595,32 @@ Screen: src/components/landing/how-it-works-tabs.tsx, src/components/landing/faq
   src/i18n/messages/*.json
 Copy: agent draft, four locales (§8)
 Depends on: D48, D5
-Open questions: Q-3 (FR-16)
+Open questions: none (Q-3 → D80, FR-16)
 ```
 
 ```text
 FR-16. Help payments answers, cesja and sublet steps, the listings counter
-Milestone: M2 · Priority: Could · Status: Open (Q-3: the payments answers mirror the terms and
-  name 39 PLN; removing the cesja and sublet steps and the About listings counter hides frozen
-  surfaces)
+Milestone: M2 · Priority: Could · Status: Decided (D80, Q-3 (a), 2026-11-20: "nothing is paid
+  today"; the general answer says Passflat is free today and nothing about future prices; the
+  payments section with its 14-day withdrawal text, the cesja and sublet tabs, the listers block
+  and the About counter are removed; `meta.pricingDescription` deleted)
 Findings: S-11 (the Open part)
 Who and when: a visitor reads /help payments and lease-takeover answers, the home "how it works"
   cesja and sublet tabs, `howItWorksPage.listers.*` and the About "{listings}+" counter
-Result (proposal): the payments section says nothing is paid today and the promotion answer is
-  removed; the cesja and sublet tabs and the listers block are removed from the home section and
+Result (decided, D80): the general answer says Passflat is free today; the payments section (with
+  the 14-day withdrawal text) and the promotion answer are removed; the cesja and sublet tabs and
+  the listers block are removed from the home section and
   /how-it-works; the listings counter is removed from /about; `meta.pricingDescription` is deleted
-Acceptance criteria (when the owner answers): the named keys are rewritten or deleted in four
+Acceptance criteria: the named keys are rewritten or deleted in four
   locales (parity test), the tabs component has one flow, the About counter is gone, and no page
   names a price.
 Edge cases: none
 Data: none · Analytics: none
 Screen: src/app/[locale]/help/client.tsx, how-it-works/client.tsx, about/client.tsx,
   src/components/landing/how-it-works-tabs.tsx
-Copy: agent draft after the answer
+Copy: agent drafts (spec 08 §How it works, Help and About)
 Depends on: FR-15
-Open questions: Q-3 (owner; blocks this requirement only)
+Open questions: none (Q-3 → D80)
 ```
 
 ```text
@@ -663,49 +669,50 @@ Data: none · Analytics: none
 Screen: src/components/listings/listings-empty-state.tsx, src/i18n/messages/*.json
 Copy: agent draft (§8)
 Depends on: D42
-Open questions: Q-9 (consent note; blocks nothing here)
+Open questions: none (Q-9 → D86, the copy-questions task)
 ```
 
 ```text
 FR-19. The city-notify form on the home page
-Milestone: M2 · Priority: Could · Status: Open (Q-2: the form collects e-mails for a launch that is
-  out of focus, D6; removing it is a surface and personal-data decision)
+Milestone: M2 · Priority: Could · Status: Decided (D79, Q-2, 2026-11-20, not the proposal: the form
+  stays as a demand signal with new copy; a second city stays out of focus, D6)
 Findings: S-12 (the city-notify form)
 Who and when: a visitor reads the home page's "Live in another city?" section
-Result (proposal): the section is removed from the home page; the API and the checker's
-  outside-city form stay; the checker's wording becomes "we may e-mail you once if Passflat
-  launches there"
-Acceptance criteria (when the owner answers): `CityNotify` no longer renders on /; its keys stay
-  while the checker uses them; the checker's `checker.outside.*` copy is rewritten in four
-  locales; the manual city-launch route is unchanged (D33).
+Result (decided, D79): the section stays on the home page with new copy (title "Live outside
+  Warsaw?"; body: we only work here for now, tell us your city, that is how we see where people
+  are waiting for us, when we open your city we send you an e-mail; the owner's Russian in spec 08
+  §Dead-end forms); the API, the stored rows and the checker's outside-city form are unchanged
+Acceptance criteria: `landing.cityNotify.title` and `subtitle` carry the new copy in four locales
+  (the owner's Russian verbatim; "when", not "if"; an e-mail notification), the badge and the
+  success line agree with it (spec 08 §Dead-end forms), the honesty test and key parity pass;
+  `CityNotify` still renders on /; the API, the stored rows and the manual city-launch route
+  (D33, D47), which sends the promised e-mail, are unchanged; `checker.outside.*` is unchanged.
 Edge cases: none
 Data: no change to stored rows · Analytics: none
 Screen: src/app/[locale]/page.tsx, src/components/landing/city-notify.tsx
-Copy: agent draft after the answer
-Depends on: D6, D33
-Open questions: Q-2 (owner; blocks this requirement only)
+Copy: the owner's Russian (given); PL, EN and UK agent drafts
+Depends on: D6, D33, D47
+Open questions: none (Q-2 → D79)
 ```
 
 ```text
 FR-20. The roommate e-mail card and "I have a free room"
-Milestone: M2 · Priority: Could · Status: Open (Q-4: the e-mail card collects personal data and is
-  counted by E13; the free-room role leads to a frozen listing form)
+Milestone: M2 · Priority: Could · Status: Decided (D81, Q-4, 2026-11-20, not the proposal: both
+  stay; only FR-18's wording changes)
 Findings: S-12 (the e-mail card and the free-room role)
 Who and when: a visitor on the empty roommate list
-Result (proposal): the e-mail card is removed from the roommate page only (kept on /replacement
-  and /sublet); "I have a free room" points to the room money block's links to OLX, Otodom and
-  the Facebook groups instead of /create-listing
-Acceptance criteria (when the owner answers): `ListingsEmptyState` does not render the capture
-  on roommate; `listing_interest_saved` is no longer possible from the roommate page and spec 05
-  says so for E13; the offer role's target changes and PRD 1 FR-15's sign-in test is retired or
-  retargeted.
+Result (decided, D81): nothing changes: the e-mail card stays on the roommate page (E13 keeps
+  counting it) and "I have a free room" keeps its target (sign-in, then the listing form, PRD 1
+  FR-15); the card's title is FR-18's
+Acceptance criteria: no code change; the task closes with the answer in its progress entry;
+  E13's count and PRD 1 FR-15's sign-in test stand.
 Edge cases: none
-Data: fewer e-mails stored
-Analytics: E13 counting note
-Screen: src/components/listings/listings-empty-state.tsx, roommate-role-selector.tsx
-Copy: agent draft after the answer
+Data: none
+Analytics: none (E13 unchanged)
+Screen: src/components/listings/listings-empty-state.tsx, roommate-role-selector.tsx (unchanged)
+Copy: none (FR-18's)
 Depends on: D40, PRD 1 FR-15
-Open questions: Q-4 (owner; blocks this requirement only)
+Open questions: none (Q-4 → D81)
 ```
 
 ### M3. Search metadata and district pages
@@ -817,13 +824,13 @@ Acceptance criteria:
   3. `markdownToHtml` renders a link whose href starts with `https://passflat.com/` as a
      relative href without `target="_blank"`; absolute links to other hosts keep today's
      behaviour; the affiliate rule is unchanged.
-  4. The cesja guide's links to /replacement are left as they are (Q-7).
+  4. The cesja guide's links to /replacement are left as they are (D84: the guide stays).
 Edge cases: a guide with no closing link sentence → nothing to change
 Data: none · Analytics: none
 Screen: src/content/blog/*.mdx, src/app/[locale]/blog/[slug]/client.tsx
 Copy: mechanical, listed in the task
 Depends on: FR-23
-Open questions: Q-7 (cesja article; blocks nothing here)
+Open questions: none (Q-7 → D84)
 ```
 
 ```text
@@ -850,8 +857,8 @@ Data: none · Analytics: none (Search Console is read by the owner)
 Screen: src/content/blog/*.mdx
 Copy: agent draft, four locales (appendix tables D, E, H, J)
 Depends on: FR-23
-Open questions: Q-7 (keeping the cesja article at all; blocks nothing: the description is
-  honest either way)
+Open questions: none (Q-7 answered 2026-11-20, D84: the guide stays; the description of table H
+  is the whole change)
 ```
 
 ```text
@@ -926,8 +933,9 @@ Open questions: none
 FR-28. Sitemap, robots, structured data and the submit page's metadata
 Milestone: M3 (criteria 1, 3, 4, 5 for the sitemap, robots and the submit page); criterion 2
   (structured data) moved to Later after the gap review (14 breadcrumb callers) · Priority: Should
-  · Status: Assumption (priorities, schema choices); dropping frozen URLs from the sitemap or
-  adding noindex is FR-29 (Open, Q-1); the Instagram handle is Q-8 (its own blocked task, one line)
+  · Status: Assumption (priorities, schema choices); dropping frozen URLs from the sitemap and
+  adding noindex is FR-29 (Decided, D78); the Instagram handle is `passflatapp` (D85, Q-8; its own
+  task, one line)
 Findings: S-13 (the part that is not Open), S-21 (JSON-LD), S-22
 Who and when: a crawler reads /sitemap.xml, /robots.txt and the JSON-LD of pages
 Result: the roommate page outranks the frozen lists in the sitemap, blog entries carry lastmod,
@@ -935,14 +943,13 @@ Result: the roommate page outranks the frozen lists in the sitemap, blog entries
   blocked, private URLs are blocked in every locale, and /costs/submit has its own title
 Acceptance criteria:
   1. Sitemap: `/[city]/roommate` weekly 0.8; `/replacement` and `/sublet` 0.4; blog entries get
-     `lastModified: post.date`; the listing-detail loop stays until Q-1.
+     `lastModified: post.date`; the listing-detail loop stays until FR-29 (D78).
   2. JSON-LD: the `WebSite` `SearchAction` is removed (no page performs a free-text search);
      `Article.image` = `getOgImage(title, description).url`; `Article.url` and every
      `BreadcrumbList` item use the locale URL from `getAlternates(path, locale).canonical`, with
      breadcrumb names from the `breadcrumbs` namespace ("Home", "Blog" translated); the data
      report passes `dateModified`; the duplicate `Organization` on /about is removed;
-     `Organization.sameAs` keeps its current Instagram URL until Q-8 is answered (listed for the
-     owner).
+     `Organization.sameAs` gets the `passflatapp` Instagram URL (D85; its own task).
   3. robots: `allow: ['/', '/api/og']`; disallow `/api/` (the rest), `/dashboard/`, `/messages/`,
      `/create-listing/`, `/auth/`, `/admin/` each with and without the `/en`, `/ru`, `/uk`
      prefixes.
@@ -956,26 +963,25 @@ Screen: src/app/sitemap.ts, src/app/robots.ts, src/lib/json-ld.tsx, src/app/[loc
   blog/warsaw-rent-prices/page.tsx, about/page.tsx, src/app/[locale]/[city]/costs/submit/page.tsx
 Copy: agent draft, four locales (§8)
 Depends on: none
-Open questions: Q-1 (FR-29), Q-8 (Instagram handle; blocks the sameAs line only)
+Open questions: none (Q-1 → D78, Q-8 → D85)
 ```
 
 ```text
 FR-29. Frozen listing pages out of the sitemap, or noindex
-Milestone: M3 · Priority: Could · Status: Open (Q-1: changing the discoverability of existing URLs
-  is the owner's)
+Milestone: M3 · Priority: Could · Status: Decided (D78, Q-1 (a), 2026-11-20)
 Findings: S-13 (the Open part)
 Who and when: a crawler reads the sitemap and the frozen pages
-Result (proposal): `/[city]/replacement`, `/[city]/sublet` and the listing-detail loop leave the
+Result (decided, D78): `/[city]/replacement`, `/[city]/sublet` and the listing-detail loop leave the
   sitemap; the two list pages get `robots: { index: false, follow: true }`; the pages stay
   reachable; no URL is removed and no redirect is needed
-Acceptance criteria (when the owner answers): the sitemap test asserts their absence; the two
+Acceptance criteria: the sitemap test asserts their absence; the two
   pages' metadata carries the robots setting; /warsaw/roommate is unchanged.
 Edge cases: a listing detail that is still active stays reachable by URL
 Data: none · Analytics: none
 Screen: src/app/sitemap.ts, src/app/[locale]/[city]/{replacement,sublet}/page.tsx
 Copy: none
 Depends on: FR-28
-Open questions: Q-1 (owner; blocks this requirement only)
+Open questions: none (Q-1 → D78)
 ```
 
 ### M4. Performance, mobile and accessibility
@@ -1011,12 +1017,12 @@ Open questions: none
 
 ```text
 FR-31. HTTP headers: link-preview cache and security headers
-Milestone: M4 · Priority: Should · Status: Assumption (values below; a CSP is Later); Open for
-  the framing header (Q-13)
+Milestone: M4 · Priority: Should · Status: Assumption (values below; a full CSP is Later); Decided
+  for the framing header (D90, Q-13 (b), 2026-11-20)
 Findings: S-27, S-28 (without a CSP)
 Who and when: a chat app fetches /api/og; any response leaves the server
-Result: /api/og is cached at the edge; every response carries three security headers; the
-  framing header waits for the owner
+Result: /api/og is cached at the edge; every response carries three security headers and the
+  `frame-ancestors` header (D90)
 Acceptance criteria:
   1. `/api/og` responses carry `Cache-Control: public, max-age=3600, s-maxage=86400,
      stale-while-revalidate=604800`; the e2e og-image test asserts the header.
@@ -1024,15 +1030,16 @@ Acceptance criteria:
      `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(),
      microphone=(), geolocation=()` (the site uses none of the three); the e2e home test asserts
      them on /.
-  3. No framing header until Q-13 is answered: `X-Frame-Options: SAMEORIGIN` would also block
-     PostHog's in-app heatmap and toolbar frames (gap review); the blocked task adds the answered
-     header. No other `Content-Security-Policy` is added (Later).
+  3. The framing header is `Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com`
+     on every route, the only directive (D90), added by its own task with an e2e assertion;
+     `X-Frame-Options: SAMEORIGIN` would also block PostHog's in-app heatmap and toolbar frames
+     (gap review). No other `Content-Security-Policy` directive is added (Later).
 Edge cases: the OG route's error responses are not cached (no header on a 4xx/5xx)
 Data: none · Analytics: none
 Screen: src/app/api/og/route.tsx, next.config.mjs
 Copy: none
 Depends on: none
-Open questions: Q-13 (owner; blocks the framing header only)
+Open questions: none (Q-13 → D90)
 ```
 
 ```text
@@ -1312,7 +1319,8 @@ the deploy (D29). Longer tables are in the audit appendix (`../reviews/2026-11-1
 tables A – K) and are cited by table letter; the tasks copy them into the message files.
 
 **Roommate page (FR-3)** — the title and description ship from appendix seo.md table A (they fit
-the snippet length and say nothing about price, Q-12); the longer descriptions below are kept as
+the snippet length and said nothing about price while Q-12 was open; D89 adds "Free, no account");
+the longer descriptions below are kept as
 the source of table A's wording. Title: PL "Szukam współlokatora w Warszawie: koszty na osobę", EN "Find
 a flatmate in Warsaw — rent per person", RU «Сосед по квартире в Варшаве — цена на человека», UK
 «Сусід по квартирі у Варшаві — ціна на особу». Description (FU-2 drafts): EN "Looking for someone
@@ -1360,7 +1368,7 @@ pay, and where rooms are listed." / "See room costs"; PL, RU, UK analogues in th
 "Checking a flat you found" / "Known costs for the building, the location and the nuisances, in one
 answer." / "Check an address"; PL, RU, UK analogues. `landing.cta.subtitle`: EN "Someone to rent
 with, a room, or a flat you already found — start with the figures.", `landing.cta.freeNote`: EN
-"No account needed." (PL, RU, UK in spec 08; "free" waits for Q-12). `landing.tools.templatesDescription` (FU-13;
+"No account needed." (PL, RU, UK in spec 08; D89 makes it "Free, no account"). `landing.tools.templatesDescription` (FU-13;
 the four files of `public/documents/`, gap review): EN "Lease assignment (cesja), handover
 protocol, sublease agreement and flatmate agreement — Polish originals with English, Russian and
 Ukrainian versions."; PL "Cesja umowy najmu, protokół zdawczo-odbiorczy, umowa podnajmu i umowa
@@ -1481,8 +1489,8 @@ and deposit for your building. Shown only as aggregates with their counts."
 
 ## 11. Owner steps
 
-1. Review this PRD and `prd-4-decision-review.md`; answer Q-1 – Q-13 when convenient (each is
-   held by a blocked task, Q-9 – Q-12 by one; nothing else waits for them).
+1. Review this PRD and `prd-4-decision-review.md` (Q-1 – Q-13 answered on 2026-11-20, D78 – D91;
+   the ten tasks that held them are back in the queue).
 2. Review the draft copy by task from the progress entries and the deploy checklist
    (`docs/ops/deploy-copy-review.md`, FR-36).
 3. Deploy with PRD 3 (D67) or in the next deploy; set `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (D76);
@@ -1494,6 +1502,10 @@ and deposit for your building. Shown only as aggregates with their counts."
    readings into the stage 1 readout of 2027-01-18 (E14) where the dates allow.
 
 ## 12. Open questions
+
+All thirteen were answered on 2026-11-20; the answers and their D-numbers are in
+`prd-4-decision-review.md` §Owner's answers (D78 – D91). The table stays as the record of what was
+asked.
 
 | ID   | Question                                                                                                                                                                                                                                                                                    | Owner | Blocks                                                         |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
@@ -1514,7 +1526,8 @@ and deposit for your building. Shown only as aggregates with their counts."
 ## 13. Size
 
 After the architect gap review: **30 tasks to build** (M1 4, M2 10, M3 11, M4 3, M5 2) and **10
-blocked tasks** holding Q-1 – Q-13 (M1 1, M2 5, M3 3, M4 1), 40 in all (T118 – T157). The review
+tasks that held Q-1 – Q-13** until 2026-11-20 (M1 1, M2 5, M3 3, M4 1), 40 in all (T118 – T157;
+T158 and T159 followed). The review
 split the larger requirements (FR-11/12, FR-15, FR-21, FR-24, FR-28, FR-30/31) into one testable
 change each and moved FR-32, FR-33, FR-35 and FR-28's structured data to Later. About 10 tasks of
 10–30 minutes (the callout and its placements, the per-person line, the district section, the
@@ -1576,3 +1589,15 @@ With the audit's finding ids, not in this PRD:
 - **0.1, 2026-11-20, review of the decomposition (third night run, before the owner's review).**
   Agent clarification, nothing new: FR-19 states its empty analytics field. The audit's table of
   findings now names this PRD's requirement ids instead of the audit's proposed numbers.
+- **0.2, 2026-11-20.** The owner's answers to the decision review (D78 – D91), applied by Claude.
+  Every Open mark became Decided with its D-number: Q-1 the frozen pages out of the sitemap with
+  `noindex, follow` (D78; FR-29, FR-28), Q-2 the city-notify form stays with the owner's new copy
+  (D79; FR-19, not the proposal), Q-3 "nothing is paid today" (D80; FR-16), Q-4 the e-mail card
+  and the free-room target stay (D81; FR-20, not the proposal), Q-5 the footer links and the type
+  tabs (D82; FR-7), Q-6 option (c): the hero H1 and the thesis-first title, description and tagline
+  (D83; FR-10), Q-7 the cesja guide stays (D84; FR-24, FR-25), Q-8 `passflatapp` (D85; FR-28), Q-9 –
+  Q-12 the copy answers (D86 – D89; §8), Q-13 `frame-ancestors` (D90; FR-31), the row 12 defaults
+  confirmed (D91). A29 and A30 are registered in the BRD and the §1 thresholds as E16 in
+  `../experiments.md`. The ten blocked tasks are back in the queue (T122, T125, T133, T135, T136,
+  T137, T146, T150, T151, T154); T136 and T146 close with their answers. The requirement text is
+  otherwise unchanged; the copy is still drafts for the owner's review (D29).

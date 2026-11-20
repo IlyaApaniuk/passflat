@@ -38,8 +38,8 @@ PRD changes status or an experiment ends. The thesis and the ladder are in `thes
   figure next to the block, honest titles and guides under the test, district pages with room
   figures and profile counts, icons, headers and contrast. FR-32, FR-33, FR-35 and the structured
   data moved to the PRD's Later list. Ships with the PRD 3 deploy or the next one; the owner
-  answers Q-1 – Q-13 when convenient. Read after 4 full weeks (Search Console per page
-  group, bot opens by source, profile completion from the web; proposed E16), folded into the stage
+  answered Q-1 – Q-13 on 2026-11-20 (D78 – D91). Read after 4 full weeks (Search Console per
+  page group, bot opens by source, profile completion from the web; E16), folded into the stage
   1 readout where the dates allow.
 - **Posting from the PRD 3 deploy** (D46, D53, D67): two 30-minute slots a day, replying to
   people who look for a roommate, with `mate_<source>_<group>` links from the deploy day (until

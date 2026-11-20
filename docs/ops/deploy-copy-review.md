@@ -116,7 +116,7 @@ curl -sI https://passflat.com/nonexistent.ext
 
 ## 5. After 4 full weeks: Search Console and PostHog
 
-The readout is `docs/analytics/activation-funnels.md` §9 (E16, proposed): the Search Console page
+The readout is `docs/analytics/activation-funnels.md` §9 (E16): the Search Console page
 groups and the 8 rewritten pages (§9.1), the HogQL queries K – N (§9.2), the thresholds as
 Assumptions (§9.3) and the attribution limit (§9.4).
 

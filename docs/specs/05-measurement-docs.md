@@ -232,12 +232,13 @@ A section "Roommate stage 2 (E15)" in `docs/analytics/activation-funnels.md`:
 
 PRD 4 FR-36, **Decided** (existing event names, new values only; the loop never queries PostHog or
 Search Console); **Assumption** (the readout's shape; the thresholds are the PRD's §1 Assumptions,
-proposed as E16 in `../product/prd/prd-4-decision-review.md` row 14). Written from the code as it
+registered as E16 in `../product/experiments.md` on 2026-11-20). Written from the code as it
 is after M1 – M4.
 
 - `docs/analytics/activation-funnels.md` §1: `telegram_bot_opened.source` and `cta_click.placement`
   values of spec 01 §PRD 4 values, with where each fires; `tg_roommate_flow_started.entry_detail`'s
-  new values. A new section "PRD 4 readout (E16, proposed)":
+  new values. A new section "PRD 4 readout (E16)" (headed "(E16, proposed)" until the owner
+  accepted E16 on 2026-11-20):
   1. Search Console, read by the owner: the page groups (`/warsaw/roommate` in four locales,
      building pages, district pages with the hub, guides, the calculator, the data report, the
      home page), compared over 4 full weeks (Monday–Sunday) after the deploy against the 4 full

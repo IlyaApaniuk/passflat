@@ -13,15 +13,15 @@
       "title": "Bot avatar: public/bot-avatar.png, a 512 x 512 square made from the logo (D77)",
       "spec": "src/lib/bot/README.md#going-live",
       "dependsOn": [],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "public/bot-avatar.png exists and is committed: a 512 x 512 PNG made from public/logo.png (1536 x 1024: the rounded-square gradient mark centred on a white background) with the mark centred and the logo's background colour kept (no transparency, no new colour); made with the system `sips` tool in a one-off command, for example `sips -c 1024 1024 public/logo.png --out public/bot-avatar.png` (centre crop to the square) then `sips -z 512 512 public/bot-avatar.png`; the exact commands are named in the progress entry. sharp is not a dependency and no dependency is added",
         "A unit test (src/lib/bot/bot-avatar.test.ts) reads the PNG header of public/bot-avatar.png without a new dependency (the PNG signature, then the IHDR width and height at bytes 16 - 23) and asserts 512 x 512, and that the file is under 200 kB; it passes for any 512 x 512 PNG, so the owner may replace the file with his own",
         "The progress entry's Owner review says the owner may replace public/bot-avatar.png with another 512 x 512 PNG before running `npm run bot:profile` (T115)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 1,
-      "notes": "D77 (evening of 2026-11-19). The avatar is what T115 sends with setMyProfilePhoto. If the sandbox denies `sips`, block the task with the exact commands for the owner; never add an image dependency for this.\nBlocked: sips is not in the ralph/settings.json allow list and the loop sandbox denies it; the owner runs the two sips commands from the T114 progress entry (or adds Bash(sips *) to the allow list) and unblocks T114; the unit test is written and waits in the ralph-wip T114 stash"
+      "attempts": 0,
+      "notes": "D77 (evening of 2026-11-19). The avatar is what T115 sends with setMyProfilePhoto. If the sandbox denies `sips`, block the task with the exact commands for the owner; never add an image dependency for this.\nBlocked: sips is not in the ralph/settings.json allow list and the loop sandbox denies it; the owner runs the two sips commands from the T114 progress entry (or adds Bash(sips *) to the allow list) and unblocks T114; the unit test is written and waits in the ralph-wip T114 stash\nOwner answer: sips allowed in ralph/settings.json; make public/bot-avatar.png as the task says"
     },
     {
       "id": "T115",
@@ -157,16 +157,16 @@
       "id": "T122",
       "milestone": "M1",
       "title": "Footer without the frozen listings links; roommate type tabs hidden at 0 offers (FR-7, owner question Q-5)",
-      "spec": "docs/specs/08-site-structure-and-entries.md#footer-product-column-open",
+      "spec": "docs/specs/08-site-structure-and-entries.md#footer-product-column",
       "dependsOn": ["T120", "T121"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-5 with (a): the footer drops browseListings, temporarySublets and addListing and their keys in four locales; roommatePageLayout gains showTypeTabs (false on the roommate page while cityOfferCount === 0); the no-frozen-links test extends to footer.tsx; the pages stay reachable by URL",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-5 (PRD 4, decision review row 5). Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer? (a) remove the links and hide the tabs; the pages stay reachable by URL (proposal). (b) keep both. Removing navigation to frozen pages is the owner's call (D5 says 'not promoted', not 'hidden')."
+      "notes": "Blocked: owner question Q-5 (PRD 4, decision review row 5). Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer? (a) remove the links and hide the tabs; the pages stay reachable by URL (proposal). (b) keep both. Removing navigation to frozen pages is the owner's call (D5 says 'not promoted', not 'hidden').\nOwner answer: Q-5 (a), D82: remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer and hide the roommate type tabs while the city has no offer; everything reachable by URL; see spec 08 section Footer product column"
     },
     {
       "id": "T123",
@@ -212,16 +212,16 @@
       "id": "T125",
       "milestone": "M2",
       "title": "Positioning: the hero H1 and thesis-first home title, description and tagline (FR-10 Open part, owner question Q-6)",
-      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-held-by-blocked-tasks",
+      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-answered-2026-11-20",
       "dependsOn": ["T124"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-6: the answered values of the hero H1 key (the task names it), meta.homeTitle, meta.homeDescription and landing.footer.tagline are written in four locales (with (a): appendix seo.md table K and the PRD 4 §8 tagline), stay in REWRITTEN_KEYS and pass the honesty test",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-6 (PRD 4, decision review row 6). The hero H1 'Don't overpay for rent in Warsaw' and the home title, description and footer tagline: (a) keep the H1 and ship table K's thesis-first title and description and the §8 tagline (proposal); (b) keep T124's honest cost-first rewrite and the H1; (c) also rewrite the H1 to 'Who to rent with in Warsaw, and what it costs per person'. Positioning copy is the owner's call (the audit appendix marks table K as his decision)."
+      "notes": "Blocked: owner question Q-6 (PRD 4, decision review row 6). The hero H1 'Don't overpay for rent in Warsaw' and the home title, description and footer tagline: (a) keep the H1 and ship table K's thesis-first title and description and the §8 tagline (proposal); (b) keep T124's honest cost-first rewrite and the H1; (c) also rewrite the H1 to 'Who to rent with in Warsaw, and what it costs per person'. Positioning copy is the owner's call (the audit appendix marks table K as his decision).\nOwner answer: Q-6 (c), D83: the hero H1 becomes 'Who to rent with in Warsaw, and what it costs per person' (RU draft in the spec), plus table K's thesis-first home title and description and the PRD 4 section 8 footer tagline, four locales, drafts for the owner's review; see spec 08 section Owner questions (answered 2026-11-20)"
     },
     {
       "id": "T126",
@@ -352,14 +352,14 @@
       "title": "Help payments answers and 'Is Passflat free?', the cesja and sublet steps, the About listings counter (FR-16, owner question Q-3)",
       "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
       "dependsOn": ["T131", "T132"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-3: the payments answers and helpCenter.general.a2 are rewritten or deleted in four locales as answered (parity test), the tabs component keeps the answered flows, the About counter and howItWorksPage.listers.* follow the answer, meta.pricingDescription is deleted with (a), and no page names a price",
         "With answer (b) only the rewrites are made and nothing is removed"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-3 (PRD 4, decision review row 3). The Help payments answers name 39 PLN and cost-report access and helpCenter.general.a2 answers 'Is Passflat free?' while nothing is paid; the home 'how it works' keeps cesja and sublet steps; /about shows a listings counter. (a) payments and a2 → 'nothing is paid today', the promotion answer removed, the cesja and sublet tabs and howItWorksPage.listers.* removed, the counter removed, meta.pricingDescription deleted (proposal). (b) rewrite only, remove nothing. Payments copy mirrors the terms and removing steps hides frozen surfaces, so it is the owner's call."
+      "notes": "Blocked: owner question Q-3 (PRD 4, decision review row 3). The Help payments answers name 39 PLN and cost-report access and helpCenter.general.a2 answers 'Is Passflat free?' while nothing is paid; the home 'how it works' keeps cesja and sublet steps; /about shows a listings counter. (a) payments and a2 → 'nothing is paid today', the promotion answer removed, the cesja and sublet tabs and howItWorksPage.listers.* removed, the counter removed, meta.pricingDescription deleted (proposal). (b) rewrite only, remove nothing. Payments copy mirrors the terms and removing steps hides frozen surfaces, so it is the owner's call.\nOwner answer: Q-3 (a), D80, 'nothing is paid today': helpCenter.general.a2 = Passflat is free today (nothing about future prices); the payments section is removed including the 14-day withdrawal text; the cesja and sublet tabs, howItWorksPage.listers.* and the About listings counter are removed; meta.pricingDescription deleted; see spec 08 section How it works, Help and About"
     },
     {
       "id": "T134",
@@ -383,46 +383,46 @@
       "id": "T135",
       "milestone": "M2",
       "title": "The city-notify form on the home page (FR-19, owner question Q-2)",
-      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms-open",
+      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms",
       "dependsOn": [],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-2 with (a): CityNotify no longer renders on /; the API, the stored rows and the manual city-launch route (D33) are unchanged; the checker's outside-city copy is rewritten in four locales as answered",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-2 (PRD 4, decision review row 2). The home 'Live in another city?' form collects e-mails for a launch that is out of focus (D6). (a) remove it from the home page and keep the API and the checker's outside-city form with 'we may e-mail you once if Passflat launches there' (proposal). (b) keep it as is. Removing a form that stores personal data is the owner's call."
+      "notes": "Blocked: owner question Q-2 (PRD 4, decision review row 2). The home 'Live in another city?' form collects e-mails for a launch that is out of focus (D6). (a) remove it from the home page and keep the API and the checker's outside-city form with 'we may e-mail you once if Passflat launches there' (proposal). (b) keep it as is. Removing a form that stores personal data is the owner's call.\nOwner answer: Q-2, D79, not the proposal: the city-notify form stays on the home page as a demand signal with the owner's new copy (title 'Live outside Warsaw?', body: we only work here for now, tell us your city, when we open it we send one e-mail); API and rows unchanged; the e-mail is the city-launch route's (D33, D47); checker.outside unchanged; see spec 08 section Dead-end forms"
     },
     {
       "id": "T136",
       "milestone": "M2",
       "title": "The roommate e-mail card and the target of 'I have a free room' (FR-20, owner question Q-4)",
-      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms-open",
+      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms",
       "dependsOn": ["T134"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-4 with (a): ListingsEmptyState does not render the capture on the roommate page (kept on /replacement and /sublet); 'I have a free room' points to the room money block's links; PRD 1 FR-15's sign-in test is retargeted; spec 05 notes for E13 that the roommate page no longer saves interest",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-4 (PRD 4, decision review row 4). The roommate page's e-mail 'save interest' card competes with the bot and E13 counts it; 'I have a free room' leads through a login wall to a frozen listing form. (a) remove the card from the roommate page only and point the free-room role to the room money block's links (proposal). (b) keep both. Personal data and an experiment's count are the owner's call."
+      "notes": "Blocked: owner question Q-4 (PRD 4, decision review row 4). The roommate page's e-mail 'save interest' card competes with the bot and E13 counts it; 'I have a free room' leads through a login wall to a frozen listing form. (a) remove the card from the roommate page only and point the free-room role to the room money block's links (proposal). (b) keep both. Personal data and an experiment's count are the owner's call.\nOwner answer: Q-4, D81, not the proposal: keep both; the e-mail card stays on the roommate page (E13 keeps counting it) and 'I have a free room' keeps its target; only FR-18's wording, already built in T134; no code change: close with the answer in the progress entry"
     },
     {
       "id": "T137",
       "milestone": "M2",
       "title": "Copy questions: the consent note's register, 'expanding across Europe', open data against 'unlock', 'free' in new copy (owner questions Q-9 – Q-12)",
-      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-held-by-blocked-tasks",
+      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-answered-2026-11-20",
       "dependsOn": ["T119", "T121"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers: Q-9 (a) listings.demandCapture.consentNote ru and uk switch to «ты» / «ти» with the meaning unchanged; Q-10 the footer line is replaced or dropped in four locales as answered; Q-11 the trust line and/or the gate copy change as answered; Q-12 (a) 'Free, no account' joins listings.roommateMetaDescription and landing.cta.freeNote in four locales; every 'leave' closes its part",
         "The honesty test and key parity pass; the changed keys are listed for the owner"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: owner questions Q-9 – Q-12 (PRD 4, decision review rows 9, 10, 11 and 15), answered together. Q-9: change the roommate page's consent note from «вы»/«ви» to «ты»/«ти»? (a) yes, the address form only (proposal); (b) leave; consent text. Q-10: the footer line 'Starting in Warsaw, expanding across Europe' (D6): (a) 'Warsaw only for now.' (proposal); (b) drop it. Q-11: 'The data is open — free, no account' against the 'unlock' gates (D3): (a) 'Figures are open — free, no account; the per-utility breakdown after you add yours' (proposal); (b) leave. Q-12: may new copy say the bot and the figures are free? (a) yes, in the roommate description and the home CTA note (proposal); (b) no, 'No account needed.' stays. Consent text and statements about prices are the owner's."
+      "notes": "Blocked: owner questions Q-9 – Q-12 (PRD 4, decision review rows 9, 10, 11 and 15), answered together. Q-9: change the roommate page's consent note from «вы»/«ви» to «ты»/«ти»? (a) yes, the address form only (proposal); (b) leave; consent text. Q-10: the footer line 'Starting in Warsaw, expanding across Europe' (D6): (a) 'Warsaw only for now.' (proposal); (b) drop it. Q-11: 'The data is open — free, no account' against the 'unlock' gates (D3): (a) 'Figures are open — free, no account; the per-utility breakdown after you add yours' (proposal); (b) leave. Q-12: may new copy say the bot and the figures are free? (a) yes, in the roommate description and the home CTA note (proposal); (b) no, 'No account needed.' stays. Consent text and statements about prices are the owner's.\nOwner answer: Q-9 (a) D86: consentNote ru/uk switch to ty/ti, address form only; Q-10 (a) D87: landing.footer.expanding = 'Warsaw only for now.' in four locales; Q-11 (a) D88: landing.hero.trustLine = 'Figures are open - free, no account; the per-utility breakdown after you add yours'; Q-12 (a) D89: 'Free, no account' in listings.roommateMetaDescription and landing.cta.freeNote; see spec 08 section Owner questions (answered 2026-11-20)"
     },
     {
       "id": "T138",
@@ -560,14 +560,14 @@
       "title": "The cesja guide: keep, or remove with a redirect (owner question Q-7)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#low-ctr-titles",
       "dependsOn": ["T145"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-7: with (a) keep, nothing changes and the task closes with the answer in the progress entry",
         "With (b) the four cesja-najmu-guide locale files are removed, a permanent redirect for each locale URL to the blog index of that locale is added in next.config.mjs, and the sitemap test and an e2e redirect assertion cover it"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-7 (PRD 4, decision review row 7). Keep the cesja guide, which promises frozen tenant replacement? (a) keep it: T145 already drops the promise from its description (proposal); (b) remove it with a redirect to /blog. Removing a URL needs a redirect, and URL changes are the owner's call."
+      "notes": "Blocked: owner question Q-7 (PRD 4, decision review row 7). Keep the cesja guide, which promises frozen tenant replacement? (a) keep it: T145 already drops the promise from its description (proposal); (b) remove it with a redirect to /blog. Removing a URL needs a redirect, and URL changes are the owner's call.\nOwner answer: Q-7 (a), D84: keep the cesja guide at its URL; T145 already dropped the tenant-replacement promise from its description; no file removal, no redirect: close with the answer in the progress entry"
     },
     {
       "id": "T147",
@@ -629,14 +629,14 @@
       "title": "Frozen listing pages out of the sitemap, or noindex (FR-29, owner question Q-1)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
       "dependsOn": ["T149"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-1 with (a): /[city]/replacement, /[city]/sublet and the listing-detail loop leave the sitemap and the two list pages carry robots { index: false, follow: true }; the sitemap test asserts their absence; no URL is removed or redirected",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-1 (PRD 4, decision review row 1). Drop /replacement, /sublet and the listing details from the sitemap and set noindex, follow on the two list pages? (a) yes; the pages stay reachable, no redirect (proposal). (b) keep them listed at 0.4 (T149 lowers them). Changing the discoverability of existing URLs is the owner's call."
+      "notes": "Blocked: owner question Q-1 (PRD 4, decision review row 1). Drop /replacement, /sublet and the listing details from the sitemap and set noindex, follow on the two list pages? (a) yes; the pages stay reachable, no redirect (proposal). (b) keep them listed at 0.4 (T149 lowers them). Changing the discoverability of existing URLs is the owner's call.\nOwner answer: Q-1 (a), D78: drop /replacement, /sublet and the listing details from the sitemap; noindex, follow on the two list pages; pages reachable, no redirect; see spec 09 section Sitemap, robots, structured data"
     },
     {
       "id": "T151",
@@ -644,13 +644,13 @@
       "title": "Organization schema: the right Instagram handle (owner question Q-8)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
       "dependsOn": [],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-8: organizationJsonLd().sameAs carries the answered Instagram URL and the footer's Instagram link matches it; a unit test asserts both"
       ],
       "checks": ["npm run verify"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-8 (PRD 4, decision review row 8). Which Instagram handle is right: passflatapp (the footer) or passflat.com (the Organization schema)? Proposal: passflatapp; the schema's value looks like a typo. A fact only the owner knows."
+      "notes": "Blocked: owner question Q-8 (PRD 4, decision review row 8). Which Instagram handle is right: passflatapp (the footer) or passflat.com (the Organization schema)? Proposal: passflatapp; the schema's value looks like a typo. A fact only the owner knows.\nOwner answer: Q-8, D85: the Instagram handle is passflatapp; organizationJsonLd().sameAs becomes the footer's URL https://instagram.com/passflatapp, with a unit test that the schema and the footer agree"
     },
     {
       "id": "T152",
@@ -691,13 +691,13 @@
       "title": "The framing header (FR-31 Open part, owner question Q-13)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#http-headers",
       "dependsOn": ["T153"],
-      "status": "blocked",
+      "status": "todo",
       "acceptance": [
         "Only after the owner answers Q-13: next.config.mjs adds the answered header on every route ((b) Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com as the only directive, or (a) X-Frame-Options: SAMEORIGIN) and e2e/home.spec.ts asserts it on /; with (c) nothing changes"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
-      "notes": "Blocked: owner question Q-13 (PRD 4, decision review row 16). A framing header stops other sites from framing Passflat, but X-Frame-Options: SAMEORIGIN also blocks PostHog's in-app heatmap and toolbar frames (gap review; not verified). (b) frame-ancestors 'self' plus the PostHog EU app host (proposal); (a) X-Frame-Options: SAMEORIGIN; (c) none for now. PostHog tooling and settings are the owner's."
+      "notes": "Blocked: owner question Q-13 (PRD 4, decision review row 16). A framing header stops other sites from framing Passflat, but X-Frame-Options: SAMEORIGIN also blocks PostHog's in-app heatmap and toolbar frames (gap review; not verified). (b) frame-ancestors 'self' plus the PostHog EU app host (proposal); (a) X-Frame-Options: SAMEORIGIN; (c) none for now. PostHog tooling and settings are the owner's.\nOwner answer: Q-13 (b), D90: Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com as the only directive on every route in next.config.mjs, no X-Frame-Options, with an e2e assertion on /; see spec 09 section HTTP headers"
     },
     {
       "id": "T155",

@@ -628,7 +628,7 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
   });
 });
 
-const PRD_4 = docSection(DOC, 'PRD 4 readout (E16, proposed)');
+const PRD_4 = docSection(DOC, 'PRD 4 readout (E16)');
 const PRD_4_BLOCKS = sqlBlocks(PRD_4);
 
 /** Event names a website query reads (`event = '…'`), not the bot's `tg_` names. */

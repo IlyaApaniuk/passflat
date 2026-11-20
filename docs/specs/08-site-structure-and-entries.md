@@ -4,8 +4,9 @@ Requirements FR-1 – FR-20 of PRD 4 (`../product/prd/prd-4-site-improvements.md
 becomes an entry into the bot's roommate matching (D48): the roommate page opens on the flatmate
 block, the header and the home page state the thesis, and one shared callout appears on every cost
 surface. Listings stay frozen and are not promoted (D5): links to `/replacement`, `/sublet` and
-`/create-listing` are re-pointed, never the pages themselves; removing navigation to them is
-**Open** (FR-7, Q-5). No table, migration, cron, dependency or new event name (**Decided**,
+`/create-listing` are re-pointed, never the pages themselves; the footer drops its three links and
+the roommate page hides the type tabs at 0 offers (FR-7, **Decided**, D82); the pages stay
+reachable by URL. No table, migration, cron, dependency or new event name (**Decided**,
 CLAUDE.md). Every copy change touches the four files of `src/i18n/messages/` (parity test, spec 01)
 and is listed in the progress entry as draft copy for the owner (D29). Bot copy does not change.
 
@@ -127,7 +128,8 @@ FR-1 (**Decided**: the roommate page is the entry, D48, D41; frozen and not prom
 hasUsername })` → `{ showFlatmateBlock, showRoomMoney, showCountLine, showBotButton, selectorAboveTabs }`
   in `src/lib/roommate-roles.ts` (or a sibling), tested for: default view (block, no count line at 0
   offers, selector above tabs), each intent, offers present, no username, another city.
-- Hiding the type tabs at 0 offers is FR-7 (**Open**, Q-5): not done here.
+- Hiding the type tabs at 0 offers is FR-7 (**Decided**, D82; §Footer product column): not done
+  here.
 - `roommate_intent_selected` fires only on a tap, as today; nothing fires on load.
 - Not e2e-testable (the roommate page needs a database, §Current state): the helper's unit tests
   are the proof; the progress entry says the page was not rendered.
@@ -141,7 +143,8 @@ FR-3 (**Decided**: URL, canonical, hreflang unchanged; **Assumption**: wording),
   from **appendix seo.md table A** (the source for both; table A's descriptions fit about 155
   characters, PRD 4 §8's longer ones do not), the PL title starting with "Szukam
   współlokatora"; new key `listings.roommateH1` from PRD 4 §8. No draft says "free" or
-  "bezpłatnie" (whether snippets may say so is Q-12, blocked task). All three keys join
+  "bezpłatnie" here; D89 (Q-12) allows "Free, no account", and the §Owner questions task adds it to
+  the description. All three keys join
   `REWRITTEN_KEYS` (`src/i18n/honesty-copy.test.ts`); no promise of a match, a date or a result;
   the city stands after a colon or dash or as the literal "w Warszawie" (spec 09 §Nominative-safe
   templates).
@@ -192,7 +195,8 @@ FR-6 (**Decided**: not promoted, D5; the entries, D48; **Assumption**: targets a
 MapPin }]` with keys `landing.forWhom.<key>.{title,description,cta}` (PRD 4 §8); the old
   `findHome|findRoommate|sublet` keys are deleted; `landing.cta.subtitle` rewritten (§8) and
   `landing.cta.freeNote` rewritten to "No account needed." (EN; PL "Bez zakładania konta.", RU «Без
-  регистрации.», UK «Без реєстрації.»): no new "free" claim (Q-12).
+  регистрации.», UK «Без реєстрації.»): the interim value; D89 (Q-12) makes it "Free, no account"
+  in the §Owner questions task.
 - 404: the second button → `/${DEFAULT_CITY}/check` with `errors.notFound.browse` rewritten to
   "Check an address"; a third `Link` (ghost) → `/${DEFAULT_CITY}/roommate` with `common.findFlatmate`.
   Status stays 404; `robots` noindex stays.
@@ -203,14 +207,25 @@ MapPin }]` with keys `landing.forWhom.<key>.{title,description,cta}` (PRD 4 §8)
 - Test `src/components/landing/no-frozen-links.test.ts` (static scan): no file under
   `src/components/landing/` (footer excluded until FR-7) and neither `src/app/[locale]/page.tsx`
   nor `not-found.tsx` contains `/replacement`, `/sublet` or `/create-listing`.
-- The hero H1 and subtitle: the H1 stays (Q-6); the subtitle drops "document templates" (FR-10).
+- The hero H1 and subtitle: the H1 is rewritten to the thesis in the §Owner questions task (D83,
+  Q-6 (c)); the subtitle drops "document templates" (FR-10).
 
-## Footer product column (Open)
+## Footer product column
 
-FR-7, **Open** (Q-5). Blocked task. Proposal when answered (a): remove `browseListings`,
-`temporarySublets`, `addListing` from the footer and delete their keys; the roommate page hides the
-`ListingTypeTabs` row while `cityOfferCount === 0` (`roommatePageLayout` gains `showTypeTabs`);
-the no-frozen-links test extends to the footer. The pages stay reachable by URL.
+FR-7, **Decided** (D82, Q-5 (a), answered 2026-11-20). Task T122.
+
+- `src/components/landing/footer.tsx`: the product column drops `browseListings`
+  (→ `/warsaw/replacement`), `temporarySublets` (→ `/warsaw/sublet`) and `addListing`
+  (→ `/create-listing`); the keys `landing.footer.browseListings`, `temporarySublets` and
+  `addListing` are deleted in four locales unless another component reads them (grep first; parity
+  test). The other entries of the column stay as §Header and footer entries left them.
+- `roommatePageLayout` (§Roommate page default view) gains `showTypeTabs`: `false` when
+  `listingType === 'roommate' && cityOfferCount === 0`, otherwise `true`; `ListingsPageClient`
+  renders the `ListingTypeTabs` row only when it is `true`. `/replacement` and `/sublet` keep their
+  tabs; the roommate page shows them again when an offer exists. Unit tests: the three cases.
+- `src/components/landing/no-frozen-links.test.ts` drops its footer exclusion: no file under
+  `src/components/landing/` links to `/replacement`, `/sublet` or `/create-listing`.
+- Nothing is removed or redirected: the three pages stay reachable by URL (D5).
 
 ## Flatmate callout
 
@@ -274,7 +289,8 @@ counts={…} />` renders between `Hero` and `CheckAddress`, inside `main`. The p
 ## Home copy
 
 FR-10 (**Assumption**: drafts; D25 honesty rule **Decided**; the thesis-first positioning of the
-home title, description and tagline is **Open**, Q-6).
+hero H1, the home title, description and tagline is **Decided**, D83, Q-6 (c): built by the §Owner
+questions task after this one).
 
 - This task owns the home keys; spec 09 §Honesty keys does not touch them.
 - **Honesty and D5 rewrite, current positioning kept** (the cost site first, as today): the values
@@ -286,8 +302,8 @@ home title, description and tagline is **Open**, Q-6).
   `landing.footer.tagline` "Rental costs in Warsaw as tenants reported them, with their counts;
   guides and document templates."; `landing.hero.costsCta` "See reported costs";
   `landing.hero.subtitle` drops "document templates" and keeps its cost sentence.
-- The thesis-first versions (appendix seo.md table K, the PRD 4 §8 tagline) are the blocked task of
-  Q-6 together with the hero H1.
+- The thesis-first versions (appendix seo.md table K, the PRD 4 §8 tagline) and the hero H1 are the
+  §Owner questions task (D83); they replace the interim values above.
 - `landing.tools.templatesDescription`: one sentence naming the four documents of
   `public/documents/` and the languages, EN "Lease assignment (cesja), handover protocol, sublease
   agreement and flatmate agreement — Polish originals with English, Russian and Ukrainian
@@ -387,11 +403,11 @@ whitespace-normal')}>` with the same href, `onClick` and label.
 
 ## How it works, Help and About
 
-FR-15 (**Assumption**: drafts); FR-16 **Open** (Q-3).
+FR-15 (**Assumption**: drafts); FR-16 **Decided** (D80, Q-3 (a) with "nothing is paid today").
 
 - `HowItWorksTabs`: `TABS = ['roommate', 'replacement', 'sublet']` (roommate first and default);
   `landing.howItWorks.roommate.step{1..4}{Title,Desc}` and `landing.howItWorks.subtitle` rewritten
-  (PRD 4 §8); the other tabs' copy is untouched until Q-3.
+  (PRD 4 §8); the other tabs go in the FR-16 task (D80).
   Two tasks: (1) the tabs and the FAQ, (2) the Help and About copy.
 
 - `landing.faq.q7` / `a7` added and rendered first. `faq.tsx` pairs answers by position today
@@ -403,10 +419,29 @@ FR-15 (**Assumption**: drafts); FR-16 **Open** (Q-3).
   it, spec 09 §Honesty keys does not). No price, listing feature, "verified", match guarantee or
   date in any rewritten value (the honesty test's forbidden list plus a check for "PLN" and "zł" in
   these keys).
-- `helpCenter.general.a2` answers "Is Passflat free?": a statement about prices, so it moves to
-  FR-16 (Q-3) and is not changed here.
-- FR-16 (blocked task): payments answers including `helpCenter.general.a2`, the cesja and sublet
-  tabs, `howItWorksPage.listers.*`, the About counter, `meta.pricingDescription`.
+- `helpCenter.general.a2` answers "Is Passflat free?": a statement about prices, so it belongs to
+  FR-16 and is not changed here.
+- **FR-16** (**Decided**, D80; task T133), "nothing is paid today":
+  - `helpCenter.general.a2` → Passflat is free today, in the sense of EN "Yes. Everything on
+    Passflat is free today: the figures, the address check, the calculator, the guides, the
+    templates and the Telegram bot." (agent draft, four locales); nothing about future prices and
+    no "forever".
+  - The Help payments section (`helpCenter.payments.*`, with its 14-day withdrawal answer) is
+    removed from `help/client.tsx` and its keys deleted; the promotion answer (the `a6` "Promoted
+    listings … 39 PLN" of its Help section) goes with its question. The withdrawal text returns
+    only with a real paid service; the terms and the checkout keep theirs for the frozen flows.
+  - `HowItWorksTabs`: `TABS = ['roommate']`; with one tab the tab strip is not rendered (or the
+    component becomes a plain list; the agent's choice); the `replacement` and `sublet` step keys
+    and the `tabReplacement` / `tabSublet` labels are deleted in four locales.
+  - `/how-it-works`: the `listers` tab and `howItWorksPage.listers.*` are removed; the `seekers`
+    and `costs` tabs stay (`seekers.step1Desc` was reworded by spec 09 §Honesty keys).
+  - `/about`: the "{listings}+" counter leaves the stats block (the cost-reports counter stays
+    while it is above 0); its label key (`about.stats.listings`) is deleted if nothing else reads
+    it.
+  - `meta.pricingDescription` is deleted in four locales (grep for readers first).
+  - Tests: key parity; a test asserts that no value under `helpCenter`, `howItWorksPage` and
+    `landing.howItWorks` contains "PLN" or "zł" (a price); no page names a price.
+  - Every changed value is listed in the progress entry for the owner (D29).
 
 ## Polish visitor and the posting kit
 
@@ -428,27 +463,73 @@ FR-17 (**Decided**: D50, D53; **Assumption**: the clause and the link rule).
 FR-18 (**Assumption**). `listings.demandCapture.searchCardTitleRoommate` (new key, PRD 4 §8) is
 used by `ListingsEmptyState` when `listingType === 'roommate'`; the other types keep
 `searchCardTitle`. `listings.noMatch.title` ru/uk switch to «ты»/«ти». `listings.demandCapture.consentNote`
-is not changed (Q-9).
+changes in the §Owner questions task (D86: «ты» / «ти»), not here.
 
-## Dead-end forms (Open)
+## Dead-end forms
 
-FR-19 (Q-2) and FR-20 (Q-4): blocked tasks with the proposals of the decision review. Nothing
-changes until the owner answers; FR-18 only rewords the card's title.
+FR-19 (**Decided**, D79, Q-2; task T135) and FR-20 (**Decided**, D81, Q-4; task T136). Neither
+answer is the decision review's proposal.
 
-## Owner questions held by blocked tasks
+- **FR-19, the city-notify form stays** on the home page as a demand signal with new copy; the
+  component, the API, the stored rows, `city_notify_subscribed` and the manual city-launch route
+  (`/api/cron/city-launch`, D33, D47) are unchanged. Copy in `landing.cityNotify.*`, four locales:
+  - `title`: RU «Живёте не в Варшаве?» (the owner's wording, given); EN "Live outside Warsaw?"; PL
+    and UK in the same sense (agent drafts).
+  - `subtitle`: RU «Пока работаем только здесь. Напишите свой город — так мы видим, где нас ждут.
+    Когда откроем ваш город, пришлём уведомление на почту.» (given); EN "We only work here for
+    now. Tell us your city — that is how we see where people are waiting for us. When we open your
+    city, we'll send you an e-mail."; PL and UK in the same sense: "when", not "if", and an e-mail
+    notification (one e-mail at the launch, which the city-launch route sends).
+  - `badge` ("Expanding soon") contradicts "we only work here for now" (D6): it becomes the D87
+    line ("Warsaw only for now.") or is dropped; `currentCity` stays or goes; `success` may say the
+    e-mail comes when the city opens. The agent's choices (Assumption), listed in the progress
+    entry; a dropped key is deleted in four locales.
+  - The honesty test and key parity pass.
+- **The checker's outside-city form** (`checker.outside.*`) already promises the same one e-mail
+  ("we'll tell you when Passflat launches in this city") and is not changed.
+- **FR-20, both stay:** `ListingsEmptyState` keeps the e-mail card on the roommate page (E13 keeps
+  counting `listing_interest_saved` from it; spec 05's E13 note is unchanged) and "I have a free
+  room" keeps its target (sign-in, then the listing form; PRD 1 FR-15's test stands). The wording is
+  FR-18's (built, T134). T136 changes no code and closes with the answer in its progress entry.
 
-Night rule (`prd-intake` §3): every owner question is a blocked task; nothing else waits for it.
+## Owner questions (answered 2026-11-20)
 
-- **Q-6, positioning** (FR-10's Open part, audit S-3, appendix seo.md table K): the hero H1 "Don't
-  overpay for rent in Warsaw", and whether the home title, description and footer tagline become
-  thesis-first (table K, PRD 4 §8 tagline) instead of the honest cost-first rewrite of §Home copy.
-  When answered (a): the task writes the answered values in four locales under the honesty test.
-- **Q-9 – Q-12, copy questions** (audit S-34; one blocked task, answered together): Q-9 the roommate
-  page's consent note «вы» → «ты» (consent text); Q-10 the footer line "Starting in Warsaw,
-  expanding across Europe" (D6); Q-11 "The data is open — free, no account" against the "unlock"
-  gates (D3); Q-12 whether new copy may say the bot and the figures are free (the roommate
-  description and `landing.cta.freeNote`; a statement about prices). Each answer is applied as a
-  copy change in four locales; "leave" closes that part.
+The night rule (`prd-intake` §3) held every owner question in a blocked task; the owner answered
+all of them on 2026-11-20 (D78 – D91, `../product/decisions.md`). The two copy tasks of this spec:
+
+- **Q-6, positioning** (**Decided**, D83, option (c); task T125; audit S-3): thesis-first in four
+  locales, as drafts for the owner's review (D29):
+  - The hero H1, `landing.hero.title` + `landing.hero.titleHighlight` (today "Don't overpay for
+    rent" + "in Warsaw."): EN "Who to rent with in Warsaw, and what it costs per person", RU «С кем
+    снимать в Варшаве и сколько это на человека» (the owner's draft); PL and UK in the same sense
+    (agent drafts). How the sentence splits across the two keys is the agent's choice (for example
+    the per-person half as the highlight); `landing.hero.subtitle` stays as T124 left it.
+  - `meta.homeTitle` and `meta.homeDescription`: appendix seo.md table K's drafts (EN "Passflat —
+    who to rent with in Warsaw, and what it costs" / "Find a flatmate through our Telegram bot and
+    see what tenants reported for rent in Warsaw: rent and utilities by building and district,
+    calculator, guides."; PL, RU and UK in the table). The title stays under about 60 characters
+    and the description under about 155 (shorten, never into a claim).
+  - `landing.footer.tagline`: the PRD 4 §8 tagline (EN "Find someone to rent with in Warsaw and
+    see what it costs per person — figures reported by tenants, with their counts."; PL, RU and UK
+    there).
+  - All five keys stay in `REWRITTEN_KEYS`; the honesty test and key parity pass; any e2e or unit
+    test that reads the old H1 or title follows. The changed keys are listed for the owner.
+- **Q-9 – Q-12, copy questions** (**Decided**, D86 – D89; task T137; audit S-34), four locales:
+  - Q-9 (D86): `listings.demandCapture.consentNote` ru «Нажимая, ты соглашаешься на обработку
+    данных — …», uk «Натискаючи, ти погоджуєшся на обробку даних — …»; the address form only, the
+    meaning and the privacy link unchanged; en and pl untouched.
+  - Q-10 (D87): `landing.footer.expanding` → EN "Warsaw only for now.", PL "Na razie tylko
+    Warszawa.", RU «Пока только Варшава.», UK «Поки лише Варшава.» (D6).
+  - Q-11 (D88): `landing.hero.trustLine` → EN "Figures are open — free, no account; the
+    per-utility breakdown after you add yours"; PL, RU and UK in the same sense (agent drafts); the
+    gate copy (D3) is unchanged.
+  - Q-12 (D89): "Free, no account" joins `listings.roommateMetaDescription` (EN "… Free, no
+    account."; the description stays under about 160 characters: shorten elsewhere, never into a
+    claim) and `landing.cta.freeNote` (EN "Free, no account." instead of "No account needed."; PL
+    "Bezpłatnie, bez konta.", RU «Бесплатно, без аккаунта.», UK «Безкоштовно, без акаунта.»).
+    Nothing about future prices (D80).
+  - The honesty test (the keys stay in `REWRITTEN_KEYS`) and key parity pass; the changed keys are
+    listed for the owner.
 
 ## Events (PRD 4 values)
 
