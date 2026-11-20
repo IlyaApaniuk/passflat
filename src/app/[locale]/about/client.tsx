@@ -5,17 +5,7 @@ import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { FEATURE_FLAGS } from '@/lib/feature-flags';
-import {
-  Search,
-  EyeOff,
-  Users,
-  Unlock,
-  Repeat,
-  BarChart3,
-  CalendarRange,
-  Database,
-  Heart,
-} from 'lucide-react';
+import { Search, EyeOff, Users, Unlock, Wallet, BarChart3, Database, Heart } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -75,21 +65,21 @@ export function AboutClient({ stats }: { stats?: AboutStats }) {
             <div className="mt-8 grid gap-6 sm:grid-cols-2">
               <div className="rounded-xl border bg-card p-6">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Repeat className="h-6 w-6 text-primary" />
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">{t('solution.pillar1Title')}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t('solution.pillar1Desc')}</p>
               </div>
               <div className="rounded-xl border bg-card p-6">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
+                  <Wallet className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">{t('solution.pillar2Title')}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t('solution.pillar2Desc')}</p>
               </div>
               <div className="rounded-xl border bg-card p-6">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <CalendarRange className="h-6 w-6 text-primary" />
+                  <Search className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">{t('solution.pillar3Title')}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t('solution.pillar3Desc')}</p>

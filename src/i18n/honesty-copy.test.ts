@@ -40,6 +40,20 @@ const HOW_IT_WORKS_KEYS = [
   'landing.faq.a7',
 ];
 
+/**
+ * The Help "What is Passflat?" answer and the About copy rewritten by PRD 4 FR-15
+ * (spec 08). `helpCenter.general.a2` ("Is Passflat free?") is a price statement and
+ * stays with FR-16 (Q-3).
+ */
+const HELP_ABOUT_KEYS = [
+  'helpCenter.general.a1',
+  ...[1, 2, 3].flatMap((n) =>
+    ['Title', 'Desc'].map((field) => `about.solution.pillar${n}${field}`),
+  ),
+  'about.team.description2',
+  'about.values.principle1Desc',
+];
+
 /** The spec's list as found on 2026-11-19, plus the keys the en.json search found with it. */
 const REWRITTEN_KEYS = [
   'landing.hero.subtitle',
@@ -88,8 +102,10 @@ const REWRITTEN_KEYS = [
   'blog.ctaText',
   // PRD 4 FR-13 (spec 08 §Per-person line): the bot's roomSplit wording.
   'listings.flatmateCallout.perPerson',
-  // PRD 4 FR-15 (spec 08 §How it works, Help and About).
+  // PRD 4 FR-15 (spec 08 §How it works, Help and About); about.values.principle1Desc
+  // is owned here, not by spec 09 §Honesty keys.
   ...HOW_IT_WORKS_KEYS,
+  ...HELP_ABOUT_KEYS,
 ];
 
 /** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
@@ -294,6 +310,42 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     expect(caught('Подберём соседа', 'ru')).toBe(true);
     expect(caught('Знайдемо сусіда', 'uk')).toBe(true);
     expect(caught('Contacts open on mutual interest', 'en')).toBe(false);
+  });
+
+  it('the Help and About keys (PRD 4 FR-15): no PLN, zł, "verified", price, date, listing or promise', () => {
+    expect(HELP_ABOUT_KEYS).toHaveLength(9);
+    for (const locale of LOCALES) {
+      for (const key of HELP_ABOUT_KEYS) {
+        const value = valueAt(locale, key);
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect(value as string, `${locale}: ${key}`).not.toMatch(/PLN/);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(/zł/i);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(/verified/i);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FORBIDDEN[locale]);
+        // A price or a date needs a digit or a currency; "free" is a price statement (Q-12).
+        expect(value as string, `${locale}: ${key}`).not.toMatch(/\d|€/);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(LISTINGS[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(REAL_OR_TRUTH[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toContain('{');
+      }
+    }
+  });
+
+  it('the Help and About EN drafts: the thesis first, then the costs tenants reported', () => {
+    expect(valueAt('en', 'helpCenter.general.a1')).toBe(
+      'Passflat helps people in Warsaw find someone to rent with (a profile in our Telegram bot) and see what renting costs per person: costs tenants reported per building and district, an address checker, a calculator, guides and document templates.',
+    );
+    expect(valueAt('en', 'about.values.principle1Desc')).toBe(
+      'We show the figures tenants reported, with their counts — also when they are inconvenient.',
+    );
+    // The old principle blamed "the market"; the honesty rules never call a figure that.
+    for (const locale of LOCALES) {
+      expect(valueAt(locale, 'about.values.principle1Desc') as string, locale).not.toMatch(
+        /market|rynk|рын|ринк/i,
+      );
+    }
   });
 
   it('the home copy keeps the cost-first positioning and the EN drafts of spec 08', () => {

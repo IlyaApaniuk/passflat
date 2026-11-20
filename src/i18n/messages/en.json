@@ -1640,12 +1640,12 @@
     "solution": {
       "label": "Our Solution",
       "title": "A complete rental toolkit built by the community",
-      "pillar1Title": "Lease Takeovers",
-      "pillar1Desc": "Find a replacement and keep your deposit. Take over someone's lease and skip the agency fee. Lease assignment is a standard legal instrument in Poland — we make it easy.",
-      "pillar2Title": "Roommate Search",
-      "pillar2Desc": "Find a compatible roommate or fill a vacant room. Specify preferences, room type, and per-person costs — so both sides know what to expect.",
-      "pillar3Title": "Temporary Sublet",
-      "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
+      "pillar1Title": "Find someone to rent with",
+      "pillar1Desc": "A short profile in our Telegram bot, in English, Russian or Ukrainian: district, budget per person, move-in month. Compatible people come one at a time, and both Telegram usernames appear only when the interest is mutual.",
+      "pillar2Title": "What it costs per person",
+      "pillar2Desc": "What a flat costs when two people share it: half the median of the whole-flat costs tenants reported, always with the number of reports behind it.",
+      "pillar3Title": "Checker, calculator, guides",
+      "pillar3Desc": "Look up an address before you sign: the costs tenants reported for the building and its district. The calculator gives a ballpark of rent plus utilities for a district and flat size, and the guides cover deposits, utilities and lease contracts in Poland.",
       "pillar4Title": "Cost Transparency",
       "pillar4Desc": "Community-sourced utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
     },
@@ -1653,13 +1653,13 @@
       "label": "Who We Are",
       "title": "Built by renters, for renters",
       "description": "We rent in Warsaw ourselves and we've been through all of it — lost deposits, utility bills no one warned us about, a price you only learn after moving in. Passflat grew out of that pain.",
-      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Right now that's costs by building, listings (lease takeover, roommate, sublet), and free document templates."
+      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Today it helps people find someone to rent with in our Telegram bot and see what renting costs per person, from the costs tenants reported by building and district."
     },
     "values": {
       "label": "Our Principles",
       "title": "Platform rules",
       "principle1": "No hidden information",
-      "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
+      "principle1Desc": "We show the figures tenants reported, with their counts — also when they are inconvenient.",
       "principle2": "Your data belongs to you",
       "principle2Desc": "Every cost report is anonymous — it can't be tied to you, and we never sell data to third parties.",
       "principle3": "Open by default",
@@ -1855,7 +1855,7 @@
     "general": {
       "title": "General",
       "q1": "What is Passflat?",
-      "a1": "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of costs from tenants themselves (rent, utilities, deposits), and free document templates for the deal.",
+      "a1": "Passflat helps people in Warsaw find someone to rent with (a profile in our Telegram bot) and see what renting costs per person: costs tenants reported per building and district, an address checker, a calculator, guides and document templates.",
       "q2": "Is Passflat free?",
       "a2": "Yes. Browsing listings, cost reports, posting listings, and document templates — all free.",
       "q3": "What cities does Passflat operate in?",

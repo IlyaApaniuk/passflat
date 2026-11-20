@@ -335,7 +335,7 @@
       "title": "Help 'What is Passflat?' and About describe the thesis and reported costs (FR-15)",
       "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Rewritten in four locales from PRD 4 §8: helpCenter.general.a1, about.solution.pillar{1,2,3}{Title,Desc}, about.team.description2 and about.values.principle1Desc (which joins REWRITTEN_KEYS)",
         "helpCenter.general.a2 ('Is Passflat free?') is not changed: it is a price statement and belongs to Q-3 (T133)",
@@ -343,7 +343,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48. /help and /about give their content namespaces through scoped providers: the progress entry names them."
     },
     {

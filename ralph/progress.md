@@ -4357,3 +4357,76 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Agent's choice:** `aria-pressed` and `type="button"` on the tab buttons. They were not asked for, but make "selected" observable; there is no visual change.
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next` (T132 rewrites the Help and About copy, the second FR-15 task; FR-15 stays Planned in the `docs/specs/README.md` map until it is done).
+
+### 2026-11-20 09:06 · T132 · done
+
+- Done (PRD 4 FR-15, part 2 of 2; spec 08 §How it works, Help and About):
+  - Copy in four locales (scratchpad script, exact-once replacement per file): `helpCenter.general.a1`, `about.solution.pillar{1,2,3}{Title,Desc}`, `about.team.description2`, `about.values.principle1Desc`. Nine keys, no new key.
+  - Not changed: `helpCenter.general.a2` ("Is Passflat free?", FR-16 / Q-3, checked in the diff), `about.solution.pillar4*`, the rest of `about.*` (the stats counter, `ctaBrowse` to `/warsaw/replacement`, the vision) and the other Help answers.
+  - `src/app/[locale]/about/client.tsx`: the first three pillar icons follow the new copy: pillar 1 `Users` (was `Repeat`, lease takeover), pillar 2 `Wallet` (was `Users`), pillar 3 `Search` (was `CalendarRange`, sublet). The `Repeat` and `CalendarRange` imports are gone. No other markup changed.
+  - `docs/specs/README.md` PRD 4 map: FR-15 → Done (T131, T132).
+- Tests:
+  - `src/i18n/honesty-copy.test.ts`: new `HELP_ABOUT_KEYS` (the nine keys) join `REWRITTEN_KEYS` (so `principle1Desc` is under the claim check). Two new cases:
+    - in four locales: no `PLN`, no `zł`, no "verified", the locale's `FORBIDDEN`, no digit or `€` (price or date), no "free" (`FREE`), no listings word, no "real"/"truth", no promise, no placeholder;
+    - the EN `a1` and `principle1Desc` drafts verbatim, and no locale's `principle1Desc` names "the market".
+  - New `src/app/[locale]/about/about-copy.test.ts`: renders the real `AboutClient` with `renderToStaticMarkup`, `next-intl` mocked to `createTranslator` over `pickMessages(messages, ['about', 'common'])` (the page's provider) with `onError` throwing, `posthog-js/react` and `@/i18n/navigation` mocked. Per locale: no missing key; the solution section's h3s are pillars 1 – 4 in order with the `users` / `wallet` / `search` icons; the section has no listings word and shows the three new descriptions; `team.description2` and `principle1Desc` render. EN titles and principle equal PRD 4 §8.
+  - `bot-languages-copy.test.ts` passes: `pillar1Desc` names the bot and English, Russian and Ukrainian in every locale.
+- Checks:
+  - Focused Vitest (`src/i18n/`, the About dir): 5 files / 65 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 161 files / 3425 tests;
+    - build OK.
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks). No page was looked at in a browser; the render test is the proof. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29).** EN pillar titles and `principle1Desc` are PRD 4 §8 verbatim; EN `a1` is §8 **without "free"** (see the agent's choices); the EN descriptions, `description2` and all PL, RU and UK values are the agent's drafts. RU/UK use no direct address (infinitive titles, no «вы»/«ты»), because the About page still says «вы» elsewhere.
+    - `helpCenter.general.a1`:
+      - pl "Passflat pomaga osobom w Warszawie znaleźć kogoś do wspólnego wynajmu (profil w naszym bocie w Telegramie) i zobaczyć, ile najem kosztuje na osobę: koszty zgłoszone przez najemców według budynków i dzielnic, sprawdzanie adresu, kalkulator, poradniki i wzory dokumentów."
+      - en "Passflat helps people in Warsaw find someone to rent with (a profile in our Telegram bot) and see what renting costs per person: costs tenants reported per building and district, an address checker, a calculator, guides and document templates."
+      - ru «Passflat помогает людям в Варшаве найти, с кем снять квартиру (анкета в нашем Telegram-боте), и увидеть, сколько аренда стоит на человека: расходы, о которых сообщили жильцы, по домам и районам, проверка адреса, калькулятор, гайды и шаблоны документов.»
+      - uk «Passflat допомагає людям у Варшаві знайти, з ким зняти квартиру (анкета в нашому Telegram-боті), і побачити, скільки оренда коштує на людину: витрати, про які повідомили мешканці, по будинках і районах, перевірка адреси, калькулятор, гайди та шаблони документів.»
+      - old en: "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of costs …, and free document templates for the deal."
+    - `about.solution.pillar1Title` / `pillar1Desc`:
+      - pl "Znajdź kogoś do wspólnego wynajmu" / "Krótki profil w naszym bocie w Telegramie, po angielsku, rosyjsku lub ukraińsku: dzielnica, budżet na osobę, miesiąc przeprowadzki. Pasujące osoby pojawiają się po jednej, a nazwy użytkowników w Telegramie obu osób widać dopiero przy obopólnym zainteresowaniu."
+      - en "Find someone to rent with" / "A short profile in our Telegram bot, in English, Russian or Ukrainian: district, budget per person, move-in month. Compatible people come one at a time, and both Telegram usernames appear only when the interest is mutual."
+      - ru «Найти, с кем снять квартиру» / «Короткая анкета в нашем Telegram-боте — по-английски, по-русски или по-украински: район, бюджет на человека, месяц заезда. Подходящие люди показываются по одному, а username в Telegram обоих появляются, только когда интерес взаимный.»
+      - uk «Знайти, з ким зняти квартиру» / «Коротка анкета в нашому Telegram-боті — англійською, російською чи українською: район, бюджет на людину, місяць заїзду. Люди, які підходять, показуються по одному, а username у Telegram обох з'являються, лише коли інтерес взаємний.»
+      - old en: "Lease Takeovers" (find a replacement, keep your deposit).
+    - `pillar2Title` / `pillar2Desc`:
+      - pl "Ile to kosztuje na osobę" / "Ile kosztuje mieszkanie, gdy dzielą je dwie osoby: połowa mediany kosztów całych mieszkań zgłoszonych przez najemców, zawsze z liczbą zgłoszeń."
+      - en "What it costs per person" / "What a flat costs when two people share it: half the median of the whole-flat costs tenants reported, always with the number of reports behind it."
+      - ru «Сколько это стоит на человека» / «Сколько стоит квартира, если снимать её вдвоём: половина медианы расходов по целым квартирам, о которых сообщили жильцы, — всегда с числом отчётов.»
+      - uk «Скільки це коштує на людину» / «Скільки коштує квартира, якщо знімати її удвох: половина медіани витрат за цілими квартирами, про які повідомили мешканці, — завжди з кількістю звітів.»
+      - old en: "Roommate Search" (find a roommate or fill a vacant room).
+    - `pillar3Title` / `pillar3Desc`:
+      - pl "Sprawdzanie adresu, kalkulator, poradniki" / "Sprawdź adres przed podpisaniem umowy: koszty zgłoszone przez najemców dla budynku i jego dzielnicy. Kalkulator podaje orientacyjną kwotę — czynsz najmu plus media — dla dzielnicy i metrażu, a poradniki opisują kaucję, media i umowy najmu w Polsce."
+      - en "Checker, calculator, guides" / "Look up an address before you sign: the costs tenants reported for the building and its district. The calculator gives a ballpark of rent plus utilities for a district and flat size, and the guides cover deposits, utilities and lease contracts in Poland."
+      - ru «Проверка адреса, калькулятор, гайды» / «Проверка адреса до подписания договора: расходы, о которых сообщили жильцы этого дома и района. Калькулятор даёт ориентир — аренда плюс коммуналка — для района и площади, а гайды рассказывают о залоге, коммуналке и договорах аренды в Польше.»
+      - uk «Перевірка адреси, калькулятор, гайди» / «Перевірка адреси до підписання договору: витрати, про які повідомили мешканці цього будинку й району. Калькулятор дає орієнтир — оренда плюс комуналка — для району та площі, а гайди розповідають про заставу, комуналку й договори оренди в Польщі.»
+      - old en: "Temporary Sublet" (sublet your apartment, "all in one listing").
+    - `about.team.description2`:
+      - pl "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Dziś Passflat pomaga znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile najem kosztuje na osobę, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic."
+      - en "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Today it helps people find someone to rent with in our Telegram bot and see what renting costs per person, from the costs tenants reported by building and district."
+      - ru «В основе Passflat — наш опыт аренды в Варшаве: переезды, агентства и цессия. Сейчас Passflat помогает найти, с кем снять квартиру, в нашем Telegram-боте и увидеть, сколько аренда стоит на человека, — по расходам, о которых сообщили жильцы, по домам и районам.»
+      - uk «В основі Passflat — наш досвід оренди у Варшаві: переїзди, агентства і цесія. Зараз Passflat допомагає знайти, з ким зняти квартиру, у нашому Telegram-боті й побачити, скільки оренда коштує на людину, — за витратами, про які повідомили мешканці, по будинках і районах.»
+      - The first sentence (your experience) is unchanged in meaning; only the "right now" sentence is new (old: costs by building, listings, free templates).
+    - `about.values.principle1Desc`:
+      - pl "Pokazujemy kwoty zgłoszone przez najemców wraz z liczbą zgłoszeń — także wtedy, gdy są niewygodne."
+      - en "We show the figures tenants reported, with their counts — also when they are inconvenient."
+      - ru «Мы показываем цифры, о которых сообщили жильцы, с числом отчётов — даже когда они неудобны.»
+      - uk «Ми показуємо цифри, про які повідомили мешканці, з кількістю звітів — навіть коли вони незручні.»
+      - old en: "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown …"
+  - **Namespaces and providers:**
+    - `/about`: `AboutClient` reads `about` (`useTranslations('about')`) from the page's scoped `NextIntlClientProvider` (`about/page.tsx`, `pickMessages(messages, ['about', 'common'])`). No new namespace; the render test serves exactly those two.
+    - `/help`: `HelpCenterClient` reads `helpCenter` from the page's scoped provider (`help/page.tsx`, `pickMessages(messages, ['helpCenter', 'common'])`); the server page also puts `general.a1` into the FAQ JSON-LD through `getTranslations('helpCenter')`. No wiring changed.
+  - **Agent's choices:**
+    - `a1` drops "free" from the PRD 4 §8 draft ("… guides and free document templates"): the spec allows no price statement in these keys, `a2` ("Is Passflat free?") is held for Q-3, and the home copy (FR-10) dropped "free" from templates for Q-12. If you want "free" back, it is one word in four files plus the `FREE` check in `honesty-copy.test.ts`.
+    - The three pillar icons now match the copy (`Users`, `Wallet`, `Search`); not asked for by the spec.
+    - `pillar2Desc` says "two people" and "half the median of whole flats", as the per-person line (`perPersonSplit`, D71) does; it does not mention asking prices (the RU/UK asking-price label says «объявлений»).
+  - Left for FR-16 (Q-3, blocked T133): `a2` and the About listings counter (`stats.listings`).
+  - **Not covered by any task (owner's call, no task added because no spec covers it):** the rest of `/about` still speaks of the frozen listings (D5) and outside the thesis: `problem.p1` / `p4` (finding a replacement, the paperwork after it), `pillar4Desc` ("Know exactly what you'll pay"), `values.principle3Desc` ("Listings and cost data are open … no paywall", near Q-11), `vision.*` ("Expanding across Europe", like the footer line of Q-10), and the CTA row (`ctaBrowse` "Browse Listings" → `/warsaw/replacement`, `ctaRoommate`, `ctaSublet`). Worth a line in the next PRD or the Q-9 – Q-12 answers.
+  - The nine keys also pass T138's wider forbidden lists (market, real, truth; rzeczywist, prawdziw, rynk; настоящ, рыночн; справжн, ринков).
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.

@@ -1640,12 +1640,12 @@
     "solution": {
       "label": "Nasze rozwiązanie",
       "title": "Kompletny zestaw narzędzi do wynajmu od społeczności",
-      "pillar1Title": "Cesje najmu",
-      "pillar1Desc": "Znajdź zastępcę i zachowaj kaucję. Przejmij czyjś najem i omiń prowizję pośrednika. Cesja najmu to standardowy instrument prawny w Polsce — my ułatwiamy ten proces.",
-      "pillar2Title": "Szukanie współlokatora",
-      "pillar2Desc": "Znajdź odpowiedniego współlokatora lub zapełnij wolny pokój. Określ preferencje, typ pokoju i koszt na osobę — aby obie strony wiedziały, czego się spodziewać.",
-      "pillar3Title": "Tymczasowy podnajem",
-      "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
+      "pillar1Title": "Znajdź kogoś do wspólnego wynajmu",
+      "pillar1Desc": "Krótki profil w naszym bocie w Telegramie, po angielsku, rosyjsku lub ukraińsku: dzielnica, budżet na osobę, miesiąc przeprowadzki. Pasujące osoby pojawiają się po jednej, a nazwy użytkowników w Telegramie obu osób widać dopiero przy obopólnym zainteresowaniu.",
+      "pillar2Title": "Ile to kosztuje na osobę",
+      "pillar2Desc": "Ile kosztuje mieszkanie, gdy dzielą je dwie osoby: połowa mediany kosztów całych mieszkań zgłoszonych przez najemców, zawsze z liczbą zgłoszeń.",
+      "pillar3Title": "Sprawdzanie adresu, kalkulator, poradniki",
+      "pillar3Desc": "Sprawdź adres przed podpisaniem umowy: koszty zgłoszone przez najemców dla budynku i jego dzielnicy. Kalkulator podaje orientacyjną kwotę — czynsz najmu plus media — dla dzielnicy i metrażu, a poradniki opisują kaucję, media i umowy najmu w Polsce.",
       "pillar4Title": "Przejrzystość kosztów",
       "pillar4Desc": "Koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę. A kalkulator kosztów podpowie orientacyjną kwotę dla dowolnej dzielnicy i powierzchni — czynsz najmu plus media — w kilka kliknięć."
     },
@@ -1653,13 +1653,13 @@
       "label": "Kim jesteśmy",
       "title": "Stworzone przez najemców, dla najemców",
       "description": "Sami wynajmujemy w Warszawie i przeszliśmy to wszystko na własnej skórze — utracone kaucje, rachunki za media, o których nikt nie uprzedził, cenę, którą poznajesz dopiero po przeprowadzce. Z tego bólu wyrósł Passflat.",
-      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Obecnie to koszty według budynków, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów."
+      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Dziś Passflat pomaga znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile najem kosztuje na osobę, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic."
     },
     "values": {
       "label": "Nasze zasady",
       "title": "Zasady platformy",
       "principle1": "Żadnych ukrytych informacji",
-      "principle1Desc": "Pokazujemy realne liczby — nawet gdy są niewygodne dla rynku. Każde ogłoszenie zawiera pełny podział kosztów, zanim się z kimkolwiek skontaktujesz.",
+      "principle1Desc": "Pokazujemy kwoty zgłoszone przez najemców wraz z liczbą zgłoszeń — także wtedy, gdy są niewygodne.",
       "principle2": "Twoje dane należą do Ciebie",
       "principle2Desc": "Każdy raport kosztów jest anonimowy — nie da się go powiązać z Tobą, i nigdy nie sprzedajemy danych stronom trzecim.",
       "principle3": "Otwarte domyślnie",
@@ -1855,7 +1855,7 @@
     "general": {
       "title": "Ogólne",
       "q1": "Czym jest Passflat?",
-      "a1": "Passflat to marketplace najmu w Warszawie: ogłoszenia (cesja najmu, szukanie współlokatora, podnajem), baza kosztów od samych najemców (czynsz, media, kaucje) i darmowe wzory dokumentów do transakcji.",
+      "a1": "Passflat pomaga osobom w Warszawie znaleźć kogoś do wspólnego wynajmu (profil w naszym bocie w Telegramie) i zobaczyć, ile najem kosztuje na osobę: koszty zgłoszone przez najemców według budynków i dzielnic, sprawdzanie adresu, kalkulator, poradniki i wzory dokumentów.",
       "q2": "Czy Passflat jest darmowy?",
       "a2": "Tak. Przeglądanie ofert, raporty kosztów, dodawanie ogłoszeń i wzory dokumentów — są bezpłatne.",
       "q3": "W jakich miastach działa Passflat?",
