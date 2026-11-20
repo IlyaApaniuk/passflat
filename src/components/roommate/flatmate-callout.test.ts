@@ -74,7 +74,7 @@ import { TrackedLink } from '@/components/analytics/tracked-link';
 import { FlatmateCallout } from './flatmate-callout';
 import { FLATMATE_CALLOUT_ROOMMATE_PATH, FlatmateCalloutLinks } from './flatmate-callout-links';
 
-const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [] };
+const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [], byDistrict: {} };
 const BOT = 'passflat_test_bot';
 
 const at = (locale: Locale, path: string) =>
@@ -210,7 +210,9 @@ describe('FlatmateCallout', () => {
 
   it.each(LOCALES)('%s: every text comes from its key', async (locale) => {
     const home = text(await render('home', COUNTS, locale));
-    const other = text(await render('guide', { status: 'counts', total: 0, top: [] }, locale));
+    const other = text(
+      await render('guide', { status: 'counts', total: 0, top: [], byDistrict: {} }, locale),
+    );
     for (const key of [
       'listings.flatmateCallout.homeTitle',
       'listings.findFlatmate.how',
@@ -231,7 +233,7 @@ describe('FlatmateCallout', () => {
     expect(text(await render('hub', COUNTS))).toContain(
       '7 people in Warsaw already have a profile.',
     );
-    const zero = text(await render('hub', { status: 'counts', total: 0, top: [] }));
+    const zero = text(await render('hub', { status: 'counts', total: 0, top: [], byDistrict: {} }));
     expect(zero).toContain('Be among the first.');
     expect(zero).not.toMatch(/\d/);
     for (const counts of [{ status: 'unavailable' } as const, undefined]) {

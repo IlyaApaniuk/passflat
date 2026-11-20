@@ -575,7 +575,7 @@
       "title": "District page: the roommate section with the count of profiles naming the district and the callout; counts expire on every profile write (FR-26)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#district-section",
       "dependsOn": ["T123", "T140"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "countRoommates without a viewer also returns byDistrict: Record<slug, number> (the same counting: active, not blocked, not banned, 'any' profiles in no district, nothing summed); loadFlatmateBlockCounts() carries it under the cache key roommate-website-counts-v2 with the tag roommate-counts; golden test PRD 4 §5 example 4 → total 5, byDistrict { mokotow: 2, ochota: 2, wola: 1 }, the top-5 list unchanged",
         "revalidateRoommateCounts() in src/lib/roommate/website-counts.ts calls revalidateTag('roommate-counts', { expire: 0 }), never throws, and is called after every profile write that changes who is counted (save or edit, delete, moderation hide or restore, the daily cron's expiry and deletion; the progress entry lists the call sites); a unit test with a mocked next/cache asserts the call and a swallowed throw",
@@ -584,7 +584,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D49, D51, D68 (counting rules Decided); the website count shape and the expiry are Assumptions (spec 06 §Counts, spec 09 §District section). Outside a Next request (bot:dev) revalidateTag throws: the helper swallows it."
     },
     {

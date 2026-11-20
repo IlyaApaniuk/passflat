@@ -21,6 +21,9 @@ import {
 import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
 import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
+import { districtRoommateSection } from '@/lib/roommate/district-section';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { ArrowLeft, ArrowRight, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
@@ -136,12 +139,17 @@ export default async function DistrictCostsPage({ params }: PageProps) {
   // surfaces): the district figure is a summary over the district's reports, the
   // value and N `loadAreaReference` gives it; a building without a usable figure is
   // not listed.
-  const [buildingsData, districtFigures] = await Promise.all([
+  // The roommate section's profile counts (spec 09 §District section, PRD 4 FR-26), cached for
+  // an hour and expired on every profile write; a rejected load renders the section without a
+  // count line.
+  const [buildingsData, districtFigures, flatmateCounts] = await Promise.all([
     getBuildingsData(cityRec.id, district, null),
     loadDistrictFigures(cityRec.id),
+    loadFlatmateBlockCounts().catch(() => undefined),
   ]);
   const buildings = buildingsForRentalType(buildingsData, 'all');
   const figure = districtFigures.find((d) => d.slug === district)?.figures.all ?? null;
+  const roommate = districtRoommateSection({ slug: district, counts: flatmateCounts });
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -191,6 +199,23 @@ export default async function DistrictCostsPage({ params }: PageProps) {
               </Button>
               <ShareButton path={`/${city}/${district}`} source="district" size="default" />
             </div>
+
+            <section aria-labelledby="district-roommate-title" className="mt-10 space-y-4">
+              <h2 id="district-roommate-title" className="text-xl font-semibold">
+                {t('costsSeo.districtRoommateHeading', { district: districtRec.nameKey })}
+              </h2>
+              {roommate.countLine && (
+                <p className="font-medium">
+                  {roommate.countLine.key === 'costsSeo.districtProfileCount'
+                    ? t(roommate.countLine.key, {
+                        district: districtRec.nameKey,
+                        n: roommate.countLine.n,
+                      })
+                    : t(roommate.countLine.key, { district: districtRec.nameKey })}
+                </p>
+              )}
+              <FlatmateCallout surface="district" counts={flatmateCounts} />
+            </section>
 
             <h2 className="mt-10 text-xl font-semibold">
               {t('costsSeo.buildingsHeading', { district: districtRec.nameKey })}

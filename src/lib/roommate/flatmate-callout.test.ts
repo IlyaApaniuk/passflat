@@ -11,6 +11,7 @@ const COUNTS: FlatmateBlockCounts = {
   status: 'counts',
   total: 7,
   top: [{ slug: 'mokotow', count: 4 }],
+  byDistrict: { mokotow: 4 },
 };
 
 describe('flatmateCalloutView', () => {
@@ -19,7 +20,7 @@ describe('flatmateCalloutView', () => {
       ['counts above zero → the number', COUNTS, 'count', 7],
       [
         'zero profiles → "be among the first", no number',
-        { status: 'counts', total: 0, top: [] },
+        { status: 'counts', total: 0, top: [], byDistrict: {} },
         'first',
         0,
       ],

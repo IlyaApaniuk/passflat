@@ -18,6 +18,7 @@ describe('flatmateBlockView', () => {
             { slug: 'wola', count: 3 },
             { slug: 'mokotow', count: 2 },
           ],
+          byDistrict: { wola: 3, mokotow: 2 },
         },
         DISTRICTS,
       ),
@@ -34,14 +35,21 @@ describe('flatmateBlockView', () => {
   it('a slug missing from the city districts stands for itself', () => {
     expect(
       flatmateBlockView(
-        { status: 'counts', total: 1, top: [{ slug: 'ursus', count: 1 }] },
+        {
+          status: 'counts',
+          total: 1,
+          top: [{ slug: 'ursus', count: 1 }],
+          byDistrict: { ursus: 1 },
+        },
         DISTRICTS,
       ).districts,
     ).toEqual([{ slug: 'ursus', name: 'ursus', count: 1 }]);
   });
 
   it('zero: "be among the first", no number, no districts', () => {
-    expect(flatmateBlockView({ status: 'counts', total: 0, top: [] }, DISTRICTS)).toEqual({
+    expect(
+      flatmateBlockView({ status: 'counts', total: 0, top: [], byDistrict: {} }, DISTRICTS),
+    ).toEqual({
       countLine: 'first',
       total: 0,
       districts: [],
@@ -74,6 +82,7 @@ describe('flatmateBlockView', () => {
           { slug: 'wola', count: 3 },
           { slug: 'mokotow', count: 2 },
         ],
+        byDistrict: { wola: 3, mokotow: 2 },
       },
       DISTRICTS,
     );

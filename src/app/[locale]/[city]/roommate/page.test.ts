@@ -106,6 +106,7 @@ describe('/[city]/roommate page: the flatmate block counts (spec 02 §Find a fla
         { slug: 'mokotow', count: 2 },
         { slug: 'wola', count: 1 },
       ],
+      byDistrict: { mokotow: 2, wola: 1 },
     });
     // The block names districts from the list the district filter already receives.
     expect(props.districts).toEqual([
@@ -191,7 +192,7 @@ describe('/[city]/roommate page: the room money block figures (spec 02 §Room mo
     costReportFindMany.mockRejectedValue(new Error('timeout'));
     const props = await render('warsaw');
     expect(props.roomMoney).toBeNull();
-    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [] });
+    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [], byDistrict: {} });
   });
 
   it('the room money block does not need the bot username', async () => {
@@ -250,7 +251,7 @@ describe('/[city]/roommate page: the per-person line (spec 08 §Per-person line,
     props = await render('warsaw');
     expect(props.perPersonSplit).toBeNull();
     expect(props.perPersonArea).toBeUndefined();
-    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [] });
+    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [], byDistrict: {} });
   });
 
   it('needs no bot username (a cost figure)', async () => {

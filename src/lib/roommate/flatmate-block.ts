@@ -28,11 +28,17 @@ export function canLoadFlatmateCounts(
 }
 
 /**
- * The counts the server hands to the block: the Warsaw total and the most named districts
- * (spec 06 §Counts, without a viewer), or `unavailable` after a database error.
+ * The counts the server hands to the block: the Warsaw total, the most named districts and every
+ * named district's own count (`byDistrict`, read by the district page, spec 09 §District section;
+ * spec 06 §Counts, without a viewer), or `unavailable` after a database error.
  */
 export type FlatmateBlockCounts =
-  | { status: 'counts'; total: number; top: DistrictCount[] }
+  | {
+      status: 'counts';
+      total: number;
+      top: DistrictCount[];
+      byDistrict: Record<string, number>;
+    }
   | { status: 'unavailable' };
 
 /** A district as the listings district filter names it (`District.nameKey`, e.g. "Mokotów"). */

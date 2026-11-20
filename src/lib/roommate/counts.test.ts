@@ -189,6 +189,41 @@ describe('golden case: PRD 3 §5 example 1', () => {
   });
 });
 
+describe('golden case: PRD 4 §5 example 4 (the website, no viewer)', () => {
+  beforeEach(() => {
+    // Example 1's table without P8: P5 hidden, P6 expired, P9's chat blocked the bot.
+    db.state.rows = structuredClone(EXAMPLE_1).filter((profile) => profile.id !== 'P8');
+  });
+
+  it('total 5, byDistrict { mokotow: 2, ochota: 2, wola: 1 }; P3 ("any") counts in no district', async () => {
+    const counts = await loadRoommateCounts(null, NOW);
+    expect(counts).toMatchObject({ kind: 'top', total: 5 });
+    expect(counts.kind === 'top' && counts.byDistrict).toEqual({ mokotow: 2, ochota: 2, wola: 1 });
+  });
+
+  it('the top-5 list is unchanged: Mokotów 2, Ochota 2, Wola 1 (ties by slug)', async () => {
+    expect(await loadRoommateCounts(null, NOW)).toMatchObject({
+      top: [
+        { slug: 'mokotow', count: 2 },
+        { slug: 'ochota', count: 2 },
+        { slug: 'wola', count: 1 },
+      ],
+    });
+  });
+
+  it('nothing is summed: the result holds the profile total, the top list and one number per named district', async () => {
+    const counts = await loadRoommateCounts(null, NOW);
+    expect(Object.keys(counts).sort()).toEqual(['byDistrict', 'kind', 'top', 'total']);
+    const byDistrict = counts.kind === 'top' ? (counts.byDistrict ?? {}) : {};
+    expect(Object.keys(byDistrict).sort()).toEqual(['mokotow', 'ochota', 'wola']);
+  });
+
+  it('a viewer (the bot) never gets byDistrict', async () => {
+    expect(await loadRoommateCounts(P8_ANY, NOW)).not.toHaveProperty('byDistrict');
+    expect(await loadRoommateCounts(P8, NOW)).not.toHaveProperty('byDistrict');
+  });
+});
+
 describe('loadRoommateCounts', () => {
   it('reads only the district fields of active, unexpired profiles of open chats in one query', async () => {
     await loadRoommateCounts(P8, NOW);
@@ -276,6 +311,17 @@ describe('loadRoommateCounts', () => {
         { slug: 'wola', count: 2 },
         { slug: 'zoliborz', count: 2 },
       ],
+      // Every named district, also those below the top 5 (spec 09 §District section).
+      byDistrict: {
+        mokotow: 3,
+        ochota: 2,
+        wola: 2,
+        bielany: 2,
+        zoliborz: 2,
+        srodmiescie: 1,
+        'praga-polnoc': 1,
+        ursus: 1,
+      },
     });
   });
 
@@ -377,7 +423,7 @@ describe('countRoommates', () => {
       total: 0,
     });
     expect(countRoommates(P8_ANY, [])).toEqual({ kind: 'top', total: 0, top: [] });
-    expect(countRoommates(null, [])).toEqual({ kind: 'top', total: 0, top: [] });
+    expect(countRoommates(null, [])).toEqual({ kind: 'top', total: 0, top: [], byDistrict: {} });
   });
 
   it('an "any" viewer gets at most the three most named districts, only districts named at all', () => {

@@ -53,6 +53,9 @@ const prismaFake = vi.hoisted(() => ({
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaFake }));
 vi.mock('./analytics', () => ({ track: vi.fn() }));
+vi.mock('@/lib/roommate/website-counts', () => ({ revalidateRoommateCounts: vi.fn() }));
+
+import { revalidateRoommateCounts } from '@/lib/roommate/website-counts';
 
 import { track } from './analytics';
 import {
@@ -334,6 +337,41 @@ describe('runRoommateHousekeeping: expiry', () => {
     expect(counts.expired).toBe(0);
     expect(profile('renewed')?.status).toBe('active');
     expect(track).not.toHaveBeenCalled();
+  });
+});
+
+describe("runRoommateHousekeeping: the website's counts expire (spec 09 §District section)", () => {
+  it('once after an expiry landed', async () => {
+    seedProfile({ id: 'due', expiresAt: NOW });
+    seedProfile({ id: 'past', expiresAt: ago(HOUR) });
+    await runRoommateHousekeeping(NOW);
+    expect(revalidateRoommateCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('once after a deletion landed, also with an expiry in the same run', async () => {
+    seedProfile({
+      id: 'old',
+      status: 'expired',
+      expiresAt: ago(15 * DAY),
+      expiredAt: ago(14 * DAY),
+    });
+    seedProfile({ id: 'due', expiresAt: NOW });
+    await runRoommateHousekeeping(NOW);
+    expect(revalidateRoommateCounts).toHaveBeenCalledTimes(1);
+
+    vi.mocked(revalidateRoommateCounts).mockClear();
+    seedProfile({ id: 'hidden', status: 'hidden', expiresAt: ago(15 * DAY) });
+    await runRoommateHousekeeping(NOW);
+    expect(revalidateRoommateCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('not when the run changed nobody counted (drafts, open steps, nothing due)', async () => {
+    seedProfile({ id: 'draft', status: 'draft', updatedAt: ago(30 * DAY), expiresAt: null });
+    seedProfile({ id: 'step', step: 'edit_budget', updatedAt: ago(25 * HOUR) });
+    seedProfile({ id: 'later', expiresAt: new Date(NOW.getTime() + DAY) });
+    const counts = await runRoommateHousekeeping(NOW);
+    expect(counts.expired + counts.deletedExpired + counts.deletedModeration).toBe(0);
+    expect(revalidateRoommateCounts).not.toHaveBeenCalled();
   });
 });
 

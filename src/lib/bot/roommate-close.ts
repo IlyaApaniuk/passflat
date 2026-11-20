@@ -1,6 +1,7 @@
 import type { Api } from 'grammy';
 
 import { prisma } from '@/lib/prisma';
+import { revalidateRoommateCounts } from '@/lib/roommate/website-counts';
 
 import { track } from './analytics';
 import { SYSTEM_CLOCK, createCronSender, type CronClock, type CronSender } from './roommate-daily';
@@ -73,6 +74,9 @@ export async function runRoommateClose(
       options: { parse_mode: 'HTML' },
     });
   }
+
+  // The website's counts expire once a deletion landed (spec 09 §District section).
+  if (profilesDeleted > 0) revalidateRoommateCounts();
 
   const remaining = await prisma.roommateProfile.count();
   const reports = remaining === 0 ? await prisma.roommateReport.deleteMany({}) : { count: 0 };

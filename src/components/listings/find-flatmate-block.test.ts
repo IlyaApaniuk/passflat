@@ -62,6 +62,7 @@ const COUNTS: FlatmateBlockCounts = {
     { slug: 'wola', count: 2 },
     { slug: 'praga-poludnie', count: 1 },
   ],
+  byDistrict: { mokotow: 4, wola: 2, 'praga-poludnie': 1 },
 };
 
 function text(counts: FlatmateBlockCounts | undefined, locale: Locale = 'en'): string {
@@ -170,7 +171,7 @@ describe('FindFlatmateBlock', () => {
     ['uk', 4, 'У Варшаві анкету вже створили 4 людини.'],
     ['uk', 5, 'У Варшаві анкету вже створили 5 людей.'],
   ])('ICU plural: %s with %i', (locale, total, sentence) => {
-    expect(text({ status: 'counts', total, top: [] }, locale)).toContain(sentence);
+    expect(text({ status: 'counts', total, top: [], byDistrict: {} }, locale)).toContain(sentence);
   });
 
   it.each<[Locale, string]>([
@@ -182,15 +183,21 @@ describe('FindFlatmateBlock', () => {
   });
 
   it('zero: "Be among the first", no number and no district list', () => {
-    const rendered = text({ status: 'counts', total: 0, top: [] });
+    const rendered = text({ status: 'counts', total: 0, top: [], byDistrict: {} });
     expect(rendered).toContain('Be among the first.');
     expect(rendered).not.toMatch(/\d/);
     expect(rendered).not.toContain('Districts named most often');
     expect(rendered).toContain('The bot speaks English, Russian and Ukrainian.');
     expect(rendered).toContain('Open the bot in Telegram');
-    expect(text({ status: 'counts', total: 0, top: [] }, 'pl')).toContain('Bądź wśród pierwszych.');
-    expect(text({ status: 'counts', total: 0, top: [] }, 'ru')).toContain('Будь среди первых.');
-    expect(text({ status: 'counts', total: 0, top: [] }, 'uk')).toContain('Будь серед перших.');
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'pl')).toContain(
+      'Bądź wśród pierwszych.',
+    );
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'ru')).toContain(
+      'Будь среди первых.',
+    );
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'uk')).toContain(
+      'Будь серед перших.',
+    );
   });
 
   it('a database error: the block without counts (no count sentence, no districts, still the button)', () => {
@@ -204,7 +211,7 @@ describe('FindFlatmateBlock', () => {
   });
 
   it('a total with no named district (all "any district") shows the count without the list', () => {
-    const rendered = text({ status: 'counts', total: 3, top: [] });
+    const rendered = text({ status: 'counts', total: 3, top: [], byDistrict: {} });
     expect(rendered).toContain('3 people in Warsaw already have a profile.');
     expect(rendered).not.toContain('Districts named most often');
   });
@@ -220,7 +227,7 @@ describe('FindFlatmateBlock', () => {
     expect(FindFlatmateBlock({ districts: DISTRICTS })).not.toBeNull();
     expect(text(undefined)).toBe(expected);
     expect(text(COUNTS)).toBe(expected);
-    expect(text({ status: 'counts', total: 0, top: [] })).toBe(expected);
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} })).toBe(expected);
     expect(findAll(FindFlatmateBlock({ districts: DISTRICTS }), (el) => el.type === 'a')).toEqual(
       [],
     );
@@ -287,7 +294,7 @@ describe('FindFlatmateBlock', () => {
 
   it('the same button in the zero and error states', () => {
     for (const counts of [
-      { status: 'counts', total: 0, top: [] },
+      { status: 'counts', total: 0, top: [], byDistrict: {} },
       { status: 'unavailable' },
     ] as FlatmateBlockCounts[]) {
       expect(botLink(counts)?.props.href).toBe(

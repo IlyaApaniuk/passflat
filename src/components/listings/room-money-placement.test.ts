@@ -156,7 +156,9 @@ function html({
       citySlug,
       listingType,
       cityOfferCount: listingType === 'roommate' ? (offers ? 1 : 0) : undefined,
-      flatmateCounts: withCounts ? { status: 'counts', total: 0, top: [] } : undefined,
+      flatmateCounts: withCounts
+        ? { status: 'counts', total: 0, top: [], byDistrict: {} }
+        : undefined,
       roomMoney,
     }),
   );

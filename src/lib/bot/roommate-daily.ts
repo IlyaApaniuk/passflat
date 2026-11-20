@@ -15,6 +15,7 @@ import {
 import { findCompatible, freshness } from '@/lib/roommate/store';
 import { isMatchingEnabled } from '@/lib/roommate/switch';
 import { formatWarsawDate, isRoommateSendHour, isSameWarsawDay } from '@/lib/roommate/time';
+import { revalidateRoommateCounts } from '@/lib/roommate/website-counts';
 
 import { track } from './analytics';
 import { retryHideNotices, retryStatements } from './roommate-hide-messages';
@@ -150,6 +151,9 @@ export async function runRoommateHousekeeping(now: Date): Promise<HousekeepingCo
   const reports = await prisma.roommateReport.deleteMany({
     where: { createdAt: { lte: monthsBefore(now, REPORT_LIFE_MONTHS) } },
   });
+
+  // The website's counts expire after an expiry or a deletion landed (spec 09 §District section).
+  if (expired + deletedExpired + deletedModeration > 0) revalidateRoommateCounts();
 
   return {
     draftsDeleted: drafts.count,

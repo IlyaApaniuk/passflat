@@ -27,11 +27,13 @@ export type DistrictCount = { slug: string; count: number };
  * order, zero included), the number open to any district and the Warsaw total.
  * `top`: a viewer who chose "any", and the website without a viewer, get the
  * Warsaw total and the districts named by most profiles (only districts named at
- * least once). Every number excludes the viewer.
+ * least once). Every number excludes the viewer. Only the website (no viewer) also
+ * gets `byDistrict`: every district named by at least one counted profile with its
+ * own count (PRD 4 FR-26, spec 09 §District section), never summed.
  */
 export type RoommateCounts =
   | { kind: 'districts'; districts: DistrictCount[]; anyDistrict: number; total: number }
-  | { kind: 'top'; total: number; top: DistrictCount[] };
+  | { kind: 'top'; total: number; top: DistrictCount[]; byDistrict?: Record<string, number> };
 
 /** **Assumption** (PRD 3 FR-16, D68): a viewer who chose "any" sees the three most named districts. */
 export const TOP_DISTRICTS_FOR_ANY = 3;
@@ -78,7 +80,8 @@ export function countRoommates(
     .map(([slug, count]) => ({ slug, count }))
     .sort((a, b) => b.count - a.count || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0))
     .slice(0, viewer ? TOP_DISTRICTS_FOR_ANY : TOP_DISTRICTS_ON_WEBSITE);
-  return { kind: 'top', total: counted.length, top };
+  if (viewer) return { kind: 'top', total: counted.length, top };
+  return { kind: 'top', total: counted.length, top, byDistrict: Object.fromEntries(byDistrict) };
 }
 
 /**
@@ -109,8 +112,8 @@ export function notReportedWith(profileId: string) {
 /**
  * Loads the district fields of the active profiles in one query and counts them:
  * for the bot with its viewer (leaving out the profiles the viewer reported or was
- * reported by, `notReportedWith`), for the website without one (the Warsaw total and
- * the top `TOP_DISTRICTS_ON_WEBSITE` districts). A database error is thrown to the
+ * reported by, `notReportedWith`), for the website without one (the Warsaw total,
+ * the top `TOP_DISTRICTS_ON_WEBSITE` districts and `byDistrict`). A database error is thrown to the
  * caller, which says the counts are not available now.
  */
 export async function loadRoommateCounts(

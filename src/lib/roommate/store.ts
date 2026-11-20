@@ -13,12 +13,18 @@ import {
   type ReportReason,
 } from './rules';
 import { computeExpiresAt } from './time';
+import { revalidateRoommateCounts } from './website-counts';
 
 /**
  * Prisma access for roommate profiles (spec 06 §Module layout; server only).
  *
  * A chat has at most one profile (`chat_id` is unique). Nothing here logs: a
  * profile holds personal data (spec 06 §Boundaries).
+ *
+ * Every write here that changes who the website counts (`saveProfile`, `saveEdit`,
+ * `setDistrictPick` at an edit step, `renewProfile`, `deleteProfile`, the hide of
+ * `hideAfterReport`, `liftHide`) expires the website's counts once it landed
+ * (`revalidateRoommateCounts`, spec 09 §District section).
  */
 
 /** The step every new draft starts at (spec 06 §Intake steps, step 1). */
@@ -136,7 +142,9 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   const { count } = await prisma.roommateProfile.deleteMany({
     where: { id: profileId, status: { in: ['active', 'expired', 'hidden'] } },
   });
-  return count === 1;
+  if (count !== 1) return false;
+  revalidateRoommateCounts();
+  return true;
 }
 
 /**
@@ -167,7 +175,9 @@ export async function saveEdit(
     where: { id: profileId, step, status: { in: ['active', 'expired'] } },
     data: { ...answer, step: null },
   });
-  return count === 1;
+  if (count !== 1) return false;
+  revalidateRoommateCounts();
+  return true;
 }
 
 /**
@@ -200,7 +210,9 @@ export async function renewProfile(
       ...(step ? { moveInMonth, step: null } : {}),
     },
   });
-  return count === 1 ? { renewed: true, expiresAt } : { renewed: false };
+  if (count !== 1) return { renewed: false };
+  revalidateRoommateCounts();
+  return { renewed: true, expiresAt };
 }
 
 /**
@@ -451,7 +463,10 @@ export async function hideAfterReport(
           HIDE_AT_REPORTERS
         ? 'reports'
         : null;
-  if (hiddenReason && (await hideTarget(target, hiddenReason, now))) return hiddenReason;
+  if (hiddenReason && (await hideTarget(target, hiddenReason, now))) {
+    revalidateRoommateCounts();
+    return hiddenReason;
+  }
   return (await decideLateReports(target.id, now)) ? 'already_hidden' : null;
 }
 
@@ -536,7 +551,7 @@ export async function recordAppeal(profileId: string, now: Date): Promise<boolea
  * calls only one changes anything: true only for that one (the claim of the decision message).
  */
 export async function liftHide(profileId: string, now: Date): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
+  const lifted = await prisma.$transaction(async (tx) => {
     const profile = await tx.roommateProfile.findUnique({
       where: { id: profileId },
       select: { chatId: true, status: true, expiresAt: true, expiredAt: true },
@@ -563,6 +578,8 @@ export async function liftHide(profileId: string, now: Date): Promise<boolean> {
     });
     return true;
   });
+  if (lifted) revalidateRoommateCounts();
+  return lifted;
 }
 
 /**
@@ -823,7 +840,9 @@ export async function telegramChatIdOf(chatDbId: string): Promise<number | null>
 
 /**
  * Stores a district pick while the profile is still at `step`, so an answer to a
- * step that has moved on changes nothing (spec 06 "Stale and repeated taps").
+ * step that has moved on changes nothing (spec 06 "Stale and repeated taps"). At an
+ * edit step (`edit_districts`) the profile is saved and each toggle changes its
+ * counted districts at once, so the website's counts expire; a draft is not counted.
  */
 export async function setDistrictPick(
   profileId: string,
@@ -834,7 +853,9 @@ export async function setDistrictPick(
     where: { id: profileId, step },
     data: { districtSlugs: [...pick.districtSlugs], anyDistrict: pick.anyDistrict },
   });
-  return count === 1;
+  if (count !== 1) return false;
+  if (step.startsWith('edit_')) revalidateRoommateCounts();
+  return true;
 }
 
 /**
@@ -879,7 +900,9 @@ export async function saveProfile(
       ...(step ? { moveInMonth } : {}),
     },
   });
-  return count === 1 ? { saved: true, expiresAt } : { saved: false };
+  if (count !== 1) return { saved: false };
+  revalidateRoommateCounts();
+  return { saved: true, expiresAt };
 }
 
 /**

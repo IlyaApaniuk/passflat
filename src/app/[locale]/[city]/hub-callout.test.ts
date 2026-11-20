@@ -63,7 +63,7 @@ import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 
 import CityCostsHub, { revalidate } from './page';
 
-const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [] };
+const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [], byDistrict: {} };
 
 /** Every element under `node`, in document order. */
 function elements(node: ReactNode, out: ReactElement[] = []): ReactElement[] {

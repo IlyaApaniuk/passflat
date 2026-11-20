@@ -101,10 +101,13 @@ const db = vi.hoisted(() => {
     },
   };
 });
-const mocks = vi.hoisted(() => ({ track: vi.fn() }));
+const mocks = vi.hoisted(() => ({ track: vi.fn(), revalidateRoommateCounts: vi.fn() }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: db.prisma }));
 vi.mock('./analytics', () => ({ track: mocks.track }));
+vi.mock('@/lib/roommate/website-counts', () => ({
+  revalidateRoommateCounts: mocks.revalidateRoommateCounts,
+}));
 
 import { runRoommateClose } from './roommate-close';
 import { MAX_MESSAGES_PER_RUN, SEND_BUDGET_MS, type CronClock } from './roommate-daily';
@@ -548,5 +551,21 @@ describe('the closing run: send failures, the cap and the time budget', () => {
     expect(result.remaining).toBe(2);
     expect(result.reportsDeleted).toBe(0);
     expect(deletedEvents()).toHaveLength(MAX_MESSAGES_PER_RUN);
+  });
+});
+
+describe("the website's counts (spec 09 §District section)", () => {
+  it('expire once after the run deleted profiles', async () => {
+    seed('active', 'active');
+    seed('expired', 'expired');
+    await close(fakeApi().api);
+    expect(mocks.revalidateRoommateCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('stay when only drafts (never counted) or nothing were deleted', async () => {
+    seed('draft', 'draft');
+    await close(fakeApi().api);
+    await close(fakeApi().api);
+    expect(mocks.revalidateRoommateCounts).not.toHaveBeenCalled();
   });
 });

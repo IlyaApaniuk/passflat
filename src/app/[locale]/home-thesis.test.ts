@@ -71,7 +71,7 @@ for (const [path, name] of [
   vi.doMock(path, () => ({ [name]: () => null }));
 }
 
-const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [] };
+const COUNTS: FlatmateBlockCounts = { status: 'counts', total: 7, top: [], byDistrict: {} };
 
 /** The component types under `node` in document order, without rendering any of them. */
 function componentOrder(node: ReactNode, out: unknown[] = []): unknown[] {
