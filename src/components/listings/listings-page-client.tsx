@@ -316,11 +316,15 @@ function ListingsPageInner({
             transition={{ duration: 0.3 }}
             className="border-b bg-card px-4 py-3"
           >
-            {/* Desktop: underline type tabs + sort on one row, count below. */}
+            {/* Desktop: underline type tabs + sort on one row, count below. The roommate page
+                hides the tabs while the city has no offer (spec 08 §Footer product column). */}
             <div className="hidden xl:block">
               <div className="flex items-center justify-between gap-3">
-                <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
-                <div className="shrink-0">{sortSelect}</div>
+                {layout.showTypeTabs && (
+                  <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
+                )}
+                {/* ml-auto keeps sort on the right when the tabs are absent. */}
+                <div className="ml-auto shrink-0">{sortSelect}</div>
               </div>
               {layout.showCountLine && (
                 <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
@@ -332,8 +336,15 @@ function ListingsPageInner({
             {/* Mobile: full-width segmented type, then count + sort/map, then the
                 quick-filter chips. The full filter set lives in the bottom sheet. */}
             <div className="xl:hidden">
-              <ListingTypeTabs variant="segmented" listingType={listingType} citySlug={citySlug} />
-              <div className="mt-3 flex items-center justify-between gap-2">
+              {layout.showTypeTabs && (
+                <ListingTypeTabs
+                  variant="segmented"
+                  listingType={listingType}
+                  citySlug={citySlug}
+                />
+              )}
+              {/* first:mt-0: no gap above this row when the tabs are absent. */}
+              <div className="mt-3 flex items-center justify-between gap-2 first:mt-0">
                 {layout.showCountLine && (
                   <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
                     {countText}

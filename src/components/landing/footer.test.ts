@@ -5,8 +5,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // PRD 4 FR-5, spec 08 §Header and footer entries: the product column gains
-// "Costs by district" (the hub) and "Building reviews" (moved from the header);
-// the three frozen listings links stay until FR-7.
+// "Costs by district" (the hub) and "Building reviews" (moved from the header).
+// FR-7, spec 08 §Footer product column (D82): it drops the three frozen listings
+// links (lease takeovers, sublets, posting a listing) and their keys.
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -73,21 +74,18 @@ function productColumn(locale: Locale) {
   return columns(renderToStaticMarkup(createElement(Footer))).get(footer.product);
 }
 
-describe('Footer product column (PRD 4 FR-5)', () => {
+describe('Footer product column (PRD 4 FR-5, FR-7)', () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('lists the costs, the hub, building reviews and the frozen listings links in English', () => {
+  it('lists roommate search, the costs, the hub and building reviews in English', () => {
     vi.stubEnv('NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES', 'false');
     expect(productColumn('en')).toEqual([
-      ['/warsaw/replacement', 'Lease Takeovers'],
       ['/warsaw/roommate', 'Roommate Search'],
-      ['/warsaw/sublet', 'Temporary Sublets'],
       ['/warsaw/costs', 'Cost Reports'],
       ['/warsaw', 'Costs by district'],
       ['/warsaw/review', 'Building reviews'],
-      ['/create-listing', 'Post a Listing'],
     ]);
   });
 
@@ -100,12 +98,25 @@ describe('Footer product column (PRD 4 FR-5)', () => {
     }
   });
 
-  it('keeps the three frozen listings links until FR-7', () => {
+  it('links to no frozen listings page in any locale, with or without the templates flag (FR-7)', () => {
+    for (const flag of ['false', 'true']) {
+      vi.stubEnv('NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES', flag);
+      for (const locale of LOCALES) {
+        state.locale = locale;
+        const hrefs = [...renderToStaticMarkup(createElement(Footer)).matchAll(/href="([^"]*)"/g)]
+          .map(([, href]) => href)
+          .filter((href) => /\/(replacement|sublet|create-listing)\b/.test(href));
+        expect(hrefs, `${locale}, templates ${flag}`).toEqual([]);
+      }
+    }
+  });
+
+  it('the three frozen link keys are gone from landing.footer in every locale', () => {
     for (const locale of LOCALES) {
-      const hrefs = productColumn(locale)?.map(([href]) => href);
-      expect(hrefs, locale).toEqual(
-        expect.arrayContaining(['/warsaw/replacement', '/warsaw/sublet', '/create-listing']),
-      );
+      const footer = messages[locale].landing.footer as Record<string, string>;
+      for (const key of ['browseListings', 'temporarySublets', 'addListing']) {
+        expect(footer[key], `${locale}: landing.footer.${key}`).toBeUndefined();
+      }
     }
   });
 

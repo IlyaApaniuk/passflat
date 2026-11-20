@@ -260,17 +260,12 @@ describe('ListingsPageClient: the room money block (spec 02 §Room money block)'
   });
 });
 
-describe('ListingsPageClient: the roommate page default view (spec 08, PRD 4 FR-1, FR-2)', () => {
+describe('ListingsPageClient: the roommate page default view (spec 08, PRD 4 FR-1, FR-2, FR-7)', () => {
   beforeEach(() => {
     h.initial = { collapsed: false };
   });
 
   it('the role selector row renders above the type tabs row (desktop and mobile tabs)', () => {
-    expect(slots({ offers: false, roomMoney: FIGURES })).toEqual([
-      'selector',
-      'tabs:tabs',
-      'tabs:segmented',
-    ]);
     expect(slots({ offers: true, roomMoney: FIGURES })).toEqual([
       'selector',
       'tabs:tabs',
@@ -278,9 +273,20 @@ describe('ListingsPageClient: the roommate page default view (spec 08, PRD 4 FR-
     ]);
   });
 
-  it('/replacement and /sublet: no selector, the tabs as before', () => {
+  it('no offer in the city: the selector without the type tabs, on desktop and mobile (FR-7, D82)', () => {
+    expect(slots({ offers: false, roomMoney: FIGURES })).toEqual(['selector']);
+    for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
+      expect(slots({ intent, offers: false, roomMoney: FIGURES }), intent).toEqual(['selector']);
+    }
+    // The sort select stays: the desktop row keeps it on the right without the tabs.
+    expect(html({ offers: false, roomMoney: FIGURES })).toContain('class="ml-auto shrink-0"');
+  });
+
+  it('/replacement and /sublet: no selector, the tabs as before, also with nothing listed', () => {
     for (const listingType of ['replacement', 'sublet'] as const) {
-      expect(slots({ offers: true, listingType })).toEqual(['tabs:tabs', 'tabs:segmented']);
+      for (const offers of [true, false]) {
+        expect(slots({ offers, listingType })).toEqual(['tabs:tabs', 'tabs:segmented']);
+      }
     }
   });
 

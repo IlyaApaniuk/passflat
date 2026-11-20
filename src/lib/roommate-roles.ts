@@ -93,15 +93,17 @@ interface RoommatePageLayout {
   showBotButton: boolean;
   /** The role selector row stands above the type tabs row. */
   selectorAboveTabs: boolean;
+  /** The frozen listing type tabs (desktop and mobile; spec 08 §Footer product column). */
+  showTypeTabs: boolean;
   /** The `listings.roommateH1` heading, first in the content column (spec 08 §Roommate page shell). */
   showH1: boolean;
 }
 
 /**
  * What `ListingsPageClient` shows on a listings page (spec 08 §Roommate page default view, PRD 4
- * FR-1, FR-2; the placement and order are an **Assumption**, D68). Only the roommate page of the
- * checker city has the two blocks; `/replacement` and `/sublet` keep the count line and have no
- * selector.
+ * FR-1, FR-2, FR-7; the placement and order are an **Assumption**, D68). Only the roommate page of
+ * the checker city has the two blocks; `/replacement` and `/sublet` keep the count line and the
+ * type tabs and have no selector.
  */
 export function roommatePageLayout({
   listingType,
@@ -114,13 +116,17 @@ export function roommatePageLayout({
   const roommate = listingType === 'roommate';
   const blocksCity = roommate && pageHasFlatmateBlock(citySlug);
   const showFlatmateBlock = blocksCity && showsFlatmateBlock(roleState);
+  const noOfferInCity = roommate && cityOfferCount === 0;
   return {
     showFlatmateBlock,
     showRoomMoney: blocksCity && showsRoomMoneyBlock(roleState, emptyKind),
     // "0 listings" is not shown while the city has no offer at all.
-    showCountLine: !(roommate && cityOfferCount === 0),
+    showCountLine: !noOfferInCity,
     showBotButton: showFlatmateBlock && hasUsername,
     selectorAboveTabs: roommate,
+    // PRD 4 FR-7 (D82): the roommate page drops the tabs to the frozen listing types while the
+    // city has no offer; they come back with the first offer. `/replacement` and `/sublet` keep them.
+    showTypeTabs: !noOfferInCity,
     // PRD 4 FR-3: the page's one h1 is the roommate page's; `/replacement` and `/sublet` have none.
     showH1: roommate,
   };

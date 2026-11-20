@@ -159,13 +159,13 @@
       "title": "Footer without the frozen listings links; roommate type tabs hidden at 0 offers (FR-7, owner question Q-5)",
       "spec": "docs/specs/08-site-structure-and-entries.md#footer-product-column",
       "dependsOn": ["T120", "T121"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-5 with (a): the footer drops browseListings, temporarySublets and addListing and their keys in four locales; roommatePageLayout gains showTypeTabs (false on the roommate page while cityOfferCount === 0); the no-frozen-links test extends to footer.tsx; the pages stay reachable by URL",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-5 (PRD 4, decision review row 5). Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer? (a) remove the links and hide the tabs; the pages stay reachable by URL (proposal). (b) keep both. Removing navigation to frozen pages is the owner's call (D5 says 'not promoted', not 'hidden').\nOwner answer: Q-5 (a), D82: remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer and hide the roommate type tabs while the city has no offer; everything reachable by URL; see spec 08 section Footer product column"
     },
     {

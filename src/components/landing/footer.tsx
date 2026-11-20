@@ -12,16 +12,15 @@ export function Footer() {
   const t = useTranslations();
 
   const footerLinks = {
+    // PRD 4 FR-7 (D82): no link to the frozen listings (lease takeovers, sublets,
+    // posting a listing); those pages stay reachable by URL (D5).
     product: [
-      { label: t('landing.footer.browseListings'), href: `/${DEFAULT_CITY}/replacement` },
       { label: t('landing.footer.roommateSearch'), href: `/${DEFAULT_CITY}/roommate` },
-      { label: t('landing.footer.temporarySublets'), href: `/${DEFAULT_CITY}/sublet` },
       { label: t('landing.footer.costReports'), href: `/${DEFAULT_CITY}/costs` },
       { label: t('landing.footer.costsByDistrict'), href: `/${DEFAULT_CITY}` },
       // Moved here from the header (PRD 4 FR-5): building reputation is out of
       // focus (D48), the page stays one click away.
       { label: t('common.buildingReviews'), href: `/${DEFAULT_CITY}/review` },
-      { label: t('landing.footer.addListing'), href: '/create-listing' },
       ...(isDocumentTemplatesEnabled()
         ? [{ label: t('landing.footer.resources'), href: '/resources' }]
         : []),

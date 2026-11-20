@@ -116,13 +116,14 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
   const layout = (overrides: Partial<Input> = {}) =>
     roommatePageLayout({ ...DEFAULT_VIEW, ...overrides });
 
-  it('the default view: the flatmate block, room money, no count line at 0 offers, the selector above the tabs', () => {
+  it('the default view: the flatmate block, room money, no count line and no type tabs at 0 offers, the selector above the tabs', () => {
     expect(layout()).toEqual({
       showFlatmateBlock: true,
       showRoomMoney: true,
       showCountLine: false,
       showBotButton: true,
       selectorAboveTabs: true,
+      showTypeTabs: false,
       showH1: true,
     });
   });
@@ -135,7 +136,11 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
     expect(at('offer_room')).toMatchObject({ showFlatmateBlock: false, showBotButton: false });
     // The rest does not depend on the role.
     for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
-      expect(at(intent)).toMatchObject({ showCountLine: false, selectorAboveTabs: true });
+      expect(at(intent)).toMatchObject({
+        showCountLine: false,
+        selectorAboveTabs: true,
+        showTypeTabs: false,
+      });
     }
     // Room money keeps its own rule (find_room, or no offer in the city whatever the role).
     expect(at('find_room').showRoomMoney).toBe(true);
@@ -146,13 +151,14 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
     ).toBe(false);
   });
 
-  it('offers present: the block stays first, the count line is back, no room money by default', () => {
+  it('offers present: the block stays first, the count line and the type tabs are back, no room money by default', () => {
     expect(layout({ cityOfferCount: 3, emptyKind: 'none' })).toEqual({
       showFlatmateBlock: true,
       showRoomMoney: false,
       showCountLine: true,
       showBotButton: true,
       selectorAboveTabs: true,
+      showTypeTabs: true,
       showH1: true,
     });
     // Filters that match nothing in a city with offers: still offers, so the count line shows.
@@ -168,22 +174,24 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
       showCountLine: false,
       showBotButton: false,
       selectorAboveTabs: true,
+      showTypeTabs: false,
       showH1: true,
     });
   });
 
-  it('another city: no flatmate block and no room money; the selector and the count rule stay', () => {
+  it('another city: no flatmate block and no room money; the selector, the count rule and the tabs rule stay', () => {
     expect(layout({ citySlug: 'krakow' })).toEqual({
       showFlatmateBlock: false,
       showRoomMoney: false,
       showCountLine: false,
       showBotButton: false,
       selectorAboveTabs: true,
+      showTypeTabs: false,
       showH1: true,
     });
   });
 
-  it('/replacement and /sublet are unchanged: count line, no selector, no blocks', () => {
+  it('/replacement and /sublet are unchanged: count line, type tabs, no selector, no blocks', () => {
     for (const listingType of ['replacement', 'sublet'] as const) {
       expect(layout({ listingType, cityOfferCount: undefined })).toEqual({
         showFlatmateBlock: false,
@@ -191,8 +199,51 @@ describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
         showCountLine: true,
         showBotButton: false,
         selectorAboveTabs: false,
+        showTypeTabs: true,
         showH1: false,
       });
+    }
+  });
+});
+
+describe('roommatePageLayout: the type tabs (spec 08 §Footer product column, PRD 4 FR-7, D82)', () => {
+  const at = (
+    listingType: 'roommate' | 'replacement' | 'sublet',
+    cityOfferCount: number | undefined,
+    overrides: Partial<Parameters<typeof roommatePageLayout>[0]> = {},
+  ) =>
+    roommatePageLayout({
+      listingType,
+      citySlug: 'warsaw',
+      cityOfferCount,
+      roleState: INITIAL_ROOMMATE_ROLE_STATE,
+      emptyKind: cityOfferCount === 0 ? 'no_offers_in_city' : 'none',
+      hasUsername: true,
+      ...overrides,
+    }).showTypeTabs;
+
+  it('the roommate page with no offer in the city: no type tabs, whatever the role, username or city', () => {
+    expect(at('roommate', 0)).toBe(false);
+    for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
+      expect(at('roommate', 0, { roleState: chooseRoommateRole(intent).state }), intent).toBe(
+        false,
+      );
+    }
+    expect(at('roommate', 0, { hasUsername: false })).toBe(false);
+    expect(at('roommate', 0, { citySlug: 'krakow' })).toBe(false);
+  });
+
+  it('the roommate page once the city has an offer: the type tabs are back', () => {
+    expect(at('roommate', 1)).toBe(true);
+    expect(at('roommate', 3)).toBe(true);
+    // Filters that match nothing in a city with offers: the city still has offers.
+    expect(at('roommate', 3, { emptyKind: 'no_match_for_filters' })).toBe(true);
+  });
+
+  it('/replacement and /sublet keep their type tabs, also with nothing listed', () => {
+    for (const listingType of ['replacement', 'sublet'] as const) {
+      expect(at(listingType, undefined), listingType).toBe(true);
+      expect(at(listingType, 0), listingType).toBe(true);
     }
   });
 });

@@ -39,18 +39,18 @@ test('english home page (/en) loads', async ({ page }) => {
   await expect(page.locator('body')).toBeVisible();
 });
 
-// PRD 4 FR-6: outside the footer (its frozen links wait for FR-7, Q-5), the
-// home page no longer links to /replacement, /sublet or /create-listing; the
-// hero chip, the thesis section's link (FR-9) and two ForWhom cards lead to the
-// roommate page, and the district cards to the district pages.
+// PRD 4 FR-6 and FR-7 (D82): the home page, its footer included, no longer
+// links to /replacement, /sublet or /create-listing; the hero chip, the thesis
+// section's link (FR-9) and two ForWhom cards lead to the roommate page, and the
+// district cards to the district pages.
 test.describe('home framing on /en', () => {
   test.use({ locale: 'en-US' });
 
-  test('no frozen listings link outside the footer', async ({ page }) => {
+  test('no frozen listings link anywhere on the page, the footer included', async ({ page }) => {
     await page.goto('/en');
+    await expect(page.locator('footer')).toHaveCount(1);
     const frozen = await page.evaluate(() =>
       Array.from(document.querySelectorAll('a[href]'))
-        .filter((a) => !a.closest('footer'))
         .map((a) => a.getAttribute('href') ?? '')
         .filter((href) => /\/(replacement|sublet|create-listing)\b/.test(href)),
     );
