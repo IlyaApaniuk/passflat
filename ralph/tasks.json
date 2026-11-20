@@ -770,7 +770,7 @@
       "title": "PRD 4 final check and handoff (FR-37)",
       "spec": "docs/specs/05-measurement-docs.md#prd-4-final-check",
       "dependsOn": ["T156", "T158", "T159"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "npm run verify and npm run test:e2e pass",
         "node scripts/ralph-tasks.mjs summary shows every PRD 4 task done or blocked with its question (Q-1 – Q-13, ten blocked tasks)",
@@ -778,7 +778,7 @@
         "The progress entry is the owner's handoff as spec 05 §PRD 4 final check lists it, separating built, tested and not deployed"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Last task of PRD 4."
     },
     {

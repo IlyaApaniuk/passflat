@@ -10,7 +10,7 @@ in `docs/product/` explain why, the specs say what.
 (`../product/reviews/2026-11-19-site-audit.md`) in the night run the owner authorized; the owner
 has not reviewed it yet, so every owner question is a blocked task (Q-1 – Q-13, ten tasks) and
 everything independent proceeds. Specs 08 and 09 are its new specs; 01, 02, 03, 04, 05 and 06
-carry its sections; the requirement map is below. Its tasks (T118 – T157: 30 to build, 10
+carry its sections; the requirement map is below. Its tasks (T118 – T159: 32 built, 10
 blocked) follow milestone **M7 "Owner tooling"** (no PRD; D76, D77) in `../../ralph/tasks.json`,
 which keeps its `todo` and `blocked` tasks (the map is below).
 
@@ -99,9 +99,13 @@ Draft copy is allowed where a spec says so; list such keys in the progress entry
 Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
 Planned (task todo), Later (moved to PRD 4's Later list; no task). Decomposed on 2026-11-20 in
 the night run; the owner has not answered the decision review, so every owner question (Q-1 –
-Q-13) is a blocked task and everything else is Planned. The architect gap review found 22 gaps;
+Q-13) is a blocked task and everything else was built. The architect gap review found 22 gaps;
 all are folded into specs 08 and 09 and the tasks, and 3 became owner questions (Q-12, Q-13, the
-wider Q-6); see `../product/prd/prd-4-decision-review.md` §Architect gap review.
+wider Q-6); see `../product/prd/prd-4-decision-review.md` §Architect gap review. Final check
+(T157, 2026-11-20): every non-blocked PRD 4 task is done (32 of the 42 tasks T118 – T159); ten
+tasks wait for answers Q-1 – Q-13. Built and tested on `chore/agent-harness`, not deployed: the
+handoff is the T157 entry of `ralph/progress.md`, the deploy checklist
+`../ops/deploy-copy-review.md`.
 
 | FR                 | Requirement                                                                 | Spec                                                                                                                                                                                  | Tasks            | Status  |
 | ------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------- |
@@ -142,7 +146,7 @@ wider Q-6); see `../product/prd/prd-4-decision-review.md` §Architect gap review
 | FR-34              | Contrast, tap targets, hamburger                                            | [09 §Contrast, tap targets and the hamburger](09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger)                                                           | T155, T159       | Done    |
 | FR-35              | Labels, banner link, heading order, skip link                               | [09 §Labels…](09-search-metadata-and-performance.md#labels-the-banners-privacy-link-heading-order-and-a-skip-link)                                                                    | —                | Later   |
 | FR-36              | Measurement and docs                                                        | [05 §PRD 4: readout and docs](05-measurement-docs.md#prd-4-readout-and-docs)                                                                                                          | T156             | Done    |
-| FR-37              | Final check and handoff                                                     | [05 §PRD 4 final check](05-measurement-docs.md#prd-4-final-check)                                                                                                                     | T157             | Planned |
+| FR-37              | Final check and handoff                                                     | [05 §PRD 4 final check](05-measurement-docs.md#prd-4-final-check)                                                                                                                     | T157             | Done    |
 
 ## Requirement map (PRD 3, done)
 

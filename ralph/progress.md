@@ -5282,3 +5282,100 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Assumption applied** (spec 09 FR-34, classes): the deposit figure is a figure value → `text-foreground` (near-black instead of light green on the light-green card).
   - No copy, new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next` (T157, the PRD 4 final check).
+
+### 2026-11-20 11:50 · T157 · done
+
+- Done (PRD 4 FR-37; spec 05 §PRD 4 final check). This entry is the owner's handoff for PRD 4.
+  - **Status:** every non-blocked PRD 4 task is done: 32 of the 42 tasks T118 – T159. Ten are blocked on Q-1 – Q-13 (below). All of it is **built and tested on `chore/agent-harness`, not deployed**. The deploy checklist is `docs/ops/deploy-copy-review.md` (T156). It covers PRD 1, PRD 3 and PRD 4, which all ship in one deploy.
+  - `docs/specs/README.md`: FR-37 row → Done. The PRD 4 map paragraph records the final check, and the "Current PRD" line now says T118 – T159 (32 built, 10 blocked). The map covers every FR-1 – FR-37: each row is Done, Blocked with its task and question, or Later.
+  - `node scripts/ralph-tasks.mjs summary`: M1 4/5, M2 10/15, M3 12/15, M4 4/5, M5 2/2 once this task is done. The blocked tasks are T122, T125, T133, T135, T136, T137, T146, T150, T151 and T154. Outside PRD 4, M7 still holds T114 (blocked: the avatar needs `sips`), T117 (blocked: the production bot username, D76) and T115 (todo, waits on T114).
+- **Built (not deployed):**
+  - **No migration, no table, no cron change.** Since `2940d0a` nothing changed under `prisma/` or `supabase/`, nor in `vercel.json`. No new event name either: only new `source` / `placement` / `entry_detail` values of existing events.
+  - **Added:** the icon routes `/favicon.ico` and `/apple-touch-icon.png` (two `next/og` route handlers, `BRAND_ICON_HEADERS`, T152); the home page's `dynamicParams = false`, so a dotted path like `/x.ext` answers 404 without a render; three security headers on every route (`SECURITY_HEADERS` in `next.config.mjs`, T153); and the OG cache header (`OG_CACHE_CONTROL` on `/api/og`). **No redirect** was added: `next.config.mjs` only gains `headers()` and the middleware is unchanged. No framing header and no CSP (Q-13).
+  - **Website changes:**
+    - The roommate page opens on the flatmate block, with its own title, H1 and footer.
+    - The header puts "Find a flatmate" first; the home framing no longer promotes frozen listings.
+    - One shared `FlatmateCallout` appears on home (the thesis section), building pages, the hub, district pages, the calculator, the blog list, guides and the data report. Some of these surfaces also show the per-person line.
+    - The checker's 44 px bot handoff; the roommate-first How it works and FAQ; the Help and About thesis copy.
+    - The honesty scans now cover metadata, templates, guide frontmatter and bodies, and the low-CTR titles.
+    - The district roommate section; sitemap and robots.
+    - Contrast, tap targets and the hamburger.
+    - The PRD 4 readout docs.
+- **Draft copy for review (agent copy, D29, web, four locales unless noted).** Full old/new texts are in each task's entry above; the list by task is `docs/ops/deploy-copy-review.md` §1:
+  - T118 `listings.findFlatmate.notConnected`
+  - T119 `listings.titleRoommate`, `roommateMetaDescription`, `roommateH1`
+  - T120 `common.findFlatmate`, `landing.footer.costsByDistrict` (deleted `common.costsShort`)
+  - T121 `landing.forWhom.rentTogether.*`, `findRoom.*`, `checkFlat.*`, `landing.cta.subtitle`, `freeNote`, `errors.notFound.browse` (PL/RU/UK of the second group are agent drafts; three trust keys, three ForWhom groups and `dashboard.browseListings` deleted)
+  - T123 `listings.flatmateCallout.homeTitle`, `title`, `roommateLink`
+  - T124 `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`, `landing.hero.costsCta`, `landing.hero.subtitle`, `landing.tools.templatesDescription`
+  - T126: three `costs.building.*` listing keys deleted
+  - T128 `blog.ctaText`, `blog.ctaFlatmate`
+  - T129 `listings.flatmateCallout.perPerson`
+  - T130 `checker.costs.telegramHint`
+  - T131 `landing.howItWorks.subtitle`, `roommate.step1–4{Title,Desc}`, `landing.faq.q7`/`a7`
+  - T132 `helpCenter.general.a1`, `about.solution.pillar1–3{Title,Desc}`, `about.team.description2`, `about.values.principle1Desc`
+  - T134 pl `listings.roommateRoles.findFlatmate`, pl `listings.findFlatmate.languages`, ru/uk `listings.noMatch.title`, `listings.demandCapture.searchCardTitleRoommate`, and the posting-kit locale rule
+  - T138 the `costsSeo` building, district and city meta titles and descriptions, `calculator.metaTitle`/`metaDescription`, `listings.demandCapture.costCtaTitle`, `listings.detail.buildingCostHint`
+  - T139 `rentReport.*` (seven keys), `meta.about/howItWorks/blogDescription`, `howItWorksPage.seekers.step1Desc`
+  - T140 `costsSeo.districtH1`, `buildingsHeading`, `calculator.h1`; pl/ru/uk `cityMetaDescription`, `cityH1`, `districtIntro`; pl city-notify and city-launch e-mail subjects
+  - T141: 30 guide frontmatter values in 29 files
+  - T142: 88 guide link lines in 48 files
+  - T143: 122 guide body lines
+  - T145: 32 guide frontmatter values in 20 files
+  - T147 `costsSeo.districtRoommateHeading`, `districtProfileCount`, `districtProfileNone`
+  - T148 `costsSeo.districtRoomLead`, `districtRoomCityFallback`, `districtMetaDescription`
+  - T149 `costs.submit.metaTitle`/`metaDescription`
+  - T155 `common.menu`
+  - T158 pl/ru/uk `costsSeo.cityIntro`, `backToCity` (deleted `costs.building.districtAvg`)
+  - No copy: T127, T144, T152, T153, T156, T159.
+- **Assumptions applied (placements and values; one place each):**
+  - Roommate page layout and `showH1`: `roommatePageLayout` in `src/lib/roommate-roles.ts` (T118, T119).
+  - Header order: the `navLinks` array in `header.tsx`; building reviews moved to the footer (T120, decision review row 12).
+  - ForWhom targets: the `personas` array in `for-whom.tsx`, plus the 404 and dashboard links (T121).
+  - Callout surfaces: `FLATMATE_SURFACES` in `telegram-events.ts`; its rules: `flatmateCalloutView`; the roommate path: `FLATMATE_CALLOUT_ROOMMATE_PATH` (T123).
+  - No counts on building pages, the calculator, guides or the report (T126 – T128). Per-person line surfaces: roommate block, home, hub, data report, district (T129, T148).
+  - Checker button: `min-h-11` outline, with a hint line (T130). FAQ pairs: `faq-items.ts`; tab order: `TABS` (T131).
+  - The roommate title is a separate key (T134).
+  - Nominative shapes: name first, or after a noun in apposition; scan lists `GOVERNING_WORD_BEFORE_NAME` (T140, T158).
+  - Guide own-origin prefix: `OWN_ORIGIN = 'https://passflat.com'` in `src/lib/blog-markdown.ts` (T144). T145 made three small edits to the audit drafts.
+  - District counts: `byDistrict`, expired by the `ROOMMATE_COUNTS_TAG` tag `roommate-counts` (T147).
+  - Sitemap priorities 0.8 / 0.4 / 0.4, weekly; `/api/og` is allowed under `/api/` (T149).
+  - Icon cache: `public, max-age=86400, s-maxage=604800` (T152).
+  - OG cache: `public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800`. Headers: `nosniff`, `strict-origin-when-cross-origin`, `camera=(), microphone=(), geolocation=()` (T153).
+  - Colour mapping: accent text → `text-primary` / `text-foreground`; header bar `py-1.5 lg:py-3`; `ICON_LINES` (T155, T159).
+  - Readout shape: queries K – N, full Monday – Sunday weeks, Search Console group filters (T156).
+- **Blocked questions** (answers through `ralph-answer`; the full text is in each task's notes and `docs/product/prd/prd-4-decision-review.md`):
+  - Q-1 (T150): frozen listing pages out of the sitemap, or noindex (FR-29).
+  - Q-2 (T135): the home city-notify form (FR-19).
+  - Q-3 (T133): the Help payments answers, "Is Passflat free?", the cesja and sublet steps, the About listings counter (FR-16).
+  - Q-4 (T136): the roommate e-mail card, and where "I have a free room" leads (FR-20).
+  - Q-5 (T122): the footer without the frozen links; roommate type tabs hidden at 0 offers (FR-7).
+  - Q-6 (T125): the hero H1 and the thesis-first home title, description and tagline (FR-10).
+  - Q-7 (T146): the cesja guide: keep it, or remove it with a redirect (FR-25).
+  - Q-8 (T151): the Organization schema's Instagram handle.
+  - Q-9 – Q-12 (T137): the consent note's register, "expanding across Europe", open data against "unlock", "free" in new copy.
+  - Q-13 (T154): the framing header (FR-31).
+- **Moved to Later (no task):** FR-32 (roommate page server work), FR-33 (header client bundle), FR-35 (labels, the banner's privacy link, heading order, skip link), and the structured data of FR-28 (item 2).
+- **Readings after 4 full weeks:**
+  - Search Console page groups and the 8 FR-25 pages; PostHog queries K – N; thresholds as Assumptions, none a stop rule. All in `docs/analytics/activation-funnels.md` §9.
+  - Window and dates: `docs/ops/deploy-copy-review.md` §5. For a deploy on 2026-12-01 the window is 2026-12-07 – 2027-01-03, read from 2027-01-04. PostHog bot numbers stay 0 until `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` is set.
+- Checks:
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 180 files / 3643 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 19 passed. This covers the home thesis section and the header roommate link on `/` (pl) and `/en`, the mobile header, the three security headers on `/`, the icons and the dotted-path 404, the OG card and PostHog landing. `next-env.d.ts` restored.
+  - **Not verified:**
+    - Core Web Vitals.
+    - PostHog Live Events for the new `source` / `placement` values.
+    - The live headers and icons after deploy (the `curl -I` list in the checklist §4).
+    - Mobile layout by eye on real phones.
+    - The home route's script list in production.
+    - Any page that needs a database in e2e (city, building, district, calculator, roommate page): these are covered by Vitest render tests only.
+  - Nothing deployed, no migration, no event sent, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - Before the deploy: read the draft copy above (`docs/ops/deploy-copy-review.md` §1 and its "points for a decision").
+  - At the deploy: set `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the name is Open, T117) and `ROOMMATE_MATCHING_ENABLED=true` (D75). Without the username, the callouts show a count line with no bot button, while the roommate page says "not connected".
+  - After the deploy: the checks of checklist §3 and §4.
+  - Answer Q-1 – Q-13 to unblock the ten tasks.
+  - The PRD 4 status in `docs/product/` (roadmap, PRD header, decision review) still reads "decomposed, 40 tasks". The loop did not edit product documents; closing or updating PRD 4 there is the owner's step (ralph-start / Fable).
+  - No new table, migration or event name.
+- Next: none runnable in PRD 4. Answer Q-1 – Q-13 (and T117's username), then `node scripts/ralph-tasks.mjs next`.
