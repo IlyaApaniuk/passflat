@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   buildingFindMany: vi.fn(),
   poiFindMany: vi.fn(),
   costReportFindMany: vi.fn(),
+  districtFindUnique: vi.fn(),
   buildingTagFindMany: vi.fn(),
   getTranslations: vi.fn(),
 }));
@@ -20,6 +21,7 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     city: { findUnique: h.cityFindUnique },
+    district: { findUnique: h.districtFindUnique },
     building: {
       findFirst: h.buildingFindFirst,
       findMany: h.buildingFindMany,
@@ -30,10 +32,15 @@ vi.mock('@/lib/prisma', () => ({
     },
     buildingLocationScore: { upsert: h.scoreUpsert },
     poi: { findMany: h.poiFindMany },
-    // The district baseline the cost card compares against.
+    // The figure contract's loaders: the building, its district or city, deposits.
     costReport: { findMany: h.costReportFindMany },
     buildingTag: { findMany: h.buildingTagFindMany },
   },
+}));
+
+// The loaders' cache is Next's; here every call reads through.
+vi.mock('next/cache', () => ({
+  unstable_cache: <T extends (...args: never[]) => unknown>(fn: T) => fn,
 }));
 
 // Only the scoring source is faked; the category table and math stay real so a
@@ -53,7 +60,13 @@ vi.mock('next-intl/server', () => ({
   getTranslations: h.getTranslations,
 }));
 
-import { isLocationCheckRateLimited, resetLocationCheckRateLimit } from '@/lib/location-checker';
+import type { FigureGroup, FigureReport, FigureSummary } from '@/lib/cost-figures';
+import { loadBuildingFigures } from '@/lib/cost-figures-query';
+import {
+  isLocationCheckRateLimited,
+  NEIGHBOUR_REPORT_SELECT,
+  resetLocationCheckRateLimit,
+} from '@/lib/location-checker';
 import { SCORE_VERSION } from '@/lib/location-score';
 import { GET, POST } from './route';
 
@@ -110,9 +123,107 @@ function building(overrides: Record<string, unknown> = {}) {
     city: { slug: 'warsaw', lat: 52.2297, lng: 21.0122 },
     district: { slug: 'srodmiescie', nameKey: 'Śródmieście' },
     locationScore: cachedScore,
-    costReports: [],
     ...overrides,
   };
+}
+
+type Where = {
+  buildingId?: string;
+  building?: { districtId?: string; cityId?: string };
+};
+type ReportFixture = FigureReport;
+
+/**
+ * Serve the loaders' report queries by their `where`: this building's reports,
+ * the district's and the city's. Deposit queries read the same rows.
+ */
+function serveReports(rows: {
+  building?: ReportFixture[];
+  district?: ReportFixture[];
+  city?: ReportFixture[];
+}) {
+  h.costReportFindMany.mockImplementation(async ({ where }: { where: Where }) => {
+    if (where.buildingId) return where.buildingId === 'building-1' ? (rows.building ?? []) : [];
+    if (where.building?.districtId) return rows.district ?? [];
+    if (where.building?.cityId) return rows.city ?? [];
+    return [];
+  });
+}
+
+function report(source: string, fields: Partial<ReportFixture> = {}): ReportFixture {
+  return {
+    source,
+    rentalType: 'apartment',
+    utilitiesComplete: true,
+    createdAt: new Date('2026-09-01T10:00:00.000Z'),
+    ...fields,
+  };
+}
+
+const many = (count: number, make: (index: number) => ReportFixture) =>
+  Array.from({ length: count }, (_, index) => make(index));
+
+/** Golden example 1 of spec 03: three tenant reports and two asking prices. */
+const mixedBuildingReports = [
+  report('user', { rent: 3_200, totalMonthlyAvg: 4_000 }),
+  report('import', { rent: 3_000, totalMonthlyAvg: 3_700 }),
+  report('user', { rent: 3_400, totalMonthlyAvg: 3_900, utilitiesComplete: false }),
+  report('scraped', { rent: 3_500, totalMonthlyAvg: 4_100, utilitiesComplete: false }),
+  report('scraped', { rent: 3_300, totalMonthlyAvg: 3_900, utilitiesComplete: false }),
+];
+
+/** A district answer (golden example 10 among its rows) of six reports. */
+const districtReports = [
+  report('user', {
+    totalMonthlyAvg: 4_000,
+    depositAmount: 4_000,
+    depositReturned: true,
+    depositReturnedAmount: 4_000,
+  }),
+  report('user', {
+    totalMonthlyAvg: 4_100,
+    depositAmount: 4_000,
+    depositReturned: true,
+    depositReturnedAmount: 2_500,
+  }),
+  report('user', {
+    totalMonthlyAvg: 3_900,
+    depositAmount: 4_000,
+    depositReturned: false,
+    depositReturnedAmount: 0,
+  }),
+  report('user', { totalMonthlyAvg: 4_300, isCurrentTenant: true, depositReturned: null }),
+  report('import', { totalMonthlyAvg: 4_200 }),
+  report('scraped', { totalMonthlyAvg: 4_500, utilitiesComplete: false }),
+];
+
+async function checkedCosts() {
+  const existing = building();
+  h.buildingFindFirst.mockResolvedValue(existing);
+  h.buildingUpdate.mockResolvedValue(existing);
+  const response = await POST(postRequest());
+  expect(response.status).toBe(200);
+  return (await response.json()).costs;
+}
+
+const METRICS = [
+  'completeTotal',
+  'knownPartTotal',
+  'rent',
+  'expenses',
+  'rentPerM2',
+  'completeTotalPerM2',
+  'adminFee',
+] as const;
+
+/** Median and N of every metric per group: what two surfaces must agree on. */
+function mediansAndN(summary: FigureSummary) {
+  const byGroup = (group: FigureGroup | null) =>
+    group &&
+    Object.fromEntries(
+      METRICS.map((metric) => [metric, { median: group[metric].median, n: group[metric].n }]),
+    );
+  return { tenant: byGroup(summary.groups.tenant), asking: byGroup(summary.groups.asking) };
 }
 
 function postRequest(body: unknown = input, ip = '203.0.113.10') {
@@ -133,6 +244,7 @@ beforeEach(() => {
   h.buildingFindMany.mockResolvedValue([]);
   h.poiFindMany.mockResolvedValue([]);
   h.costReportFindMany.mockResolvedValue([]);
+  h.districtFindUnique.mockResolvedValue({ slug: 'srodmiescie', nameKey: 'Śródmieście' });
   h.buildingTagFindMany.mockResolvedValue([]);
   h.buildingCount.mockResolvedValue(0);
   h.getTranslations.mockResolvedValue((key: string) => (key === 'city.warsaw' ? 'Warszawa' : key));
@@ -193,7 +305,10 @@ describe('POST /api/location-score', () => {
         addressFull: 'Far 2',
         lat: 52.23,
         lng: 21.0215,
-        costReports: [{ source: 'user', totalMonthlyAvg: 5_000, rent: 4_000 }],
+        // Asking prices only, utilities not established: the asking group's known part.
+        costReports: [
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 5_000, rent: 4_000 },
+        ],
       },
       // ~110m north — nearest, so it must come first.
       {
@@ -202,7 +317,11 @@ describe('POST /api/location-score', () => {
         addressFull: 'Near 1',
         lat: 52.231,
         lng: 21.01,
-        costReports: [{ source: 'user', totalMonthlyAvg: 4_000, rent: 3_100 }],
+        // The tenant report wins; the asking price is not blended into it.
+        costReports: [
+          { source: 'user', utilitiesComplete: true, totalMonthlyAvg: 4_000, rent: 3_100 },
+          { source: 'scraped', utilitiesComplete: false, totalMonthlyAvg: 9_000, rent: 8_000 },
+        ],
       },
       // Inside the bounding box corner but ~1.2km away, so outside the circle.
       {
@@ -231,22 +350,35 @@ describe('POST /api/location-score', () => {
     expect(body.neighbours[0]).toMatchObject({
       slug: 'near',
       address: 'Near 1',
-      totalMedian: 4_000,
+      figure: { group: 'tenant', metric: 'completeTotal', value: 4_000, n: 1 },
+      // Both groups' visible reports, for analytics only.
+      reportCount: 2,
+    });
+    expect(body.neighbours[1]).toMatchObject({
+      slug: 'far',
+      figure: { group: 'asking', metric: 'knownPartTotal', value: 5_000, n: 1 },
       reportCount: 1,
     });
+    expect(body.neighbours[0]).not.toHaveProperty('totalMedian');
     expect(body.neighbours[0].distanceM).toBeLessThan(body.neighbours[1].distanceM);
+    // The neighbour query selects only the headline fields.
+    const neighbourQuery = h.buildingFindMany.mock.calls.find(
+      ([args]) => args?.select?.costReports,
+    )?.[0];
+    expect(neighbourQuery.select.costReports.select).toEqual(NEIGHBOUR_REPORT_SELECT);
   });
 
-  it('uses a fresh cache, increments the check and returns source-aware costs', async () => {
-    const existing = building({
-      costReports: [
-        { source: 'user', totalMonthlyAvg: 4_000, rent: 3_200 },
-        { source: 'scraped', totalMonthlyAvg: 4_400, rent: 3_400 },
-      ],
-    });
+  it('uses a fresh cache, increments the check and returns the costs by group', async () => {
+    const existing = building();
     const updated = building({ ...existing, checksCount: 5 });
     h.buildingFindFirst.mockResolvedValue(existing);
     h.buildingUpdate.mockResolvedValue(updated);
+    serveReports({
+      building: [
+        report('user', { totalMonthlyAvg: 4_000, rent: 3_200 }),
+        report('scraped', { totalMonthlyAvg: 4_400, rent: 3_400, utilitiesComplete: false }),
+      ],
+    });
 
     const response = await POST(postRequest());
     expect(response.status).toBe(200);
@@ -254,12 +386,15 @@ describe('POST /api/location-score', () => {
       building: { id: 'building-1', address: 'Marszałkowska 1', citySlug: 'warsaw' },
       score: { overall: 78 },
       costs: {
-        totalMedian: 4_200,
-        rentMedian: 3_300,
-        expensesMedian: 900,
-        reportCount: 2,
-        tenantReportCount: 1,
-        sourceKind: 'mixed',
+        building: {
+          level: 'building',
+          reportCount: 2,
+          sourceCounts: { user: 1, import: 0, scraped: 1 },
+          groups: {
+            tenant: { reportCount: 1, completeTotal: { median: 4_000, n: 1 } },
+            asking: { reportCount: 1, knownPartTotal: { median: 4_400, n: 1 } },
+          },
+        },
       },
     });
     expect(h.buildingUpdate).toHaveBeenCalledWith(
@@ -383,6 +518,144 @@ describe('POST /api/location-score', () => {
     expect(second.status).toBe(503);
     expect(h.computeScore).toHaveBeenCalledOnce();
     expect(h.scoreUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/location-score costs from the figure contract', () => {
+  const isDepositQuery = (args: { select: Record<string, boolean> }) =>
+    'depositReturned' in args.select && !('source' in args.select);
+
+  it('answers a mixed building by group, with the district reference and its deposit statistic', async () => {
+    serveReports({ building: mixedBuildingReports, district: districtReports });
+
+    const costs = await checkedCosts();
+
+    expect(costs.building).toMatchObject({
+      level: 'building',
+      rentalType: 'all',
+      reportCount: 5,
+      sourceCounts: { user: 2, import: 1, scraped: 2 },
+      groups: {
+        tenant: {
+          reportCount: 3,
+          observation: 'several',
+          completeTotal: { median: 3_850, n: 2 },
+          knownPartTotal: { median: 3_900, n: 1 },
+          rent: { median: 3_200, n: 3 },
+          expenses: { median: 750, n: 2 },
+        },
+        asking: {
+          reportCount: 2,
+          completeTotal: { median: null, n: 0 },
+          knownPartTotal: { median: 4_000, n: 2 },
+          rent: { median: 3_400, n: 2 },
+        },
+      },
+    });
+    expect(costs.reference).toMatchObject({
+      level: 'district',
+      slug: 'srodmiescie',
+      name: 'Śródmieście',
+      summary: {
+        level: 'district',
+        reportCount: 6,
+        groups: {
+          tenant: { completeTotal: { median: 4_100, n: 5 } },
+          asking: { knownPartTotal: { median: 4_500, n: 1 } },
+        },
+      },
+    });
+    expect(costs.deposit).toEqual({
+      level: 'district',
+      returns: { answered: 3, gotBack: 2, full: 1, medianDeposit: 4_000 },
+    });
+    const depositCall = h.costReportFindMany.mock.calls.find(([args]) => isDepositQuery(args));
+    expect(depositCall?.[0].where).toEqual({
+      isVisible: true,
+      building: { districtId: 'district-1' },
+    });
+    // The building's figure is never set against an ungated district median.
+    expect(JSON.stringify(costs)).not.toMatch(/districtMedian|districtName|sourceKind/);
+  });
+
+  it('answers a building without reports with its district as a labelled reference', async () => {
+    serveReports({ district: districtReports });
+
+    const costs = await checkedCosts();
+
+    expect(costs.building).toMatchObject({
+      level: 'building',
+      reportCount: 0,
+      groups: { tenant: null, asking: null },
+    });
+    expect(costs.reference).toMatchObject({
+      level: 'district',
+      name: 'Śródmieście',
+      summary: { reportCount: 6, groups: { tenant: { reportCount: 5 } } },
+    });
+    expect(costs.deposit).toMatchObject({ level: 'district', returns: { answered: 3 } });
+  });
+
+  it('falls back to the city when the district holds fewer than MIN_AREA_REPORTS reports', async () => {
+    const cityReports = many(40, (index) =>
+      report(index % 4 === 0 ? 'scraped' : 'user', {
+        totalMonthlyAvg: 3_000 + index * 50,
+        depositAmount: 3_000,
+        depositReturned: index % 2 === 0,
+      }),
+    );
+    serveReports({ district: districtReports.slice(0, 4), city: cityReports });
+
+    const costs = await checkedCosts();
+
+    expect(costs.building.reportCount).toBe(0);
+    expect(costs.reference).toMatchObject({
+      level: 'city',
+      slug: 'warsaw',
+      name: 'city.warsaw',
+      summary: { level: 'city', reportCount: 40, sourceCounts: { user: 30, scraped: 10 } },
+    });
+    expect(costs.deposit).toMatchObject({ level: 'city', returns: { answered: 40, gotBack: 20 } });
+    const depositCall = h.costReportFindMany.mock.calls.find(([args]) => isDepositQuery(args));
+    expect(depositCall?.[0].where).toEqual({ isVisible: true, building: { cityId: 'city-1' } });
+    // Four district reports never surface as a district figure.
+    expect(JSON.stringify(costs)).not.toContain('Śródmieście');
+  });
+
+  it('has no reference and no deposit statistic when the city has no report either', async () => {
+    serveReports({});
+
+    const costs = await checkedCosts();
+
+    expect(costs).toMatchObject({
+      building: { reportCount: 0, groups: { tenant: null, asking: null } },
+      reference: null,
+      deposit: null,
+    });
+    expect(h.costReportFindMany.mock.calls.some(([args]) => isDepositQuery(args))).toBe(false);
+  });
+
+  it('gives the same median and N per group as loadBuildingFigures for the same reports', async () => {
+    const fixture = [
+      ...mixedBuildingReports.map((row, index) => ({
+        ...row,
+        areaM2: 40 + index * 5,
+        adminFee: index === 0 ? 0 : 400 + index * 10,
+      })),
+      report('import', { rentalType: 'room', rent: 2_000, totalMonthlyAvg: 2_300, areaM2: 15 }),
+    ];
+    serveReports({ building: fixture, district: districtReports });
+
+    const checker = (await checkedCosts()).building as FigureSummary;
+    const page = await loadBuildingFigures('building-1');
+
+    expect(mediansAndN(checker)).toEqual(mediansAndN(page));
+    expect(mediansAndN(checker).tenant).toMatchObject({
+      completeTotal: { median: 3_700, n: 3 },
+      rent: { median: 3_100, n: 4 },
+    });
+    // The whole summary, not only the medians, is the contract's.
+    expect(checker).toEqual(JSON.parse(JSON.stringify(page)));
   });
 });
 

@@ -1095,7 +1095,8 @@ export function DashboardClient({
                           {t('dashboard.noSavedListingsDesc')}
                         </p>
                         <Button className="mt-6 gap-2" asChild>
-                          <Link href="/warsaw/replacement">{t('dashboard.browseListings')}</Link>
+                          {/* PRD 4 FR-6: the costs, not the frozen listings (D5). */}
+                          <Link href="/warsaw/costs">{t('dashboard.accessBrowse')}</Link>
                         </Button>
                       </CardContent>
                     </Card>

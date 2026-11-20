@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { Footer } from '@/components/landing/footer';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { getPostBySlug, getPostSlugs } from '@/lib/blog';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, articleJsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
@@ -62,7 +63,8 @@ export default async function BlogPostPage({ params }: Props) {
         })}
       />
       <main className="flex-1 pt-24">
-        <BlogArticle post={post} />
+        {/* Static page: the callout carries no counts (spec 08 §Callout placements). */}
+        <BlogArticle post={post} flatmateCallout={<FlatmateCallout surface="guide" />} />
       </main>
       <Footer />
     </div>

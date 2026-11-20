@@ -1,14 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email/send';
-import { resolveEmailLocale } from '@/lib/email/types';
-import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
+import { resolveEmailLocale, type EmailLocale } from '@/lib/email/types';
+import { makeInterestRemovalToken } from '@/lib/email/unsubscribe';
+import { localeUrl } from '@/lib/email/url';
+import { flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { isPrismaUniqueConstraintError } from '@/lib/location-checker';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 3;
+
+const LISTING_TYPES = ['replacement', 'roommate', 'sublet'];
+
+/** Stable machine-readable error codes (spec 02); the client maps them to `error_code`. */
+type ErrorCode =
+  | 'rate_limited'
+  | 'invalid_input'
+  | 'consent_required'
+  | 'invalid_email'
+  | 'unknown_city'
+  | 'unknown_district'
+  | 'server_error';
+
+function errorResponse(status: number, code: ErrorCode, error: string) {
+  return NextResponse.json({ error, code }, { status });
+}
+
+/** `undefined`/`null` → '', a string → trimmed, anything else → null (invalid). */
+function optionalTrimmed(value: unknown): string | null {
+  if (value === undefined || value === null) return '';
+  return typeof value === 'string' ? value.trim() : null;
+}
+
+/**
+ * `{ removeUrl }` for a listings-interest row (spec 02 §Remove-interest link): an absolute,
+ * locale-prefixed link to the page that deletes that one row. Empty when there is no row id
+ * or the token cannot be signed (no CRON_SECRET in production): the row is saved either way,
+ * so the save still succeeds, just without the link.
+ */
+function removeUrlField(rowId: string | undefined, locale: EmailLocale): { removeUrl?: string } {
+  if (!rowId) return {};
+  try {
+    const token = makeInterestRemovalToken(rowId);
+    return { removeUrl: localeUrl(locale, `/email/remove-interest?token=${token}`) };
+  } catch (err) {
+    console.error('[city-notify] Cannot sign the remove-interest link:', (err as Error).message);
+    return {};
+  }
+}
 
 // Logged-in one-tap subscribe: when the client sends no email (we already have
 // their account email), resolve it from the Supabase session.
@@ -38,34 +80,34 @@ export async function POST(request: NextRequest) {
   });
 
   if (!allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests. Please try again later.' },
-      { status: 429 },
-    );
+    return errorResponse(429, 'rate_limited', 'Too many requests. Please try again later.');
   }
 
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return errorResponse(400, 'invalid_input', 'Invalid JSON');
+  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return errorResponse(400, 'invalid_input', 'Invalid JSON');
   }
 
   const { email, city, consent, locale, districtSlug, listingType } = body as {
-    email?: string;
-    city?: string;
-    consent?: boolean;
+    email?: unknown;
+    city?: unknown;
+    consent?: unknown;
     locale?: string;
-    districtSlug?: string;
-    listingType?: string;
+    districtSlug?: unknown;
+    listingType?: unknown;
   };
 
-  if (!city?.trim()) {
-    return NextResponse.json({ error: 'City is required' }, { status: 400 });
+  if (typeof city !== 'string' || !city.trim()) {
+    return errorResponse(400, 'invalid_input', 'City is required');
   }
 
   if (!consent) {
-    return NextResponse.json({ error: 'Consent to data processing is required' }, { status: 400 });
+    return errorResponse(400, 'consent_required', 'Consent to data processing is required');
   }
 
   // Email from the body (logged-out form) or, for a logged-in one-tap subscribe,
@@ -75,12 +117,12 @@ export async function POST(request: NextRequest) {
     resolvedEmail = (await getSessionEmail()) ?? '';
   }
   if (!resolvedEmail) {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    return errorResponse(400, 'invalid_email', 'Email is required');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(resolvedEmail)) {
-    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    return errorResponse(400, 'invalid_email', 'Invalid email address');
   }
 
   const normalizedEmail = resolvedEmail.toLowerCase();
@@ -88,45 +130,56 @@ export async function POST(request: NextRequest) {
   const cityNormalized = cityName.toLowerCase();
   const emailLocale = resolveEmailLocale(locale);
 
-  // District-scoped listings waitlist (new). "" keeps the original whole-city
-  // landing path. Validate against REAL records so we never store a phantom
-  // district/type (honesty guardrail) — here `city` is the city slug.
-  const LISTING_TYPES = ['replacement', 'roommate', 'sublet'];
-  let districtSlugClean = '';
-  let listingTypeClean = '';
-  if (typeof districtSlug === 'string' && districtSlug.trim()) {
-    const lt = typeof listingType === 'string' ? listingType.trim() : '';
-    if (!LISTING_TYPES.includes(lt)) {
-      return NextResponse.json({ error: 'Invalid listing type' }, { status: 400 });
+  // Three classes (spec 02), validated independently:
+  //   city launch        listingType ''   districtSlug ''    (`city` is free text)
+  //   listings, city     listingType type districtSlug ''    (`city` is a City.slug)
+  //   listings, district listingType type districtSlug slug  (district of that city)
+  // A district without a type never falls back to a city-launch row. Listings
+  // classes are checked against real records so no phantom city/district is stored.
+  const listingTypeClean = optionalTrimmed(listingType);
+  const districtSlugClean = optionalTrimmed(districtSlug);
+  if (listingTypeClean === null || districtSlugClean === null) {
+    return errorResponse(400, 'invalid_input', 'Invalid listing type or district');
+  }
+  if (!listingTypeClean && districtSlugClean) {
+    return errorResponse(400, 'invalid_input', 'listingType required');
+  }
+  const isListingsInterest = listingTypeClean !== '';
+  if (isListingsInterest) {
+    if (!LISTING_TYPES.includes(listingTypeClean)) {
+      return errorResponse(400, 'invalid_input', 'Invalid listing type');
     }
     const cityRec = await prisma.city.findUnique({
       where: { slug: cityNormalized },
       select: { id: true },
     });
     if (!cityRec) {
-      return NextResponse.json({ error: 'Unknown city' }, { status: 400 });
+      return errorResponse(400, 'unknown_city', 'Unknown city');
     }
-    const dist = await prisma.district.findFirst({
-      where: { cityId: cityRec.id, slug: districtSlug.trim() },
-      select: { id: true },
-    });
-    if (!dist) {
-      return NextResponse.json({ error: 'Unknown district' }, { status: 400 });
+    if (districtSlugClean) {
+      const dist = await prisma.district.findFirst({
+        where: { cityId: cityRec.id, slug: districtSlugClean },
+        select: { id: true },
+      });
+      if (!dist) {
+        return errorResponse(400, 'unknown_district', 'Unknown district');
+      }
     }
-    districtSlugClean = districtSlug.trim();
-    listingTypeClean = lt;
   }
 
+  const uniqueKey = {
+    email_cityNormalized_districtSlug_listingType: {
+      email: normalizedEmail,
+      cityNormalized,
+      districtSlug: districtSlugClean,
+      listingType: listingTypeClean,
+    },
+  };
+  let row: { id: string };
   try {
-    await prisma.cityNotifySubscription.upsert({
-      where: {
-        email_cityNormalized_districtSlug_listingType: {
-          email: normalizedEmail,
-          cityNormalized,
-          districtSlug: districtSlugClean,
-          listingType: listingTypeClean,
-        },
-      },
+    row = await prisma.cityNotifySubscription.upsert({
+      where: uniqueKey,
+      select: { id: true },
       create: {
         email: normalizedEmail,
         city: cityName,
@@ -143,32 +196,35 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
+    // Two parallel identical submits can both try the insert; the loser hits the
+    // unique key. The row exists and the winner confirms it, so this one just
+    // succeeds (no duplicate e-mail). A listings row still gets its remove link,
+    // found by the same unique key.
+    if (isPrismaUniqueConstraintError(err)) {
+      const existing = isListingsInterest
+        ? await prisma.cityNotifySubscription
+            .findUnique({ where: uniqueKey, select: { id: true } })
+            .catch(() => null)
+        : null;
+      return NextResponse.json(
+        { success: true, ...removeUrlField(existing?.id, emailLocale) },
+        { status: 200 },
+      );
+    }
     console.error('[city-notify] Failed to persist subscription:', err);
+    // No distinct id: the e-mail is never a PostHog identity (spec 02 §Waitlist server
+    // events). The waitlist is counted by the client's `listing_interest_saved` and by rows.
     captureServerException(err, {
-      distinctId: normalizedEmail,
       properties: { source: 'city_notify', step: 'persist', city: cityName },
     });
     await flushPostHog();
-    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
+    return errorResponse(500, 'server_error', 'Something went wrong. Please try again.');
   }
 
-  const isDistrict = districtSlugClean !== '';
-  trackServerEvent(
-    normalizedEmail,
-    isDistrict ? 'district_notify_subscribed' : 'city_notify_subscribed',
-    {
-      city: cityName,
-      locale: emailLocale,
-      ...(isDistrict ? { districtSlug: districtSlugClean, listingType: listingTypeClean } : {}),
-    },
-  );
-  await flushPostHog();
-
-  // City-level waitlist gets the existing "we'll tell you when we launch here"
-  // confirmation. District listings waitlists skip it for now — that copy is for
-  // city launch, and the district-launch dispatch is a deliberate follow-up (A3);
-  // the in-UI success state is the confirmation until then.
-  if (!isDistrict) {
+  // Only the city-launch class gets the "we'll tell you when we launch here"
+  // confirmation: that copy is about a city launch, and no code notifies
+  // listings-interest rows; the in-UI success state is their confirmation.
+  if (!isListingsInterest) {
     try {
       await sendEmail({
         to: normalizedEmail,
@@ -179,12 +235,14 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error('[city-notify] Failed to send confirmation email:', err);
       captureServerException(err, {
-        distinctId: normalizedEmail,
         properties: { source: 'city_notify', step: 'confirmation_email' },
       });
       await flushPostHog();
     }
   }
 
-  return NextResponse.json({ success: true }, { status: 200 });
+  return NextResponse.json(
+    { success: true, ...(isListingsInterest ? removeUrlField(row.id, emailLocale) : {}) },
+    { status: 200 },
+  );
 }

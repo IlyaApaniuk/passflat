@@ -87,6 +87,7 @@ model Building {
   locationScore BuildingLocationScore?
   follows       BuildingFollow[]
   tags          BuildingTag[]
+  telegramSubs  TelegramSubscription[]
 
   @@unique([cityId, slug])
   @@unique([cityId, addressNormalized])
@@ -508,6 +509,7 @@ model Profile {
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
   buildingFollows          BuildingFollow[]
+  telegramChats            TelegramChat[]
 
   @@map("profiles")
 }
@@ -633,4 +635,234 @@ model CityNotifySubscription {
   @@unique([email, cityNormalized, districtSlug, listingType], map: "city_notify_email_city_district_type_key")
   @@index([cityNormalized, districtSlug], map: "city_notify_city_district_idx")
   @@map("city_notify_subscriptions")
+}
+
+// --- Telegram bot ---
+
+// One row per Telegram chat that started the bot. Deliberately account-free:
+// the bot's whole point is that a Telegram user needs no signup to look up an
+// address, so `profileId` stays null unless the chat later links a web account.
+model TelegramChat {
+  id               String    @id @default(uuid()) @db.Uuid
+  chatId           BigInt    @unique @map("chat_id")
+  profileId        String?   @map("profile_id") @db.Uuid
+  locale           String    @default("ru")
+  // Raw `?start=` payload of the first /start, e.g. "thr_med" or "b_<uuid>".
+  // Attribution for the whole point of the bot: which surface sent this person.
+  startPayload     String?   @map("start_payload")
+  lastSeenAt       DateTime  @default(now()) @map("last_seen_at")
+  blockedAt        DateTime? @map("blocked_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  // Set when moderation hid this chat's roommate profile (PRD 3 FR-14): the chat
+  // cannot create another one. Kept while the chat row exists (D55).
+  roommateBannedAt DateTime? @map("roommate_banned_at") @db.Timestamptz(3)
+
+  profile         Profile?               @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  subscriptions   TelegramSubscription[]
+  depositCases    DepositCase[]
+  roommateProfile RoommateProfile?
+
+  @@index([profileId])
+  @@map("telegram_chats")
+}
+
+// A chat watching a building or a district. Mirrors BuildingFollow, but keyed
+// by chat instead of user because the push channel is the chat itself.
+//
+// `targetKey` ("b:<uuid>", "d:<slug>" or "c:<city>") carries the dedupe key instead of the
+// nullable columns it duplicates: Postgres treats NULLs as distinct, so a
+// unique key over `buildingId` would let one chat subscribe to the same
+// district many times and get the same push twice.
+model TelegramSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  targetKey      String    @map("target_key")
+  buildingId     String?   @map("building_id") @db.Uuid
+  districtSlug   String    @default("") @map("district_slug")
+  citySlug       String    @default("warsaw") @map("city_slug")
+  // Display name for a target we hold no row for: a city we do not cover yet
+  // ("c:krakow" → "Kraków"), waitlisted from the bot.
+  label          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastNotifiedAt DateTime? @map("last_notified_at")
+
+  chat     TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  building Building?    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, targetKey], map: "telegram_sub_chat_target_key")
+  @@index([buildingId])
+  @@index([citySlug, districtSlug])
+  @@map("telegram_subscriptions")
+}
+
+// A tenant trying to get a deposit back, walked through by the bot: a short
+// intake, a verdict against the law, a demand letter in Polish, and follow-ups
+// on fixed dates. The outcome a case ends with (returned in full / in part /
+// not at all) is the deposit statistic nobody else in this market has — it
+// accrues here as a by-product of helping, not from a form.
+model DepositCase {
+  id             String    @id @default(uuid()) @db.Uuid
+  chatId         String    @map("chat_id") @db.Uuid
+  // intake → verdict → letter_sent → resolved; "abandoned" when restarted.
+  status         String    @default("intake")
+  // The intake question awaiting an answer while status = "intake".
+  step           String?
+  movedOutAt     DateTime? @map("moved_out_at") @db.Date
+  depositAmount  Int?      @map("deposit_amount")
+  returnedAmount Int?      @map("returned_amount")
+  // wear | damage | bills | silent | other
+  reason         String?
+  // both | one | none — a handover protocol with photos at move-in and move-out.
+  protocol       String?
+  letterAt       DateTime? @map("letter_at")
+  // The next date the bot writes first; "deadline" or "letter" says why.
+  followUpAt     DateTime? @map("follow_up_at")
+  followUpKind   String?   @map("follow_up_kind")
+  // full | partial | none
+  outcome        String?
+  outcomeAt      DateTime? @map("outcome_at")
+  // Asked for a lawyer after the letter failed — demand for the lawyer layer
+  // before any lawyer is signed up.
+  wantsLawyer    Boolean   @default(false) @map("wants_lawyer")
+
+  // What the lease itself says, read from an uploaded PDF or photos. The
+  // contract decides cases the statute leaves open: its own return deadline,
+  // whether repainting is on the tenant, whether cleaning is required.
+  // Telegram file ids of photographed pages, collected until "done" is pressed.
+  contractFiles       String[] @default([]) @map("contract_files")
+  // pending | done | failed | skipped
+  contractStatus      String?  @map("contract_status")
+  // standard | okazjonalny | instytucjonalny | unknown
+  contractType        String?  @map("contract_type")
+  // person | company | unknown
+  landlordKind        String?  @map("landlord_kind")
+  contractReturnValue Int?     @map("contract_return_value")
+  // days | months — null when the contract sets no deadline of its own.
+  contractReturnUnit  String?  @map("contract_return_unit")
+  // tenant_must_renew | tenant_exempt | not_mentioned
+  renovationRule      String?  @map("renovation_rule")
+  // cleaning_required | not_mentioned
+  cleaningRule        String?  @map("cleaning_rule")
+  // The clauses quoted back to the person, so the verdict shows its source.
+  contractQuotes      Json?    @map("contract_quotes")
+  // Names and addresses for the letter. Personal data, held only until the
+  // letter is generated and then cleared.
+  letterParties       Json?    @map("letter_parties")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  chat TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, status])
+  @@index([followUpAt])
+  @@map("deposit_cases")
+}
+
+// --- Roommate matching (PRD 3, spec 06 §Data model) ---
+//
+// Every column of both stages lives in one migration (D49). Personal data:
+// the district choice, budget band, move-in month, languages, gender, "live
+// with", the short text, house rules and the Telegram username. Gender and
+// "live with" are never shown to anyone but the person, never counted and
+// never sent in an event (D51).
+
+// At most one profile per chat.
+model RoommateProfile {
+  id               String    @id @default(uuid()) @db.Uuid
+  chatId           String    @unique @map("chat_id") @db.Uuid
+  // draft | active | expired | hidden
+  status           String    @default("draft")
+  // The intake or edit step awaiting an answer.
+  step             String?
+  // First touch of the intake (direct, tg, fb, ig, threads, web, bot_menu, other).
+  entrySource      String?   @map("entry_source")
+  districtSlugs    String[]  @default([]) @map("district_slugs")
+  anyDistrict      Boolean   @default(false) @map("any_district")
+  // b1 – b5, per person a month, all-in.
+  budgetBand       String?   @map("budget_band")
+  // The first day of the move-in month.
+  moveInMonth      DateTime? @map("move_in_month") @db.Date
+  // pl | en | ru | uk
+  languages        String[]  @default([])
+  // woman | man
+  gender           String?
+  // anyone | women | men
+  prefers          String    @default("anyone")
+  about            String?   @db.VarChar(280)
+  // no | outside | fine
+  smoking          String?
+  // no | have | fine
+  pets             String?
+  adultConfirmedAt DateTime? @map("adult_confirmed_at") @db.Timestamptz(3)
+  tgUsername       String?   @map("tg_username")
+
+  activatedAt       DateTime? @map("activated_at") @db.Timestamptz(3)
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(3)
+  renewalRemindedAt DateTime? @map("renewal_reminded_at") @db.Timestamptz(3)
+  expiredAt         DateTime? @map("expired_at") @db.Timestamptz(3)
+  renewedAt         DateTime? @map("renewed_at") @db.Timestamptz(3)
+  notifyOnOpenAt    DateTime? @map("notify_on_open_at") @db.Timestamptz(3)
+  notifiedOpenAt    DateTime? @map("notified_open_at") @db.Timestamptz(3)
+  pushOff           Boolean   @default(false) @map("push_off")
+  lastPushAt        DateTime? @map("last_push_at") @db.Timestamptz(3)
+  hiddenAt          DateTime? @map("hidden_at") @db.Timestamptz(3)
+  hiddenReason      String?   @map("hidden_reason")
+  statementSentAt   DateTime? @map("statement_sent_at") @db.Timestamptz(3)
+  appealedAt        DateTime? @map("appealed_at") @db.Timestamptz(3)
+  outcomeAskedAt    DateTime? @map("outcome_asked_at") @db.Timestamptz(3)
+  outcome           String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Drives the draft lifetime.
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chat            TelegramChat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  reactionsGiven  RoommateReaction[] @relation("RoommateReactionFrom")
+  reactionsGot    RoommateReaction[] @relation("RoommateReactionTo")
+  reportsMade     RoommateReport[]   @relation("RoommateReportReporter")
+  reportsReceived RoommateReport[]   @relation("RoommateReportTarget")
+
+  @@index([status, expiresAt])
+  @@map("roommate_profiles")
+}
+
+// One reaction of a profile to another, deleted with either profile.
+model RoommateReaction {
+  id            String    @id @default(uuid()) @db.Uuid
+  fromProfileId String    @map("from_profile_id") @db.Uuid
+  toProfileId   String    @map("to_profile_id") @db.Uuid
+  // interest | skip
+  kind          String
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  matchedAt     DateTime? @map("matched_at") @db.Timestamptz(3)
+  // The reveal message to the `from` person was claimed (spec 07 FR-26).
+  revealedAt    DateTime? @map("revealed_at") @db.Timestamptz(3)
+
+  fromProfile RoommateProfile @relation("RoommateReactionFrom", fields: [fromProfileId], references: [id], onDelete: Cascade)
+  toProfile   RoommateProfile @relation("RoommateReactionTo", fields: [toProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([fromProfileId, toProfileId])
+  @@index([toProfileId])
+  @@map("roommate_reactions")
+}
+
+// A report on a profile. A deleted profile nulls its references and the report
+// stays until it is 6 months old (D55).
+model RoommateReport {
+  id                 String    @id @default(uuid()) @db.Uuid
+  reporterProfileId  String?   @map("reporter_profile_id") @db.Uuid
+  targetProfileId    String?   @map("target_profile_id") @db.Uuid
+  reason             String
+  // none | hidden | lifted
+  decision           String    @default("none")
+  automated          Boolean   @default(true)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  decidedAt          DateTime? @map("decided_at") @db.Timestamptz(3)
+  // The hide notice to this reporter was claimed (spec 07 §Automatic hiding).
+  reporterNotifiedAt DateTime? @map("reporter_notified_at") @db.Timestamptz(3)
+
+  reporterProfile RoommateProfile? @relation("RoommateReportReporter", fields: [reporterProfileId], references: [id], onDelete: SetNull)
+  targetProfile   RoommateProfile? @relation("RoommateReportTarget", fields: [targetProfileId], references: [id], onDelete: SetNull)
+
+  @@unique([reporterProfileId, targetProfileId])
+  @@map("roommate_reports")
 }

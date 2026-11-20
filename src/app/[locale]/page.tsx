@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getAlternates } from '@/lib/seo';
 import { Hero } from '@/components/landing/hero';
 import { CheckAddress } from '@/components/landing/check-address';
@@ -15,14 +15,28 @@ import { CityNotify } from '@/components/landing/city-notify';
 import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { prisma } from '@/lib/prisma';
-import { median, perAreaValues } from '@/lib/cost-stats';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
+import { depositClaim } from '@/lib/deposit-claim';
+import {
+  loadFeaturedBuilding,
+  loadHomeCityFigure,
+  loadHomeDistrictFigures,
+} from '@/lib/home-figures';
 
 const DEFAULT_CITY = 'warsaw';
 
+// Only the four locales of the layout's `generateStaticParams` exist at `/[locale]`. A dotted
+// path such as `/nonexistent.ext` skips the middleware and arrives here as a "locale"; it now gets
+// the router's 404 instead of an on-demand render, which read next-intl's request header in a
+// static route and never answered (FR-30).
+export const dynamicParams = false;
+
 async function getStats() {
-  const [listings, costReports, districts, buildings, users, buildingsWithCosts, perM2Reports] =
+  const [listings, costReports, districts, buildings, users, buildingsWithCosts, cityFigure] =
     await Promise.all([
       prisma.listing.count({ where: { status: 'active' } }),
       prisma.costReport.count(),
@@ -34,64 +48,29 @@ async function getStats() {
       prisma.building.count({
         where: { city: { slug: DEFAULT_CITY }, costReports: { some: { isVisible: true } } },
       }),
-      prisma.costReport.findMany({
-        where: {
-          building: { city: { slug: DEFAULT_CITY } },
-          isVisible: true,
-          totalMonthlyAvg: { not: null },
-        },
-        select: { totalMonthlyAvg: true, rent: true, areaM2: true },
-        take: 5000,
-      }),
+      // The city's single number (D23): the hero's per m² and expenses tiles come
+      // from its group, labelled with that group and N.
+      loadHomeCityFigure(DEFAULT_CITY),
     ]);
 
   // Deposit data lives on real reports regardless of whether they carry a
   // monthly total, so query it separately (no totalMonthlyAvg filter).
   const depositReports = await prisma.costReport.findMany({
     where: { building: { city: { slug: DEFAULT_CITY } }, isVisible: true },
-    select: { depositAmount: true, depositReturned: true },
+    select: {
+      source: true,
+      depositAmount: true,
+      depositReturned: true,
+      depositReturnedAmount: true,
+      isCurrentTenant: true,
+    },
     take: 5000,
   });
 
-  const round10 = (n: number) => Math.round(n / 10) * 10;
-
-  // Median all-in cost per m² across Warsaw — same method as the /costs city
-  // baseline (perAreaValues + median), so the hero figure matches the tool.
-  const perM2 = median(
-    perAreaValues(
-      perM2Reports.map((r) => ({
-        value: r.totalMonthlyAvg == null ? null : Number(r.totalMonthlyAvg),
-        areaM2: r.areaM2 == null ? null : Number(r.areaM2),
-      })),
-    ),
-  );
-  const pricePerM2 = perM2 == null ? null : round10(perM2);
-
-  // Median monthly "Расходы" = total − rent: the komunalka/utilities paid on top
-  // of rent — the hidden cost listings never show. Same definition as the
-  // Аренда/Расходы split on /costs.
-  const expenses = median(
-    perM2Reports.map((r) =>
-      r.totalMonthlyAvg != null && r.rent != null
-        ? Number(r.totalMonthlyAvg) - Number(r.rent)
-        : null,
-    ),
-  );
-  const expensesMonthly = expenses == null ? null : round10(expenses);
-
-  // Deposit: median amount (rounded to hundreds — it's a large one-off sum) and
-  // the share of past tenants who got it back. Real reports only (scraped
-  // listings carry no deposit), so it's honest tenant data.
-  const depositAmounts = depositReports
-    .map((r) => (r.depositAmount == null ? null : Number(r.depositAmount)))
-    .filter((v): v is number => v != null && v > 0);
-  const depositMed = median(depositAmounts);
-  const depositMedian = depositMed == null ? null : Math.round(depositMed / 100) * 100;
-  const returnKnown = depositReports.filter((r) => r.depositReturned != null);
-  const returnTrue = returnKnown.filter((r) => r.depositReturned === true);
-  const depositReturnedPct = returnKnown.length
-    ? Math.round((100 * returnTrue.length) / returnKnown.length)
-    : null;
+  // Deposit: the tenant group's median amount and "X of N who answered got it
+  // back, fully or partly" (spec 03 §Marketing copy), or nothing below
+  // MIN_DEPOSIT_ANSWERS answers.
+  const deposit = depositClaim(depositReports);
 
   return {
     listings,
@@ -100,106 +79,43 @@ async function getStats() {
     buildings,
     users,
     buildingsWithCosts,
-    pricePerM2,
-    expensesMonthly,
-    depositMedian,
-    depositReturnedPct,
+    cityFigure,
+    deposit,
   };
 }
 
 // Rotate the featured cost building once per day instead of always showing the
-// single top building. We take the top-N buildings by report count (best data)
-// and deterministically pick one by the day (days since epoch), so the address
-// is stable within a day and cycles between days. The pick lives inside the
-// cached function (not in render) — within-day stability comes from the cache's
-// revalidate, and the rotation flips on the first revalidate after midnight.
-const FEATURED_BUILDING_POOL_SIZE = 20;
-
-async function getTopBuildingCostData() {
-  const dayBucket = Math.floor(Date.now() / 86_400_000);
-  const buildings = await prisma.building.findMany({
-    orderBy: { costReports: { _count: 'desc' } },
-    where: { costReports: { some: { isVisible: true } } },
-    take: FEATURED_BUILDING_POOL_SIZE,
-    include: {
-      district: true,
-      costReports: {
-        where: { isVisible: true },
-        select: {
-          rent: true,
-          adminFee: true,
-          electricityAvg: true,
-          internet: true,
-          gas: true,
-          heating: true,
-        },
-      },
-    },
-  });
-
-  const pool = buildings.filter((b) => b.costReports.length > 0);
-  if (pool.length === 0) return undefined;
-
-  const building = pool[dayBucket % pool.length];
-  const reports = building.costReports;
-  const avg = (field: keyof (typeof reports)[0]) => {
-    const values = reports.map((r) => Number(r[field] ?? 0)).filter((v) => v > 0);
-    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
-  };
-
-  const avgRent = avg('rent');
-  const avgAdminFee = avg('adminFee');
-  const avgElectricity = avg('electricityAvg');
-  const avgInternet = avg('internet');
-  const avgGas = avg('gas');
-  const avgHeating = avg('heating');
-  const avgGasHeating = avgGas + avgHeating;
-  const totalMonthly = avgRent + avgAdminFee + avgElectricity + avgInternet + avgGasHeating;
-
-  return {
-    address: building.addressFull,
-    district: building.district?.nameKey ?? '',
-    reportsCount: reports.length,
-    avgRent,
-    avgAdminFee,
-    avgElectricity,
-    avgInternet,
-    avgGasHeating,
-    totalMonthly,
-  };
+// single top building: the most-reported buildings, one picked by the day (days
+// since epoch), so the address is stable within a day and cycles between days.
+// The pick lives inside the cached function (not in render) — within-day
+// stability comes from the cache's revalidate, and the rotation flips on the
+// first revalidate after midnight.
+function getTopBuildingCostData() {
+  return loadFeaturedBuilding(Math.floor(Date.now() / 86_400_000));
 }
 
 /**
- * Per-district medians for the district cards. Same roll-up the district pages
- * use, so a card and the page it links to can never disagree.
+ * Per-district single numbers for the district cards: the same
+ * `loadDistrictFigures` the district pages read, so a card and the page it
+ * links to can never disagree.
  */
-async function getDistrictMedians() {
-  const city = await prisma.city.findUnique({
-    where: { slug: DEFAULT_CITY },
-    select: { id: true, districts: { select: { slug: true, nameKey: true } } },
-  });
-  if (!city) return [];
-
-  const buildings = await getBuildingsData(city.id, null, null);
-  return rollUpDistricts(buildings, city.districts).map((d) => ({
-    slug: d.slug,
-    medianTotal: d.medianTotal,
-    reportCount: d.reportCount,
-  }));
+function getDistrictMedians() {
+  return loadHomeDistrictFigures(DEFAULT_CITY);
 }
 
 // Cache the request-independent landing data so locale switches and repeat
 // visits don't re-run these queries on every render. These functions read
 // only from the database (no cookies/headers), so they're safe to cache.
-const getStatsCached = unstable_cache(getStats, ['home-stats'], { revalidate: 300 });
-const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians'], {
+// Keys are renamed whenever the result shape changes (v3 / v2: D23 figures, T052).
+const getStatsCached = unstable_cache(getStats, ['home-stats-v3'], { revalidate: 300 });
+const getDistrictMediansCached = unstable_cache(getDistrictMedians, ['home-district-medians-v2'], {
   revalidate: 300,
   tags: ['costs'],
 });
 const getTopBuildingCostDataCached = unstable_cache(
   getTopBuildingCostData,
-  ['home-top-building-cost'],
-  { revalidate: 600 },
+  ['home-top-building-cost-v2'],
+  { revalidate: 600, tags: ['costs'] },
 );
 
 // Title, description and OG come from the locale layout; only the canonical
@@ -244,15 +160,24 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [statsResult, costResult, districtResult] = await Promise.allSettled([
-    getStatsCached(),
-    getTopBuildingCostDataCached(),
-    getDistrictMediansCached(),
-  ]);
+  const [statsResult, costResult, districtResult, flatmateResult, splitResult] =
+    await Promise.allSettled([
+      getStatsCached(),
+      getTopBuildingCostDataCached(),
+      getDistrictMediansCached(),
+      loadFlatmateBlockCounts(),
+      loadWarsawPerPersonSplit(),
+    ]);
 
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
   const districtMedians = districtResult.status === 'fulfilled' ? districtResult.value : [];
+  // A rejection → no count line; the thesis section still renders with its links.
+  const flatmateCounts = flatmateResult.status === 'fulfilled' ? flatmateResult.value : undefined;
+  // Spec 08 §Per-person line: a rejection or null → no per-person line. The split's own area
+  // is a city `nameKey`, resolved here on the server.
+  const split = splitResult.status === 'fulfilled' ? splitResult.value : null;
+  const splitArea = split ? perPersonSplitArea(split, await getTranslations()) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -262,6 +187,15 @@ async function HomeContent() {
             longer showcases them; their pages remain reachable by direct link. */}
         <main className="flex-1">
           <Hero stats={heroStats} />
+          {/* The thesis right under the hero (PRD 4 FR-9, D48). */}
+          <div className="container mx-auto max-w-3xl px-4 pt-12 sm:px-6 sm:pt-16">
+            <FlatmateCallout
+              surface="home"
+              counts={flatmateCounts}
+              split={split}
+              splitArea={splitArea}
+            />
+          </div>
           <CheckAddress citySlug={DEFAULT_CITY} />
           <Districts medians={districtMedians} />
           <BentoGrid />

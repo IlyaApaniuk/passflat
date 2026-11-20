@@ -47,6 +47,19 @@ function priceField(type: ListingType): string {
   }
 }
 
+/** Active listings of one type in one city, before any URL filter. A new object per call. */
+function cityListingsWhere(cityId: string, type: ListingType): Record<string, unknown> {
+  return { building: { cityId }, status: 'active', type };
+}
+
+/**
+ * Active listings of one type in the city without the URL filters (spec 02 §Empty states): the
+ * same `where` as `queryListings` minus the filter params, one `count` query.
+ */
+export function countCityListings({ cityId, type }: { cityId: string; type: ListingType }) {
+  return prisma.listing.count({ where: cityListingsWhere(cityId, type) });
+}
+
 export async function queryListings({
   cityId,
   type,
@@ -61,11 +74,7 @@ export async function queryListings({
 }: QueryParams) {
   const pField = priceField(type);
 
-  const where: Record<string, unknown> = {
-    building: { cityId },
-    status: 'active',
-    type,
-  };
+  const where = cityListingsWhere(cityId, type);
 
   if (district) {
     (where.building as Record<string, unknown>).district = { slug: district };

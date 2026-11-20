@@ -5,12 +5,13 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
-import { median, TRUST_THRESHOLDS } from '@/lib/cost-stats';
+import { calculatorBaseline } from '@/lib/calculator-baseline';
+import { loadCityFigure, loadDistrictFigures } from '@/lib/cost-figures-query';
 import { pickMessages } from '@/i18n/messages';
-import { CalculatorClient, type DistrictCalcData } from './client';
+import { CalculatorClient } from './client';
 
 // ISR: pure compute over open cost data — no auth/cookies, so it is cacheable for crawlers.
 export const revalidate = 3600;
@@ -61,28 +62,19 @@ export default async function CalculatorPage({ params, searchParams }: PageProps
   const t = await getTranslations();
   const cityName = t(cityRec.nameKey);
 
-  // Real rent & czynsz medians per district (and a city-wide rent/m² fallback).
-  const buildings = await getBuildingsData(cityRec.id, null, null);
-  const rollups = rollUpDistricts(buildings, cityRec.districts);
-  const bySlug = new Map(rollups.map((r) => [r.slug, r]));
-  const cityRentPerM2 = median(rollups.map((r) => r.medianRentPerM2).filter((v) => v > 0)) ?? 0;
-
-  // Every district is offered (norms cover the ones without data); reliable ones
-  // carry their real rent/czynsz medians so the estimate is anchored to data.
-  const districts: DistrictCalcData[] = cityRec.districts
-    .map((d) => {
-      const r = bySlug.get(d.slug);
-      const reportCount = r?.reportCount ?? 0;
-      return {
-        slug: d.slug,
-        name: d.nameKey,
-        rentPerM2: r?.medianRentPerM2 ?? 0,
-        czynszPerM2: r?.medianAdminFeePerM2 ?? 0,
-        reportCount,
-        reliable: reportCount >= TRUST_THRESHOLDS.reliableMin,
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Rent and czynsz per m² per district, and the city's rent per m² fallback, each
+  // from the area's single-number group (D23) with its label and N. Every district
+  // is offered (norms cover the ones without data).
+  const [districtFigures, cityFigure] = await Promise.all([
+    loadDistrictFigures(cityRec.id),
+    loadCityFigure(cityRec.id),
+  ]);
+  const { districts, cityRentPerM2, cityRentLabel } = calculatorBaseline({
+    districts: cityRec.districts,
+    districtFigures,
+    cityFigure,
+    t,
+  });
 
   const initialDistrict =
     initialDistrictRaw && districts.some((d) => d.slug === initialDistrictRaw)
@@ -111,7 +103,11 @@ export default async function CalculatorPage({ params, searchParams }: PageProps
               cityName={cityName}
               districts={districts}
               cityRentPerM2={cityRentPerM2}
+              cityRentLabel={cityRentLabel}
               initialDistrict={initialDistrict}
+              // FR-12: no counts on the calculator (spec 08 §Flatmate callout). A server component
+              // (it reads `listings` itself), so it needs nothing from the scoped provider.
+              flatmateCallout={<FlatmateCallout surface="calculator" />}
             />
           </NextIntlClientProvider>
         </div>

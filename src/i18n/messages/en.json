@@ -6,7 +6,7 @@
       "heading": "We couldn't find that page",
       "description": "The page you're looking for may have been moved, removed, or never existed. Let's get you back on track.",
       "home": "Back to home",
-      "browse": "Browse listings"
+      "browse": "Check an address"
     },
     "generic": {
       "metaTitle": "Something went wrong",
@@ -23,20 +23,18 @@
     "learnMore": "Learn more"
   },
   "meta": {
-    "homeTitle": "Passflat — Warsaw rentals: costs, listings, documents",
-    "homeDescription": "Real rental costs in Warsaw from tenants themselves, listings (lease takeover, roommate, sublet) and free document templates. Know the real price before you sign.",
-    "aboutDescription": "Passflat — a Warsaw rental service: real costs from tenants (rent, utilities, deposits), lease-takeover and sublet listings, and free document templates. Everything visible before you sign.",
-    "howItWorksDescription": "How Passflat works: see real costs by building and district in Warsaw, take over a lease, find a roommate or sublet, and download free document templates. Step by step, transparently.",
+    "homeTitle": "Passflat — who to rent with in Warsaw, and what it costs",
+    "homeDescription": "Find a flatmate through our Telegram bot and see what tenants reported for rent in Warsaw: rent and utilities by building and district, calculator, guides.",
+    "aboutDescription": "About Passflat: we help people in Warsaw find someone to rent with in our Telegram bot and see what renting costs, from the costs tenants reported by building and district.",
+    "howItWorksDescription": "How Passflat works: the costs tenants reported by building and district in Warsaw, how to add yours anonymously, and how lease takeovers and sublets work. Step by step.",
     "contactDescription": "Get in touch with the Passflat team — a question, an issue, a partnership idea, or feedback about our transparent rental-cost service.",
     "helpDescription": "Answers to common Passflat questions: lease takeovers, cost reports, listings, and accounts. Browse the FAQ section.",
-    "blogDescription": "Guides and tips on renting in Warsaw: lease takeovers, hidden costs, utilities, and advice for foreigners — everything about the real rental market.",
+    "blogDescription": "Guides to renting in Warsaw: hidden costs and utility top-ups, getting the deposit back, lease contracts, meters and internet, and advice for foreigners.",
     "termsDescription": "Passflat Terms of Service: rules for listings, cost reports, user rights, and how the platform works.",
-    "privacyDescription": "Passflat Privacy Policy: how we collect, use, and protect your personal data under GDPR. Processors, your rights, cookies, and contact.",
-    "pricingDescription": "Passflat pricing — free listings, cost reports, and favorites. Optional promoted listings for more visibility starting at 39 PLN."
+    "privacyDescription": "Passflat Privacy Policy: how we collect, use, and protect your personal data under GDPR. Processors, your rights, cookies, and contact."
   },
   "common": {
     "appName": "Passflat",
-    "costsShort": "Costs",
     "login": "Log in",
     "register": "Sign up",
     "logout": "Log out",
@@ -73,7 +71,9 @@
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong",
     "checkAddress": "Check an address",
-    "buildingReviews": "Building reviews"
+    "buildingReviews": "Building reviews",
+    "findFlatmate": "Find a flatmate",
+    "menu": "Menu"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -85,21 +85,18 @@
   "landing": {
     "hero": {
       "badge": "Now live in Warsaw",
-      "title": "Don't overpay for rent",
-      "titleHighlight": "in Warsaw.",
-      "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See what tenants actually pay — before the deal, and close it with ready-made document templates.",
+      "title": "Who to rent with in Warsaw,",
+      "titleHighlight": "and what it costs per person",
+      "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal.",
       "browseCta": "Browse Listings",
       "addCta": "Post a Listing",
-      "trustLeaseTakeovers": "Lease Takeovers",
       "trustLeaseTakeoversDesc": "Find tenants to take over your lease and keep your deposit",
       "trustRealCost": "What listings hide",
-      "trustRealCostDesc": "Crowdsourced utility costs so you know what you will actually pay",
-      "trustRoommate": "Roommate Search",
-      "trustSublet": "Temporary Sublets",
-      "trustVerified": "Verified Listings",
-      "trustVerifiedDesc": "Trusted community with transparent pricing and reviews",
-      "costsCta": "See real costs",
-      "trustLine": "The data is open — free, no account",
+      "trustRealCostDesc": "Utility costs reported by tenants, so you can plan before you sign",
+      "trustVerified": "Community listings",
+      "trustVerifiedDesc": "Listings and building reviews from the community, with prices shown openly",
+      "costsCta": "See reported costs",
+      "trustLine": "Figures are open — free, no account; the per-utility breakdown after you add yours",
       "calculatorCta": "Calculator",
       "templatesCta": "Document templates",
       "statsListings": "Listings",
@@ -110,45 +107,22 @@
       "statsPriceUnit": "zł/m²",
       "statsExpenses": "costs on top of rent",
       "statsExpensesUnit": "zł/mo",
-      "statsDeposit": "deposit · {pct}% returned",
+      "statsDeposit": "deposit · {gotBack} of {answered} who answered got it back, fully or partly",
       "statsAvgRating": "Avg Rating",
       "checkAddressCta": "Check an address"
     },
     "howItWorks": {
       "title": "How Passflat Works",
-      "subtitle": "Three ways to find your next home in Warsaw",
-      "tabReplacement": "Lease Takeover",
-      "tabRoommate": "Roommate Search",
-      "tabSublet": "Temporary Sublet",
-      "replacement": {
-        "step1Title": "Browse Listings",
-        "step1Desc": "Search apartments by location, price, and amenities. All costs upfront.",
-        "step2Title": "Connect",
-        "step2Desc": "Message the current tenant directly. Ask questions, schedule viewings.",
-        "step3Title": "Take Over Lease",
-        "step3Desc": "Agree on terms and sign a lease assignment with the landlord.",
-        "step4Title": "Move In",
-        "step4Desc": "Complete the handover. No deposit lost, no agency fees."
-      },
+      "subtitle": "How finding someone to rent with works",
       "roommate": {
-        "step1Title": "Find a Room",
-        "step1Desc": "Browse available rooms — private or shared. See price per person and who already lives there.",
-        "step2Title": "Meet Roommates",
-        "step2Desc": "Message the current tenants. Get to know their lifestyle and habits.",
-        "step3Title": "Agree on Terms",
-        "step3Desc": "Settle on rent split, deposit, and house rules.",
-        "step4Title": "Move In",
-        "step4Desc": "Join the household and start your new chapter."
-      },
-      "sublet": {
-        "step1Title": "Browse Sublets",
-        "step1Desc": "Find furnished apartments available for a fixed period. See total price and what's included.",
-        "step2Title": "Contact Tenant",
-        "step2Desc": "Reach out to the tenant who's subletting. Clarify dates, rules, and utilities.",
-        "step3Title": "Confirm Dates",
-        "step3Desc": "Agree on the exact period, price, and move-in details.",
-        "step4Title": "Move In Temporarily",
-        "step4Desc": "Enjoy a ready-to-live apartment — no long-term commitment."
+        "step1Title": "Create a profile in the bot",
+        "step1Desc": "District, budget per person, move-in month, languages. In Telegram, in English, Russian or Ukrainian.",
+        "step2Title": "See who else is looking",
+        "step2Desc": "Honest counts per district and what a flat costs per person, from tenant reports.",
+        "step3Title": "Mark who you'd rent with",
+        "step3Desc": "Compatible people one at a time. Interested or skip; nobody sees your profile on the web.",
+        "step4Title": "Contacts open on mutual interest",
+        "step4Desc": "Both Telegram usernames appear only when the interest is mutual. Never pay a reservation before a viewing and a signed contract."
       }
     },
     "bentoGrid": {
@@ -157,7 +131,7 @@
       "titleAfter": "?",
       "subtitle": "Built for renters tired of hidden costs and broken promises.",
       "realCostDataTitle": "Costs, no sugarcoating",
-      "realCostDataDesc": "See what tenants actually pay — rent, utilities, admin fees. Crowdsourced data from tenants themselves across Warsaw.",
+      "realCostDataDesc": "See the costs tenants reported — rent, utilities, admin fees — building by building across Warsaw.",
       "saveDepositTitle": "Save Your Deposit",
       "saveDepositDesc": "Find someone to take over your lease instead of losing 1–3 months deposit.",
       "exploreCta": "Explore cost data",
@@ -182,7 +156,7 @@
       "badge": "Cost Transparency",
       "title": "See the",
       "titleHighlight": "hidden costs before you sign",
-      "subtitle": "Crowdsourced cost data from tenants themselves. See what people actually pay for utilities, admin fees, and hidden costs.",
+      "subtitle": "Cost data from tenants themselves. See the costs people reported for utilities, admin fees and hidden charges.",
       "viewReports": "Explore Cost Data",
       "submitCosts": "Contribute Your Data",
       "addMoreCosts": "Add new costs",
@@ -197,8 +171,8 @@
       "electricity": "Electricity",
       "reports": "reports",
       "accuracyScore": "Accuracy score",
-      "communityVerified": "Community-reported data",
-      "anonymousVerified": "Anonymous tenant-reported data"
+      "communityVerified": "Costs reported by the community",
+      "anonymousVerified": "Reported costs, shown anonymously"
     },
     "districts": {
       "title": "Explore",
@@ -244,27 +218,29 @@
       "q4": "Do I need the landlord's approval?",
       "a4": "Yes, the landlord must consent to the transfer. Most landlords agree because they get a vetted replacement tenant and avoid vacancy — it's a win for everyone.",
       "q5": "How does cost transparency work?",
-      "a5": "Tenants anonymously share their monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see what you'll actually pay before signing a lease.",
+      "a5": "Tenants anonymously share their monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see the costs tenants reported before signing a lease.",
       "q6": "Is my data safe?",
-      "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR."
+      "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR.",
+      "q7": "How do I find someone to rent with?",
+      "a7": "Open the Passflat bot in Telegram and create a short profile: district, budget per person, move-in month. You see honest counts of who else is looking and what a flat costs per person; contacts appear only when the interest is mutual."
     },
     "forWhom": {
       "title": "Passflat is for",
       "titleHighlight": "everyone",
-      "findHome": {
-        "title": "Find a home",
-        "description": "Browse lease takeovers and sublets with a full cost breakdown. No hidden fees, no surprises — honest listings from tenants.",
-        "cta": "Browse Listings"
+      "rentTogether": {
+        "title": "Renting a whole flat with someone",
+        "description": "Create a short profile in the Passflat Telegram bot: district, budget per person, move-in month. Contacts appear only when the interest is mutual. English, Russian and Ukrainian.",
+        "cta": "Find someone to rent with"
       },
-      "findRoommate": {
-        "title": "Find a roommate",
-        "description": "Search for compatible flatmates or list your spare room. Price per person, lifestyle preferences, and who already lives there.",
-        "cta": "Find Roommates"
+      "findRoom": {
+        "title": "Looking for a room",
+        "description": "What a room costs in Warsaw from tenant reports and asking prices, a checklist before you pay, and where rooms are listed.",
+        "cta": "See room costs"
       },
-      "sublet": {
-        "title": "Temporary sublet",
-        "description": "Going on vacation or a business trip? Sublet your place for a fixed period. Set exact dates, total price, and find a temporary tenant.",
-        "cta": "Browse Sublets"
+      "checkFlat": {
+        "title": "Checking a flat you found",
+        "description": "Known costs for the building, the location and the nuisances, in one answer.",
+        "cta": "Check an address"
       }
     },
     "aboutTeam": {
@@ -272,14 +248,13 @@
       "link": "Learn more about us"
     },
     "cityNotify": {
-      "badge": "Expanding soon",
-      "title": "Live in another city?",
-      "subtitle": "We're starting in Warsaw and expanding to other cities. Tell us where you'd like to see Passflat next — we'll notify you when we launch.",
-      "currentCity": "Currently live in Warsaw, Poland",
+      "badge": "Warsaw only for now.",
+      "title": "Live outside Warsaw?",
+      "subtitle": "We only work here for now. Tell us your city — that is how we see where people are waiting for us. When we open your city, we'll send you an e-mail.",
       "emailPlaceholder": "Your email",
       "cityPlaceholder": "Which city?",
       "submit": "Notify Me",
-      "success": "Thanks! We'll keep you posted.",
+      "success": "Thanks! We'll send you an e-mail when we open your city.",
       "error": "Something went wrong. Please try again.",
       "consent": "I agree to the processing of my personal data",
       "consentRequired": "You must agree to the processing of your personal data.",
@@ -288,20 +263,18 @@
     "cta": {
       "title": "Ready to find your",
       "titleHighlight": "next home?",
-      "subtitle": "Lease takeovers, roommate search, or a sublet — find the right option with transparent pricing.",
+      "subtitle": "Someone to rent with, a room, or a flat you already found — start with the figures.",
       "browseCta": "Browse Listings",
       "listCta": "Post a Listing",
-      "freeNote": "Posting listings is free"
+      "freeNote": "Free, no account."
     },
     "footer": {
-      "tagline": "Renting in Warsaw without surprises: the full truth on costs from tenants, listings, and free document templates.",
-      "expanding": "Starting in Warsaw, expanding across Europe.",
+      "tagline": "Find someone to rent with in Warsaw and see what it costs per person — figures reported by tenants, with their counts.",
+      "expanding": "Warsaw only for now.",
       "product": "Product",
-      "browseListings": "Lease Takeovers",
       "roommateSearch": "Roommate Search",
-      "temporarySublets": "Temporary Sublets",
       "costReports": "Cost Reports",
-      "addListing": "Post a Listing",
+      "costsByDistrict": "Costs by district",
       "pricing": "Pricing",
       "resources": "Document Templates",
       "company": "Company",
@@ -327,12 +300,12 @@
       "badge": "Free, no sign-up",
       "title": "Check the address",
       "titleHighlight": "before you sign the lease.",
-      "subtitle": "Enter any Warsaw address — see what's nearby, how convenient the location is, and what tenants actually pay in that building.",
+      "subtitle": "Enter any Warsaw address — see what's nearby, how convenient the location is, and the costs tenants reported in that building.",
       "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
       "cta": "Check",
       "pointTransit": "Transit and metro",
       "pointAmenities": "Shops, pharmacies, parks",
-      "pointCosts": "What tenants really pay",
+      "pointCosts": "Costs tenants reported",
       "free": "Free · no account · 15 seconds"
     },
     "tools": {
@@ -343,7 +316,7 @@
       "calculatorDescription": "Estimate the full cost of renting in a district: rent, utilities and deposit — before you sign.",
       "calculatorCta": "Calculate",
       "templatesTitle": "Document templates",
-      "templatesDescription": "Lease agreement, handover protocol and termination notice — ready-made templates in Polish and English.",
+      "templatesDescription": "Lease assignment (cesja), handover protocol, sublease agreement and flatmate agreement — Polish originals with English, Russian and Ukrainian versions.",
       "templatesCta": "Open templates"
     }
   },
@@ -379,10 +352,50 @@
     },
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
-    "titleRoommate": "Roommate Search",
-    "roommateMetaDescription": "Flatmate listings in {city} — rooms in shared flats, no agents. Before you move in, check what the building really costs: rent, utilities and deposit.",
-    "roommateCostsBridge": "Before you move in — check what the building really costs: rent, utilities, deposit.",
-    "roommateCostsBridgeCta": "Check an address",
+    "titleRoommate": "Find a flatmate in Warsaw — rent per person",
+    "roommateMetaDescription": "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest, room costs. Free, no account.",
+    "roommateH1": "Find a flatmate in Warsaw",
+    "roommateCostsBridge": "Found a place?",
+    "roommateCostsBridgeCta": "Check the address and known costs",
+    "roommateRoles": {
+      "find": "I'm looking for a room",
+      "offer": "I have a free room",
+      "findChosen": "Looking for a room",
+      "change": "change",
+      "findFlatmate": "Looking for someone to rent with"
+    },
+    "findFlatmate": {
+      "title": "Looking for someone to rent with?",
+      "count": "{count, plural, one {# person in Warsaw already has a profile.} other {# people in Warsaw already have a profile.}}",
+      "first": "Be among the first.",
+      "topLabel": "Districts named most often:",
+      "topItem": "{name}: {count, plural, one {# profile} other {# profiles}}",
+      "how": "Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. Contacts appear only when the interest is mutual.",
+      "languages": "The bot speaks English, Russian and Ukrainian.",
+      "notConnected": "The Telegram bot is not connected yet.",
+      "button": "Open the bot in Telegram"
+    },
+    "flatmateCallout": {
+      "homeTitle": "Passflat helps people in Warsaw find someone to rent with and see what it costs per person",
+      "title": "Looking for someone to rent with in Warsaw?",
+      "roommateLink": "See the figures per person and the profiles",
+      "perPerson": "For two people about {value} each (half of the median flat, {count} tenant reports, {area})."
+    },
+    "roomMoney": {
+      "title": "Found a room? What it will cost you per person, and is it safe to pay the deposit?",
+      "figuresLead": "A room in Warsaw, per month:",
+      "oneObservation": "One observation in Warsaw so far",
+      "checklistTitle": "Before you pay:",
+      "checklistSee": "See the room in person before you pay anything.",
+      "checklistReservation": "Never pay a “reservation” before a viewing and a signed contract.",
+      "checklistIncludes": "Ask what the price includes: czynsz and media (utilities).",
+      "checklistProtocol": "At move-in, ask for a handover protocol (protokół zdawczo-odbiorczy).",
+      "checklistAddress": "Check the address in Passflat.",
+      "linksTitle": "Rooms on other sites:",
+      "linkOlx": "OLX: rooms in Warsaw",
+      "linkOtodom": "Otodom: rooms in Warsaw",
+      "linkFacebook": "Facebook: Warsaw room groups"
+    },
     "titleSublet": "Temporary Sublets",
     "listingsInCity": "<b>{count}</b> {count, plural, one {listing} other {listings}}",
     "filters": {
@@ -472,7 +485,7 @@
       "featuresAmenities": "Features & Amenities",
       "thingsToKnow": "Good to know",
       "buildingInfo": "Building Information",
-      "buildingCostHint": "Want to see the actual utility costs for this building reported by tenants?",
+      "buildingCostHint": "Want to see the utility costs tenants reported for this building?",
       "viewBuildingCosts": "View Building Cost Reports",
       "monthlyCosts": "Monthly Costs",
       "imInterested": "Write to Tenant",
@@ -713,19 +726,26 @@
     "registrationPossible": "Registration possible",
     "empty": "No listings found",
     "emptyDesc": "Try adjusting your filters to see more results",
+    "noMatch": {
+      "title": "No offers match your filters",
+      "clearFilters": "Clear filters"
+    },
     "demandCapture": {
       "title": "No listings yet",
       "titleWithDistrict": "No listings in {district} yet",
-      "subtitle": "Leave your email — we'll tell you the moment they appear.",
-      "subtitleLoggedIn": "We'll email you the moment listings appear.",
-      "notifyMeButton": "Notify me",
+      "subtitle": "Leave your email and we'll save your interest. There are no automatic notifications about new offers yet.",
+      "subtitleLoggedIn": "We'll save your interest with your account email. There are no automatic notifications about new offers yet.",
+      "saveInterestButton": "Save interest",
+      "interestSaved": "Your interest is saved. We don't send automatic notifications about new offers yet.",
+      "removeEmailLink": "Remove my email",
       "postOwnTitle": "Have a place to list here?",
       "postOwnButton": "Post a listing",
       "searchCardTitle": "Looking for a place?",
+      "searchCardTitleRoommate": "Looking for a room? Save interest in listings",
       "supplyCardTitle": "Renting out or passing it on?",
       "supplyCardBody": "Post it for free — lease takeover, flatmate, or sublet.",
       "consentNote": "By tapping you agree to data processing — <privacyLink>privacy policy</privacyLink>.",
-      "costCtaTitle": "See real rental costs",
+      "costCtaTitle": "See reported rental costs",
       "costCtaButton": "View costs"
     },
     "navListings": "Listings"
@@ -733,41 +753,34 @@
   "share": {
     "share": "Share",
     "copied": "Link copied",
-    "cardTitle": "I pay {percent}% below the {district} average",
-    "cardTitleGeneric": "What renting really costs across Warsaw",
-    "cardDescription": "Check if you're overpaying on rent — Passflat",
-    "landingHeading": "See what people really pay in your area",
+    "cardTitleGeneric": "Reported rental costs across Warsaw",
+    "cardDescription": "Monthly rent and expenses by district, from reports on Passflat",
+    "landingHeading": "See the costs reported in your area",
     "landingBody": "Someone compared their rent to the area and shared it. Check yours — it's free and takes two minutes.",
-    "landingBodyBelow": "Someone you know rents for ≈{amount} zł — {percent}% below the {district} market. Are you overpaying? Check your rent — free, two minutes.",
-    "landingBodyAbove": "Someone you know rents for ≈{amount} zł — {percent}% above the {district} market. What about you? See if you're overpaying — free, two minutes.",
     "ctaCalculator": "Cost calculator",
     "ctaCosts": "Browse costs by district",
-    "landingDataLabel": "Rent costs in {district}",
-    "ogTitle": "I pay less than my area",
-    "ogStatLabel": "Below the {district} median",
-    "ogStat": "-{percent}%",
-    "ogMedian": "Area median: ≈{amount} zł",
-    "cardTitleArea": "What people really pay for rent in {district}",
+    "landingDataLabel": "Costs in {district}",
+    "cardTitleArea": "Reported rental costs in {district}",
     "ogTitleNeutral": "What people pay for rent",
     "ogStatNeutralLabel": "{district} median",
     "ogMedianPerM2": "≈{amount} zł/m²",
     "landingRent": "Rent",
     "landingExpenses": "Expenses",
-    "landingRange": "Most pay {from}–{to} zł",
+    "landingRange": "Half of the reports are between {from} and {to} zł",
     "landingHowTitle": "How it works",
     "landingStep1": "Add your costs — it takes a couple of minutes",
-    "landingStep2": "Compare them to the district and city median",
-    "landingStep3": "See whether you're overpaying on rent",
+    "landingStep2": "See them next to the figures for your district or city",
+    "landingStep3": "Share the figures with friends who rent",
     "ctaSubmit": "Compare your costs"
   },
   "rentReport": {
-    "metaTitle": "How much rent costs in Warsaw in {year} — real tenant data",
-    "metaDescription": "Real rental costs in Warsaw in {year} by district: median rent and utilities. Updated automatically.",
-    "ogTitle": "Renting in Warsaw {year}: real data",
+    "metaTitle": "Rent in Warsaw {year}: what tenants report, by district",
+    "metaDescription": "Monthly rent and utilities in Warsaw {year} by district: medians from tenant reports or asking prices, each with its N, deposit returns, cost checklist.",
+    "ogTitle": "Renting in Warsaw {year}: reports by district",
     "badge": "Community data",
     "h1": "How much rent costs in Warsaw in {year}",
     "updated": "Updated: {date}",
-    "lead": "Real rental costs in Warsaw by district: the typical rent and utilities. The figures update as new reports come in.",
+    "lead": "Rental costs in Warsaw by district: the median rent and utilities from tenant reports or asking prices, each with its N. The figures update as new reports come in.",
     "perM2": "Per m²",
     "tableHeading": "Costs by district",
     "colDistrict": "District",
@@ -782,45 +795,45 @@
     "ctaDistricts": "Browse by district",
     "backToBlog": "← Blog",
     "storyRent": "The listing would say: {rent} zł.",
-    "storyReality": "What tenants of this building — {address}, {district} — actually pay is ≈{total} zł a month: rent plus czynsz administracyjny, electricity, gas and internet. The ≈{diff} zł gap appears nowhere in the listing.",
-    "storyNotException": "This is not an outlier. Below is what Warsaw tenants really pay each month — not asking prices, but what leaves their accounts.",
-    "anatomyTitle": "What the real monthly cost is made of",
+    "storyReality": "According to the reports for this building — {address}, {district} — the monthly cost is ≈{total} zł: rent plus czynsz administracyjny, electricity, gas and internet. The ≈{diff} zł gap appears nowhere in the listing.",
+    "storyNotException": "This is not an outlier. Below are the monthly costs by district, from tenant reports and listing asking prices.",
+    "anatomyTitle": "What the monthly cost is made of",
     "anatomyIntro": "The listing price is usually just the rent (odstępne). On top of it come:",
     "anatomyCzynsz": "Czynsz administracyjny — the building fee paid to the housing co-op or manager; listings often “forget” it.",
     "anatomyUtilities": "Electricity and gas — metered; noticeably more in winter.",
     "anatomyInternet": "Internet — typically 60–100 zł.",
     "anatomyDoplaty": "Dopłaty (rozliczenie) — the twice-a-year settlement; the biggest surprise, more below.",
-    "anatomyMedian": "The median paid on top of rent in our data is ≈{expenses} zł a month. Add it to any listing price to get closer to reality.",
+    "anatomyMedian": "The median paid on top of rent in our data is ≈{expenses} zł a month. Add it to any listing price to get closer to reality. Source: {source}.",
     "kaucjaTitle": "The fourth payment listings never mention: the deposit",
     "kaucjaAmount": "The median deposit in tenant reports is ≈{deposit} zł.",
-    "kaucjaReturnedLabel": "got their deposit back in full",
+    "kaucjaReturnedLabel": "who answered got the deposit back, fully or partly",
     "kaucjaBody": "One in four leavers loses part or all of it — usually over cleaning disputes, minor damage and unpaid bills. A move-in protocol, photos and recorded meter readings are what improve your odds.",
     "kaucjaCta": "How to get your kaucja back in full — guide",
     "doplatyTitle": "Dopłaty: why a 1,500 zł bill arrives six months in",
     "doplatyBody1": "Electricity and gas in Poland are often paid as fixed monthly advances (zaliczka). Every six-twelve months the provider reconciles advances against actual usage and sends a rozliczenie. If the winter was cold or tariffs rose, a top-up bill lands — sometimes hundreds of złoty — long after you settled into “your” number.",
-    "doplatyBody2": "It is the most common unpleasant surprise of renting here — and the main reason listing prices and reality diverge.",
+    "doplatyBody2": "It is the most common unpleasant surprise of renting here — and the main reason the price in a listing and what you end up paying diverge.",
     "doplatyCta": "Dopłaty in detail: how to check your rozliczenie",
     "checkTitle": "How to check a specific building before you sign",
     "checkIntro": "You will be paying for one address, not the city average. Before signing:",
-    "checkStep1": "Check the address — free, no account: real tenant costs for the building, transport and location downsides.",
+    "checkStep1": "Check the address — no account needed: the reported costs for the building, transport and location downsides.",
     "checkStep2": "Ask the landlord for the czynsz administracyjny amount and what it covers.",
     "checkStep3": "Ask for the latest rozliczenie: were there dopłaty, and how big.",
     "checkStep4": "Record meter readings in the handover protocol.",
     "checkCta": "Check an address",
     "faqTitle": "Frequently asked questions",
     "faqQ1": "Why do prices here differ from Otodom?",
-    "faqA1": "They measure different things: portals show the asking price without fees; we show the full amount tenants actually pay, including czynsz and utilities.",
+    "faqA1": "They measure different things: portals show the asking price without fees; we show the full monthly costs from reports, including czynsz and utilities.",
     "faqQ2": "How much should I budget on top of rent?",
-    "faqA2": "The median is ≈{expenses} zł a month. Older buildings cost more in winter, new builds with district heating less — check the specific building.",
+    "faqA2": "The median is ≈{expenses} zł a month. Older buildings cost more in winter, new builds with district heating less — check the specific building. Source: {source}.",
     "faqQ3": "Is it true you might not get the deposit back?",
-    "faqA3": "In our data, {pct}% of leavers get the deposit back in full. A handover protocol with photos and meter readings is what improves the odds most."
+    "faqA3": "In our data, {gotBack} of {answered} leavers who answered got the deposit back, fully or partly. A handover protocol with photos and meter readings is what improves the odds most."
   },
   "checker": {
     "metaTitle": "Check an address: location score and neighbour costs — {city}",
     "metaDescription": "Check any address in {city}: a free location score, distances to shops, transport and schools, what makes noise nearby and what the neighbours pay.",
     "badge": "Free location score",
     "title": "Check an address: {city}",
-    "subtitle": "See what's nearby, how convenient the location is and what tenants really pay in this building.",
+    "subtitle": "See what's nearby, how convenient the location is and the costs tenants reported in this building.",
     "searchLabel": "Building address",
     "searchPlaceholder": "Start typing an address…",
     "searchHint": "Choose a complete address with a building number. The checker currently covers Warsaw.",
@@ -850,24 +863,17 @@
       "privacy": "<privacyLink>Privacy Policy</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Checked address"
+      "checkedAddress": "Address you looked up"
     },
     "costs": {
       "availableTitle": "We have monthly cost data for this building",
-      "month": "month",
-      "rent": "Rent",
-      "expenses": "Utilities & charges",
-      "sourceTenant": "Based on {count, plural, one {# tenant report} other {# tenant reports}}",
-      "sourceMixed": "Based on {tenantCount, plural, one {# tenant report} other {# tenant reports}} and {listingCount, plural, one {# listing} other {# listings}}",
-      "sourceScraped": "Based on {count, plural, one {# listing} other {# listings}}",
       "viewBuilding": "See the bill-by-bill breakdown",
       "emptyTitle": "No one has shared costs for this building yet. Be the first.",
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
       "followHint": "Not ready to share? Follow the building for updates.",
-      "cheaperThanDistrict": "{percent}% below the {district} median",
-      "pricierThanDistrict": "{percent}% above the {district} median",
-      "depositReturned": "deposit returned to {returned} of {answered}"
+      "telegramCta": "Open this building in the Telegram bot",
+      "telegramHint": "This building's figures and roommate profiles in Telegram, in English, Russian and Ukrainian; the deposit letter in Russian and Ukrainian."
     },
     "nuisances": {
       "title": "Worth knowing",
@@ -936,11 +942,11 @@
     }
   },
   "calculator": {
-    "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",
-    "metaDescription": "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities based on Warsaw tariffs — admin fee (czynsz), heating, electricity, water, garbage, internet.",
+    "metaTitle": "Warsaw rent calculator: rent plus utilities per month",
+    "metaDescription": "Estimate a month of renting in Warsaw: the district's median rent with its source and N plus utilities at Warsaw tariffs: czynsz, heating, water, internet.",
     "breadcrumb": "Calculator",
     "badge": "Cost calculator",
-    "h1": "What renting in {city} costs with all payments included",
+    "h1": "The cost of renting in Warsaw with all payments included",
     "intro": "The full monthly cost of a flat with all payments included: rent plus utilities (czynsz, heating, electricity, water, garbage, internet). Rent comes from the median of tenant reports; utilities are calculated from current Warsaw tariffs. It is a planning estimate, not an exact bill.",
     "controls": {
       "district": "District",
@@ -958,7 +964,7 @@
       "perMonth": "/mo",
       "areaSummary": "{area} m²",
       "rent": "Rent",
-      "basisData": "based on {count, plural, one {# report} other {# reports}} in the district",
+      "basisData": "from district data",
       "basisCityWide": "from the whole-city median",
       "basisCityFallback": "from city median · little data in this district",
       "basisNone": "no rent data yet",
@@ -984,27 +990,33 @@
     "sourcesNote": "Tariffs: MPWiK, district heating, G11, waste collection in Warsaw (2025–2026). Rent — Passflat report medians."
   },
   "costsSeo": {
-    "cityMetaTitle": "Rent in {city}: real costs by district",
-    "cityMetaDescription": "What tenants actually pay to rent in {city} — rent, utilities and deposits, by district. Crowdsourced, open data.",
-    "cityH1": "What renting in {city} actually costs",
+    "cityMetaTitle": "{city}: reported rental costs by district",
+    "cityMetaDescription": "Reported rental costs in {city} — rent, utilities and deposits, by district. Crowdsourced, open data.",
+    "cityH1": "What renting in {city} costs: reported figures by district",
     "cityIntro": "Median costs reported by tenants themselves — rent, utilities (komunalka) and deposits — across the districts of {city}. Pick a district to see the buildings.",
     "districtsHeading": "Costs by district",
     "exploreAll": "All buildings & filters",
     "emptyCity": "No data yet — be the first to add your costs.",
-    "districtMetaTitle": "Rent in {district}, {city} — real tenant costs",
-    "districtMetaDescription": "Real rental costs in {district}, {city}: rent, utilities and deposits, building by building. Crowdsourced from tenants.",
-    "districtH1": "Rent in {district}",
-    "districtIntro": "What tenants actually pay in {district}, {city} — rent, utilities and deposits, building by building.",
-    "buildingsHeading": "Buildings in {district}",
+    "districtMetaTitle": "{district}, {city} — rent costs and room prices",
+    "districtMetaDescription": "Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building, room figures, and how many people look for a flatmate here.",
+    "districtH1": "{district}: rent costs",
+    "districtIntro": "Reported rental costs in {district}, {city} — rent, utilities and deposits, building by building.",
+    "buildingsHeading": "Buildings — {district}",
     "backToCity": "All {city} districts",
     "emptyDistrict": "No reports here yet — be the first to add yours.",
-    "buildingMetaTitle": "{address}, {city} — real rental costs",
-    "buildingMetaDescriptionWithData": "What renting {address}, {city} actually costs: ≈ {total} zł/mo in total (rent ≈ {rent}, utilities ≈ {expenses}). {reports}.",
-    "buildingMetaDescription": "Real rental costs for {address}, {city}: rent, utilities and deposit. See the data or add yours."
+    "districtRoommateHeading": "Room and shared renting: {district}",
+    "districtProfileCount": "{district}: {n, plural, one {# person with a profile names this district.} other {# people with a profile name this district.}}",
+    "districtProfileNone": "{district}: nobody has named this district yet — be the first.",
+    "districtRoomLead": "Rooms: tenant reports and asking prices",
+    "districtRoomCityFallback": "{district} has fewer than {min} room reports; {city}:",
+    "buildingMetaTitle": "{address}, {city} — reported rental costs",
+    "buildingMetaDescriptionWithData": "Reported costs of renting at {address}, {city}: ≈ {total} zł/mo in total (rent ≈ {rent}, utilities ≈ {expenses}). {reports}.",
+    "buildingMetaDescriptionPartial": "Reported costs of renting at {address}, {city}: {metric, select, knownPartTotal {the known part of the costs is ≈ {value} zł/mo} rent {rent ≈ {value} zł/mo, other costs unknown} other {≈ {value} zł/mo in total}}. {reports}.",
+    "buildingMetaDescription": "{address}, {city}: no report for this building yet — we show the district or Warsaw reference with its group and N. Add your own costs."
   },
   "costs": {
     "title": "Cost Transparency",
-    "subtitle": "What tenants actually pay to rent",
+    "subtitle": "Rental costs tenants reported",
     "calculatorTeaser": {
       "title": "How much per month with all payments included?",
       "desc": "Rent plus utilities — an estimate in a couple of clicks",
@@ -1034,7 +1046,7 @@
     },
     "overview": {
       "badge": "Cost Transparency",
-      "title": "Find out what you'll actually pay before signing a lease",
+      "title": "See the costs tenants reported before you sign a lease",
       "searchPlaceholder": "Search by address or district...",
       "submitCosts": "Submit Costs",
       "districts": "Districts",
@@ -1042,9 +1054,6 @@
       "buildingsWithReports": "buildings",
       "reports": "reports",
       "perMonthShort": "mo",
-      "vsMedianAbove": "above the city median",
-      "vsMedianBelow": "below the city median",
-      "vsMedianEqual": "at the city median",
       "unlockFullData": "Cost reports are locked",
       "unlockDesc": "Unlock by submitting your costs, or buy access",
       "submitMyCosts": "Submit My Costs",
@@ -1095,7 +1104,12 @@
       "flaggedTitle": "Your report is under review",
       "flaggedDesc": "We noticed unusual values in your cost report. Your data is hidden until you fix it or confirm it with us.",
       "rent": "Rent",
-      "expenses": "Expenses"
+      "expenses": "Expenses",
+      "figureTenant": "Tenant reports ({count})",
+      "figureAsking": "Asking prices ({count})",
+      "figureKnownPart": "known part",
+      "figureRentOnly": "rent only",
+      "mapLegendPart": "+ after a number: only part of the costs is known"
     },
     "buyAccess": {
       "title": "Buy Access to Cost Data",
@@ -1126,6 +1140,8 @@
       "description": "Help the community by sharing your own expenses",
       "pageTitle": "Submit Your Costs",
       "pageSubtitle": "Help others make an informed decision. It takes less than 2 minutes.",
+      "metaTitle": "Add the costs of your flat in Warsaw",
+      "metaDescription": "Two minutes: rent, czynsz, utilities and deposit for your building. Shown only as aggregates with their counts.",
       "rentalType": "What are you renting?",
       "wholeApartment": "Whole apartment",
       "room": "Room",
@@ -1158,20 +1174,16 @@
       "optionalLabel": "(optional)",
       "addressNotFoundHint": "Can't find your address? Pick the closest match — you can fix details later.",
       "completeBuildingTitle": "Help complete this building",
-      "comparisonHeading": "Compared to the district median",
-      "unlockTitle": "Log in to unlock the full statistics",
-      "unlockDesc": "Your report is saved. Create an account or log in to claim it and reveal the deeper numbers for this building.",
+      "comparisonHeading": "{level, select, district {Your costs and the district's figures} other {Your costs and the city's figures}}",
+      "unlockTitle": "Log in to claim your report and see the utilities breakdown",
+      "unlockDesc": "Your report is saved. Create an account or log in to claim it. After you log in:",
       "unlockItemUtilities": "Full utilities breakdown — electricity, gas, heating, water",
-      "unlockItemDeposit": "Deposit return rates and how long they take",
-      "unlockItemTenure": "How long tenants actually stay",
-      "unlockItemPosition": "Where this building ranks in its district",
+      "unlockItemPosition": "Your report in your dashboard, next to the figures for your district or city",
       "unlockCta": "Log in to unlock",
       "movingOutNudgeTitle": "Have a place to offer?",
       "movingOutNudgeBody": "Leaving, looking for a flatmate, or subletting — post a listing for free.",
       "movingOutNudgeButton": "Post a listing",
       "yourCosts": "You pay",
-      "comparisonSave": "You save ≈{amount} zł/mo",
-      "comparisonOverpay": "You overpay ≈{amount} zł/mo",
       "comparisonPerM2Heading": "Per square metre",
       "comparisonRentPerM2": "Rent/m²",
       "comparisonTotalPerM2": "Total/m²",
@@ -1180,7 +1192,7 @@
       "fillDistrictTitle": "Help fill {district}",
       "shareDistrict": "Share district",
       "shareInviteTitle": "Share with friends",
-      "shareInviteDesc": "Share with friends — let them see whether they're overpaying on rent.",
+      "shareInviteDesc": "Send it to friends who rent: they'll see the figures for this district and can add their own costs.",
       "shareComparison": "Share comparison",
       "shareBuilding": "Share building",
       "fillDistrictDesc": "Share it in your area chat — more reports mean more accurate comparisons for everyone renting here.",
@@ -1295,7 +1307,7 @@
     },
     "building": {
       "whiteSpotTitle": "This building needs more reports",
-      "whiteSpotDesc": "{count, plural, one {# report so far, out of the five that mark a building as reliable.} other {# reports so far, out of the five that mark a building as reliable.}}",
+      "whiteSpotDesc": "{count, plural, one {# report so far: add yours so these figures rest on more answers.} other {# reports so far: add yours so these figures rest on more answers.}}",
       "follow": "Follow",
       "following": "Following",
       "followToast": "Following — we'll email you when new reports arrive.",
@@ -1339,7 +1351,6 @@
       "tagsCta": "Describe this building",
       "tagsAddCta": "Add your review",
       "thisBuilding": "This Building",
-      "districtAvg": "{district} Average",
       "warsawAvg": "Warsaw Average",
       "districtMedian": "{district} Median",
       "cityMedian": "Warsaw Median",
@@ -1349,20 +1360,14 @@
       "cheaperThanPct": "Cheaper than ~{percent}% of reports in {district}",
       "pricierThanPct": "Pricier than ~{percent}% of reports in {district}",
       "comparisonCaption": "Directional estimate. District and city figures are the median of all reports in the area.",
-      "percentLower": "{percent}% lower",
       "higher": "Higher",
-      "percentHigher": "{percent}% higher",
       "matchesAverage": "Matches average",
-      "matchesMedian": "Matches median",
       "otherCosts": "Other Costs",
       "periodic": "Periodic recalculations (avg/mo)",
       "deposit": "Deposit (kaucja)",
       "depositDesc": "One-time refundable security deposit",
       "winterSummer": "winter {winter} / summer {summer}",
       "oftenIncluded": "Often included in rent",
-      "lookingForApartment": "Looking for an apartment in this building?",
-      "lookingForApartmentDesc": "Browse available listings with verified costs",
-      "viewListingsIn": "View Listings in {district}",
       "demoSimulate": "[Demo] Simulate Contribution",
       "expenses": "Expenses",
       "depositReturnedRate": "{percent}% got their deposit back",
@@ -1381,14 +1386,53 @@
       "tenureLabel": "Typical tenure",
       "estimateCaptionDistrict": "Based on {count, plural, one {# report} other {# reports}} · {districtCount} in {district}",
       "withinRange": "within range",
-      "onPar": "on par",
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "district typical range",
       "legendMedian": "median",
-      "legendBuilding": "this building"
+      "legendBuilding": "this building",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# report from tenants} other {# reports from tenants}}",
+        "sourceTenantWithImported": "{count, plural, one {# report from tenants} other {# reports from tenants}} ({imported} entered by Passflat)",
+        "sourceImported": "{count, plural, one {# report entered by Passflat from tenants' answers} other {# reports entered by Passflat from tenants' answers}}",
+        "sourceAsking": "{count, plural, one {# asking price from listings} other {# asking prices from listings}}",
+        "tenantTitle": "Reports from tenants",
+        "askingTitle": "Asking prices from listings",
+        "nListings": "{count, plural, one {# listing} other {# listings}}",
+        "depositReturned": "{gotBack} of {answered} who answered got the deposit back, fully or partly",
+        "depositReturnedArea": "{level, select, district {In the {area} district} other {In {area}}}, {gotBack} of {answered} who answered got the deposit back, fully or partly",
+        "countOfTotal": "{count} of {total}",
+        "oneObservation": "One observation at this address",
+        "oneObservationArea": "{level, select, district {One observation in the {area} district} other {One observation in {area}}}",
+        "roomsValue": "Rooms: {count}",
+        "areaValue": "Area ≈ {area} m²",
+        "knownPart": "Known part of the costs",
+        "knownPartHint": "Not all utilities were listed, so the full monthly cost may be higher",
+        "valueUnknown": "Unknown",
+        "valueIncluded": "Included in rent",
+        "includedCount": "included in rent: {count}",
+        "unknownCount": "unknown: {count}",
+        "lastRecorded": "Last report added or confirmed: {date}",
+        "lastRecordedAsking": "Last asking price added: {date}",
+        "tenancyRange": "Period of these costs: {from}–{to}",
+        "tenancyYear": "Period of these costs: {year}",
+        "tenancyOngoing": "Period of these costs: {from} to now",
+        "tenancyCurrent": "Period of these costs: up to now",
+        "tenancyFrom": "Period of these costs: from {from}",
+        "tenancyUntil": "Period of these costs: until {to}",
+        "tenancyUnknown": "The period these costs were paid is not known",
+        "viewDetails": "View details",
+        "addExperience": "Add your experience",
+        "noBuildingData": "No data for this building",
+        "noAreaData": "No figures for this area yet",
+        "referenceTenantDistrict": "Reference: tenant reports in {area} ({count})",
+        "referenceTenantCity": "Reference: tenant reports in {area} ({count})",
+        "referenceAskingDistrict": "Reference: asking prices from listings in {area} ({count})",
+        "referenceAskingCity": "Reference: asking prices from listings in {area} ({count})",
+        "referenceHint": "{level, select, district {These figures are for the district, not for this building.} other {These figures are for the city, not for this building.}}"
+      }
     },
     "trust": {
-      "reliable": "Popular building",
+      "sampleSize": "{count}+ observations",
       "outdated": "Data may be outdated",
       "earlyData": "{count, plural, one {Early data · # report} other {Early data · # reports}}"
     },
@@ -1477,13 +1521,12 @@
     "title": "How Passflat Works",
     "subtitle": "Looking for a new apartment or want to pass on your lease? Here's how it works, step by step.",
     "tabSeekers": "Looking for a flat",
-    "tabListers": "Passing on a lease",
     "tabCosts": "Comparing costs",
     "seekers": {
       "label": "For apartment seekers",
       "title": "Find a new apartment — with every cost in the open, no surprises",
-      "step1Title": "Browse verified listings",
-      "step1Desc": "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with full cost breakdown — rent, admin fees, and actual utility costs.",
+      "step1Title": "Browse listings",
+      "step1Desc": "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with the costs the current tenant entered — rent, admin fees and utilities.",
       "step2Title": "Filter and explore",
       "step2Desc": "Narrow your search by district, price range, number of rooms, and move-in date. Browse listings on an interactive map.",
       "step3Title": "Contact the current tenant",
@@ -1493,21 +1536,6 @@
       "step5Title": "Move in",
       "step5Desc": "Complete the handover — no deposit lost, no agency fees. Start your new chapter.",
       "cta": "Browse Listings"
-    },
-    "listers": {
-      "label": "For current tenants",
-      "title": "Pass on your lease — keep your deposit",
-      "step1Title": "Create a listing",
-      "step1Desc": "Add your apartment with address, photos, and full cost breakdown. It's free — up to 2 active listings.",
-      "step2Title": "Appear on the map",
-      "step2Desc": "Your listing appears on the map and in search results — renters looking for a place will see it.",
-      "step3Title": "Receive interest",
-      "step3Desc": "Get email notifications when someone is interested. Review messages in your dashboard.",
-      "step4Title": "Choose a replacement",
-      "step4Desc": "Select the best candidate and coordinate the lease assignment with your landlord.",
-      "step5Title": "Hand over the keys",
-      "step5Desc": "Complete the handover and get your deposit back. Done.",
-      "cta": "Post a Listing"
     },
     "costs": {
       "label": "Cost Transparency",
@@ -1576,12 +1604,12 @@
     "solution": {
       "label": "Our Solution",
       "title": "A complete rental toolkit built by the community",
-      "pillar1Title": "Lease Takeovers",
-      "pillar1Desc": "Find a replacement and keep your deposit. Take over someone's lease and skip the agency fee. Lease assignment is a standard legal instrument in Poland — we make it easy.",
-      "pillar2Title": "Roommate Search",
-      "pillar2Desc": "Find a compatible roommate or fill a vacant room. Specify preferences, room type, and per-person costs — so both sides know what to expect.",
-      "pillar3Title": "Temporary Sublet",
-      "pillar3Desc": "Sublet your apartment for a fixed period while you're away. Set exact dates, total price, and house rules — all in one listing.",
+      "pillar1Title": "Find someone to rent with",
+      "pillar1Desc": "A short profile in our Telegram bot, in English, Russian or Ukrainian: district, budget per person, move-in month. Compatible people come one at a time, and both Telegram usernames appear only when the interest is mutual.",
+      "pillar2Title": "What it costs per person",
+      "pillar2Desc": "What a flat costs when two people share it: half the median of the whole-flat costs tenants reported, always with the number of reports behind it.",
+      "pillar3Title": "Checker, calculator, guides",
+      "pillar3Desc": "Look up an address before you sign: the costs tenants reported for the building and its district. The calculator gives a ballpark of rent plus utilities for a district and flat size, and the guides cover deposits, utilities and lease contracts in Poland.",
       "pillar4Title": "Cost Transparency",
       "pillar4Desc": "Community-sourced utility costs. Know exactly what you'll pay for electricity, gas, heating, and water — including periodic recalculations shown as a monthly equivalent — before you sign. And the cost calculator gives a ballpark for any district and size — rent plus utilities — in a couple of clicks."
     },
@@ -1589,13 +1617,13 @@
       "label": "Who We Are",
       "title": "Built by renters, for renters",
       "description": "We rent in Warsaw ourselves and we've been through all of it — lost deposits, utility bills no one warned us about, a price you only learn after moving in. Passflat grew out of that pain.",
-      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Right now that's costs by building, listings (lease takeover, roommate, sublet), and free document templates."
+      "description2": "Passflat is grounded in our own renting experience in Warsaw: moves, agencies, and a lease takeover. Today it helps people find someone to rent with in our Telegram bot and see what renting costs per person, from the costs tenants reported by building and district."
     },
     "values": {
       "label": "Our Principles",
       "title": "Platform rules",
       "principle1": "No hidden information",
-      "principle1Desc": "We show real numbers — even when they make the market uncomfortable. Every listing includes a full cost breakdown before you contact anyone.",
+      "principle1Desc": "We show the figures tenants reported, with their counts — also when they are inconvenient.",
       "principle2": "Your data belongs to you",
       "principle2Desc": "Every cost report is anonymous — it can't be tied to you, and we never sell data to third parties.",
       "principle3": "Open by default",
@@ -1609,7 +1637,6 @@
       "description": "Right now — Warsaw. Next we're planning Kraków, Wrocław, and other cities."
     },
     "stats": {
-      "listings": "Active listings",
       "costReports": "Cost reports shared"
     },
     "ctaTitle": "Join the community",
@@ -1632,9 +1659,10 @@
     "topic3": "Foreigner's guide: your first rental in Warsaw",
     "topic3Desc": "From searching for listings to signing the lease — everything a new resident needs to know about Warsaw's rental market.",
     "topic4": "What is czynsz administracyjny and what does it cover?",
-    "topic4Desc": "Admin fee is one of the most confusing elements of renting in Poland. We explain what you're actually paying for.",
-    "ctaText": "While you wait, explore what tenants pay by building",
+    "topic4Desc": "Admin fee is one of the most confusing elements of renting in Poland. We explain what it covers.",
+    "ctaText": "Looking for someone to rent with, or checking a flat? Start with the figures tenants reported.",
     "ctaButton": "Explore Cost Data",
+    "ctaFlatmate": "Find a flatmate",
     "backToBlog": "Back to Blog",
     "readMore": "Read more"
   },
@@ -1682,7 +1710,6 @@
     "about": "about",
     "listingType": "Type",
     "goToDashboard": "Go to Dashboard",
-    "browseListings": "Browse Listings",
     "savedListings": "Saved",
     "noSavedListings": "No saved listings yet",
     "noSavedListingsDesc": "Browse listings and tap the heart icon to save them here",
@@ -1791,9 +1818,9 @@
     "general": {
       "title": "General",
       "q1": "What is Passflat?",
-      "a1": "Passflat is a rental marketplace in Warsaw: listings (lease takeover, roommate search, sublet), a database of costs from tenants themselves (rent, utilities, deposits), and free document templates for the deal.",
+      "a1": "Passflat helps people in Warsaw find someone to rent with (a profile in our Telegram bot) and see what renting costs per person: costs tenants reported per building and district, an address checker, a calculator, guides and document templates.",
       "q2": "Is Passflat free?",
-      "a2": "Yes. Browsing listings, cost reports, posting listings, and document templates — all free.",
+      "a2": "Yes. Everything on Passflat is free today: the figures, the address check, the calculator, the guides, the templates and the Telegram bot.",
       "q3": "What cities does Passflat operate in?",
       "a3": "Currently we operate in Warsaw. Expansion to Kraków, Wrocław, and other European cities is on our roadmap.",
       "q4": "What languages does Passflat support?",
@@ -1810,14 +1837,12 @@
       "q4": "How do I create a listing?",
       "a4": "Log in, click \"Create Listing\" and fill in the address, apartment details, photos, and cost breakdown. Your listing will appear on the map and in search results after publishing.",
       "q5": "How long does a listing stay active?",
-      "a5": "Listings are active for 60 days. You can renew or close them at any time from your dashboard.",
-      "q6": "Can I promote my listing?",
-      "a6": "Yes. Promoted listings appear at the top of search results for 7, 14, or 30 days. Prices start at 39 PLN."
+      "a5": "Listings are active for 60 days. You can renew or close them at any time from your dashboard."
     },
     "costTransparency": {
       "title": "Cost Transparency",
       "q1": "How does the cost database work?",
-      "a1": "Tenants submit anonymous cost reports for their buildings — including rent, admin fee, electricity, gas, heating, water, and internet. Data is aggregated and displayed per building so future tenants can see what they'll actually pay.",
+      "a1": "Tenants submit anonymous cost reports for their buildings — including rent, admin fee, electricity, gas, heating, water, and internet. Data is aggregated and displayed per building so future tenants can see the costs others reported.",
       "q2": "How do I unlock cost data?",
       "a2": "Cost data is open to everyone. Add your report — free and forever — to see the detailed breakdown and help the database grow for the whole community.",
       "q3": "Is my data anonymous?",
@@ -1840,21 +1865,6 @@
       "a1": "Send an email to contact@passflat.com with the subject \"Data Access Request.\" We will provide a copy of all personal data we hold about you within 30 days, in a structured, machine-readable format.",
       "q2": "What are my GDPR rights?",
       "a2": "Under GDPR, you have the right to access, rectify, erase, restrict processing, port your data, object to processing, and withdraw consent. For full details, see our Privacy Policy. To exercise any right, contact contact@passflat.com."
-    },
-    "payments": {
-      "title": "Payments & Refunds",
-      "q1": "What can I pay for on Passflat?",
-      "a1": "Posting a listing is free (up to 2 active listings). Paid services are: extra listings beyond the free limit, promotion to boost a listing's visibility in search results, and time-limited access to the cost-report database. Listings themselves stay free.",
-      "q2": "When does my paid service start, and can I still cancel?",
-      "a2": "Paid services are delivered immediately and in full right after payment. Because of this, when you pay you give your express consent to immediate provision — and once the service has been provided you can no longer use the standard 14-day right of withdrawal. You confirm this at checkout when you accept the Terms.",
-      "q3": "Do you guarantee I'll find a tenant, roommate, or replacement?",
-      "a3": "No. You pay for the service itself — publication, visibility, or data access — not for a particular result. Passflat doesn't guarantee that you'll find a replacement tenant, a roommate, or a new lease, and not getting a result is not grounds for a refund.",
-      "q4": "How do I request a refund?",
-      "a4": "Refunds are handled case by case for genuine issues — for example a duplicate charge, a technical failure that stopped the service from being delivered, or a defective service. Email contact@passflat.com with your account email and the payment reference (you'll find it in your dashboard billing history). Your mandatory consumer rights are always preserved.",
-      "q5": "Which payment methods can I use?",
-      "a5": "Payments are processed securely by Stripe. You can pay by card, BLIK, or Przelewy24 (P24). Available methods may vary slightly by device and browser.",
-      "q6": "Will I get a receipt or invoice?",
-      "a6": "Yes. Stripe automatically emails a payment receipt to the email address used at checkout. You can also open the receipt anytime from the billing section of your dashboard."
     },
     "searchPlaceholder": "Search questions...",
     "noResults": "No matching questions found. Try a different search term.",
@@ -1920,6 +1930,7 @@
       "intro": "We share data only in the following, limited circumstances:",
       "item1": "Cost reports are displayed in aggregated, anonymized form",
       "item2": "Listing contact details are shared only with users who express interest through the platform",
+      "item3": "Roommate matching in the Telegram bot: once matching opens, people whose answers fit yours see your profile card, and on mutual interest both people receive each other’s Telegram username. Telegram delivers the bot’s messages (details in “Roommate Matching in the Telegram Bot” below).",
       "processors": {
         "title": "Data Processors",
         "supabase": "Supabase — hosting, database, and authentication",
@@ -1930,15 +1941,31 @@
         "mapbox": "Mapbox — map rendering (no personal data shared)",
         "posthog": "PostHog — product analytics (opt-out available)",
         "googleAnalytics": "Google Analytics 4 — web traffic/audience analytics (consent-based, opt-in via cookie banner)",
-        "deepl": "DeepL — automated translation of listing content (EU-based, Germany)"
+        "deepl": "DeepL — automated translation of listing content (EU-based, Germany)",
+        "telegram": "Telegram — the messenger the Passflat bot runs in (the bot’s messages, including the roommate profile questions and answers); Telegram processes messages under its own rules, as its privacy policy describes"
       }
+    },
+    "roommateMatching": {
+      "title": "Roommate Matching in the Telegram Bot",
+      "intro": "The Passflat bot on Telegram helps you find someone to rent a flat with. This section describes what we store from a roommate profile, who sees it and how long we keep it.",
+      "fields": "What we store and why: the districts you chose (or “any district”), your budget per person as a band, the move-in month, the languages you speak, a short text about you of up to 280 characters (optional), smoking and pets (optional), the time you confirmed you are 18 or older, and your Telegram username. We use them to match you with people whose answers fit yours, to count people per district and to share contacts on mutual interest. We never ask for a name, photo, date of birth, age, phone number, e-mail address or documents.",
+      "gender": "Your own gender and “live with” (both optional) are used only for mutual matching: each person has to fit what the other accepts. They are never shown to anyone but you, never counted and never sent to analytics.",
+      "channel": "The profile is created and used only in the Passflat bot on Telegram. Telegram delivers the bot’s messages and processes them under its own rules (the Telegram privacy policy).",
+      "recipients": "Who sees what: your profile is included in the numbers of people per district that others see in the bot and on the website; a number never shows details of a single person. Until matching opens, nobody sees the profile itself. Once matching opens, people whose answers fit yours see your card: districts, budget band, move-in month, languages, the short text, and smoking and pets if you answered them. Your Telegram username is shared only on mutual interest, and then both people get each other’s username. We read your current username from Telegram just before sharing it.",
+      "lifetime": "A profile is active for 30 days after you create or renew it, or until the end of your move-in month if that comes first. It is then hidden and can be renewed for 14 days; after that we delete it together with its “Interested” and “Skip” marks.",
+      "deletion": "You can delete your profile in the bot at any time: it is deleted at once and for good. A username already sent to a matched person stays in that person’s chat.",
+      "drafts": "A profile that was never finished is deleted 7 days after the last answer.",
+      "reports": "Reports: we keep the reason and the decision for 6 months after the report. When a profile is deleted, its reports no longer point to it. A reported person is never told who reported them.",
+      "ban": "A profile hidden after reports is deleted 14 days after the date it would have expired. The chat whose profile was hidden keeps a ban marker so that no new profile can be created in it; the marker stays as long as the record of that chat with the bot exists.",
+      "analytics": "In our analytics (PostHog), matching events are linked to a pseudonymous identifier of your chat with the bot. Your profile appears in them only as bands, counts and yes/no values — for example the budget band, how many districts you chose or whether there is a short text — next to actions such as creating, editing or deleting a profile. Your username, short text, districts, gender and “live with” never go to analytics."
     },
     "retention": {
       "title": "Data Retention",
       "account": "Account data: retained until you delete your account",
       "listings": "Listings: active for 60 days, then archived for 30 days before deletion",
       "costReports": "Cost reports: retained indefinitely in anonymized, aggregated form. Once anonymized, this data is no longer personal data under GDPR (Recital 26) and is maintained to support the community database",
-      "importedEmail": "Email addresses from imported submissions are retained until the submission is claimed at login or until you request removal."
+      "importedEmail": "Email addresses from imported submissions are retained until the submission is claimed at login or until you request removal.",
+      "roommate": "Roommate profiles (Telegram bot): active for 30 days after creation or renewal, or until the end of the move-in month if earlier; then hidden and renewable for 14 days, then deleted. Deleted at once on request in the bot; unfinished profiles after 7 days; a profile hidden after reports 14 days after its expiry date; reports after 6 months; a chat’s ban marker as long as the chat’s record exists (details in “Roommate Matching in the Telegram Bot” above)."
     },
     "rights": {
       "title": "Your Rights (GDPR)",
@@ -1956,7 +1983,7 @@
     "transfers": {
       "title": "Cross-Border Data Transfers",
       "description": "Some of our data processors are located outside the European Union / European Economic Area (EU/EEA). When your data is transferred outside the EU/EEA, we ensure appropriate safeguards are in place, including Standard Contractual Clauses (SCCs) approved by the European Commission, or adequacy decisions.",
-      "processors": "The following processors may process data outside the EU/EEA: Vercel (US), Resend (US), Stripe (EU and US), Google (US, covering both Places API and Google Analytics), and Mapbox (US) — all operating under Standard Contractual Clauses. Supabase and PostHog data locations depend on instance configuration. DeepL is EU-based (Germany)."
+      "processors": "The following processors may process data outside the EU/EEA: Vercel (US), Resend (US), Stripe (EU and US), Google (US, covering both Places API and Google Analytics), and Mapbox (US) — all operating under Standard Contractual Clauses. Supabase and PostHog data locations depend on instance configuration. DeepL is EU-based (Germany). Telegram, which the Passflat bot runs in, processes messages on its own infrastructure, which may be outside the EU/EEA, under its own privacy policy."
     },
     "cookies": {
       "title": "Cookies",
@@ -1991,7 +2018,7 @@
     },
     "automated": {
       "title": "Automated Decision-Making",
-      "description": "Passflat does not engage in automated individual decision-making or profiling as defined by GDPR Art. 22. Listing rankings are based solely on recency, with promoted listings displayed at the top as a paid feature."
+      "description": "Outside roommate matching, Passflat makes no automated individual decisions. In roommate matching in the Telegram bot one decision is automated: a profile is hidden, and no new profile can be created in that chat, when two different people report it, or at once after one “Looks under 18” report. You then receive a statement of reasons and can appeal (/appeal in the bot or contact@passflat.com); a person reviews the appeal. The matching itself compares only your answers (districts, budget band, move-in month, languages, “live with”) by a fixed rule and does not assess you from your behaviour. Listing rankings are based solely on recency, with promoted listings displayed at the top as a paid feature."
     },
     "children": {
       "title": "Children's Data",
@@ -2111,17 +2138,29 @@
       "title": "11. Governing Law",
       "text": "These Terms of Service are governed by and construed in accordance with the laws of the Republic of Poland. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts of Warsaw."
     },
+    "matching": {
+      "title": "12. Roommate Matching in the Telegram Bot",
+      "intro": "In the Passflat bot on Telegram you can create a roommate profile: districts, budget per person, move-in month, languages and optional details. Once matching is open, the bot shows you, one at a time, the profiles of people whose answers fit yours; when both people tap “Interested”, each receives the other’s Telegram username. Passflat does not vet people or flats and is not a party to any arrangement between you.",
+      "adults": "Matching is for adults only: before the profile is saved you confirm that you are 18 or older. One chat can hold one profile.",
+      "content": "The short text (up to 280 characters) must not contain contact details — links, @handles, e-mail addresses, phone or account numbers; the bot refuses them, because contacts are shared only on mutual interest. It must not contain offensive, discriminatory or illegal content, or details of your health, religion or other sensitive matters. Your profile must describe you and be true.",
+      "money": "Do not ask anyone for money, a deposit or a “reservation” through matching. Passflat never asks for money.",
+      "reports": "Every card and every shared contact has a Report button with the reasons “Asks for money or a deposit”, “Fake profile”, “Offensive”, “Looks under 18” and “Other”. A reported profile disappears for the reporter at once. The reported person is never told who reported them.",
+      "hiding": "A profile is hidden automatically when two different people report it, for any reason, or at once after one “Looks under 18” report. A report counts while the reporter’s profile exists; reports lifted after an appeal no longer count. A hidden profile is no longer shown or counted, and no new profile can be created in that chat. The decision is automated: no person reviews the reports before the hide. The people who reported the profile are told that it was hidden.",
+      "ranking": "Order of profiles: profiles whose answers fit yours are shown newest first, by the date they were created or last renewed. Whether answers fit is a fixed rule: at least one shared district (or “any district”), budget bands at most one step apart, move-in months at most one month apart, at least one shared language, and “live with” accepted on both sides. There is no paid placement and no other personalization in matching.",
+      "statement": "When your profile is hidden, the bot sends you a statement of reasons: what was restricted, how many reports there were and their reasons (never who reported), that the decision was automated, and the rule in this section it rests on.",
+      "redress": "You can appeal: reply /appeal in the bot or write to contact@passflat.com; a person reviews the appeal. You can also lodge a complaint with the Digital Services Coordinator, the President of UKE (Prezes Urzędu Komunikacji Elektronicznej), or go to court."
+    },
     "contact": {
-      "title": "12. Contact",
+      "title": "13. Contact",
       "text": "For questions about these Terms of Service, contact us:",
       "operator": "Passflat is operated by Ilya Apaniuk, Warsaw, Poland."
     },
     "forceMajeure": {
-      "title": "13. Force Majeure",
+      "title": "14. Force Majeure",
       "text": "Passflat shall not be liable for any failure or delay in performing its obligations due to circumstances beyond its reasonable control, including but not limited to natural disasters, war, terrorism, pandemics, power outages, internet disruptions, government actions, or third-party service failures."
     },
     "changes": {
-      "title": "14. Changes to Terms",
+      "title": "15. Changes to Terms",
       "text": "We may update these Terms of Service. We will notify registered users of significant changes via email at least 14 days before they take effect. For material changes affecting your rights or data processing, we will request your explicit re-acceptance upon next login. If you do not accept the updated terms, you may delete your account. Continued use of the platform after the notification period constitutes acceptance of the updated terms."
     }
   },
@@ -2260,7 +2299,13 @@
     "successDesc": "You will no longer receive building-activity or report-reminder emails from Passflat.",
     "errorTitle": "Link expired or invalid",
     "errorDesc": "This unsubscribe link is not valid. You can manage your emails from your dashboard.",
-    "home": "Go to homepage"
+    "home": "Go to homepage",
+    "removeInterest": {
+      "successTitle": "Email removed",
+      "successDesc": "This saved interest and the email stored with it have been deleted.",
+      "errorTitle": "Link invalid or already used",
+      "errorDesc": "This link is not valid, or this saved interest has already been deleted."
+    }
   },
   "emails": {
     "common": {
@@ -2356,8 +2401,8 @@
       "subject": "We've launched in {city} — Passflat",
       "heading": "Passflat is now in {city}!",
       "intro": "Great news — Passflat is now live in {city}.",
-      "body": "You can now browse listings and post your own. Click below to get started.",
-      "cta": "Browse listings",
+      "body": "See what renting costs with utilities included, district by district.",
+      "cta": "See the costs",
       "footer": "You received this email because you signed up to be notified when Passflat launches in your city."
     },
     "listingExpiring": {

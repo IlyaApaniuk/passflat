@@ -6,7 +6,7 @@
       "heading": "Nie możemy znaleźć tej strony",
       "description": "Strona, której szukasz, mogła zostać przeniesiona, usunięta lub nigdy nie istniała. Wróćmy na właściwą drogę.",
       "home": "Powrót na stronę główną",
-      "browse": "Przeglądaj oferty"
+      "browse": "Sprawdź adres"
     },
     "generic": {
       "metaTitle": "Coś poszło nie tak",
@@ -23,20 +23,18 @@
     "learnMore": "Dowiedz się więcej"
   },
   "meta": {
-    "homeTitle": "Passflat — wynajem w Warszawie: koszty, ogłoszenia, dokumenty",
-    "homeDescription": "Realne koszty wynajmu w Warszawie od samych najemców, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów. Poznaj prawdziwą cenę przed podpisaniem.",
-    "aboutDescription": "Passflat — serwis najmu w Warszawie: realne koszty od najemców (czynsz, media, kaucje), ogłoszenia o cesji i podnajmie oraz darmowe wzory dokumentów. Wszystko widać przed podpisaniem.",
-    "howItWorksDescription": "Jak działa Passflat: zobacz realne koszty według budynków i dzielnic Warszawy, przekaż najem, znajdź współlokatora lub podnajem i pobierz darmowe wzory dokumentów. Krok po kroku i przejrzyście.",
+    "homeTitle": "Passflat — z kim i za ile wynająć mieszkanie w Warszawie",
+    "homeDescription": "Znajdź współlokatora przez bota Telegram i zobacz, ile zgłoszono za najem w Warszawie: czynsz i opłaty wg budynków i dzielnic, kalkulator, poradniki.",
+    "aboutDescription": "O Passflat: pomagamy osobom w Warszawie znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile kosztuje najem, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic.",
+    "howItWorksDescription": "Jak działa Passflat: koszty zgłoszone przez najemców według budynków i dzielnic Warszawy, jak anonimowo dodać swoje oraz jak wygląda cesja najmu i podnajem. Krok po kroku.",
     "contactDescription": "Skontaktuj się z zespołem Passflat — pytanie, problem, pomysł na współpracę lub opinia o serwisie przejrzystych kosztów najmu.",
     "helpDescription": "Odpowiedzi na najczęstsze pytania Passflat: cesja najmu, raporty kosztów, ogłoszenia i konto. Zajrzyj do sekcji FAQ.",
-    "blogDescription": "Poradniki i wskazówki o wynajmie w Warszawie: cesja, ukryte koszty, media i porady dla obcokrajowców — wszystko o realnym rynku najmu.",
+    "blogDescription": "Poradniki o najmie w Warszawie: ukryte koszty i dopłaty, zwrot kaucji, umowy najmu, liczniki i internet oraz porady dla obcokrajowców.",
     "termsDescription": "Regulamin Passflat: zasady ogłoszeń, raportów kosztów, praw użytkowników i działania platformy.",
-    "privacyDescription": "Polityka prywatności Passflat: zbieranie, wykorzystanie i ochrona danych osobowych zgodnie z RODO. Procesory danych, Twoje prawa, cookies i kontakt.",
-    "pricingDescription": "Cennik Passflat — darmowe ogłoszenia, raporty kosztów i ulubione. Opcjonalne promowane ogłoszenia dla większej widoczności od 39 PLN."
+    "privacyDescription": "Polityka prywatności Passflat: zbieranie, wykorzystanie i ochrona danych osobowych zgodnie z RODO. Procesory danych, Twoje prawa, cookies i kontakt."
   },
   "common": {
     "appName": "Passflat",
-    "costsShort": "Koszty",
     "login": "Zaloguj się",
     "register": "Zarejestruj się",
     "logout": "Wyloguj",
@@ -73,7 +71,9 @@
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak",
     "checkAddress": "Sprawdź adres",
-    "buildingReviews": "Opinie o budynkach"
+    "buildingReviews": "Opinie o budynkach",
+    "findFlatmate": "Szukam współlokatora",
+    "menu": "Menu"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -85,21 +85,18 @@
   "landing": {
     "hero": {
       "badge": "Już dostępne w Warszawie",
-      "title": "Nie przepłacaj\nza wynajem",
-      "titleHighlight": "w Warszawie.",
-      "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź, ile naprawdę płacą najemcy — przed decyzją, i sfinalizuj ją na gotowych wzorach dokumentów.",
+      "title": "Z kim wynająć mieszkanie w Warszawie",
+      "titleHighlight": "i ile to kosztuje na osobę",
+      "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją.",
       "browseCta": "Przeglądaj oferty",
       "addCta": "Dodaj ogłoszenie",
-      "trustLeaseTakeovers": "Cesje najmu",
       "trustLeaseTakeoversDesc": "Znajdź najemcę, który przejmie Twój najem i zachowaj kaucję",
       "trustRealCost": "Co ukrywają ogłoszenia",
-      "trustRealCostDesc": "Dane o kosztach od społeczności — wiesz, ile naprawdę zapłacisz",
-      "trustRoommate": "Współlokatorzy",
-      "trustSublet": "Podnajem",
-      "trustVerified": "Zweryfikowane oferty",
-      "trustVerifiedDesc": "Zaufana społeczność z przejrzystymi cenami i opiniami",
-      "costsCta": "Zobacz prawdziwe koszty",
-      "trustLine": "Dane są otwarte — za darmo i bez konta",
+      "trustRealCostDesc": "Koszty mediów zgłoszone przez najemców — zaplanujesz wydatki przed podpisaniem",
+      "trustVerified": "Oferty od społeczności",
+      "trustVerifiedDesc": "Oferty i opinie o budynkach od społeczności, z jawnymi cenami",
+      "costsCta": "Zobacz zgłoszone koszty",
+      "trustLine": "Liczby są otwarte — za darmo i bez konta; rozbicie opłat po dodaniu Twoich kosztów",
       "calculatorCta": "Kalkulator",
       "templatesCta": "Wzory dokumentów",
       "statsListings": "Oferty",
@@ -110,45 +107,22 @@
       "statsPriceUnit": "zł/m²",
       "statsExpenses": "dodatkowe koszty",
       "statsExpensesUnit": "zł/mies",
-      "statsDeposit": "kaucja · zwrot {pct}%",
+      "statsDeposit": "kaucja · {gotBack} z {answered} osób, które odpowiedziały, odzyskało ją — w całości lub częściowo",
       "statsAvgRating": "Śr. ocena",
       "checkAddressCta": "Sprawdź adres"
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
-      "subtitle": "Trzy sposoby na znalezienie nowego mieszkania w Warszawie",
-      "tabReplacement": "Cesja najmu",
-      "tabRoommate": "Współlokator",
-      "tabSublet": "Podnajem",
-      "replacement": {
-        "step1Title": "Przeglądaj oferty",
-        "step1Desc": "Szukaj mieszkań według lokalizacji, ceny i udogodnień. Wszystkie koszty od razu.",
-        "step2Title": "Skontaktuj się",
-        "step2Desc": "Napisz do obecnego najemcy. Zadaj pytania i umów się na oględziny.",
-        "step3Title": "Przejmij najem",
-        "step3Desc": "Uzgodnij warunki i podpisz cesję najmu z wynajmującym.",
-        "step4Title": "Przeprowadź się",
-        "step4Desc": "Dokończ formalności. Bez utraty kaucji, bez prowizji."
-      },
+      "subtitle": "Jak działa szukanie kogoś do wspólnego wynajmu",
       "roommate": {
-        "step1Title": "Znajdź pokój",
-        "step1Desc": "Przeglądaj dostępne pokoje — prywatne lub dzielone. Zobacz cenę za osobę i kto już mieszka.",
-        "step2Title": "Poznaj współlokatorów",
-        "step2Desc": "Napisz do obecnych mieszkańców. Poznaj ich styl życia i nawyki.",
-        "step3Title": "Uzgodnij warunki",
-        "step3Desc": "Ustal podział czynszu, kaucję i zasady domowe.",
-        "step4Title": "Wprowadź się",
-        "step4Desc": "Dołącz do mieszkania i zacznij nowy rozdział."
-      },
-      "sublet": {
-        "step1Title": "Przeglądaj podnajmy",
-        "step1Desc": "Znajdź umeblowane mieszkania na określony czas. Zobacz cenę i co jest w cenie.",
-        "step2Title": "Skontaktuj się z najemcą",
-        "step2Desc": "Napisz do osoby podnajmującej. Uzgodnij daty, zasady i media.",
-        "step3Title": "Potwierdź daty",
-        "step3Desc": "Uzgodnij dokładny okres, cenę i szczegóły wprowadzenia.",
-        "step4Title": "Zamieszkaj tymczasowo",
-        "step4Desc": "Ciesz się gotowym do zamieszkania mieszkaniem — bez długoterminowego zobowiązania."
+        "step1Title": "Załóż profil w bocie",
+        "step1Desc": "Dzielnica, budżet na osobę, miesiąc przeprowadzki, języki. W Telegramie, po angielsku, rosyjsku lub ukraińsku.",
+        "step2Title": "Zobacz, kto jeszcze szuka",
+        "step2Desc": "Uczciwa liczba profili w każdej dzielnicy i to, ile mieszkanie kosztuje na osobę, według zgłoszeń najemców.",
+        "step3Title": "Zaznacz, z kim chcesz wynająć",
+        "step3Desc": "Pasujące osoby, jedna po drugiej. Zaznaczasz zainteresowanie albo pomijasz; na stronie nikt nie widzi twojego profilu.",
+        "step4Title": "Kontakty przy obopólnym zainteresowaniu",
+        "step4Desc": "Nazwy użytkowników w Telegramie obu osób pojawiają się dopiero przy obopólnym zainteresowaniu. Nigdy nie płać za rezerwację przed obejrzeniem mieszkania i podpisaniem umowy."
       }
     },
     "bentoGrid": {
@@ -157,7 +131,7 @@
       "titleAfter": "?",
       "subtitle": "Stworzone dla najemców, którzy mają dość ukrytych kosztów i złamanych obietnic.",
       "realCostDataTitle": "Koszty bez upiększeń",
-      "realCostDataDesc": "Zobacz, ile naprawdę płacą najemcy — czynsz, media, opłaty administracyjne. Dane od samych najemców z całej Warszawy.",
+      "realCostDataDesc": "Zobacz koszty zgłoszone przez najemców — czynsz, media, opłaty administracyjne — budynek po budynku w całej Warszawie.",
       "saveDepositTitle": "Zachowaj kaucję",
       "saveDepositDesc": "Znajdź kogoś, kto przejmie Twój najem, zamiast tracić 1–3 miesięczne kaucje.",
       "exploreCta": "Sprawdź koszty",
@@ -182,7 +156,7 @@
       "badge": "Przejrzystość kosztów",
       "title": "Poznaj",
       "titleHighlight": "co ukrywają przed podpisaniem",
-      "subtitle": "Dane o kosztach od samych najemców. Zobacz, ile naprawdę płacą za media i ukryte opłaty.",
+      "subtitle": "Dane o kosztach od samych najemców. Zobacz, jakie koszty mediów i ukrytych opłat zgłosili.",
       "contributeUnlockDesc": "Dodaj dane o kosztach, aby odblokować pełne raporty",
       "orBuyAccess": "lub kup czasowy dostęp",
       "alreadyContributedDesc": "Masz dostęp do pełnych raportów o kosztach",
@@ -197,8 +171,8 @@
       "electricity": "Prąd",
       "reports": "raportów",
       "accuracyScore": "Wynik dokładności",
-      "communityVerified": "Dane od społeczności",
-      "anonymousVerified": "Anonimowe dane od najemców"
+      "communityVerified": "Koszty zgłoszone przez społeczność",
+      "anonymousVerified": "Zgłoszone koszty, pokazane anonimowo"
     },
     "districts": {
       "title": "Odkryj",
@@ -244,27 +218,29 @@
       "q4": "Czy potrzebuję zgody wynajmującego?",
       "a4": "Tak, wynajmujący musi wyrazić zgodę na cesję. Większość właścicieli się zgadza, bo zyskują sprawdzonego najemcę i unikają pustostanu — to korzystne dla wszystkich.",
       "q5": "Jak działa przejrzystość kosztów?",
-      "a5": "Najemcy anonimowo udostępniają swoje miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc wiesz, ile zapłacisz, zanim podpiszesz umowę.",
+      "a5": "Najemcy anonimowo udostępniają swoje miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc przed podpisaniem umowy widzisz koszty zgłoszone przez najemców.",
       "q6": "Czy moje dane są bezpieczne?",
-      "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO."
+      "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO.",
+      "q7": "Jak znaleźć kogoś do wspólnego wynajmu?",
+      "a7": "Otwórz bota Passflat w Telegramie i załóż krótki profil: dzielnica, budżet na osobę, miesiąc przeprowadzki. Bot pokazuje uczciwą liczbę osób, które też szukają, i to, ile mieszkanie kosztuje na osobę; kontakty widać dopiero przy obopólnym zainteresowaniu."
     },
     "forWhom": {
       "title": "Passflat jest dla",
       "titleHighlight": "każdego",
-      "findHome": {
-        "title": "Znajdź mieszkanie",
-        "description": "Przeglądaj cesje najmu i podnajmy z pełnym rozbiciem kosztów. Bez ukrytych opłat — uczciwe oferty od najemców.",
-        "cta": "Przeglądaj oferty"
+      "rentTogether": {
+        "title": "Wynajem całego mieszkania z kimś",
+        "description": "Załóż krótki profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu. Po angielsku, rosyjsku i ukraińsku.",
+        "cta": "Szukam kogoś do wynajmu"
       },
-      "findRoommate": {
-        "title": "Znajdź współlokatora",
-        "description": "Szukaj kompatybilnych współlokatorów lub dodaj wolny pokój. Cena za osobę, preferencje i kto już mieszka.",
-        "cta": "Szukaj współlokatorów"
+      "findRoom": {
+        "title": "Szukasz pokoju",
+        "description": "Ile kosztuje pokój w Warszawie według raportów najemców i cen ofertowych, lista kontrolna przed zapłatą i gdzie publikowane są pokoje.",
+        "cta": "Zobacz koszty pokoi"
       },
-      "sublet": {
-        "title": "Tymczasowy podnajem",
-        "description": "Jedziesz na wakacje lub w delegację? Podnajmij swoje mieszkanie na określony czas. Podaj dokładne daty, łączną cenę i znajdź tymczasowego najemcę.",
-        "cta": "Przeglądaj podnajmy"
+      "checkFlat": {
+        "title": "Sprawdzasz znalezione mieszkanie",
+        "description": "Znane koszty budynku, lokalizacja i źródła hałasu w jednej odpowiedzi.",
+        "cta": "Sprawdź adres"
       }
     },
     "aboutTeam": {
@@ -272,14 +248,13 @@
       "link": "Dowiedz się więcej o nas"
     },
     "cityNotify": {
-      "badge": "Wkrótce w innych miastach",
-      "title": "Mieszkasz w innym mieście?",
-      "subtitle": "Zaczynamy od Warszawy i rozszerzamy się. Powiedz, w jakim mieście chcesz zobaczyć Passflat — powiadomimy Cię o uruchomieniu.",
-      "currentCity": "Aktualnie działamy w Warszawie, Polska",
+      "badge": "Na razie tylko Warszawa.",
+      "title": "Mieszkasz poza Warszawą?",
+      "subtitle": "Na razie działamy tylko tutaj. Napisz, w jakim mieście mieszkasz — tak widzimy, gdzie na nas czekają. Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem.",
       "emailPlaceholder": "Twój email",
       "cityPlaceholder": "Jakie miasto?",
       "submit": "Powiadom mnie",
-      "success": "Dzięki! Damy znać.",
+      "success": "Dzięki! Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem.",
       "error": "Coś poszło nie tak. Spróbuj ponownie.",
       "consent": "Wyrażam zgodę na przetwarzanie moich danych osobowych",
       "consentRequired": "Musisz wyrazić zgodę na przetwarzanie danych osobowych.",
@@ -288,20 +263,18 @@
     "cta": {
       "title": "Gotowy znaleźć swoje",
       "titleHighlight": "nowe mieszkanie?",
-      "subtitle": "Cesja najmu, współlokator lub podnajem — znajdź odpowiednią opcję z przejrzystymi cenami.",
+      "subtitle": "Wynająć z kimś, znaleźć pokój albo sprawdzić znalezione mieszkanie — zacznij od liczb.",
       "browseCta": "Przeglądaj oferty",
       "listCta": "Dodaj ogłoszenie",
-      "freeNote": "Dodawanie ogłoszeń jest darmowe"
+      "freeNote": "Bezpłatnie, bez konta."
     },
     "footer": {
-      "tagline": "Wynajem w Warszawie bez niespodzianek: cała prawda o kosztach od najemców, ogłoszenia i darmowe wzory dokumentów.",
-      "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
+      "tagline": "Znajdź kogoś do wspólnego wynajmu w Warszawie i zobacz, ile to kosztuje na osobę — kwoty zgłoszone przez najemców, z liczbą zgłoszeń.",
+      "expanding": "Na razie tylko Warszawa.",
       "product": "Produkt",
-      "browseListings": "Cesje najmu",
       "roommateSearch": "Współlokatorzy",
-      "temporarySublets": "Podnajem",
       "costReports": "Raporty kosztów",
-      "addListing": "Dodaj ogłoszenie",
+      "costsByDistrict": "Koszty według dzielnic",
       "pricing": "Cennik",
       "resources": "Wzory dokumentów",
       "company": "Firma",
@@ -327,12 +300,12 @@
       "badge": "Za darmo, bez rejestracji",
       "title": "Sprawdź adres,",
       "titleHighlight": "zanim podpiszesz umowę.",
-      "subtitle": "Wpisz adres w Warszawie — pokażemy, co jest w okolicy, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
+      "subtitle": "Wpisz adres w Warszawie — pokażemy, co jest w okolicy, jak wygodna jest lokalizacja i jakie koszty zgłosili najemcy w tym budynku.",
       "inputPlaceholder": "ul. Marszałkowska 1, Warszawa",
       "cta": "Sprawdź",
       "pointTransit": "Transport i metro",
       "pointAmenities": "Sklepy, apteki, parki",
-      "pointCosts": "Realne koszty najemców",
+      "pointCosts": "Koszty zgłoszone przez najemców",
       "free": "Za darmo · bez konta · 15 sekund"
     },
     "tools": {
@@ -343,7 +316,7 @@
       "calculatorDescription": "Policz pełny koszt najmu w dzielnicy: czynsz, opłaty i kaucja — zanim podpiszesz umowę.",
       "calculatorCta": "Policz",
       "templatesTitle": "Wzory dokumentów",
-      "templatesDescription": "Umowa najmu, protokół zdawczo-odbiorczy i wypowiedzenie — gotowe wzory po polsku.",
+      "templatesDescription": "Cesja umowy najmu, protokół zdawczo-odbiorczy, umowa podnajmu i umowa współlokatorska — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku.",
       "templatesCta": "Otwórz wzory"
     }
   },
@@ -379,10 +352,50 @@
     },
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
-    "titleRoommate": "Szukam współlokatora",
-    "roommateMetaDescription": "Ogłoszenia współlokatorów — {city}: pokoje we wspólnych mieszkaniach, bez pośredników. Zanim się wprowadzisz, sprawdź realne koszty budynku: czynsz, opłaty i kaucję.",
-    "roommateCostsBridge": "Zanim się wprowadzisz — sprawdź realne koszty budynku: czynsz, opłaty, kaucja.",
-    "roommateCostsBridgeCta": "Sprawdź adres",
+    "titleRoommate": "Szukam współlokatora w Warszawie: koszty na osobę",
+    "roommateMetaDescription": "Znajdź współlokatora do wynajmu w Warszawie: profil w bocie Telegram (EN/RU/UK), dzielnica, budżet na osobę, koszty pokoju. Bezpłatnie, bez konta.",
+    "roommateH1": "Szukam współlokatora w Warszawie",
+    "roommateCostsBridge": "Masz ofertę na oku?",
+    "roommateCostsBridgeCta": "Sprawdź adres i znane koszty",
+    "roommateRoles": {
+      "find": "Szukam pokoju",
+      "offer": "Mam wolny pokój",
+      "findChosen": "Szukam pokoju",
+      "change": "zmień",
+      "findFlatmate": "Szukam kogoś do wspólnego wynajmu"
+    },
+    "findFlatmate": {
+      "title": "Szukasz kogoś do wspólnego wynajmu?",
+      "count": "{count, plural, one {W Warszawie profil ma już # osoba.} few {W Warszawie profil mają już # osoby.} many {W Warszawie profil ma już # osób.} other {W Warszawie profil ma już # osoby.}}",
+      "first": "Bądź wśród pierwszych.",
+      "topLabel": "Najczęściej wybierane dzielnice:",
+      "topItem": "{name}: {count, plural, one {# profil} few {# profile} many {# profili} other {# profilu}}",
+      "how": "Załóż profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu.",
+      "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku — polskiej wersji jeszcze nie ma, po angielsku poradzisz sobie w minutę.",
+      "notConnected": "Bot Telegram nie jest jeszcze podłączony.",
+      "button": "Otwórz bota w Telegramie"
+    },
+    "flatmateCallout": {
+      "homeTitle": "Passflat pomaga znaleźć w Warszawie kogoś do wspólnego wynajmu i zobaczyć, ile to kosztuje na osobę",
+      "title": "Szukasz kogoś do wspólnego wynajmu w Warszawie?",
+      "roommateLink": "Zobacz koszty na osobę i profile",
+      "perPerson": "Na dwie osoby — około {value} na osobę (połowa mediany całych mieszkań, {area}; zgłoszenia najemców: {count})."
+    },
+    "roomMoney": {
+      "title": "Masz pokój na oku? Ile zapłacisz na osobę i czy można bezpiecznie wpłacić kaucję?",
+      "figuresLead": "Pokój w Warszawie, za miesiąc:",
+      "oneObservation": "Na razie jedna obserwacja w Warszawie",
+      "checklistTitle": "Zanim zapłacisz:",
+      "checklistSee": "Obejrzyj pokój na miejscu, zanim cokolwiek zapłacisz.",
+      "checklistReservation": "Nie płać „rezerwacji” przed obejrzeniem pokoju i podpisaniem umowy.",
+      "checklistIncludes": "Zapytaj, co jest wliczone w cenę: czynsz i media.",
+      "checklistProtocol": "Przy wprowadzce poproś o protokół zdawczo-odbiorczy.",
+      "checklistAddress": "Sprawdź adres w Passflat.",
+      "linksTitle": "Pokoje na innych stronach:",
+      "linkOlx": "OLX: pokoje w Warszawie",
+      "linkOtodom": "Otodom: pokoje w Warszawie",
+      "linkFacebook": "Facebook: grupy z pokojami w Warszawie"
+    },
     "titleSublet": "Tymczasowy podnajem",
     "listingsInCity": "<b>{count}</b> {count, plural, one {oferta} few {oferty} many {ofert} other {ofert}}",
     "filters": {
@@ -472,7 +485,7 @@
       "featuresAmenities": "Udogodnienia",
       "thingsToKnow": "Co warto wiedzieć",
       "buildingInfo": "Informacje o budynku",
-      "buildingCostHint": "Chcesz zobaczyć rzeczywiste koszty mediów w tym budynku zgłoszone przez najemców?",
+      "buildingCostHint": "Chcesz zobaczyć koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
       "monthlyCosts": "Koszty miesięczne",
       "imInterested": "Napisz do najemcy",
@@ -713,19 +726,26 @@
     "registrationPossible": "Możliwość zameldowania",
     "empty": "Nie znaleziono ofert",
     "emptyDesc": "Spróbuj zmienić filtry, aby zobaczyć więcej wyników",
+    "noMatch": {
+      "title": "Żadna oferta nie pasuje do Twoich filtrów",
+      "clearFilters": "Wyczyść filtry"
+    },
     "demandCapture": {
       "title": "Brak ogłoszeń",
       "titleWithDistrict": "Brak ogłoszeń w dzielnicy {district}",
-      "subtitle": "Zostaw email — damy znać, gdy tylko się pojawią.",
-      "subtitleLoggedIn": "Wyślemy e-mail, gdy tylko pojawią się ogłoszenia.",
-      "notifyMeButton": "Powiadom mnie",
+      "subtitle": "Zostaw email — zapiszemy Twoje zainteresowanie. Automatycznych powiadomień o nowych ofertach jeszcze nie ma.",
+      "subtitleLoggedIn": "Zapiszemy Twoje zainteresowanie z e-mailem Twojego konta. Automatycznych powiadomień o nowych ofertach jeszcze nie ma.",
+      "saveInterestButton": "Zapisz zainteresowanie",
+      "interestSaved": "Zapisaliśmy Twoje zainteresowanie. Na razie nie wysyłamy automatycznych powiadomień o nowych ofertach.",
+      "removeEmailLink": "Usuń mój e-mail",
       "postOwnTitle": "Masz coś do dodania tutaj?",
       "postOwnButton": "Dodaj ogłoszenie",
       "searchCardTitle": "Szukasz mieszkania?",
+      "searchCardTitleRoommate": "Szukasz pokoju? Zapisz zainteresowanie ogłoszeniami",
       "supplyCardTitle": "Wynajmujesz lub przekazujesz?",
       "supplyCardBody": "Dodaj za darmo — cesja, współlokator lub podnajem.",
       "consentNote": "Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.",
-      "costCtaTitle": "Zobacz realne koszty najmu",
+      "costCtaTitle": "Zobacz zgłoszone koszty najmu",
       "costCtaButton": "Zobacz koszty"
     },
     "navListings": "Ogłoszenia"
@@ -733,41 +753,34 @@
   "share": {
     "share": "Udostępnij",
     "copied": "Skopiowano link",
-    "cardTitle": "Płacę {percent}% poniżej średniej dzielnicy {district}",
-    "cardTitleGeneric": "Ile naprawdę kosztuje wynajem w Warszawie",
-    "cardDescription": "Sprawdź, czy nie przepłacasz za wynajem — Passflat",
-    "landingHeading": "Zobacz, ile naprawdę płaci się w Twojej okolicy",
+    "cardTitleGeneric": "Zgłoszone koszty wynajmu w Warszawie",
+    "cardDescription": "Czynsz i opłaty miesięczne według dzielnic, ze zgłoszeń na Passflat",
+    "landingHeading": "Zobacz koszty zgłoszone w Twojej okolicy",
     "landingBody": "Ktoś porównał swój czynsz z dzielnicą i się tym podzielił. Sprawdź swój — za darmo, w dwie minuty.",
-    "landingBodyBelow": "Twój znajomy wynajmuje za ≈{amount} zł — o {percent}% taniej niż rynek dzielnicy {district}. A Ty przepłacasz? Sprawdź swój wynajem — za darmo, dwie minuty.",
-    "landingBodyAbove": "Twój znajomy wynajmuje za ≈{amount} zł — o {percent}% drożej niż rynek dzielnicy {district}. A Ty? Sprawdź, czy nie przepłacasz — za darmo, dwie minuty.",
     "ctaCalculator": "Kalkulator kosztów",
     "ctaCosts": "Zobacz koszty wg dzielnic",
-    "landingDataLabel": "Koszty wynajmu w dzielnicy {district}",
-    "ogTitle": "Płacę mniej za wynajem",
-    "ogStatLabel": "Poniżej mediany dzielnicy {district}",
-    "ogStat": "-{percent}%",
-    "ogMedian": "Mediana dzielnicy: ≈{amount} zł",
-    "cardTitleArea": "Ile naprawdę płaci się za wynajem w dzielnicy {district}",
+    "landingDataLabel": "Koszty w dzielnicy {district}",
+    "cardTitleArea": "Zgłoszone koszty wynajmu w dzielnicy {district}",
     "ogTitleNeutral": "Ile płaci się za wynajem",
     "ogStatNeutralLabel": "Mediana dzielnicy {district}",
     "ogMedianPerM2": "≈{amount} zł/m²",
     "landingRent": "Czynsz",
     "landingExpenses": "Opłaty",
-    "landingRange": "Najczęściej płaci się {from}–{to} zł",
+    "landingRange": "Połowa zgłoszeń mieści się między {from} a {to} zł",
     "landingHowTitle": "Jak to działa",
     "landingStep1": "Dodaj swoje koszty — to dwie minuty",
-    "landingStep2": "Porównaj je z medianą dzielnicy i miasta",
-    "landingStep3": "Sprawdź, czy nie przepłacasz za wynajem",
+    "landingStep2": "Zobacz je obok danych dla Twojej dzielnicy lub miasta",
+    "landingStep3": "Wyślij dane znajomym, którzy wynajmują",
     "ctaSubmit": "Porównaj swoje koszty"
   },
   "rentReport": {
-    "metaTitle": "Ile kosztuje wynajem w Warszawie w {year} — realne dane lokatorów",
-    "metaDescription": "Realne koszty wynajmu w Warszawie w {year} według dzielnic: mediany czynszu i mediów. Aktualizowane automatycznie.",
-    "ogTitle": "Wynajem w Warszawie {year}: realne dane",
+    "metaTitle": "Czynsz i opłaty w Warszawie {year} — zgłoszenia wg dzielnic",
+    "metaDescription": "Czynsz i opłaty w Warszawie {year} wg dzielnic: mediany ze zgłoszeń najemców lub cen ofertowych, każda z liczbą zgłoszeń, zwroty kaucji i lista kontrolna kosztów.",
+    "ogTitle": "Wynajem w Warszawie {year}: zgłoszenia wg dzielnic",
     "badge": "Dane społeczności",
     "h1": "Ile kosztuje wynajem w Warszawie w {year}",
     "updated": "Zaktualizowano: {date}",
-    "lead": "Realne koszty wynajmu w Warszawie według dzielnic: ile średnio kosztuje czynsz najmu i media. Liczby aktualizują się wraz z napływem nowych zgłoszeń.",
+    "lead": "Koszty najmu w Warszawie według dzielnic: mediana czynszu najmu i mediów ze zgłoszeń najemców lub cen ofertowych, każda z liczbą zgłoszeń. Liczby aktualizują się wraz z napływem nowych zgłoszeń.",
     "perM2": "Za m²",
     "tableHeading": "Koszty według dzielnic",
     "colDistrict": "Dzielnica",
@@ -782,45 +795,45 @@
     "ctaDistricts": "Przeglądaj według dzielnic",
     "backToBlog": "← Blog",
     "storyRent": "W ogłoszeniu byłoby napisane: {rent} zł.",
-    "storyReality": "Realny miesięczny koszt najemców tego budynku — {address}, {district} — to ≈{total} zł: odstępne plus czynsz administracyjny, prąd, gaz i internet. Różnicy ≈{diff} zł w ogłoszeniu nie widać.",
-    "storyNotException": "To nie wyjątek. Poniżej — to, co najemcy w Warszawie naprawdę płacą co miesiąc: nie ceny ofertowe, a kwoty z konta.",
-    "anatomyTitle": "Z czego składa się prawdziwy koszt",
+    "storyReality": "Według zgłoszeń z tego budynku — {address}, {district} — miesięczny koszt to ≈{total} zł: odstępne plus czynsz administracyjny, prąd, gaz i internet. Różnicy ≈{diff} zł w ogłoszeniu nie widać.",
+    "storyNotException": "To nie wyjątek. Poniżej — miesięczne koszty według dzielnic, ze zgłoszeń najemców i cen ofertowych z ogłoszeń.",
+    "anatomyTitle": "Z czego składa się miesięczny koszt najmu",
     "anatomyIntro": "Cena w ogłoszeniu to zwykle samo odstępne. Do tego dochodzą:",
     "anatomyCzynsz": "Czynsz administracyjny — opłata do spółdzielni lub wspólnoty; w ogłoszeniach często „umyka”.",
     "anatomyUtilities": "Prąd i gaz — według liczników; zimą wyraźnie więcej.",
     "anatomyInternet": "Internet — zwykle 60–100 zł.",
     "anatomyDoplaty": "Dopłaty (rozliczenie zaliczek) — raz na pół roku-rok; największe zaskoczenie, o nim niżej.",
-    "anatomyMedian": "Mediana opłat ponad odstępne w naszych danych to ≈{expenses} zł miesięcznie. Dodaj ją do ceny z ogłoszenia — wyjdzie kwota bliższa rzeczywistości.",
+    "anatomyMedian": "Mediana opłat ponad odstępne w naszych danych to ≈{expenses} zł miesięcznie. Dodaj ją do ceny z ogłoszenia — wyjdzie kwota bliższa rzeczywistości. Źródło: {source}.",
     "kaucjaTitle": "Czwarta opłata, o której ogłoszenia milczą: kaucja",
     "kaucjaAmount": "Mediana kaucji w zgłoszeniach najemców to ≈{deposit} zł.",
-    "kaucjaReturnedLabel": "odzyskało kaucję w całości",
+    "kaucjaReturnedLabel": "osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
     "kaucjaBody": "Co czwarty wyprowadzający się traci część lub całość — najczęściej przez spory o sprzątanie, drobne uszkodzenia i niedopłacone rachunki. Szanse zwiększają protokół zdawczo-odbiorczy, zdjęcia i spisane liczniki.",
     "kaucjaCta": "Jak odzyskać kaucję w całości — poradnik",
     "doplatyTitle": "Dopłaty: czemu po pół roku przychodzi rachunek na kolejne 1 500 zł",
     "doplatyBody1": "Prąd i gaz często opłaca się zaliczkowo — stała kwota co miesiąc. Raz na pół roku-rok dostawca porównuje zaliczki z realnym zużyciem i wysyła rozliczenie. Jeśli ogrzewanie poszło mocniej albo taryfa wzrosła — przychodzi dopłata, czasem na setki złotych, gdy już przywykłeś do „swojej” kwoty.",
-    "doplatyBody2": "To najczęstsza przykra niespodzianka najmu — i główny powód, dla którego cena z ogłoszenia rozjeżdża się z rzeczywistością.",
+    "doplatyBody2": "To najczęstsza przykra niespodzianka najmu — i główny powód, dla którego cena z ogłoszenia rozjeżdża się z tym, co ostatecznie płacisz.",
     "doplatyCta": "Dopłaty w szczegółach: jak sprawdzić rozliczenie",
     "checkTitle": "Jak sprawdzić konkretny budynek przed podpisaniem",
     "checkIntro": "Płacić będziesz za konkretny adres, nie za „średnią dla miasta”. Przed podpisaniem umowy:",
-    "checkStep1": "Sprawdź adres — za darmo i bez konta: realne koszty najemców tego budynku, transport i minusy lokalizacji.",
+    "checkStep1": "Sprawdź adres — bez zakładania konta: zgłoszone koszty tego budynku, transport i minusy lokalizacji.",
     "checkStep2": "Zapytaj właściciela o wysokość czynszu administracyjnego i co obejmuje.",
     "checkStep3": "Poproś o ostatnie rozliczenie: czy były dopłaty i jakie.",
     "checkStep4": "Spisz liczniki w protokole zdawczo-odbiorczym.",
     "checkCta": "Sprawdź adres",
     "faqTitle": "Częste pytania",
     "faqQ1": "Czemu ceny tutaj różnią się od Otodom?",
-    "faqA1": "To różne wielkości: portal pokazuje cenę ofertową bez opłat, my — pełną kwotę, którą najemcy realnie płacą, z czynszem i mediami.",
+    "faqA1": "To różne wielkości: portal pokazuje cenę ofertową bez opłat, my — pełną kwotę miesięcznych kosztów ze zgłoszeń, z czynszem i mediami.",
     "faqQ2": "Ile doliczyć na opłaty ponad odstępne?",
-    "faqA2": "Mediana to ≈{expenses} zł miesięcznie. W starym budownictwie zimą więcej, w nowym z ogrzewaniem miejskim mniej — sprawdzaj konkretny budynek.",
+    "faqA2": "Mediana to ≈{expenses} zł miesięcznie. W starym budownictwie zimą więcej, w nowym z ogrzewaniem miejskim mniej — sprawdzaj konkretny budynek. Źródło: {source}.",
     "faqQ3": "Czy naprawdę można nie odzyskać kaucji?",
-    "faqA3": "Według naszych danych kaucję w całości odzyskuje {pct}% wyprowadzających się. Protokół zdawczo-odbiorczy ze zdjęciami i licznikami najbardziej zwiększa szanse."
+    "faqA3": "W naszych danych {gotBack} z {answered} wyprowadzających się, którzy odpowiedzieli, odzyskało kaucję — w całości lub częściowo. Protokół zdawczo-odbiorczy ze zdjęciami i licznikami najbardziej zwiększa szanse."
   },
   "checker": {
     "metaTitle": "Sprawdź adres: ocena lokalizacji i koszty sąsiadów — {city}",
     "metaDescription": "Sprawdź dowolny adres w mieście {city}: bezpłatna ocena lokalizacji, odległości do sklepów, transportu i szkół, co w pobliżu hałasuje i ile płacą sąsiedzi.",
     "badge": "Bezpłatna ocena lokalizacji",
     "title": "Sprawdź adres: {city}",
-    "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i ile naprawdę płacą najemcy w tym budynku.",
+    "subtitle": "Zobacz, co jest w pobliżu, jak wygodna jest lokalizacja i jakie koszty zgłosili najemcy w tym budynku.",
     "searchLabel": "Adres budynku",
     "searchPlaceholder": "Zacznij wpisywać adres…",
     "searchHint": "Wybierz pełny adres z numerem budynku. Checker obejmuje obecnie Warszawę.",
@@ -850,24 +863,17 @@
       "privacy": "<privacyLink>Polityka prywatności</privacyLink>"
     },
     "result": {
-      "checkedAddress": "Sprawdzony adres"
+      "checkedAddress": "Wyszukany adres"
     },
     "costs": {
       "availableTitle": "Mamy dane o miesięcznych kosztach w tym budynku",
-      "month": "mies.",
-      "rent": "Czynsz najmu",
-      "expenses": "Media i opłaty",
-      "sourceTenant": "Na podstawie {count, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców",
-      "sourceMixed": "Na podstawie {tenantCount, plural, one {# zgłoszenia} other {# zgłoszeń}} od najemców i {listingCount, plural, one {# ogłoszenia} other {# ogłoszeń}}",
-      "sourceScraped": "Na podstawie {count, plural, one {# ogłoszenia} other {# ogłoszeń}}",
       "viewBuilding": "Zobacz rozbicie na rachunki",
       "emptyTitle": "Nikt jeszcze nie udostępnił kosztów tego budynku. Bądź pierwszy.",
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
-      "cheaperThanDistrict": "O {percent}% taniej niż mediana dzielnicy {district}",
-      "pricierThanDistrict": "O {percent}% drożej niż mediana dzielnicy {district}",
-      "depositReturned": "kaucję zwrócono {returned} z {answered}"
+      "telegramCta": "Otwórz ten budynek w bocie Telegram",
+      "telegramHint": "Liczby dla tego budynku i profile współlokatorów — w Telegramie, po angielsku, rosyjsku i ukraińsku; pismo o kaucję po rosyjsku i ukraińsku."
     },
     "nuisances": {
       "title": "Na co zwrócić uwagę",
@@ -936,11 +942,11 @@
     }
   },
   "calculator": {
-    "metaTitle": "Kalkulator wynajmu w {city} — ile naprawdę kosztuje (czynsz najmu + media)",
-    "metaDescription": "Oszacuj realny miesięczny koszt wynajmu w {city}: czynsz najmu z mediany lokatorów plus media według stawek Warszawy — czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet.",
+    "metaTitle": "Kalkulator kosztów najmu w Warszawie: czynsz i media",
+    "metaDescription": "Policz koszt najmu w Warszawie: czynsz wg mediany dla dzielnicy (z grupą i N) plus media wg stawek — czynsz administracyjny, ogrzewanie, prąd, woda, internet.",
     "breadcrumb": "Kalkulator",
     "badge": "Kalkulator kosztów",
-    "h1": "Ile kosztuje wynajem w {city} z wszystkimi opłatami",
+    "h1": "Koszt najmu w Warszawie ze wszystkimi opłatami",
     "intro": "Pełny miesięczny koszt mieszkania ze wszystkimi opłatami: czynsz najmu plus media (czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet). Czynsz najmu bierzemy z mediany zgłoszeń lokatorów, media liczymy według aktualnych stawek Warszawy. To orientacja do planowania, nie dokładny rachunek.",
     "controls": {
       "district": "Dzielnica",
@@ -958,7 +964,7 @@
       "perMonth": "/mies.",
       "areaSummary": "{area} m²",
       "rent": "Czynsz najmu",
-      "basisData": "na podstawie {count, plural, one {# zgłoszenia} few {# zgłoszeń} many {# zgłoszeń} other {# zgłoszeń}} w dzielnicy",
+      "basisData": "na podstawie danych z dzielnicy",
       "basisCityWide": "z mediany całego miasta",
       "basisCityFallback": "z mediany miasta · mało danych w tej dzielnicy",
       "basisNone": "brak danych o czynszu najmu",
@@ -984,27 +990,33 @@
     "sourcesNote": "Stawki: MPWiK, ciepło systemowe, G11, wywóz śmieci w Warszawie (2025–2026). Czynsz najmu — mediany zgłoszeń Passflat."
   },
   "costsSeo": {
-    "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
-    "cityMetaDescription": "Ile naprawdę płacą najemcy w {city} — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
-    "cityH1": "Ile naprawdę kosztuje wynajem w {city}",
-    "cityIntro": "Mediany kosztów od samych najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
+    "cityMetaTitle": "{city}: zgłoszone koszty najmu według dzielnic",
+    "cityMetaDescription": "{city}: zgłoszone koszty wynajmu — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
+    "cityH1": "{city}: ile kosztuje wynajem — zgłoszone dane według dzielnic",
+    "cityIntro": "Mediany kosztów od samych najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach miasta {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
     "districtsHeading": "Koszty według dzielnic",
     "exploreAll": "Wszystkie budynki i filtry",
     "emptyCity": "Brak danych — dodaj swoje koszty jako pierwszy.",
-    "districtMetaTitle": "Wynajem w {district}, {city} — realne koszty najemców",
-    "districtMetaDescription": "Realne koszty wynajmu w {district}, {city}: czynsz, opłaty i kaucje, budynek po budynku. Dane od najemców.",
-    "districtH1": "Wynajem w {district}",
-    "districtIntro": "Ile naprawdę płacą najemcy w {district}, {city} — czynsz, opłaty i kaucje, budynek po budynku.",
-    "buildingsHeading": "Budynki w {district}",
-    "backToCity": "Wszystkie dzielnice {city}",
+    "districtMetaTitle": "{district}, {city} — koszty najmu i pokoju",
+    "districtMetaDescription": "Koszty najmu w dzielnicy {district} ({city}) wg zgłoszeń: czynsz, opłaty, budynek po budynku, cena pokoju i ile osób szuka tu współlokatora.",
+    "districtH1": "{district}: koszty najmu",
+    "districtIntro": "Zgłoszone koszty wynajmu w dzielnicy {district} ({city}) — czynsz, opłaty i kaucje, budynek po budynku.",
+    "buildingsHeading": "Budynki — {district}",
+    "backToCity": "Wszystkie dzielnice miasta {city}",
     "emptyDistrict": "Brak raportów — dodaj swój jako pierwszy.",
-    "buildingMetaTitle": "{address}, {city} — realne koszty najmu",
-    "buildingMetaDescriptionWithData": "Ile naprawdę kosztuje wynajem — {address}, {city}: razem ≈ {total} zł/mies. (czynsz ≈ {rent}, opłaty ≈ {expenses}). {reports}.",
-    "buildingMetaDescription": "Realne koszty wynajmu — {address}, {city}: czynsz, opłaty i kaucja. Sprawdź dane albo dodaj swoje."
+    "districtRoommateHeading": "Pokój i wspólny najem: {district}",
+    "districtProfileCount": "{district}: {n, plural, one {# osoba z profilem wskazała tę dzielnicę.} few {# osoby z profilem wskazały tę dzielnicę.} many {# osób z profilem wskazało tę dzielnicę.} other {# osoby z profilem wskazały tę dzielnicę.}}",
+    "districtProfileNone": "{district}: nikt jeszcze nie wskazał tej dzielnicy — bądź wśród pierwszych.",
+    "districtRoomLead": "Pokoje: raporty najemców i ceny ofertowe z ogłoszeń",
+    "districtRoomCityFallback": "W dzielnicy {district} jest mniej niż {min} raportów dotyczących pokoi; {city}:",
+    "buildingMetaTitle": "{address}, {city} — koszty najmu wg zgłoszeń",
+    "buildingMetaDescriptionWithData": "Zgłoszone koszty wynajmu — {address}, {city}: razem ≈ {total} zł/mies. (czynsz ≈ {rent}, opłaty ≈ {expenses}). {reports}.",
+    "buildingMetaDescriptionPartial": "Zgłoszone koszty wynajmu — {address}, {city}: {metric, select, knownPartTotal {znana część kosztów ≈ {value} zł miesięcznie} rent {czynsz ≈ {value} zł miesięcznie, pozostałe koszty nieznane} other {razem ≈ {value} zł miesięcznie}}. {reports}.",
+    "buildingMetaDescription": "{address}, {city}: brak zgłoszeń dla tego budynku — pokazujemy odniesienie dla dzielnicy lub Warszawy z grupą i liczbą zgłoszeń. Dodaj swoje koszty."
   },
   "costs": {
     "title": "Przejrzystość kosztów",
-    "subtitle": "Ile naprawdę płacą najemcy",
+    "subtitle": "Koszty wynajmu zgłoszone przez najemców",
     "calculatorTeaser": {
       "title": "Ile wyjdzie miesięcznie z wszystkimi opłatami?",
       "desc": "Czynsz najmu plus media — szacunek w kilka kliknięć",
@@ -1034,7 +1046,7 @@
     },
     "overview": {
       "badge": "Przejrzystość kosztów",
-      "title": "Sprawdź, ile naprawdę zapłacisz przed podpisaniem umowy",
+      "title": "Sprawdź koszty zgłoszone przez najemców przed podpisaniem umowy",
       "searchPlaceholder": "Szukaj po adresie lub dzielnicy...",
       "submitCosts": "Zgłoś koszty",
       "districts": "Dzielnice",
@@ -1042,9 +1054,6 @@
       "buildingsWithReports": "budynków",
       "reports": "raportów",
       "perMonthShort": "mies.",
-      "vsMedianAbove": "powyżej mediany miasta",
-      "vsMedianBelow": "poniżej mediany miasta",
-      "vsMedianEqual": "na poziomie mediany miasta",
       "unlockFullData": "Raporty kosztów są zablokowane",
       "unlockDesc": "Odblokuj, wysyłając swoje koszty, lub kup dostęp",
       "submitMyCosts": "Zgłoś moje koszty",
@@ -1095,7 +1104,12 @@
       "flaggedTitle": "Twój raport jest weryfikowany",
       "flaggedDesc": "Zauważyliśmy nietypowe wartości w Twoim raporcie kosztów. Dane są ukryte, dopóki ich nie poprawisz lub nie potwierdzisz z nami.",
       "rent": "Najem",
-      "expenses": "Wydatki"
+      "expenses": "Wydatki",
+      "figureTenant": "Raporty najemców ({count})",
+      "figureAsking": "Ceny ofertowe ({count})",
+      "figureKnownPart": "znana część",
+      "figureRentOnly": "tylko najem",
+      "mapLegendPart": "+ po liczbie: znana jest tylko część kosztów"
     },
     "buyAccess": {
       "title": "Kup dostęp do danych o kosztach",
@@ -1126,6 +1140,8 @@
       "description": "Pomóż społeczności dzieląc się swoimi wydatkami",
       "pageTitle": "Zgłoś swoje koszty",
       "pageSubtitle": "Pomóż innym podjąć świadomą decyzję. Zajmie to mniej niż 2 minuty.",
+      "metaTitle": "Dodaj koszty swojego mieszkania w Warszawie",
+      "metaDescription": "Dwie minuty: czynsz najmu, czynsz administracyjny, media i kaucja w Twoim budynku. Pokazujemy je tylko zbiorczo, z liczbą raportów.",
       "rentalType": "Co wynajmujesz?",
       "wholeApartment": "Całe mieszkanie",
       "room": "Pokój",
@@ -1158,20 +1174,16 @@
       "optionalLabel": "(opcjonalnie)",
       "addressNotFoundHint": "Nie możesz znaleźć adresu? Wybierz najbliższy — szczegóły poprawisz później.",
       "completeBuildingTitle": "Pomóż uzupełnić dane budynku",
-      "comparisonHeading": "Porównanie z medianą dzielnicy",
-      "unlockTitle": "Zaloguj się, aby odblokować pełne statystyki",
-      "unlockDesc": "Twój raport jest zapisany. Załóż konto lub zaloguj się, aby przypisać go do siebie i odsłonić szczegółowe dane tego budynku.",
+      "comparisonHeading": "{level, select, district {Twoje koszty i dane dzielnicy} other {Twoje koszty i dane miasta}}",
+      "unlockTitle": "Zaloguj się, aby przypisać raport do siebie i zobaczyć rozkład mediów",
+      "unlockDesc": "Twój raport jest zapisany. Załóż konto lub zaloguj się, aby przypisać go do siebie. Po zalogowaniu:",
       "unlockItemUtilities": "Pełny rozkład mediów — prąd, gaz, ogrzewanie, woda",
-      "unlockItemDeposit": "Zwrot kaucji — jak często i w ile dni",
-      "unlockItemTenure": "Jak długo najemcy naprawdę mieszkają",
-      "unlockItemPosition": "Pozycja tego budynku w dzielnicy",
+      "unlockItemPosition": "Twój raport na Twoim koncie, obok danych dla dzielnicy lub miasta",
       "unlockCta": "Zaloguj się, aby odblokować",
       "movingOutNudgeTitle": "Masz coś do zaoferowania?",
       "movingOutNudgeBody": "Wyprowadzasz się, szukasz współlokatora lub podnajmujesz — dodaj ogłoszenie za darmo.",
       "movingOutNudgeButton": "Dodaj ogłoszenie",
       "yourCosts": "Płacisz",
-      "comparisonSave": "Oszczędzasz ≈{amount} zł/mies",
-      "comparisonOverpay": "Przepłacasz ≈{amount} zł/mies",
       "comparisonPerM2Heading": "Za metr kwadratowy",
       "comparisonRentPerM2": "Czynsz/m²",
       "comparisonTotalPerM2": "Razem/m²",
@@ -1180,7 +1192,7 @@
       "fillDistrictTitle": "Pomóż uzupełnić {district}",
       "shareDistrict": "Udostępnij dzielnicę",
       "shareInviteTitle": "Podziel się ze znajomymi",
-      "shareInviteDesc": "Podziel się ze znajomymi — niech sprawdzą, czy nie przepłacają za wynajem.",
+      "shareInviteDesc": "Wyślij znajomym, którzy wynajmują: zobaczą dane dla tej dzielnicy i mogą dodać własne koszty.",
       "shareComparison": "Udostępnij porównanie",
       "shareBuilding": "Udostępnij budynek",
       "fillDistrictDesc": "Udostępnij w czacie swojej okolicy — więcej raportów to dokładniejsze porównania dla wszystkich.",
@@ -1295,7 +1307,7 @@
     },
     "building": {
       "whiteSpotTitle": "Temu budynkowi brakuje raportów",
-      "whiteSpotDesc": "{count, plural, one {Na razie # zgłoszenie z pięciu, po których dom dostaje status „wiarygodne”.} few {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.} many {Na razie # zgłoszeń z pięciu, po których dom dostaje status „wiarygodne”.} other {Na razie # zgłoszenia z pięciu, po których dom dostaje status „wiarygodne”.}}",
+      "whiteSpotDesc": "{count, plural, one {Na razie # raport: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} few {Na razie # raporty: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} many {Na razie # raportów: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.} other {Na razie # raportu: dodaj swój, aby te liczby opierały się na większej liczbie odpowiedzi.}}",
       "follow": "Obserwuj",
       "following": "Obserwujesz",
       "followToast": "Obserwujesz — wyślemy e-mail przy nowych raportach.",
@@ -1339,7 +1351,6 @@
       "tagsCta": "Opisz ten budynek",
       "tagsAddCta": "Dodaj swoją opinię",
       "thisBuilding": "Ten budynek",
-      "districtAvg": "Średnia dla {district}",
       "warsawAvg": "Średnia dla Warszawy",
       "districtMedian": "Mediana — {district}",
       "cityMedian": "Mediana — Warszawa",
@@ -1349,20 +1360,14 @@
       "cheaperThanPct": "Tańsze niż ~{percent}% zgłoszeń w dzielnicy {district}",
       "pricierThanPct": "Droższe niż ~{percent}% zgłoszeń w dzielnicy {district}",
       "comparisonCaption": "Szacunek orientacyjny. Wartości dla dzielnicy i miasta to mediana wszystkich zgłoszeń w okolicy.",
-      "percentLower": "{percent}% niżej",
       "higher": "Wyżej",
-      "percentHigher": "{percent}% wyżej",
       "matchesAverage": "Zgodne ze średnią",
-      "matchesMedian": "Zgodne z medianą",
       "otherCosts": "Inne koszty",
       "periodic": "Rozliczenia okresowe (śr./mies.)",
       "deposit": "Kaucja",
       "depositDesc": "Jednorazowa kaucja zwrotna",
       "winterSummer": "zima {winter} / lato {summer}",
       "oftenIncluded": "Często wliczone w czynsz",
-      "lookingForApartment": "Szukasz mieszkania w tym budynku?",
-      "lookingForApartmentDesc": "Zobacz dostępne oferty ze zweryfikowanymi kosztami",
-      "viewListingsIn": "Zobacz oferty w {district}",
       "demoSimulate": "[Demo] Symuluj wkład",
       "expenses": "Wydatki",
       "depositReturnedRate": "{percent}% odzyskało kaucję",
@@ -1381,14 +1386,53 @@
       "tenureLabel": "Typowy czas najmu",
       "estimateCaptionDistrict": "Na podstawie {count, plural, one {# raportu} few {# raportów} many {# raportów} other {# raportów}} · {districtCount} w dzielnicy {district}",
       "withinRange": "w typowym zakresie",
-      "onPar": "na równi",
       "districtRange": "{district}: {min}–{max} {unit}",
       "legendBand": "typowy zakres dzielnicy",
       "legendMedian": "mediana",
-      "legendBuilding": "ten budynek"
+      "legendBuilding": "ten budynek",
+      "figures": {
+        "sourceTenant": "{count, plural, one {# raport od najemców} few {# raporty od najemców} many {# raportów od najemców} other {# raportu od najemców}}",
+        "sourceTenantWithImported": "{count, plural, one {# raport od najemców} few {# raporty od najemców} many {# raportów od najemców} other {# raportu od najemców}} (w tym wprowadzone przez Passflat: {imported})",
+        "sourceImported": "{count, plural, one {# raport wprowadzony przez Passflat z odpowiedzi najemców} few {# raporty wprowadzone przez Passflat z odpowiedzi najemców} many {# raportów wprowadzonych przez Passflat z odpowiedzi najemców} other {# raportu wprowadzonego przez Passflat z odpowiedzi najemców}}",
+        "sourceAsking": "{count, plural, one {# cena ofertowa z ogłoszeń} few {# ceny ofertowe z ogłoszeń} many {# cen ofertowych z ogłoszeń} other {# ceny ofertowej z ogłoszeń}}",
+        "tenantTitle": "Raporty od najemców",
+        "askingTitle": "Ceny ofertowe z ogłoszeń",
+        "nListings": "{count, plural, one {# ogłoszenie} few {# ogłoszenia} many {# ogłoszeń} other {# ogłoszenia}}",
+        "depositReturned": "{gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
+        "depositReturnedArea": "{level, select, district {W dzielnicy {area}} other {W mieście {area}}}: {gotBack} z {answered} osób, które odpowiedziały, odzyskało kaucję — w całości lub częściowo",
+        "countOfTotal": "{count} z {total}",
+        "oneObservation": "Jedna obserwacja pod tym adresem",
+        "oneObservationArea": "{level, select, district {Jedna obserwacja w dzielnicy {area}} other {Jedna obserwacja w mieście {area}}}",
+        "roomsValue": "Pokoje: {count}",
+        "areaValue": "Powierzchnia ≈ {area} m²",
+        "knownPart": "Znana część kosztów",
+        "knownPartHint": "Nie podano wszystkich mediów — pełny koszt miesięczny może być wyższy",
+        "valueUnknown": "Nieznane",
+        "valueIncluded": "Wliczone w czynsz najmu",
+        "includedCount": "wliczone w czynsz najmu: {count}",
+        "unknownCount": "nieznane: {count}",
+        "lastRecorded": "Ostatni raport dodany lub potwierdzony: {date}",
+        "lastRecordedAsking": "Ostatnia cena ofertowa dodana: {date}",
+        "tenancyRange": "Okres tych kosztów: {from}–{to}",
+        "tenancyYear": "Okres tych kosztów: {year}",
+        "tenancyOngoing": "Okres tych kosztów: od {from} do dziś",
+        "tenancyCurrent": "Okres tych kosztów: do dziś",
+        "tenancyFrom": "Okres tych kosztów: od {from}",
+        "tenancyUntil": "Okres tych kosztów: do {to}",
+        "tenancyUnknown": "Nie wiadomo, za jaki okres płacono te koszty",
+        "viewDetails": "Zobacz szczegóły",
+        "addExperience": "Dodaj swoje doświadczenie",
+        "noBuildingData": "Brak danych dla tego budynku",
+        "noAreaData": "Dla tej okolicy nie ma jeszcze danych",
+        "referenceTenantDistrict": "Dla orientacji: raporty najemców w dzielnicy {area} ({count})",
+        "referenceTenantCity": "Dla orientacji: raporty najemców w mieście {area} ({count})",
+        "referenceAskingDistrict": "Dla orientacji: ceny ofertowe z ogłoszeń w dzielnicy {area} ({count})",
+        "referenceAskingCity": "Dla orientacji: ceny ofertowe z ogłoszeń w mieście {area} ({count})",
+        "referenceHint": "{level, select, district {To dane dla dzielnicy, a nie dla tego budynku.} other {To dane dla miasta, a nie dla tego budynku.}}"
+      }
     },
     "trust": {
-      "reliable": "Popularny budynek",
+      "sampleSize": "{count}+ obserwacji",
       "outdated": "Dane mogą być nieaktualne",
       "earlyData": "{count, plural, one {Dane wstępne · # raport} few {Dane wstępne · # raporty} many {Dane wstępne · # raportów} other {Dane wstępne · # raportu}}"
     },
@@ -1477,13 +1521,12 @@
     "title": "Jak działa Passflat",
     "subtitle": "Szukasz nowego mieszkania lub chcesz przekazać swój najem? Oto jak to działa, krok po kroku.",
     "tabSeekers": "Szukam mieszkania",
-    "tabListers": "Przekazuję najem",
     "tabCosts": "Porównuję koszty",
     "seekers": {
       "label": "Dla szukających mieszkania",
       "title": "Znajdź nowe mieszkanie — ze wszystkimi kosztami na widoku, bez niespodzianek",
-      "step1Title": "Przeglądaj zweryfikowane oferty",
-      "step1Desc": "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z pełnym rozbiciem kosztów — czynsz, opłaty administracyjne i rzeczywiste koszty mediów.",
+      "step1Title": "Przeglądaj oferty",
+      "step1Desc": "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z kosztami podanymi przez obecnego najemcę — czynsz, opłaty administracyjne i media.",
       "step2Title": "Filtruj i eksploruj",
       "step2Desc": "Zawęź wyszukiwanie wg dzielnicy, zakresu cen, liczby pokoi i daty wprowadzenia. Przeglądaj oferty na interaktywnej mapie.",
       "step3Title": "Skontaktuj się z obecnym najemcą",
@@ -1493,21 +1536,6 @@
       "step5Title": "Przeprowadź się",
       "step5Desc": "Dokończ przekazanie — bez utraty kaucji, bez prowizji. Zacznij nowy rozdział.",
       "cta": "Przeglądaj ogłoszenia"
-    },
-    "listers": {
-      "label": "Dla obecnych najemców",
-      "title": "Przekaż najem — zachowaj kaucję",
-      "step1Title": "Utwórz ogłoszenie",
-      "step1Desc": "Dodaj mieszkanie z adresem, zdjęciami i pełnym rozbiciem kosztów. To darmowe — do 2 aktywnych ogłoszeń.",
-      "step2Title": "Pojaw się na mapie",
-      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania — zobaczą je najemcy szukający mieszkania.",
-      "step3Title": "Otrzymuj zainteresowania",
-      "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości na swoim koncie.",
-      "step4Title": "Wybierz zastępcę",
-      "step4Desc": "Wybierz najlepszego kandydata i skoordynuj cesję najmu z wynajmującym.",
-      "step5Title": "Przekaż klucze",
-      "step5Desc": "Dokończ przekazanie i odzyskaj kaucję. Gotowe.",
-      "cta": "Dodaj ogłoszenie"
     },
     "costs": {
       "label": "Przejrzystość kosztów",
@@ -1576,12 +1604,12 @@
     "solution": {
       "label": "Nasze rozwiązanie",
       "title": "Kompletny zestaw narzędzi do wynajmu od społeczności",
-      "pillar1Title": "Cesje najmu",
-      "pillar1Desc": "Znajdź zastępcę i zachowaj kaucję. Przejmij czyjś najem i omiń prowizję pośrednika. Cesja najmu to standardowy instrument prawny w Polsce — my ułatwiamy ten proces.",
-      "pillar2Title": "Szukanie współlokatora",
-      "pillar2Desc": "Znajdź odpowiedniego współlokatora lub zapełnij wolny pokój. Określ preferencje, typ pokoju i koszt na osobę — aby obie strony wiedziały, czego się spodziewać.",
-      "pillar3Title": "Tymczasowy podnajem",
-      "pillar3Desc": "Podnajmij swoje mieszkanie na określony czas, gdy jesteś poza domem. Ustal dokładne daty, całkowitą cenę i zasady — wszystko w jednym ogłoszeniu.",
+      "pillar1Title": "Znajdź kogoś do wspólnego wynajmu",
+      "pillar1Desc": "Krótki profil w naszym bocie w Telegramie, po angielsku, rosyjsku lub ukraińsku: dzielnica, budżet na osobę, miesiąc przeprowadzki. Pasujące osoby pojawiają się po jednej, a nazwy użytkowników w Telegramie obu osób widać dopiero przy obopólnym zainteresowaniu.",
+      "pillar2Title": "Ile to kosztuje na osobę",
+      "pillar2Desc": "Ile kosztuje mieszkanie, gdy dzielą je dwie osoby: połowa mediany kosztów całych mieszkań zgłoszonych przez najemców, zawsze z liczbą zgłoszeń.",
+      "pillar3Title": "Sprawdzanie adresu, kalkulator, poradniki",
+      "pillar3Desc": "Sprawdź adres przed podpisaniem umowy: koszty zgłoszone przez najemców dla budynku i jego dzielnicy. Kalkulator podaje orientacyjną kwotę — czynsz najmu plus media — dla dzielnicy i metrażu, a poradniki opisują kaucję, media i umowy najmu w Polsce.",
       "pillar4Title": "Przejrzystość kosztów",
       "pillar4Desc": "Koszty mediów od społeczności. Dowiedz się dokładnie, ile zapłacisz za prąd, gaz, ogrzewanie i wodę — wraz z okresowymi rozliczeniami pokazanymi jako równowartość miesięczna — zanim podpiszesz umowę. A kalkulator kosztów podpowie orientacyjną kwotę dla dowolnej dzielnicy i powierzchni — czynsz najmu plus media — w kilka kliknięć."
     },
@@ -1589,13 +1617,13 @@
       "label": "Kim jesteśmy",
       "title": "Stworzone przez najemców, dla najemców",
       "description": "Sami wynajmujemy w Warszawie i przeszliśmy to wszystko na własnej skórze — utracone kaucje, rachunki za media, o których nikt nie uprzedził, cenę, którą poznajesz dopiero po przeprowadzce. Z tego bólu wyrósł Passflat.",
-      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Obecnie to koszty według budynków, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów."
+      "description2": "U podstaw Passflat leży nasze doświadczenie wynajmu w Warszawie: przeprowadzki, agencje i cesja. Dziś Passflat pomaga znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile najem kosztuje na osobę, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic."
     },
     "values": {
       "label": "Nasze zasady",
       "title": "Zasady platformy",
       "principle1": "Żadnych ukrytych informacji",
-      "principle1Desc": "Pokazujemy realne liczby — nawet gdy są niewygodne dla rynku. Każde ogłoszenie zawiera pełny podział kosztów, zanim się z kimkolwiek skontaktujesz.",
+      "principle1Desc": "Pokazujemy kwoty zgłoszone przez najemców wraz z liczbą zgłoszeń — także wtedy, gdy są niewygodne.",
       "principle2": "Twoje dane należą do Ciebie",
       "principle2Desc": "Każdy raport kosztów jest anonimowy — nie da się go powiązać z Tobą, i nigdy nie sprzedajemy danych stronom trzecim.",
       "principle3": "Otwarte domyślnie",
@@ -1609,7 +1637,6 @@
       "description": "Teraz — Warszawa. Dalej planujemy Kraków, Wrocław i inne miasta."
     },
     "stats": {
-      "listings": "Aktywnych ogłoszeń",
       "costReports": "Raportów kosztów"
     },
     "ctaTitle": "Dołącz do społeczności",
@@ -1632,9 +1659,10 @@
     "topic3": "Poradnik dla obcokrajowców: pierwszy wynajem w Warszawie",
     "topic3Desc": "Od szukania ofert po podpisanie umowy — wszystko, co nowy mieszkaniec musi wiedzieć o rynku najmu w Warszawie.",
     "topic4": "Czym jest czynsz administracyjny i co obejmuje?",
-    "topic4Desc": "Czynsz administracyjny to jeden z najbardziej mylących elementów wynajmu w Polsce. Wyjaśniamy, za co tak naprawdę płacisz.",
-    "ctaText": "W międzyczasie zobacz, ile płacą najemcy wg budynków",
+    "topic4Desc": "Czynsz administracyjny to jeden z najbardziej mylących elementów wynajmu w Polsce. Wyjaśniamy, co obejmuje.",
+    "ctaText": "Szukasz kogoś do wspólnego wynajmu albo sprawdzasz mieszkanie? Zacznij od kosztów zgłoszonych przez najemców.",
     "ctaButton": "Przeglądaj dane o kosztach",
+    "ctaFlatmate": "Szukam współlokatora",
     "backToBlog": "Powrót do bloga",
     "readMore": "Czytaj dalej"
   },
@@ -1682,7 +1710,6 @@
     "about": "o",
     "listingType": "Typ",
     "goToDashboard": "Przejdź do konta",
-    "browseListings": "Przeglądaj oferty",
     "savedListings": "Zapisane",
     "noSavedListings": "Brak zapisanych ogłoszeń",
     "noSavedListingsDesc": "Przeglądaj oferty i kliknij ikonę serca, aby je tutaj zapisać",
@@ -1791,9 +1818,9 @@
     "general": {
       "title": "Ogólne",
       "q1": "Czym jest Passflat?",
-      "a1": "Passflat to marketplace najmu w Warszawie: ogłoszenia (cesja najmu, szukanie współlokatora, podnajem), baza kosztów od samych najemców (czynsz, media, kaucje) i darmowe wzory dokumentów do transakcji.",
+      "a1": "Passflat pomaga osobom w Warszawie znaleźć kogoś do wspólnego wynajmu (profil w naszym bocie w Telegramie) i zobaczyć, ile najem kosztuje na osobę: koszty zgłoszone przez najemców według budynków i dzielnic, sprawdzanie adresu, kalkulator, poradniki i wzory dokumentów.",
       "q2": "Czy Passflat jest darmowy?",
-      "a2": "Tak. Przeglądanie ofert, raporty kosztów, dodawanie ogłoszeń i wzory dokumentów — są bezpłatne.",
+      "a2": "Tak. Wszystko w Passflat jest dziś bezpłatne: koszty zgłoszone przez najemców, sprawdzanie adresu, kalkulator, poradniki, wzory dokumentów i bot w Telegramie.",
       "q3": "W jakich miastach działa Passflat?",
       "a3": "Obecnie działamy w Warszawie. Ekspansja do Krakowa, Wrocławia i innych europejskich miast jest w naszych planach.",
       "q4": "Jakie języki obsługuje Passflat?",
@@ -1810,14 +1837,12 @@
       "q4": "Jak dodać ogłoszenie?",
       "a4": "Zaloguj się, kliknij \"Dodaj ogłoszenie\" i wypełnij adres, szczegóły mieszkania, zdjęcia i rozkład kosztów. Ogłoszenie pojawi się na mapie i w wynikach wyszukiwania po opublikowaniu.",
       "q5": "Jak długo ogłoszenie jest aktywne?",
-      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta.",
-      "q6": "Czy mogę promować moje ogłoszenie?",
-      "a6": "Tak. Promowane ogłoszenia wyświetlają się na górze wyników wyszukiwania przez 7, 14 lub 30 dni. Ceny zaczynają się od 39 PLN."
+      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta."
     },
     "costTransparency": {
       "title": "Przejrzystość Kosztów",
       "q1": "Jak działa baza kosztów?",
-      "a1": "Najemcy przesyłają anonimowe raporty kosztów dla swoich budynków — w tym czynsz, opłatę administracyjną, prąd, gaz, ogrzewanie, wodę i internet. Dane są agregowane i wyświetlane per budynek, aby przyszli najemcy mogli zobaczyć, ile faktycznie zapłacą.",
+      "a1": "Najemcy przesyłają anonimowe raporty kosztów dla swoich budynków — w tym czynsz, opłatę administracyjną, prąd, gaz, ogrzewanie, wodę i internet. Dane są agregowane i wyświetlane per budynek, aby przyszli najemcy mogli zobaczyć koszty zgłoszone przez innych.",
       "q2": "Jak odblokować dane o kosztach?",
       "a2": "Dane o kosztach są otwarte dla wszystkich. Dodaj swój raport — bezpłatnie i na stałe — by zobaczyć szczegółowy rozkład i pomóc bazie rosnąć dla całej społeczności.",
       "q3": "Czy moje dane są anonimowe?",
@@ -1840,21 +1865,6 @@
       "a1": "Wyślij e-mail na adres contact@passflat.com z tematem «Żądanie dostępu do danych». Dostarczymy kopię wszystkich danych osobowych, które przechowujemy na Twój temat, w ciągu 30 dni, w ustrukturyzowanym, nadającym się do odczytu maszynowego formacie.",
       "q2": "Jakie mam prawa RODO?",
       "a2": "Na mocy RODO masz prawo do dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych, sprzeciwu wobec przetwarzania i wycofania zgody. Szczegóły znajdziesz w naszej Polityce Prywatności. Aby skorzystać z dowolnego prawa, skontaktuj się na contact@passflat.com."
-    },
-    "payments": {
-      "title": "Płatności i zwroty",
-      "q1": "Za co mogę zapłacić na Passflat?",
-      "a1": "Publikacja ogłoszenia jest bezpłatna (do 2 aktywnych ogłoszeń). Usługi płatne to: dodatkowe ogłoszenia ponad darmowy limit, promocja zwiększająca widoczność ogłoszenia w wynikach wyszukiwania oraz czasowy dostęp do bazy danych o kosztach. Same ogłoszenia pozostają darmowe.",
-      "q2": "Kiedy zaczyna się płatna usługa i czy mogę ją jeszcze anulować?",
-      "a2": "Usługi płatne są świadczone natychmiast i w całości zaraz po dokonaniu płatności. Z tego powodu, płacąc, wyrażasz wyraźną zgodę na natychmiastowe wykonanie usługi — a po jej wykonaniu nie możesz już skorzystać ze standardowego 14-dniowego prawa do odstąpienia. Potwierdzasz to przy płatności, akceptując Regulamin.",
-      "q3": "Czy gwarantujecie, że znajdę najemcę, współlokatora lub następcę?",
-      "a3": "Nie. Płacisz za samą usługę — publikację, widoczność lub dostęp do danych — a nie za konkretny rezultat. Passflat nie gwarantuje, że znajdziesz następcę najmu, współlokatora czy nową umowę, a brak rezultatu nie jest podstawą do zwrotu.",
-      "q4": "Jak mogę poprosić o zwrot?",
-      "a4": "Zwroty rozpatrujemy indywidualnie w przypadku rzeczywistych problemów — np. podwójnego obciążenia, awarii technicznej, która uniemożliwiła wykonanie usługi, lub wadliwej usługi. Napisz na contact@passflat.com, podając adres e-mail konta i numer referencyjny płatności (znajdziesz go w historii płatności w panelu). Twoje bezwzględnie obowiązujące prawa konsumenta są zawsze zachowane.",
-      "q5": "Jakimi metodami mogę zapłacić?",
-      "a5": "Płatności są bezpiecznie obsługiwane przez Stripe. Możesz zapłacić kartą, BLIK-iem lub Przelewy24 (P24). Dostępne metody mogą się nieznacznie różnić w zależności od urządzenia i przeglądarki.",
-      "q6": "Czy otrzymam potwierdzenie lub fakturę?",
-      "a6": "Tak. Stripe automatycznie wysyła potwierdzenie płatności na adres e-mail podany przy płatności. Potwierdzenie możesz też w każdej chwili otworzyć w sekcji płatności w swoim panelu."
     },
     "searchPlaceholder": "Szukaj pytań...",
     "noResults": "Nie znaleziono pasujących pytań. Spróbuj innych słów.",
@@ -1920,6 +1930,7 @@
       "intro": "Udostępniamy dane tylko w następujących, ograniczonych okolicznościach:",
       "item1": "Raporty kosztów są wyświetlane w formie zagregowanej i zanonimizowanej",
       "item2": "Dane kontaktowe z ogłoszenia są udostępniane tylko użytkownikom, którzy wyrażą zainteresowanie przez platformę",
+      "item3": "Dopasowywanie współlokatorów w bocie Telegram: po otwarciu dopasowywania osoby, których odpowiedzi pasują do Twoich, widzą kartę Twojego profilu, a przy wzajemnym zainteresowaniu obie osoby dostają nawzajem swoje nazwy użytkownika w Telegramie. Wiadomości bota dostarcza Telegram (szczegóły w sekcji „Dopasowywanie współlokatorów w bocie Telegram” poniżej).",
       "processors": {
         "title": "Podmioty przetwarzające dane",
         "supabase": "Supabase — hosting, baza danych i uwierzytelnianie",
@@ -1930,15 +1941,31 @@
         "mapbox": "Mapbox — renderowanie map (żadne dane osobowe nie są udostępniane)",
         "posthog": "PostHog — analityka produktowa (można zrezygnować)",
         "googleAnalytics": "Google Analytics 4 — analityka ruchu i odbiorców w sieci (na podstawie zgody, opt-in przez baner cookies)",
-        "deepl": "DeepL — automatyczne tłumaczenie treści ogłoszeń (siedziba w UE, Niemcy)"
+        "deepl": "DeepL — automatyczne tłumaczenie treści ogłoszeń (siedziba w UE, Niemcy)",
+        "telegram": "Telegram — komunikator, w którym działa bot Passflat (wiadomości bota, w tym pytania i odpowiedzi profilu współlokatora); Telegram przetwarza wiadomości na własnych zasadach, zgodnie ze swoją polityką prywatności"
       }
+    },
+    "roommateMatching": {
+      "title": "Dopasowywanie współlokatorów w bocie Telegram",
+      "intro": "Bot Passflat w Telegramie pomaga znaleźć osobę, z którą można wspólnie wynająć mieszkanie. Ta sekcja opisuje, jakie dane z profilu współlokatora przechowujemy, kto je widzi i jak długo je przechowujemy.",
+      "fields": "Co przechowujemy i po co: wybrane dzielnice (lub „dowolna dzielnica”), budżet na osobę jako przedział, miesiąc przeprowadzki, języki, którymi mówisz, krótki tekst o sobie do 280 znaków (opcjonalnie), zasady dotyczące palenia i zwierząt (opcjonalnie), moment potwierdzenia, że masz ukończone 18 lat, oraz Twoją nazwę użytkownika w Telegramie. Te dane służą do dopasowania Cię do osób, których odpowiedzi pasują do Twoich, do liczenia osób w dzielnicach i do przekazania kontaktu przy wzajemnym zainteresowaniu. Nigdy nie pytamy o imię, zdjęcie, datę urodzenia, wiek, numer telefonu, adres e-mail ani dokumenty.",
+      "gender": "Twoja płeć i „z kim chcesz mieszkać” (oba pola opcjonalne) służą tylko do wzajemnego dopasowania: każda z osób musi pasować drugiej. Nie pokazujemy ich nikomu poza Tobą, nie liczymy ich i nie przekazujemy do analityki.",
+      "channel": "Profil tworzy się i używa wyłącznie w bocie Passflat w Telegramie. Wiadomości bota dostarcza Telegram, który przetwarza je na własnych zasadach (polityka prywatności Telegrama).",
+      "recipients": "Kto co widzi: Twój profil wlicza się do liczb osób w dzielnicach, które inni widzą w bocie i na stronie; liczba nigdy nie pokazuje szczegółów o pojedynczej osobie. Dopóki dopasowywanie nie jest otwarte, samego profilu nie widzi nikt. Po otwarciu dopasowywania osoby, których odpowiedzi pasują do Twoich, widzą Twoją kartę: dzielnice, przedział budżetu, miesiąc przeprowadzki, języki, krótki tekst oraz zasady dotyczące palenia i zwierząt, jeśli je podano. Nazwę użytkownika w Telegramie przekazujemy tylko przy wzajemnym zainteresowaniu: obie osoby dostają wtedy nawzajem swoje nazwy. Tuż przed przekazaniem pobieramy z Telegrama Twoją aktualną nazwę.",
+      "lifetime": "Profil jest aktywny przez 30 dni od utworzenia lub odnowienia albo do końca miesiąca przeprowadzki, jeśli ten nastąpi wcześniej. Potem zostaje ukryty i przez 14 dni można go odnowić; następnie usuwamy go razem z oznaczeniami „Interesuje mnie” i „Pomiń”.",
+      "deletion": "Profil możesz w każdej chwili usunąć w bocie: usuwamy go od razu i na stałe. Nazwa użytkownika, którą osoba z wzajemnym zainteresowaniem już otrzymała, zostaje w jej czacie.",
+      "drafts": "Niedokończony profil usuwamy 7 dni po ostatniej odpowiedzi.",
+      "reports": "Zgłoszenia: powód i decyzję przechowujemy przez 6 miesięcy od zgłoszenia. Gdy profil zostaje usunięty, zgłoszenia przestają być z nim powiązane. Osoba zgłoszona nigdy nie dowiaduje się, kto ją zgłosił.",
+      "ban": "Profil ukryty po zgłoszeniach usuwamy 14 dni po dacie, w której by wygasł. Czat, którego profil ukryto, dostaje oznaczenie blokady, aby nie można było w nim utworzyć nowego profilu; oznaczenie zostaje, dopóki istnieje zapis tego czatu z botem.",
+      "analytics": "W analityce (PostHog) zdarzenia dotyczące dopasowywania są powiązane z pseudonimowym identyfikatorem Twojego czatu z botem. Profil pojawia się w nich tylko jako przedziały, liczby i wartości tak/nie — np. przedział budżetu, liczba wybranych dzielnic albo to, czy jest krótki tekst — obok działań takich jak utworzenie, edycja czy usunięcie profilu. Nazwa użytkownika, krótki tekst, dzielnice, płeć i „z kim chcesz mieszkać” nigdy nie trafiają do analityki."
     },
     "retention": {
       "title": "Przechowywanie danych",
       "account": "Dane konta: przechowywane do momentu usunięcia konta",
       "listings": "Ogłoszenia: aktywne przez 60 dni, następnie archiwizowane na 30 dni przed usunięciem",
       "costReports": "Raporty kosztów: przechowywane bezterminowo w zanonimizowanej, zagregowanej formie. Po anonimizacji dane te nie stanowią już danych osobowych w rozumieniu RODO (motyw 26) i są utrzymywane w celu wsparcia bazy danych społeczności",
-      "importedEmail": "Adresy e-mail z zaimportowanych zgłoszeń są przechowywane do momentu powiązania zgłoszenia przy logowaniu lub do chwili, gdy zażądasz ich usunięcia."
+      "importedEmail": "Adresy e-mail z zaimportowanych zgłoszeń są przechowywane do momentu powiązania zgłoszenia przy logowaniu lub do chwili, gdy zażądasz ich usunięcia.",
+      "roommate": "Profile współlokatorów (bot Telegram): aktywne 30 dni od utworzenia lub odnowienia albo do końca miesiąca przeprowadzki, jeśli wcześniej; potem ukryte i przez 14 dni do odnowienia, następnie usuwane. Usuwane od razu na prośbę w bocie; niedokończone — po 7 dniach; profil ukryty po zgłoszeniach — 14 dni po dacie wygaśnięcia; zgłoszenia — po 6 miesiącach; oznaczenie blokady czatu — dopóki istnieje zapis czatu (szczegóły w sekcji „Dopasowywanie współlokatorów w bocie Telegram” powyżej)."
     },
     "rights": {
       "title": "Twoje prawa (RODO)",
@@ -1956,7 +1983,7 @@
     "transfers": {
       "title": "Transgraniczne przekazywanie danych",
       "description": "Niektórzy nasi podmioty przetwarzające dane mają siedzibę poza Unią Europejską / Europejskim Obszarem Gospodarczym (UE/EOG). Gdy Twoje dane są przekazywane poza UE/EOG, zapewniamy odpowiednie zabezpieczenia, w tym Standardowe Klauzule Umowne (SKU) zatwierdzone przez Komisję Europejską lub decyzje o adekwatności.",
-      "processors": "Następujące podmioty mogą przetwarzać dane poza UE/EOG: Vercel (USA), Resend (USA), Stripe (UE i USA), Google (USA, obejmuje zarówno Places API, jak i Google Analytics) i Mapbox (USA) — wszystkie działają na podstawie Standardowych Klauzul Umownych. Lokalizacja danych Supabase i PostHog zależy od konfiguracji instancji. DeepL ma siedzibę w UE (Niemcy)."
+      "processors": "Następujące podmioty mogą przetwarzać dane poza UE/EOG: Vercel (USA), Resend (USA), Stripe (UE i USA), Google (USA, obejmuje zarówno Places API, jak i Google Analytics) i Mapbox (USA) — wszystkie działają na podstawie Standardowych Klauzul Umownych. Lokalizacja danych Supabase i PostHog zależy od konfiguracji instancji. DeepL ma siedzibę w UE (Niemcy). Telegram, w którym działa bot Passflat, przetwarza wiadomości na własnej infrastrukturze, która może znajdować się poza UE/EOG, zgodnie ze swoją polityką prywatności."
     },
     "cookies": {
       "title": "Pliki cookies",
@@ -1991,7 +2018,7 @@
     },
     "automated": {
       "title": "Zautomatyzowane podejmowanie decyzji",
-      "description": "Passflat nie stosuje zautomatyzowanego podejmowania decyzji indywidualnych ani profilowania w rozumieniu art. 22 RODO. Ranking ogłoszeń opiera się wyłącznie na dacie dodania, a promowane ogłoszenia wyświetlane są na górze jako funkcja płatna."
+      "description": "Poza dopasowywaniem współlokatorów Passflat nie podejmuje zautomatyzowanych decyzji indywidualnych. W dopasowywaniu współlokatorów w bocie Telegram jedna decyzja zapada automatycznie: profil zostaje ukryty, a w tym czacie nie można utworzyć nowego, gdy zgłoszą go dwie różne osoby albo od razu po jednym zgłoszeniu „Wygląda na mniej niż 18 lat”. Otrzymujesz wtedy uzasadnienie decyzji i możesz się od niej odwołać (/appeal w bocie lub contact@passflat.com); odwołanie rozpatruje człowiek. Samo dopasowywanie porównuje tylko Twoje odpowiedzi (dzielnice, przedział budżetu, miesiąc przeprowadzki, języki, „z kim chcesz mieszkać”) według stałej reguły i nie ocenia Cię na podstawie Twojego zachowania. Ranking ogłoszeń opiera się wyłącznie na dacie dodania, a promowane ogłoszenia wyświetlane są na górze jako funkcja płatna."
     },
     "children": {
       "title": "Dane dzieci",
@@ -2111,17 +2138,29 @@
       "title": "11. Prawo właściwe",
       "text": "Niniejszy Regulamin podlega prawu Rzeczypospolitej Polskiej i jest interpretowany zgodnie z nim. Wszelkie spory wynikające z niniejszego regulaminu podlegają wyłącznej jurysdykcji sądów w Warszawie."
     },
+    "matching": {
+      "title": "12. Dopasowywanie współlokatorów w bocie Telegram",
+      "intro": "W bocie Passflat w Telegramie możesz utworzyć profil współlokatora: dzielnice, budżet na osobę, miesiąc przeprowadzki, języki i opcjonalne szczegóły. Gdy dopasowywanie jest otwarte, bot pokazuje po jednym profile osób, których odpowiedzi pasują do Twoich; gdy obie osoby wybiorą „Interesuje mnie”, każda dostaje nazwę użytkownika drugiej w Telegramie. Passflat nie sprawdza osób ani mieszkań i nie jest stroną żadnych ustaleń między Wami.",
+      "adults": "Dopasowywanie jest tylko dla osób pełnoletnich: przed zapisaniem profilu potwierdzasz, że masz ukończone 18 lat. Jeden czat może mieć jeden profil.",
+      "content": "Krótki tekst (do 280 znaków) nie może zawierać danych kontaktowych — linków, @nazw użytkowników, adresów e-mail, numerów telefonu ani numerów kont; bot je odrzuca, bo kontakt przekazujemy tylko przy wzajemnym zainteresowaniu. Nie może też zawierać treści obraźliwych, dyskryminujących ani nielegalnych ani informacji o zdrowiu, religii czy innych szczególnie osobistych sprawach. Profil ma opisywać Ciebie i być zgodny z prawdą.",
+      "money": "Nie proś nikogo przez dopasowywanie o pieniądze, kaucję ani „rezerwację”. Passflat nigdy nie prosi o pieniądze.",
+      "reports": "Pod każdą kartą i każdym przekazanym kontaktem jest przycisk „Zgłoś” z powodami: „Prosi o pieniądze lub kaucję”, „Fałszywy profil”, „Obraźliwe treści”, „Wygląda na mniej niż 18 lat”, „Inne”. Zgłoszony profil od razu znika dla osoby zgłaszającej. Osoba zgłoszona nie dowiaduje się, kto ją zgłosił.",
+      "hiding": "Profil jest ukrywany automatycznie, gdy zgłoszą go dwie różne osoby (z dowolnego powodu), albo od razu po jednym zgłoszeniu „Wygląda na mniej niż 18 lat”. Zgłoszenie liczy się, dopóki istnieje profil osoby zgłaszającej; zgłoszenia uchylone po odwołaniu przestają się liczyć. Ukrytego profilu nikt już nie widzi i nie jest on liczony, a w tym czacie nie można utworzyć nowego profilu. Decyzja zapada automatycznie: przed ukryciem nikt nie rozpatruje zgłoszeń. Osoby, które zgłosiły profil, dostają wiadomość, że został ukryty.",
+      "ranking": "Kolejność profili: profile osób, których odpowiedzi pasują do Twoich, pokazujemy od najnowszych — według daty utworzenia lub ostatniego odnowienia. Dopasowanie to stała reguła: co najmniej jedna wspólna dzielnica (lub „dowolna dzielnica”), przedziały budżetu różniące się najwyżej o jeden stopień, miesiące przeprowadzki oddalone najwyżej o miesiąc, co najmniej jeden wspólny język i wzajemna zgoda w polu „z kim chcesz mieszkać”. W dopasowywaniu nie ma płatnego wyróżniania ani innej personalizacji.",
+      "statement": "Gdy Twój profil zostanie ukryty, bot wysyła Ci uzasadnienie decyzji: co zostało ograniczone, ile było zgłoszeń i z jakich powodów (nigdy — kto zgłosił), że decyzja zapadła automatycznie, oraz regułę z tej sekcji, na której się opiera.",
+      "redress": "Możesz się odwołać: odpowiedz /appeal w bocie albo napisz na contact@passflat.com; odwołanie rozpatruje człowiek. Możesz też złożyć skargę do koordynatora do spraw usług cyfrowych — Prezesa Urzędu Komunikacji Elektronicznej (Prezes UKE) — albo dochodzić swoich praw przed sądem."
+    },
     "contact": {
-      "title": "12. Kontakt",
+      "title": "13. Kontakt",
       "text": "W razie pytań dotyczących niniejszego Regulaminu, skontaktuj się z nami:",
       "operator": "Passflat jest prowadzony przez Ilya Apaniuk, Warszawa, Polska."
     },
     "forceMajeure": {
-      "title": "13. Siła wyższa",
+      "title": "14. Siła wyższa",
       "text": "Passflat nie ponosi odpowiedzialności za niewykonanie lub opóźnienie w wykonaniu swoich zobowiązań z powodu okoliczności pozostających poza jego rozsądną kontrolą, w tym m.in. klęsk żywiołowych, wojny, terroryzmu, pandemii, przerw w dostawie prądu, awarii internetu, działań rządowych lub awarii usług podmiotów trzecich."
     },
     "changes": {
-      "title": "14. Zmiany w regulaminie",
+      "title": "15. Zmiany w regulaminie",
       "text": "Możemy aktualizować niniejszy Regulamin. O istotnych zmianach powiadomimy zarejestrowanych użytkowników e-mailem co najmniej 14 dni przed ich wejściem w życie. W przypadku istotnych zmian wpływających na Twoje prawa lub przetwarzanie danych, poprosimy o ponowną wyraźną akceptację przy następnym logowaniu. Jeśli nie zaakceptujesz zaktualizowanych warunków, możesz usunąć konto. Dalsze korzystanie z platformy po upływie okresu powiadomienia oznacza akceptację zaktualizowanego regulaminu."
     }
   },
@@ -2260,7 +2299,13 @@
     "successDesc": "Nie będziesz już otrzymywać e-maili o aktywności w budynkach ani przypomnień o raportach od Passflat.",
     "errorTitle": "Link nieprawidłowy",
     "errorDesc": "Ten link rezygnacji jest nieprawidłowy lub wygasł. E-mailami możesz zarządzać w panelu.",
-    "home": "Strona główna"
+    "home": "Strona główna",
+    "removeInterest": {
+      "successTitle": "E-mail usunięty",
+      "successDesc": "Usunęliśmy to zapisane zainteresowanie razem z adresem e-mail.",
+      "errorTitle": "Link nieprawidłowy lub już użyty",
+      "errorDesc": "Ten link jest nieprawidłowy albo to zainteresowanie zostało już usunięte."
+    }
   },
   "emails": {
     "common": {
@@ -2346,18 +2391,18 @@
       "footer": "Otrzymujesz tę wiadomość, ponieważ ktoś zarejestrował się w Passflat z tym adresem e-mail."
     },
     "cityNotifyConfirmation": {
-      "subject": "Jesteś na liście — Passflat w {city}",
+      "subject": "Jesteś na liście — Passflat w mieście {city}",
       "heading": "Jesteś na liście!",
       "intro": "Dzięki za zainteresowanie Passflat w mieście {city}.",
-      "body": "Damy Ci znać e-mailem, gdy tylko uruchomimy Passflat w {city}. Tymczasem nic nie musisz robić.",
+      "body": "Damy Ci znać e-mailem, gdy tylko uruchomimy Passflat w mieście {city}. Tymczasem nic nie musisz robić.",
       "footer": "Otrzymujesz tę wiadomość, ponieważ zapisałeś się na powiadomienie o starcie Passflat w Twoim mieście."
     },
     "cityLaunch": {
-      "subject": "Wystartowaliśmy w {city} — Passflat",
-      "heading": "Passflat jest już w {city}!",
+      "subject": "Wystartowaliśmy w mieście {city} — Passflat",
+      "heading": "Passflat jest już w mieście {city}!",
       "intro": "Mamy świetne wieści — Passflat działa teraz w mieście {city}.",
-      "body": "Możesz już przeglądać ogłoszenia i dodać własne. Kliknij poniżej, aby zacząć.",
-      "cta": "Zobacz ogłoszenia",
+      "body": "Zobacz, ile kosztuje najem razem z mediami w poszczególnych dzielnicach.",
+      "cta": "Zobacz koszty",
       "footer": "Otrzymujesz tę wiadomość, ponieważ zapisałeś się na powiadomienie o starcie Passflat w Twoim mieście."
     },
     "listingExpiring": {

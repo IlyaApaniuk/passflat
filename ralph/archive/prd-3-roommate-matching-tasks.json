@@ -1,0 +1,931 @@
+{
+  "version": 1,
+  "prd": {
+    "title": "PRD 3: Roommate matching — a structured waiting list, mutual matching and an English bot",
+    "version": "0.3",
+    "date": "2026-11-19",
+    "note": "PRD 3 is Done (2026-11-19: built and tested on chore/agent-harness, not deployed). Archived on 2026-11-20 when PRD 4 was decomposed; the M7 owner-tooling tasks (T114 - T117) stayed in ralph/tasks.json."
+  },
+  "tasks": [
+    {
+      "id": "T062",
+      "milestone": "M1",
+      "title": "Roommate tables in one migration (FR-1)",
+      "spec": "docs/specs/06-roommate-profiles.md#data-model",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "prisma/schema.prisma has RoommateProfile, RoommateReaction and RoommateReport with every column, default, index, unique key and foreign key (cascade or SET NULL) of spec 06 §Data model, snake_case through @map, and TelegramChat gets roommate_banned_at and the roommateProfile relation",
+        "Exactly one new migration folder, created on the local stack with `npx prisma migrate dev --name roommate_matching`, sorting after 20261005140000_deposit_contract; never applied anywhere else",
+        "A test reads the new migration.sql and fails on ENABLE ROW LEVEL SECURITY, CREATE POLICY or GRANT, and checks that the three tables and telegram_chats.roommate_banned_at are created",
+        "The progress entry's Owner review names the migration folder and the three tables that need RLS (D9, D18)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "The only PRD 3 migration (D49). Later tasks must not create a migration: a missing column is a reason to block with the finding, not to add a second migration."
+    },
+    {
+      "id": "T063",
+      "milestone": "M1",
+      "title": "`mate` deep-link payloads and the roommate entry-source constant (FR-2 parser)",
+      "spec": "docs/specs/04-telegram-bot.md#start-payloads",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "parseStartPayload returns { kind: 'roommate', source, detail? } for every `mate` row of spec 04 §Start payloads, after the 64-character and character-set guard",
+        "ROOMMATE_ENTRY_SOURCE (direct, tg, fb, ig, threads, web, bot_menu, other) is exported from start-payload.ts separately from ENTRY_SOURCE",
+        "Table-driven tests: one row per `mate` case (mate, mate_tg, mate_fb_<detail>, mate_web, mate_web_roommate, mate_xyz, mate_tg_Bad, matey) and the unchanged rows for empty, dep, b_<uuid>, d_<slug>, web_<source> and a 65-character payload",
+        "Privacy fix of spec 04 §Start payloads: tg_bot_started.payload and TelegramChat.startPayload carry the raw payload only when it passes the guard, else 'invalid'; a test sends a typed sentence after /start"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Parser only; handleStart routes the new kind in T069."
+    },
+    {
+      "id": "T064",
+      "milestone": "M1",
+      "title": "Matching switch helper and its env placeholder (FR-23 criteria 1 and 4)",
+      "spec": "docs/specs/07-roommate-matching.md#switch",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "src/lib/roommate/switch.ts exports isMatchingEnabled(), reading process.env.ROOMMATE_MATCHING_ENABLED on every call; only the exact string 'true' turns it on",
+        "Unit tests for unset, '', 'TRUE', '1', 'false' and 'true'",
+        ".env.example documents ROOMMATE_MATCHING_ENABLED= with an empty placeholder and one comment line; if the project validates env variables in a schema, the variable is optional there"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Built first because stage 1 texts and buttons depend on the switch state. The behaviour of each flow in both states is tested in its own task and in T092."
+    },
+    {
+      "id": "T065",
+      "milestone": "M1",
+      "title": "Europe/Warsaw calendar helpers for move-in months, expiry and the send hour (FR-6, FR-15, D68)",
+      "spec": "docs/specs/06-roommate-profiles.md#warsaw-calendar",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "src/lib/roommate/time.ts exports moveInMonthOptions, endOfWarsawMonth, computeExpiresAt, isMoveInMonthPast, isRoommateSendHour, monthOffset and a month-name formatter, using Intl with timeZone Europe/Warsaw and no new dependency",
+        "Every golden row of spec 06 §Warsaw calendar is a unit test, including the CET and CEST month ends and the winter and summer send hours",
+        "Month names in the nominative for ru, uk and en ('декабрь 2026', 'грудень 2026', 'December 2026') are tested"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D68: daily messages at 10:00 Europe/Warsaw, not 09:00 UTC."
+    },
+    {
+      "id": "T066",
+      "milestone": "M1",
+      "title": "Profile rules: budget bands, district picks, languages, preferences, retention constants and event properties",
+      "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "src/lib/roommate/rules.ts exports BUDGET_BANDS (b1 – b5 as spec 06 step 2) with bandForAmount ('1650' → b3, '1 650 zł' → b3, '2500' → b5, text without a number → null), a pure district-pick reducer (toggle, at most 3, 'any' clears the districts and a district clears 'any'), the language, gender, prefers, smoking and pets value sets, and the retention constants of spec 06 §Retention plus INTEREST_DAILY_LIMIT = 20",
+        "profileCreatedProperties(profile, now) returns exactly the keys of spec 06 §Events for tg_roommate_profile_created; a test fails if any other key (gender, prefers, about, district slugs, username) appears",
+        "countBand(n) returns '0', '1-2', '3-5' or '6+' with boundary tests",
+        "Every Assumption constant is named in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Bands, the 3-district cap and the daily limit are Assumptions accepted by the owner (D68)."
+    },
+    {
+      "id": "T067",
+      "milestone": "M1",
+      "title": "Contact filter for the short profile text (FR-10)",
+      "spec": "docs/specs/06-roommate-profiles.md#text-filter",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "src/lib/roommate/text-filter.ts exports checkAboutText(raw) with the result shape of spec 06 §Text filter",
+        "Every golden case of the spec table is a unit test, plus a phone with dashes, a t.me/ link, www., an IBAN with spaces, a 15-digit run and a phone in full-width digits (the text is NFKC-normalised first and stored normalised)",
+        "No input is logged"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T068",
+      "milestone": "M1",
+      "title": "Roommate bot texts in RU, UK and EN, and the copy exception for the new file",
+      "spec": "docs/specs/06-roommate-profiles.md#module-layout",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "src/lib/bot/roommate-texts.ts exports rt(locale, key, vars) for 'ru' | 'uk' | 'en' with the stage 1 copy: intro with the privacy link variable, every intake step of spec 06 §Intake steps, the own card, edit, delete with its reasons, renewal reminder and renewal, counts and the room reference lead-ins, 'nobody yet', the FR-14 ban reply, the one-open-intake lines, 'this step is done', 'tap a button'; PRD 3 §8 drafts verbatim where they exist, «ты» / «ти» (D42)",
+        "A test fails if any key lacks a ru, uk or en value, and the existing notification-promise check runs over these texts (the opt-in confirmation and the closing message are added later by T084 and T083 with their named exceptions)",
+        "CLAUDE.md 'Repository language' and docs/specs/README.md copy rules list roommate-texts.ts as bot copy",
+        "Every key is listed in the progress entry as draft copy for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Typed with its own 'ru' | 'uk' | 'en' locale until T099 widens BotLocale (spec 06 §Module layout). Stage 2 keys are added by the stage 2 tasks."
+    },
+    {
+      "id": "T069",
+      "milestone": "M1",
+      "title": "Roommate entry: /mate, the start button, mate links, bans, one open intake and usernames (FR-2 handler, FR-3, FR-14)",
+      "spec": "docs/specs/06-roommate-profiles.md#entry-and-routing",
+      "dependsOn": ["T062", "T063", "T066", "T068"],
+      "status": "done",
+      "acceptance": [
+        "openRoommate(ctx, chat, locale, entry) implements the six cases of spec 06 §Entry and routing in that order; /mate, the rm:start button (added to the start and startAfterPayload replies) and handleStart's { kind: 'roommate' } all call it",
+        "A new draft sends one tg_roommate_flow_started with entry_source (bot_menu for /mate and rm:start) and entry_detail only when present, the intro with the privacy link and the districts step; an existing draft resends its step without a second event",
+        "One open intake per chat both ways: the roommate intake does not start while the deposit intake is open, and the deposit start (dep link, dep:start, the keyword offer) does not start while a roommate draft or edit step is open, each with its /cancel line",
+        "handleText routes typed text to an open roommate step that takes text; at a button-only step, or for text that step cannot use, the text goes on to the district check or address lookup with the '/cancel leaves the roommate questions' line (spec 06 §Entry and routing); /cancel deletes a draft or clears an edit step and otherwise behaves as today",
+        "Every roommate handler stores ctx.from.username (or null) on the chat's profile when it differs (spec 07 §Usernames), through one helper, answers its callback query and ignores 'message is not modified'",
+        "A banned chat that still has its hidden profile gets the FR-14 reply with 'Delete my profile' (spec 06 rule 1); bot.catch logs only the error message and update type, with a test that no chat id or text reaches the log (spec 06 §Boundaries)",
+        "Tests for every case listed under 'Tests' in spec 06 §Entry and routing, with a fake context and mocked Prisma; a banned chat sends no roommate event"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T106",
+      "milestone": "M1",
+      "title": "Mark chats blocked or unblocked from my_chat_member updates (FR-16 'chat not blocked')",
+      "spec": "docs/specs/06-roommate-profiles.md#blocked-chats",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "bot.on('my_chat_member') for private chats: new status kicked sets telegram_chats.blocked_at = now, member sets it to null; no event, no reply; group chats ignored",
+        "Tests with a fake update for both transitions and a group chat"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Gap from the architect review: blocked_at is set today only on a failed send, so people who blocked the bot would keep counting in stage 1."
+    },
+    {
+      "id": "T070",
+      "milestone": "M1",
+      "title": "Capability list and command menu name /mate, worded by the switch (FR-3 criteria 2 and 4)",
+      "spec": "docs/specs/06-roommate-profiles.md#capability-text-and-command-menu",
+      "dependsOn": ["T064", "T069"],
+      "status": "done",
+      "acceptance": [
+        "start, startAfterPayload and help share one capability list that includes the roommate line with /mate, chosen by isMatchingEnabled() at reply time (off: profile, counts per district, matching opens later; on: matching); no text promises a date",
+        "COMMAND_MENU has `mate` in ru and uk with the drafts of spec 06, and the `cancel` description covers the roommate questions too",
+        "texts.test.ts: the capability check requires a menu command for every listed capability and that the roommate line names /mate (the old ban on «соседа по квартире» and 'roommate' goes); the notification-promise check is unchanged",
+        "Changed keys are listed in the progress entry as draft copy"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "The en menu comes with T098."
+    },
+    {
+      "id": "T071",
+      "milestone": "M1",
+      "title": "Intake steps: districts, budget, move-in month (FR-4 – FR-6)",
+      "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
+      "dependsOn": ["T065", "T066", "T069"],
+      "status": "done",
+      "acceptance": [
+        "Steps 1 – 3 of spec 06 §Intake steps with the callback data of §Entry and routing: district toggles edited in place with ✓, the 4th-pick refusal, 'Any district', Done with nothing picked, typed district names through matchDistrict; budget buttons and typed amounts through bandForAmount; four month buttons from moveInMonthOptions in the locale",
+        "Stale buttons and a passed month resend the current step; a slug outside the District table is ignored; district toggles carry the target state (rm:d:<slug>:1|0) so a repeated tap sets the same state, and each step advances through updateMany where { id, step } with count === 1 (spec 06 'Stale and repeated taps')",
+        "Tests for each edge case listed in spec 06 steps 1 – 3"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T072",
+      "milestone": "M1",
+      "title": "Intake steps: languages, own gender and live with (FR-7, FR-8)",
+      "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
+      "dependsOn": ["T071"],
+      "status": "done",
+      "acceptance": [
+        "Steps 4 – 6 of spec 06 §Intake steps: the language multi-select with the chat language ticked and Done needing one; own gender (woman, man, skip) and live with (anyone, women, men), with the PRD 3 §8 wording that says why and that it is never shown",
+        "Skipping both stores gender=null and prefers=anyone; 'women' without an own gender is stored as chosen; language toggles carry the target state (rm:l:<code>:1|0) and steps advance through the conditional update of T071",
+        "Tests for each step and the stale-button rule"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D51, D54."
+    },
+    {
+      "id": "T073",
+      "milestone": "M1",
+      "title": "Intake steps: the optional short text and house rules (FR-10, FR-11)",
+      "spec": "docs/specs/06-roommate-profiles.md#intake-steps",
+      "dependsOn": ["T067", "T072"],
+      "status": "done",
+      "acceptance": [
+        "Step 7: typed text through checkAboutText, a refusal naming what was found (and the length when too long), Skip and spaces-only as skip; the step asks not to write health, religion or other sensitive facts",
+        "Step 8: smoking and pets, one tap each, skip stores null",
+        "Tests for the text step's accept, refuse and skip paths and for both rule steps"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D54."
+    },
+    {
+      "id": "T074",
+      "milestone": "M1",
+      "title": "18+ confirmation, save and the own card (FR-9, FR-12)",
+      "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
+      "dependsOn": ["T064", "T073"],
+      "status": "done",
+      "acceptance": [
+        "Step 9 of spec 06: 'I'm 18+' saves with the conditional update of §Save (a double tap gives one row and one tg_roommate_profile_created); 'I'm under 18' deletes the draft at once and says nothing was saved",
+        "The own card shows every chosen field (own gender and live with only here), the hide date and the buttons of §Save and the own card for the switch off and on (the stage 2 buttons are only rendered, their handlers come later)",
+        "Tests: one save on a double tap, the event's properties, the under-18 path, the card for a full and a minimal profile, and the Renew button at 4, 3 and 0 days before expiry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "The counts reply after save comes with T079; until then save ends with the card."
+    },
+    {
+      "id": "T075",
+      "milestone": "M1",
+      "title": "Edit one profile field from the own card (FR-12 edit)",
+      "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
+      "dependsOn": ["T074"],
+      "status": "done",
+      "acceptance": [
+        "The field picker of spec 06 (districts, budget, month, languages, preferences, about, rules) reuses each intake step with step = 'edit_<field>'; the profile stays active; the answer changes only that field and returns to the card",
+        "tg_roommate_profile_edited is sent once per change with field only",
+        "expires_at is kept, except a new move-in month whose end comes before it lowers it to that end",
+        "Tests for each field, the expiry rule and typed text during edit_about"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T076",
+      "milestone": "M1",
+      "title": "Delete a profile at once with an optional reason (FR-13)",
+      "spec": "docs/specs/06-roommate-profiles.md#delete",
+      "dependsOn": ["T074"],
+      "status": "done",
+      "acceptance": [
+        "Delete asks for confirmation with the PRD 3 §8 wording; confirming deletes the profile and its reactions in the same request, keeps report rows with the reference nulled, replies, and sends tg_roommate_profile_deleted with reason=user once",
+        "The optional reason buttons work after the row is gone; 'Found someone here' is offered only when the profile had a reaction with matched_at (read before the delete) and sends tg_roommate_outcome with outcome=renting_together and asked=delete; the reason buttons are removed after the first tap",
+        "The FR-14 reply's 'Delete my profile' (rm:c:del) deletes a hidden profile too; the ban marker and the reports stay",
+        "A second confirm tap replies 'already deleted' and sends nothing; the chat can start a new profile at once unless banned",
+        "Tests for each listed case with mocked Prisma"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D55."
+    },
+    {
+      "id": "T077",
+      "milestone": "M1",
+      "title": "Roommate daily cron: route, two schedules, the send hour and housekeeping (FR-15, FR-12 criterion 4, D55, D68)",
+      "spec": "docs/specs/06-roommate-profiles.md#daily-cron",
+      "dependsOn": ["T062", "T065", "T066"],
+      "status": "done",
+      "acceptance": [
+        "GET /api/cron/roommate-daily guarded by requireCronAuth (401 without it), with the two vercel.json entries 0 8 * * * and 0 9 * * *",
+        "Every run does the housekeeping of spec 06 §Daily cron step 1: drafts after 7 days, edit steps after 24 hours, expiry with one tg_roommate_profile_expired, deletions with one tg_roommate_profile_deleted (reason expired or moderation), each per-row conditional so a doubled run sends each event once; messages run only when isRoommateSendHour(now), in the priority order of step 2; the response holds counts only and flushPostHog is awaited",
+        "roommate-daily.ts holds a shared claim-send-release helper for every cron message (blocked chats skipped, conditional claim, 403 marks the chat blocked, other errors release the claim, a 429 releases and stops the run, at most 25 a second, MAX_MESSAGES_PER_RUN, no new send after SEND_BUDGET_MS), used by every later message job",
+        "No bot configured → housekeeping only",
+        "Tests with mocked Prisma, a fake api and a fixed now: 401, each housekeeping kind and its event, no message outside the send hour, the helper's claim-once, release and 403 paths, and the vercel.json entries"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "No message job yet: renewal (T078), the one-time message (T082), push (T090), outcome (T091) and the statement retry (T095) plug into this route."
+    },
+    {
+      "id": "T078",
+      "milestone": "M1",
+      "title": "Renewal reminder and renewal (FR-15)",
+      "spec": "docs/specs/06-roommate-profiles.md#renewal",
+      "dependsOn": ["T074", "T077"],
+      "status": "done",
+      "acceptance": [
+        "The send-hour run sends one reminder per active profile at or after expires_at − 3 days, claimed on renewal_reminded_at, naming the hide date, with Renew and Delete",
+        "Renew from the reminder, the card or an expired card within the grace period follows spec 06 §Renewal (a past move-in month, or one that ends within 3 days, asks for a month first; a hidden profile is refused) and sends tg_roommate_profile_renewed once",
+        "Both golden cases of spec 06 §Renewal are tests, plus a second run without a second reminder and renewal of an expired profile"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T079",
+      "milestone": "M2",
+      "title": "Honest counts per district: rule, loader and the bot reply (FR-16)",
+      "spec": "docs/specs/06-roommate-profiles.md#counts",
+      "dependsOn": ["T074"],
+      "status": "done",
+      "acceptance": [
+        "countRoommates(viewer, others) and loadRoommateCounts() in src/lib/roommate/counts.ts follow spec 06 §Counts (active by time, viewer excluded, 'any' on its own line, no sums, no combinations); the website variant gives the Warsaw total and the top 5 districts",
+        "The golden case of PRD 3 §5 example 1 is a unit test for a district viewer and an 'any' viewer",
+        "The counts reply goes out after save and on rm:c:counts, with 'nobody yet' and 'nobody else yet' wording and a database-error reply that keeps the saved profile",
+        "Tests for the reply in ru, uk and en"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D51."
+    },
+    {
+      "id": "T080",
+      "milestone": "M2",
+      "title": "Room cost reference and the per-person split in the counts reply (FR-17, D61)",
+      "spec": "docs/specs/06-roommate-profiles.md#room-cost-reference",
+      "dependsOn": ["T079"],
+      "status": "done",
+      "acceptance": [
+        "For each chosen district (or Warsaw for 'any') the reply shows loadAreaReference({ rentalType: 'room' }) per group with its N through the bot's existing area helpers, the fallback wording, the shared Warsaw lines for several fallbacks, 'one observation' and 'no room figures'",
+        "The per-person line follows D61 exactly (tenant all-in apartment median, N ≥ 2, roundHalfUpTo10, labelled, never asking prices or a known part)",
+        "The golden case of spec 06 §Room cost reference and a consistency test against the checker's area summary for the same fixture pass",
+        "No 'market', percentage or blended number appears (a test over the rendered reply)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Honesty rules of CLAUDE.md apply; D23, D61."
+    },
+    {
+      "id": "T081",
+      "milestone": "M2",
+      "title": "Compatibility rule and the candidate loader (FR-24)",
+      "spec": "docs/specs/07-roommate-matching.md#compatibility",
+      "dependsOn": ["T062", "T066"],
+      "status": "done",
+      "acceptance": [
+        "isCompatible(a, b) in src/lib/roommate/compatibility.ts implements the five rules of spec 07 §Compatibility; every golden row is a test, each also with the arguments swapped",
+        "findCompatible(profile, now) in store.ts loads candidates in one query (active, not self, not hidden, not reacted by the profile, not having skipped the profile, no report either way) and filters them with isCompatible, newest first by coalesce(renewed_at, activated_at)",
+        "A test with a mocked candidate list asserts the result equals the pure rule's, excludes reacted and reported profiles and keeps the order"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "FR-24 is PRD 3 M3; it is built here because the one-time message of FR-19 (T082) counts compatible people."
+    },
+    {
+      "id": "T082",
+      "milestone": "M2",
+      "title": "The one-time 'matching is open' message (FR-19)",
+      "spec": "docs/specs/06-roommate-profiles.md#matching-is-open",
+      "dependsOn": ["T064", "T077", "T081"],
+      "status": "done",
+      "acceptance": [
+        "sendMatchingOpenMessages(api, now) in roommate-daily.ts runs in the send-hour run only with the switch on, through the claim helper on notified_open_at, with the copy of PRD 3 §8 and the zero wording",
+        "Each delivered message sends tg_roommate_open_notified with count_band; the profile's last_push_at is set to the send time so no push follows the same day",
+        "Tests: switch off sends nothing, claim once over two runs, the N = 0 wording, the count band"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49."
+    },
+    {
+      "id": "T083",
+      "milestone": "M2",
+      "title": "Manual closing route for matching that does not open (FR-20)",
+      "spec": "docs/specs/06-roommate-profiles.md#closing-route",
+      "dependsOn": ["T062", "T064", "T068", "T077"],
+      "status": "done",
+      "acceptance": [
+        "POST /api/cron/roommate-close, not in vercel.json: 401 without the secret, 400 without { confirm: true }, 409 with the switch on",
+        "With confirmation: drafts deleted silently; every other profile deleted first (the claim), one tg_roommate_profile_deleted with reason=closed, then the closing message of PRD 3 §8 in the chat locale when the chat is not blocked; reports deleted only when no profile row is left (a run cut short by the cap, time budget or a 429 says how many remain); ban markers kept",
+        "The closing message key is added to roommate-texts.ts with a named exception in the promise check pointing to this route",
+        "Tests: each status code, one message and one event per profile, drafts without a message, a second run sending nothing"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D64: the owner triggers it by hand; never scheduled. Checks never call it for real."
+    },
+    {
+      "id": "T084",
+      "milestone": "M2",
+      "title": "Opt-in 'message me once when matching opens' with its promise exception (FR-18)",
+      "spec": "docs/specs/06-roommate-profiles.md#opt-in",
+      "dependsOn": ["T079", "T082", "T083"],
+      "status": "done",
+      "acceptance": [
+        "The opt-in button under the counts reply (switch off only) sets notify_on_open_at and sends tg_roommate_browse_opted_in with already=false, a repeat replies 'already on' with already=true; the card shows the state and switches it off",
+        "The confirmation says the one message and the D64 closing sentence in ru, uk and en",
+        "The promise check allows exactly the two sentences, naming each key with its backing code (sendMatchingOpenMessages, the roommate-close route); every other promise still fails",
+        "With the switch on the button is not rendered (test)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D64."
+    },
+    {
+      "id": "T085",
+      "milestone": "M2",
+      "title": "Roommate page: the 'looking for someone to rent with' role and the bot block (FR-21)",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#find-a-flatmate",
+      "dependsOn": ["T079"],
+      "status": "done",
+      "acceptance": [
+        "The role selector has the third choice find_flatmate with one roommate_intent_selected and the chip; RoommateIntent and TelegramBotSource gain find_flatmate and roommate",
+        "Choosing it shows the block of spec 02 §Find a flatmate with server-loaded counts (unstable_cache, 1 hour), localized district names, the zero and error states, the bot languages and its own button (not TelegramBotCta, whose checker namespace is kept off this route) using the pure botStartPayload (roommate → mate_web_roommate, also used by TelegramBotCta) and capturing telegram_bot_opened with source=roommate and has_building_context=false; no block without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME or outside warsaw",
+        "Copy in four locales from PRD 3 §8, ICU plurals, key parity; the namespace and provider the client component receives are named in the progress entry",
+        "Tests for the pure helper, the event properties, botStartPayload for a building, roommate and checker, the block states, and that the roommate page's client tree does not use the checker namespace"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D48, D49, D50. The page flow is not covered by e2e/."
+    },
+    {
+      "id": "T086",
+      "milestone": "M2",
+      "title": "Roommate page: the room money block (FR-22)",
+      "spec": "docs/specs/02-roommate-and-waitlist.md#room-money-block",
+      "dependsOn": ["T080", "T085"],
+      "status": "done",
+      "acceptance": [
+        "The block shows for find_room and the no_offers_in_city empty state on /warsaw/roommate: the Warsaw room reference per group with N through the website's figure helpers, the 5-item checklist, the address-check link with cost_data_cta_clicked source=roommate_bridge, and the three links out with nofollow noopener and a new tab",
+        "A test feeds one fixture to the block and to the bot reply of T080 and gets the same figures; no figures → no figures line",
+        "Copy in four locales, Polish first, key parity; keys listed for review"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D41 (E11)."
+    },
+    {
+      "id": "T107",
+      "milestone": "M2",
+      "title": "Per-person split without studios, if the owner says so (Q-17, D61)",
+      "spec": "docs/specs/06-roommate-profiles.md#room-cost-reference",
+      "dependsOn": ["T080"],
+      "status": "done",
+      "acceptance": [
+        "The per-person line uses the apartment set the owner chose, through one filter in the line's function, with its own N and level, and the golden case updated",
+        "The figure contract's loaders gain the filter only if the answer needs it, with a consistency test against the checker"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Blocked: Q-17 (prd-3-decision-review.md, architect gaps). D61 builds 'for two people about X each' from the tenant all-in median of whole apartments, studios included; halving a studio's median can overstate what two people sharing can expect, and the loaders have no rooms filter today. T080 builds the line exactly as D61 says. Options: (a) only apartments with 2 or more rooms (a rooms filter in the loader; fewer reports, so the line appears less often); (b) keep D61 as built; (c) drop the line. Proposal: (a). An honesty rule for displayed figures, so the owner decides.\nOwner answer: Owner (D71, Q-17 (a)): the per-person split uses only apartments with 2 or more rooms, through a rooms filter in the figure contract loader; supersedes D61 for the apartment set."
+    },
+    {
+      "id": "T108",
+      "milestone": "M2",
+      "title": "The opt-in's closing promise for profiles that expire first (Q-18, D64)",
+      "spec": "docs/specs/06-roommate-profiles.md#opt-in",
+      "dependsOn": ["T084"],
+      "status": "done",
+      "acceptance": [
+        "The opt-in confirmation and the closing route follow the owner's answer in ru, uk and en; the promise check still names the backing code",
+        "No new column and no second migration (if the answer needs one, block again with that finding)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Blocked: Q-18 (prd-3-decision-review.md, architect gaps). D64's sentence 'If matching does not open, we'll tell you and delete your profile' is built as worded (T084), but a profile that expires and is deleted 14 days later (D55) before the owner runs the closing route gets no closing message, so the promise is not kept for it. Options: (a) reword to 'If matching does not open while your profile is active, we'll tell you and delete it' (copy only); (b) keep a chat-level opt-in after deletion (a new column, so a second migration, and longer retention); (c) keep as is. Proposal: (a).\nOwner answer: Owner (D72, Q-18 (a)): reword the opt-in promise to \"If matching does not open while your profile is active, we will tell you and delete it\" (RU ty, UK ty, EN); copy only, amends D64."
+    },
+    {
+      "id": "T087",
+      "milestone": "M3",
+      "title": "Cards one at a time, Skip and the username prompt (FR-25)",
+      "spec": "docs/specs/07-roommate-matching.md#cards",
+      "dependsOn": ["T064", "T074", "T081"],
+      "status": "done",
+      "acceptance": [
+        "rm:show with the switch on follows spec 07 §Cards: no profile → intake; expired → renew; no username → prompt with rm:u:done; else one card from findCompatible with Interested, Skip and Report; none left → 'That's everyone for now'",
+        "renderRoommateCard shows only the listed fields; a test of a profile with every field set finds no gender, live-with value, username or id in the output",
+        "Skip stores one skip reaction and sends the next card; a card button for a profile no longer visible replies 'no longer available' and the next card",
+        "One tg_roommate_cards_viewed per rm:show:<via> tap with results_band and via (card, open_message, push, next); the username prompt sends tg_roommate_username_prompted with context=browse and a Done that finds a username sends tg_roommate_username_set",
+        "Stage 2 copy keys in ru, uk and en, listed for review"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49."
+    },
+    {
+      "id": "T088",
+      "milestone": "M3",
+      "title": "Interested, the daily limit and the mutual match (FR-26 criteria 1 – 2, FR-28)",
+      "spec": "docs/specs/07-roommate-matching.md#interest-and-mutual-match",
+      "dependsOn": ["T087"],
+      "status": "done",
+      "acceptance": [
+        "rm:i:<id> checks visibility, refuses the 21st interest within 24 hours with no event, stores the reaction and sends tg_roommate_interest_sent",
+        "One $executeRaw statement in store.ts sets matched_at on both reactions only when both are interest and unmatched; the request that changed 2 rows sends tg_roommate_matched role=completer for itself and role=waiting for the other",
+        "No event carries a username, partner id or match id (a test over the tracked properties)",
+        "Tests: the 20th and 21st tap, a one-sided interest, a formed pair, a concurrent second completion (mocked 0 rows) sending no second pair"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D68 (20 a day). The reveal itself is T089."
+    },
+    {
+      "id": "T089",
+      "milestone": "M3",
+      "title": "Reveal with safety lines, waiting usernames and next steps (FR-26 criteria 3 – 4, FR-30)",
+      "spec": "docs/specs/07-roommate-matching.md#reveal",
+      "dependsOn": ["T077", "T088"],
+      "status": "done",
+      "acceptance": [
+        "A formed pair is revealed as spec 07 §Reveal: no reveal when a chat is blocked or a profile inactive; a missing username prompts that person (tg_roommate_username_prompted, context=reveal) and holds both messages until Done; otherwise B then A, each claimed on revealed_at, the partner's username refreshed with api.getChat first, with the safety lines, a Report button for the partner and tg_roommate_contact_revealed per delivered message",
+        "A 403 to B blocks B and A gets nothing; another error releases the claim; retryPendingReveals in the send-hour cron sends the missing reveals of pairs whose profiles are active, chats unblocked and usernames stored",
+        "The next-step callbacks send tg_roommate_next_step with step and reply with the agreement template link, the address prompt or the costs link with UTM and no chat id",
+        "The safety lines and next-step copy are listed in the progress entry as drafts the owner approves before the switch (D56)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D56."
+    },
+    {
+      "id": "T090",
+      "milestone": "M3",
+      "title": "Daily 'N new people fit' push and its opt-out (FR-27)",
+      "spec": "docs/specs/07-roommate-matching.md#daily-push",
+      "dependsOn": ["T077", "T081", "T082"],
+      "status": "done",
+      "acceptance": [
+        "sendDailyPushes(api, now) runs in the send-hour run with the switch on, counts new compatible profiles since coalesce(last_push_at, activated_at), sends nothing at N = 0, claims on last_push_at and sends tg_roommate_push_sent with count_band",
+        "rm:push:off sets push_off and sends tg_roommate_push_opted_out; rm:push:on switches it back from the card",
+        "The golden case of spec 07 §Daily push is a test, plus N = 0, claim once over two runs, switch off, a hidden and an expired profile"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49, D68 (10:00 Warsaw)."
+    },
+    {
+      "id": "T091",
+      "milestone": "M3",
+      "title": "The outcome question at 21 days (FR-29)",
+      "spec": "docs/specs/07-roommate-matching.md#outcome-question",
+      "dependsOn": ["T077", "T088"],
+      "status": "done",
+      "acceptance": [
+        "The send-hour run (switch on or off) asks each active or expired profile once, 21 days after its earliest matched_at, claimed on outcome_asked_at, with the four answers",
+        "A tap stores outcome through updateMany where { id, outcome_asked_at not null, outcome null } and only then sends tg_roommate_outcome with outcome and asked=follow_up",
+        "Tests: not before day 21, asked once over two runs, each answer, a second tap and a tap on an unasked profile sending nothing"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D68 (21 days)."
+    },
+    {
+      "id": "T092",
+      "milestone": "M3",
+      "title": "Switch on and off across the roommate flows (FR-23 criteria 2 – 3)",
+      "spec": "docs/specs/07-roommate-matching.md#switch",
+      "dependsOn": ["T070", "T084", "T087", "T089", "T090"],
+      "status": "done",
+      "acceptance": [
+        "Tests cover both switch states for /mate (the card's buttons and the capability line), rm:show, rm:i:*, the opt-in button and the cron's stage 2 jobs",
+        "A stage 2 button tapped while the switch is off replies 'matching is paused' in ru, uk and en; reveals already sent and stored reactions stay; the outcome question and moderation keep working",
+        "Any gap found in an earlier task's switch handling is fixed here and named in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49: the owner turns the switch on (D58)."
+    },
+    {
+      "id": "T093",
+      "milestone": "M4",
+      "title": "Report with reasons and a receipt (FR-31)",
+      "spec": "docs/specs/07-roommate-matching.md#report",
+      "dependsOn": ["T087", "T089"],
+      "status": "done",
+      "acceptance": [
+        "Who may report whom follows spec 07 §Report (a reaction to the target or a reveal of it, the callback id checked, never trusted), so the Report button under a reveal works",
+        "Report offers the five reasons (rm:rr:<reason>:<id>), stores one report per reporter and target, sends tg_roommate_reported with reason once, hides the target from the reporter at once (counts, cards, compatibility) and sends the receipt of spec 07 §Report",
+        "A repeat replies 'already reported' and changes nothing; an already hidden target gets the receipt only",
+        "Tests for each case; the receipt copy in ru, uk and en is listed for review"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D49.\nFrom T092: spec 07 §Switch keeps moderation working with the switch off, so rm:r:* and rm:rr:* must not read the switch (a Report under a reveal sent before a switch-off still works); add a switch-off case to its tests (roommate-switch.test.ts has a fake for taps plus whole runs)."
+    },
+    {
+      "id": "T094",
+      "milestone": "M4",
+      "title": "Automatic hiding and the ban marker (FR-32, FR-34)",
+      "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
+      "dependsOn": ["T069", "T093"],
+      "status": "done",
+      "acceptance": [
+        "A report counts toward the 2 only while its reporter's profile exists and its decision is not lifted (spec 07 §Automatic hiding); a test re-creates a reporter's profile and finds no second count",
+        "After each stored report the target is hidden at reports from 2 different reporters or at once on under_18, through one conditional update on hidden_at; only that request sets roommate_banned_at, marks the reports decided, and sends tg_roommate_profile_hidden with reason",
+        "A hidden profile is not counted, shown or pushed; /mate and mate links give the FR-14 reply after a hide",
+        "The golden cases of spec 07 §Automatic hiding are tests, including two concurrent reports giving one hide"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D62 (the rule), D55 (the ban marker is kept). The messages of a hide are T095.\nFrom T093: the hide runs in handleReportReason (src/lib/bot/roommate-safety.ts) after storeReport returns 'stored' and the tg_roommate_reported event, before the receipt; a report on an already hidden target stores nothing (reportReceiptHidden only). roommate-report.test.ts has a fake for taps over profiles, reactions and reports (createMany with the unique pair and P2003)."
+    },
+    {
+      "id": "T095",
+      "milestone": "M4",
+      "title": "Statement of reasons to the hidden person and the notice to reporters (FR-33, FR-32 criterion 4)",
+      "spec": "docs/specs/07-roommate-matching.md#statement-of-reasons",
+      "dependsOn": ["T077", "T094"],
+      "status": "done",
+      "acceptance": [
+        "A hide sends one statement of reasons with every element of spec 07 §Statement of reasons (restriction, counts and categories, automated, ground with the terms link, redress), claimed on statement_sent_at and retried by the send-hour cron after a non-403 failure",
+        "Every reporter of the target is told once that it was hidden by an automated decision, claimed on that report's reporter_notified_at, released on a non-403 failure and retried by the send-hour cron",
+        "Tests: no reporter or other profile named, sent once, the retry, the reporters' notice",
+        "The statement and notice copy in ru, uk and en is listed as drafts the owner approves before the switch (D56)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "DSA Art. 16(6), Art. 17; D56.\nFrom T093: the report receipt (reportReceipt, roommate-texts.ts) promises 'I'll tell you when that happens'; it is a ROOMMATE_PROMISE_EXCEPTIONS entry in src/lib/bot/texts.test.ts naming this notice. Once the notice sender exists, add its file and code strings to a backing map there (like DAILY_PUSH_PROMISE_BACKING) so a rename fails the check.\nFrom T094: send the statement and the notices from hideIfDue (src/lib/bot/roommate-safety.ts), after tg_roommate_profile_hidden: it runs only for the one request whose hideAfterReport (src/lib/roommate/store.ts) returned a reason, so a statement goes out once. roommate-hide.test.ts has a fake for taps plus whole default runs over profiles, chats, reactions and reports ($transaction, FK-applying deleteMany)."
+    },
+    {
+      "id": "T096",
+      "milestone": "M4",
+      "title": "/appeal and the owner's review section (FR-35)",
+      "spec": "docs/specs/07-roommate-matching.md#appeals-and-the-owners-review",
+      "dependsOn": ["T094"],
+      "status": "done",
+      "acceptance": [
+        "/appeal handles the four cases of spec 07 §Appeals and the owner's review; it is not in COMMAND_MENU",
+        "src/lib/bot/README.md has an 'Owner review' section with the read-only SQL, the unhide SQL (which also sets that target's reports to decision='lifted') and the unban SQL, the 10 minutes a week logged as manual minutes and the DSA Art. 18 police step (D65); the loop runs none of it",
+        "Tests for the four cases"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D65.\nFrom T095: the statement of reasons (statementRedress, roommate-texts.ts) already tells the hidden person to reply /appeal; until this task an /appeal gets the bot's generic reply. The hide clears statement_sent_at (hideAfterReport), so the unhide SQL need not; appealed_at is not cleared by a hide, so after an owner's unhide and a second hide /appeal would answer 'already received' unless the unhide SQL (or the hide) clears appealed_at. The owner's read-only SQL should show statement_sent_at null for a chat that blocked the bot (releaseWhenBlocked, roommate-hide-messages.ts)."
+    },
+    {
+      "id": "T097",
+      "milestone": "M4",
+      "title": "Privacy and terms drafts for matching in four locales (FR-36)",
+      "spec": "docs/specs/07-roommate-matching.md#terms-and-privacy-drafts",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "privacy.roommateMatching and termsPage.matching keys with the content of spec 07 §Terms and privacy drafts in pl, en, ru and uk, Polish first, identical key sets",
+        "The existing keys the new sections would contradict (privacy.automated.description, privacy.dataSharing, privacy.retention, the processors list) are redrafted in four locales and listed separately for the owner",
+        "The pages render the new sections with id=\"roommate-matching\" (after 'Data sharing') and id=\"matching\" (the next number in the terms titles, before 'Changes' and 'Contact'); lastUpdated unchanged",
+        "Every key is listed in the progress entry for the owner: the privacy section to approve before the deploy, the terms section before the switch (D56); nothing says it was reviewed by a lawyer",
+        "Tests: key parity and the two anchors rendering"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D56, D62, D69. The intake intro links to the privacy anchor (T069).\nFrom T095: the statement of reasons links webLink('/terms#matching', locale, 'roommate') and states the rule (two different people, or at once for 'Looks under 18') and the redress (/appeal, contact@passflat.com, Prezes UKE as the Digital Services Coordinator, court): the terms section must carry id=\"matching\" and say the same."
+    },
+    {
+      "id": "T109",
+      "milestone": "M4",
+      "title": "Telling the person the appeal decision (Q-16, DSA Art. 20)",
+      "spec": "docs/specs/07-roommate-matching.md#appeals-and-the-owners-review",
+      "dependsOn": ["T096"],
+      "status": "done",
+      "acceptance": [
+        "Built as the owner answers: either a manual POST /api/cron/roommate-appeal (cron secret, { profileId, decision: 'lifted' | 'upheld', confirm: true }) that applies the decision (lifted: unhide, unban, reports lifted) and sends one fixed message in the chat's locale, never scheduled; or only the README and terms say the decision comes by e-mail",
+        "Tests: 401, 400 without confirm, each decision, one message, a repeat sending nothing"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Blocked: Q-16 (prd-3-decision-review.md, architect gaps). DSA Art. 20 requires telling the complainant the decision on an appeal; the bot is the only channel to a person who appealed with /appeal, and the README SQL of T096 unhides silently. A route that sends a message is a new outward message and legal text (D56 drafts, owner approves). Options: (a) the manual route above, the owner triggers it per decision; (b) the owner answers appeals only by e-mail, and the /appeal acknowledgement says so. Proposal: (a).\nFrom T096: handleAppeal and recordAppeal (roommate-safety.ts, store.ts); the acknowledgement appealReceived (roommate-texts.ts) says a person reviews it and names contact@passflat.com, nothing about how the decision is told: option (b) changes that text. The README Owner review steps 2 – 3 are the unhide and unban such a route would apply (lifted reports also get automated=false, decided_at=now; expired_at set when the profile goes back to expired); appealed_at is kept by the unhide and cleared by the next hide.\nOwner answer: Owner (D73, Q-16 (a)): build the manual owner-triggered POST /api/cron/roommate-appeal that applies lifted or upheld and sends one fixed message; texts are agent drafts for owner approval (D56); time counts in the D65 weekly review."
+    },
+    {
+      "id": "T098",
+      "milestone": "M5",
+      "title": "English dictionary, plurals and command menu for texts.ts, not yet reachable (FR-38 texts)",
+      "spec": "docs/specs/04-telegram-bot.md#english-bot-locale",
+      "dependsOn": ["T070"],
+      "status": "done",
+      "acceptance": [
+        "texts.ts types its dictionaries by TextLocale = 'ru' | 'uk' | 'en' (BotLocale stays 'ru' | 'uk' in this task) and has an EN value for every key; a test fails on any key without one",
+        "plural(locale, count, forms) uses one / other for en; every counted word has English forms; COMMAND_MENU.en exists with the same commands",
+        "The promise and capability checks of texts.test.ts run over en",
+        "Every EN key is listed in the progress entry as draft copy for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D50. Split from the locale switch so the tree compiles at every step: BotLocale widens in T099, together with the deposit gate that the wider type forces."
+    },
+    {
+      "id": "T099",
+      "milestone": "M5",
+      "title": "The en bot locale: detection, /lang, menus and the deposit gate (FR-37, FR-38, D63)",
+      "spec": "docs/specs/04-telegram-bot.md#english-bot-locale",
+      "dependsOn": ["T069", "T098"],
+      "status": "done",
+      "acceptance": [
+        "BotLocale is 'ru' | 'uk' | 'en'; normalizeLocale maps uk… → uk, en… and pl… → en, anything else → ru, with the six unit tests of spec 04; existing chats keep their stored locale; roommate-texts.ts uses BotLocale",
+        "/lang offers three languages (lang:(ru|uk|en)) with English prompt texts; scripts/tg-webhook.ts publishes COMMAND_MENU.en for language_code en and pl (a test of the menu table, never a call)",
+        "One depositLocale(locale) helper at every dt() call: en → the gate at the entry points and ru for a case already open (follow-ups, outcome buttons, /cancel); cancelled, nothingToCancel and remindersOff move to texts.ts with English; tests for /cancel and sendDueFollowUps with an en chat (no throw)",
+        "dt() and the deposit flow accept only 'ru' | 'uk'; every deposit entry in an en chat (dep:start, the dep link, the keyword offer) replies 'The deposit helper speaks Russian and Ukrainian for now' with dep:lang:ru and dep:lang:uk, and a tap sets the chat locale and starts the deposit flow in it; deposit-texts.ts and the Polish letter are unchanged",
+        "Tests for detection, the three /lang buttons, each deposit entry in an en chat and both language buttons"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D50, D63, D68 (pl → English). The owner runs npm run bot:webhook after the deploy."
+    },
+    {
+      "id": "T100",
+      "milestone": "M5",
+      "title": "Website copy names the bot's languages (FR-39)",
+      "spec": "docs/specs/04-telegram-bot.md#website-bot-languages",
+      "dependsOn": ["T085"],
+      "status": "done",
+      "acceptance": [
+        "Every general bot-language line in src/i18n/messages says English, Russian and Ukrainian in all four locales; deposit-only lines keep Russian and Ukrainian (D63)",
+        "A test over the four message files fails on a general bot line without English",
+        "Changed and kept keys are listed in the progress entry; key parity holds"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D50, D63."
+    },
+    {
+      "id": "T101",
+      "milestone": "M6",
+      "title": "Bot README, funnels document and architecture for PRD 3 (FR-40)",
+      "spec": "docs/specs/05-measurement-docs.md#prd-3-roommate-docs",
+      "dependsOn": [
+        "T076",
+        "T078",
+        "T080",
+        "T084",
+        "T086",
+        "T089",
+        "T090",
+        "T091",
+        "T092",
+        "T095",
+        "T096",
+        "T097",
+        "T099",
+        "T100"
+      ],
+      "status": "done",
+      "acceptance": [
+        "src/lib/bot/README.md, docs/analytics/activation-funnels.md and docs/architecture.md describe what was built, as spec 05 §PRD 3: roommate docs lists, from the code as it is",
+        "Every roommate event of specs 06 and 07 appears in the README 'Events' table with its properties",
+        "The README says which messages the bot now sends on its own and that it sends nothing else"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": ""
+    },
+    {
+      "id": "T102",
+      "milestone": "M6",
+      "title": "Posting kit and posting log for the owner (FR-41)",
+      "spec": "docs/specs/05-measurement-docs.md#posting-kit",
+      "dependsOn": ["T063"],
+      "status": "done",
+      "acceptance": [
+        "docs/marketing/roommate-posts.md and docs/marketing/roommate-posting-log.md as spec 05 §Posting kit: D53 rules first, 6 – 8 templates in RU, UK and EN with different wording, a no-link variant, the group-key table, the log columns",
+        "No template promises a match, date or result, names an unproduced figure or says 'verified'; the log holds no names, chat ids or message texts",
+        "A test parses every t.me link of roommate-posts.md with parseStartPayload and expects { kind: 'roommate' } with a source other than 'other'",
+        "docs/marketing/bot-profile.md drafts the BotFather description and about text in RU, UK and EN (spec 05 §Posting kit), listed for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D46, D53, D65."
+    },
+    {
+      "id": "T103",
+      "milestone": "M6",
+      "title": "Stage 1 readout section (FR-42, E14)",
+      "spec": "docs/specs/05-measurement-docs.md#stage-1-readout",
+      "dependsOn": ["T101", "T102"],
+      "status": "done",
+      "acceptance": [
+        "A 'Roommate stage 1 (E14)' section in docs/analytics/activation-funnels.md with the six points of spec 05 §Stage 1 readout: HogQL, read-only SQL, the stop, go and extension rules (D52, D59), the daily check from 2027-01-04 (D58), both worked examples, 'no data' and the season",
+        "Event and column names in the queries match the code (checked by a search of src/ and prisma/schema.prisma); the loop runs no query"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "The loop never queries PostHog (CLAUDE.md)."
+    },
+    {
+      "id": "T104",
+      "milestone": "M6",
+      "title": "Stage 2 readout section (FR-43, E15)",
+      "spec": "docs/specs/05-measurement-docs.md#stage-2-readout",
+      "dependsOn": ["T103"],
+      "status": "done",
+      "acceptance": [
+        "A 'Roommate stage 2 (E15)' section with the four points of spec 05 §Stage 2 readout: the match rate with {switch_at}, pairs, outcome persons (only persons with tg_roommate_matched), browsing persons, the H12 push reading through via=push, and the active-at-switch rate reported without a rule (Q-15 open); the SQL cross-check and the A28 events and counts; the continue and stop rules of D52 and D60; the worked examples",
+        "Event and column names in the queries match the code; the loop runs no query"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "D60."
+    },
+    {
+      "id": "T110",
+      "milestone": "M6",
+      "title": "E15 qualifying persons: apply the owner's answer to Q-15",
+      "spec": "docs/specs/05-measurement-docs.md#stage-2-readout",
+      "dependsOn": ["T104"],
+      "status": "done",
+      "acceptance": [
+        "docs/analytics/activation-funnels.md, docs/product/experiments.md (E15) and the stage 2 readout use the qualifying definition the owner chose, with a worked example",
+        "No other rule of D52 or D60 changes"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Blocked: Q-15 (prd-3-decision-review.md, architect gaps). E15 counts as qualifying every person whose profile was created or renewed at least 14 days before the readout and not deleted before the switch. Stage 1 profiles created before about 2026-12-08 expire before a 2027-01-07 switch: they are never shown, never matched and get no 'matching is open' message, yet they sit in the denominator and pull the match rate toward the 15 % stop line (D60). Proposal: (a) qualifying = profile active at the switch or created after it, and at least 14 days old at the readout (tg_roommate_profile_expired, added for this, tells them apart); (b) keep the definition as decided. The readout already reports both rates; only the rule's choice waits.\nOwner answer: Owner (D74, Q-15 (a)): E15 qualifying persons = profile active at the switch or created after it, and at least 14 days old at the readout; the readout still reports both rates."
+    },
+    {
+      "id": "T105",
+      "milestone": "M6",
+      "title": "PRD 3 final check and handoff (FR-44)",
+      "spec": "docs/specs/05-measurement-docs.md#prd-3-final-check",
+      "dependsOn": [
+        "T062",
+        "T063",
+        "T064",
+        "T065",
+        "T066",
+        "T067",
+        "T068",
+        "T069",
+        "T070",
+        "T071",
+        "T072",
+        "T073",
+        "T074",
+        "T075",
+        "T076",
+        "T077",
+        "T078",
+        "T079",
+        "T080",
+        "T081",
+        "T082",
+        "T083",
+        "T084",
+        "T085",
+        "T086",
+        "T087",
+        "T088",
+        "T089",
+        "T090",
+        "T091",
+        "T092",
+        "T093",
+        "T094",
+        "T095",
+        "T096",
+        "T097",
+        "T098",
+        "T099",
+        "T100",
+        "T101",
+        "T102",
+        "T103",
+        "T104",
+        "T106",
+        "T111",
+        "T112",
+        "T113"
+      ],
+      "status": "done",
+      "acceptance": [
+        "npm run verify passes; node scripts/ralph-tasks.mjs summary shows no other PRD 3 task left to do except the blocked owner questions (T107 – T110, or whichever the owner has not answered yet)",
+        "The PRD 3 requirement map in docs/specs/README.md maps every FR-1 – FR-44 to a done task or a blocked task with its question",
+        "The progress entry is the owner handoff of spec 05 §PRD 3 final check, separating built, tested and not deployed"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "No PRD 3 task changes a page flow covered by e2e/, so npm run test:e2e is not in the checks."
+    },
+    {
+      "dependsOn": ["T074"],
+      "acceptance": [
+        "A tap on the 18+ confirmation when isMoveInMonthPast(move_in_month, now) (a draft started at the end of a month and finished after it, inside the 7-day draft life) does not save a profile whose expires_at is already in the past: it replies monthPassed, asks the move-in month again with the current months, and saves (spec 06 §Save, one tg_roommate_profile_created) once a current month is picked, without asking the later steps again",
+        "Without this, saveProfile stores expires_at = the end of the passed month, so the new profile is not counted, the card shows a past hide date and the daily cron marks it expired at once (found in T074)",
+        "Tests: a draft at adult with last month saves nothing and asks the month; the month tap then saves once; a double tap still gives one row and one event"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Found by T074. Agent clarification needed in spec 06 §Save (the renewal has the same rule: a past month runs the move-in step first, spec 06 §Renewal). If the owner prefers a different behaviour, block with the question.",
+      "id": "T111",
+      "milestone": "M1",
+      "title": "Save with a move-in month that passed while the draft was open (FR-6, FR-12 gap)",
+      "spec": "docs/specs/06-roommate-profiles.md#save-and-the-own-card",
+      "status": "done"
+    },
+    {
+      "dependsOn": ["T086"],
+      "acceptance": [
+        "CheckerAreaReference (src/components/buildings/checker-figures.tsx) passes an area label to AreaReferenceGroups' oneObservationLabel, so a district or city reference group with one report no longer shows costs.building.figures.oneObservation ('One observation at this address', a building's wording) but names its area and level (district or city), the way listings.roomMoney.oneObservation does on the roommate page (T086)",
+        "Found in T086: a district reference is chosen by MIN_AREA_REPORTS reports over both groups, so its tenant group can hold one report (e.g. 1 tenant + 4 asking prices), and a city reference can rest on one report; today the checker then says 'at this address' under 'Reference: tenant reports in Mokotów (1)'",
+        "Copy (agent draft, four locales, key parity): a new key in a namespace the checker page receives, with an ICU select on the level; listed for review",
+        "Tests: checker-figures.test.ts renders a district and a city reference whose tenant group has one report and asserts the area wording and the absence of 'at this address'; the building's own one observation keeps 'One observation at this address'"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Found by T086. The building page and the checker's building block keep the building wording. No figure or contract change.",
+      "id": "T112",
+      "milestone": "M2",
+      "title": "Checker area reference: a one-observation group says the area, not 'at this address' (FR-24 gap)",
+      "spec": "docs/specs/03-building-figures.md#checker",
+      "status": "done"
+    },
+    {
+      "dependsOn": ["T095"],
+      "acceptance": [
+        "A report inserted on a target that another request hid between this request's check (findReportableProfile) and its insert gets decision=hidden, automated=true, decided_at, and its reporter gets the hide notice once (claimed on reporter_notified_at), from that request or from the send-hour retry",
+        "Tests: two overlapping reports where the second is stored after the first one's hide committed: both reporters are told once, one statement of reasons"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "From T095: hideAfterReport (src/lib/roommate/store.ts) decides only the reports that exist when the hide commits. A report inserted just after it stays decision='none', so retryHideNotices (roommate-hide-messages.ts) never picks it up, although its receipt (reportReceipt) promised the notice. One way: when the conditional hide update finds the target already hidden, decide that target's decision='none' reports in the same transaction and run sendHideNotices for the target. The statement's facts count only decided reports, so its count is unchanged for a statement already sent.",
+      "id": "T113",
+      "milestone": "M4",
+      "title": "A report stored just after another request hid the same target is decided and its reporter told (FR-32 criterion 4)",
+      "spec": "docs/specs/07-roommate-matching.md#automatic-hiding",
+      "status": "done"
+    }
+  ]
+}

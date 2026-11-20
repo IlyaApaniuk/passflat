@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useDeferredValue, Suspense } from 'react';
+import { useState, useMemo, useCallback, useDeferredValue, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
@@ -14,8 +14,16 @@ import {
 } from '@/components/listings/listing-filters';
 import { ListingGrid } from '@/components/listings/listing-card';
 import { ListingsEmptyState } from '@/components/listings/listings-empty-state';
+import { ListingsNoMatch } from '@/components/listings/listings-no-match';
+import { RoommateRoleSelector } from '@/components/listings/roommate-role-selector';
+import { FindFlatmateBlock } from '@/components/listings/find-flatmate-block';
+import { RoomMoneyBlock, type RoomMoneyFigures } from '@/components/listings/room-money-block';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
+import type { PerPersonSplit } from '@/lib/roommate/room-costs';
+// Isomorphic (no 'use client', the non-async `useTranslations`), imported directly as the
+// building client does (spec 08 §Current state).
+import { Footer } from '@/components/landing/footer';
 
 // Mapbox GL + react-map-gl is a large, WebGL-only dependency. Code-split it so
 // it loads as its own chunk after hydration instead of bloating the listings
@@ -36,9 +44,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Map, List } from 'lucide-react';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
+import { filterListings } from '@/lib/listings-filter';
+import { listingsEmptyKind, serverListNarrowed } from '@/lib/listings-empty-kind';
+import { INITIAL_ROOMMATE_ROLE_STATE, roommatePageLayout } from '@/lib/roommate-roles';
+import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'area-desc';
@@ -49,6 +61,28 @@ interface Props {
   citySlug: string;
   cityBounds?: CityBounds;
   listingType: ListingType;
+  /**
+   * Roommate only: active offers in the city without the URL filters (spec 02 §Empty states).
+   * `/replacement` and `/sublet` do not pass it and keep their empty state.
+   */
+  cityOfferCount?: number;
+  /**
+   * `/warsaw/roommate` with a configured bot only (spec 02 §Find a flatmate): the server-loaded
+   * counts of the "Looking for someone to rent with" block. Absent → the block without its count
+   * line; whether the block shows is `roommatePageLayout` (spec 08 §Roommate page default view).
+   */
+  flatmateCounts?: FlatmateBlockCounts;
+  /**
+   * `/warsaw/roommate` only (spec 02 §Room money block): absent on every other page, which then
+   * never shows the block; null shows the block without its figures line.
+   */
+  roomMoney?: RoomMoneyFigures | null;
+  /**
+   * `/warsaw/roommate` only (spec 08 §Per-person line): the bot's Warsaw split and its own
+   * area's name, resolved on the server; absent or null → the flatmate block has no such line.
+   */
+  perPersonSplit?: PerPersonSplit | null;
+  perPersonArea?: string;
   isLoggedIn?: boolean;
 }
 
@@ -66,10 +100,16 @@ function ListingsPageInner({
   citySlug,
   cityBounds,
   listingType,
+  cityOfferCount,
+  flatmateCounts,
+  roomMoney,
+  perPersonSplit,
+  perPersonArea,
   isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
+  const router = useRouter();
   const { filters, setFilters, sortBy, setSortBy } = useUrlFilters();
   // Keep the filter controls (chips, inputs, sheet) snappy while the heavier
   // list re-filter runs at a lower priority.
@@ -82,6 +122,9 @@ function ListingsPageInner({
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filterSection, setFilterSection] = useState<string | undefined>(undefined);
+  // Roommate role choice (spec 02 §Role selector): client state only, never stored.
+  const [roleState, setRoleState] = useState(INITIAL_ROOMMATE_ROLE_STATE);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const activeFilterCount = Object.values(filters).filter(
     (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
@@ -108,66 +151,20 @@ function ListingsPageInner({
           type: listingType,
           city: citySlug,
           filters_used: activeFilters,
-          results_count: listings.length,
+          // Counted with the new filters: the filter state has not applied yet.
+          results_count: filterListings(listings, newFilters).length,
         });
       }
     },
-    [setFilters, posthog, listingType, citySlug, listings.length],
+    [setFilters, posthog, listingType, citySlug, listings],
   );
 
   const districtNames = useMemo(() => districts.map((d) => d.name), [districts]);
 
-  const filteredListings = useMemo(() => {
-    return listings.filter((listing) => {
-      if (deferredFilters.priceMin && listing.totalCost < deferredFilters.priceMin) return false;
-      if (deferredFilters.priceMax && listing.totalCost > deferredFilters.priceMax) return false;
-      if (
-        deferredFilters.bedrooms?.length &&
-        !deferredFilters.bedrooms.some((b) => listing.bedrooms >= b)
-      )
-        return false;
-      if (
-        deferredFilters.districts?.length &&
-        !deferredFilters.districts.includes(listing.district)
-      )
-        return false;
-      if (deferredFilters.areaMin && listing.area < deferredFilters.areaMin) return false;
-      if (deferredFilters.areaMax && listing.area > deferredFilters.areaMax) return false;
-      if (deferredFilters.availableFrom) {
-        const filterDate = new Date(deferredFilters.availableFrom);
-        const listingDate = new Date(listing.availableFrom);
-        if (listingDate > filterDate) return false;
-      }
-      if (
-        deferredFilters.amenities?.length &&
-        !deferredFilters.amenities.every((a) => listing.features.includes(a))
-      )
-        return false;
-      if (deferredFilters.roomType && listing.roomType !== deferredFilters.roomType) return false;
-      if (
-        deferredFilters.preferredGender &&
-        deferredFilters.preferredGender !== 'any' &&
-        listing.preferredGender !== deferredFilters.preferredGender &&
-        listing.preferredGender !== 'any'
-      )
-        return false;
-      if (deferredFilters.availableTo) {
-        const filterDate = new Date(deferredFilters.availableTo);
-        if (!listing.availableTo) return false;
-        const listingDate = new Date(listing.availableTo);
-        if (listingDate < filterDate) return false;
-      }
-      if (deferredFilters.utilitiesIncluded && !listing.utilitiesIncluded) return false;
-      if (deferredFilters.internetIncluded && !listing.internetIncluded) return false;
-      if (deferredFilters.floorMin != null && listing.floor < deferredFilters.floorMin)
-        return false;
-      if (deferredFilters.floorMax != null && listing.floor > deferredFilters.floorMax)
-        return false;
-      if (deferredFilters.hasPhotos && listing.photoCount === 0) return false;
-      if (deferredFilters.registrationPossible && !listing.registrationPossible) return false;
-      return true;
-    });
-  }, [listings, deferredFilters]);
+  const filteredListings = useMemo(
+    () => filterListings(listings, deferredFilters),
+    [listings, deferredFilters],
+  );
 
   const sortedListings = useMemo(() => {
     const sorted = [...filteredListings];
@@ -210,7 +207,7 @@ function ListingsPageInner({
   });
   const sortSelect = (
     <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-      <SelectTrigger className="w-[140px] sm:w-[180px]">
+      <SelectTrigger className="min-h-11 w-[140px] sm:w-[180px]">
         <SelectValue placeholder={t('listings.sort.sortBy')} />
       </SelectTrigger>
       <SelectContent>
@@ -234,8 +231,60 @@ function ListingsPageInner({
   const showDemandCapture =
     filteredListings.length === 0 && (listings.length === 0 || !!selectedDistrict);
 
+  // Roommate (spec 02 §Empty states): the server's city count tells "no offers in the city"
+  // from "nothing matches your filters", also after a reload with strict URL filters (then
+  // `listings` is already narrowed). `/replacement` and `/sublet` keep the rule above.
+  const emptyKind =
+    listingType === 'roommate' && cityOfferCount !== undefined
+      ? listingsEmptyKind({
+          cityOfferCount,
+          filteredCount: filteredListings.length,
+          hasActiveFilters: activeFilterCount > 0,
+        })
+      : showDemandCapture
+        ? 'no_offers_in_city'
+        : 'none';
+
+  // Spec 08 §Roommate page default view: the flatmate block by default, the selector above the
+  // type tabs, no "0 listings" line while the city has no offer.
+  const layout = roommatePageLayout({
+    listingType,
+    citySlug,
+    cityOfferCount,
+    roleState,
+    emptyKind,
+    hasUsername: Boolean(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME),
+  });
+
+  // Spec 02 §Room money block: its address-check item replaces the bridge line while it shows.
+  // `roomMoney` is absent on every page the server does not load it for.
+  const showRoomMoney = layout.showRoomMoney && roomMoney !== undefined;
+
+  // Roommate only (spec 02 §Role selector): the role choices. Choosing is never required; the
+  // list below stays rendered.
+  const roleSelector = layout.selectorAboveTabs && (
+    <div className="border-b bg-card px-4 py-2">
+      <RoommateRoleSelector
+        state={roleState}
+        onStateChange={setRoleState}
+        onScrollListToTop={() => listRef.current?.scrollTo({ top: 0 })}
+      />
+    </div>
+  );
+
+  // The existing filter reset; when the server list was narrowed by URL params, fetch the
+  // whole city again (the reset already dropped the params from the URL).
+  const clearFilters = () => {
+    handleFiltersChange({});
+    if (serverListNarrowed({ serverCount: listings.length, cityOfferCount: cityOfferCount ?? 0 })) {
+      router.refresh();
+    }
+  };
+
+  // Spec 08 §Roommate page shell (PRD 4 FR-3, FR-4): `h-dvh` so mobile browser bars never clip
+  // the page; the content column is the `main` landmark on all three listing types.
   return (
-    <div className="flex h-screen flex-col overflow-hidden pt-24">
+    <div className="flex h-dvh flex-col overflow-hidden pt-24">
       <div className="flex min-h-0 flex-1">
         <ListingFiltersDesktop
           filters={filters}
@@ -245,35 +294,71 @@ function ListingsPageInner({
           listingType={listingType}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main id="main" className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* The roommate page's one h1, its first heading, above the role selector; hidden
+              visually on phones, where the selector row carries the page. The filter sidebar's
+              heading stays h2. */}
+          {layout.showH1 && (
+            <div className="bg-card sm:px-4 sm:pt-3">
+              <h1 className="sr-only text-lg font-semibold tracking-tight sm:not-sr-only">
+                {t('listings.roommateH1')}
+              </h1>
+            </div>
+          )}
+
+          {/* Spec 08 §Roommate page default view: the role selector stands above the frozen
+              type tabs and the count/sort/filter row. */}
+          {roleSelector}
+
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="border-b bg-card px-4 py-3"
           >
-            {/* Desktop: underline type tabs + sort on one row, count below. */}
+            {/* Desktop: underline type tabs + sort on one row, count below. The roommate page
+                hides the tabs while the city has no offer (spec 08 §Footer product column). */}
             <div className="hidden xl:block">
               <div className="flex items-center justify-between gap-3">
-                <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
-                <div className="shrink-0">{sortSelect}</div>
+                {layout.showTypeTabs && (
+                  <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
+                )}
+                {/* ml-auto keeps sort on the right when the tabs are absent. */}
+                <div className="ml-auto shrink-0">{sortSelect}</div>
               </div>
-              <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
-                {countText}
-              </p>
+              {layout.showCountLine && (
+                <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
+                  {countText}
+                </p>
+              )}
             </div>
 
             {/* Mobile: full-width segmented type, then count + sort/map, then the
                 quick-filter chips. The full filter set lives in the bottom sheet. */}
             <div className="xl:hidden">
-              <ListingTypeTabs variant="segmented" listingType={listingType} citySlug={citySlug} />
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
-                  {countText}
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
+              {layout.showTypeTabs && (
+                <ListingTypeTabs
+                  variant="segmented"
+                  listingType={listingType}
+                  citySlug={citySlug}
+                />
+              )}
+              {/* first:mt-0: no gap above this row when the tabs are absent. */}
+              <div className="mt-3 flex items-center justify-between gap-2 first:mt-0">
+                {layout.showCountLine && (
+                  <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
+                    {countText}
+                  </p>
+                )}
+                {/* ml-auto keeps sort and map on the right when the count line is absent. */}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {sortSelect}
-                  <Button variant="outline" size="icon" onClick={() => setShowMap(!showMap)}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="min-h-11 min-w-11"
+                    onClick={() => setShowMap(!showMap)}
+                  >
                     {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -306,8 +391,9 @@ function ListingsPageInner({
           {/* Roommate search is where organic clicks actually land ("szukam
               współlokatora warszawa"), and it is a frozen part of the product —
               one line is what carries that visit into the cost data instead of
-              letting it end on a list of ten listings. */}
-          {listingType === 'roommate' && (
+              letting it end on a list of ten listings. The room money block's
+              address-check item takes its place while that block shows. */}
+          {listingType === 'roommate' && !showRoomMoney && (
             <div className="border-b bg-primary/5 px-4 py-2 text-sm">
               <Link
                 href={`/${citySlug}/check`}
@@ -338,6 +424,7 @@ function ListingsPageInner({
           <div className="flex min-h-0 flex-1">
             <AnimatePresence mode="wait">
               <motion.div
+                ref={listRef}
                 key={showMap ? 'list-compact' : 'list-full'}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -347,13 +434,45 @@ function ListingsPageInner({
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
-                {showDemandCapture ? (
+                {/* Spec 08 §Roommate page default view: first in the scrolling list, so it
+                    scrolls with the list; the list stays rendered below. */}
+                {layout.showFlatmateBlock && (
+                  <FindFlatmateBlock
+                    counts={flatmateCounts}
+                    districts={districts}
+                    split={perPersonSplit}
+                    splitArea={perPersonArea}
+                  />
+                )}
+                {/* Spec 02 §Room money block: "I'm looking for a room" or no offer in the city. */}
+                {showRoomMoney && (
+                  <RoomMoneyBlock figures={roomMoney ?? null} citySlug={citySlug} />
+                )}
+                {emptyKind === 'no_match_for_filters' ? (
+                  <>
+                    <ListingsNoMatch onClearFilters={clearFilters} />
+                    {selectedDistrict && (
+                      <ListingsEmptyState
+                        key={selectedDistrictSlug}
+                        citySlug={citySlug}
+                        listingType={listingType}
+                        selectedDistrict={selectedDistrict}
+                        districtSlug={selectedDistrictSlug}
+                        isLoggedIn={isLoggedIn}
+                        intent={roleState.intent}
+                        showTitle={false}
+                      />
+                    )}
+                  </>
+                ) : emptyKind === 'no_offers_in_city' ? (
                   <ListingsEmptyState
+                    key={selectedDistrictSlug}
                     citySlug={citySlug}
                     listingType={listingType}
                     selectedDistrict={selectedDistrict}
                     districtSlug={selectedDistrictSlug}
                     isLoggedIn={isLoggedIn}
+                    intent={listingType === 'roommate' ? roleState.intent : undefined}
                   />
                 ) : (
                   <ListingGrid
@@ -365,6 +484,12 @@ function ListingsPageInner({
                     onToggleFavorite={toggleFavorite}
                   />
                 )}
+                {/* Spec 08 §Roommate page shell (FR-4): the footer scrolls with the list, after
+                    the grid or the empty state, so the page is not a dead end. The negative
+                    margins undo the container's padding so its border spans the column. */}
+                <div className="-mx-4 -mb-4 mt-8">
+                  <Footer />
+                </div>
               </motion.div>
             </AnimatePresence>
 
@@ -382,7 +507,7 @@ function ListingsPageInner({
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

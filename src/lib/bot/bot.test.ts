@@ -1,0 +1,1453 @@
+import {
+  BotError,
+  GrammyError,
+  type CallbackQueryContext,
+  type CommandContext,
+  type Context,
+} from 'grammy';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  summarizeDepositReturns,
+  summarizeFigures,
+  type AreaReference,
+  type FigureReport,
+} from '@/lib/cost-figures';
+
+import {
+  LANG_CALLBACK,
+  SUBSCRIBE_CALLBACK,
+  UNSUBSCRIBE_CALLBACK,
+  handleCancel,
+  handleDeposit,
+  handleHelp,
+  handleLang,
+  handleLangChoice,
+  handleMy,
+  handleStart,
+  handleSubscribe,
+  handleText,
+  handleUnsubscribe,
+  logBotError,
+} from './bot';
+import { renderDistrict, renderLookup } from './format';
+import type { AddressLookup } from './lookup';
+import { rt } from './roommate-texts';
+import { capabilityText, t, type BotLocale } from './texts';
+
+const mocks = vi.hoisted(() => ({
+  touchChat: vi.fn(),
+  addSubscription: vi.fn(),
+  listSubscriptions: vi.fn(),
+  removeSubscription: vi.fn(),
+  track: vi.fn(),
+  startDepositFlow: vi.fn(),
+  cancelDepositFlow: vi.fn(),
+  hasOpenIntake: vi.fn(),
+  getDistrictBySlug: vi.fn(),
+  getCityDepositFacts: vi.fn(),
+  lookupBuilding: vi.fn(),
+  getCity: vi.fn(),
+  getDistrictTable: vi.fn(),
+  lookupAddress: vi.fn(),
+  geocodeAddress: vi.fn(),
+  handleDepositText: vi.fn(),
+  maybeOfferDeposit: vi.fn(),
+  openRoommate: vi.fn(),
+  handleRoommateText: vi.fn(),
+  cancelRoommate: vi.fn(),
+  setChatLocale: vi.fn(),
+}));
+
+vi.mock('./store', () => ({
+  touchChat: mocks.touchChat,
+  addSubscription: mocks.addSubscription,
+  listSubscriptions: mocks.listSubscriptions,
+  removeSubscription: mocks.removeSubscription,
+  setChatBlocked: vi.fn(),
+  setChatLocale: mocks.setChatLocale,
+}));
+vi.mock('./analytics', () => ({ track: mocks.track }));
+vi.mock('./deposit-flow', () => ({
+  startDepositFlow: mocks.startDepositFlow,
+  cancelDepositFlow: mocks.cancelDepositFlow,
+  hasOpenIntake: mocks.hasOpenIntake,
+  handleDepositText: mocks.handleDepositText,
+  maybeOfferDeposit: mocks.maybeOfferDeposit,
+  registerDepositFlow: vi.fn(),
+}));
+vi.mock('./roommate-flow', () => ({
+  openRoommate: mocks.openRoommate,
+  handleRoommateText: mocks.handleRoommateText,
+  cancelRoommate: mocks.cancelRoommate,
+  registerRoommateFlow: vi.fn(),
+}));
+// It builds its handlers from the (mocked) flow's helpers at import time.
+vi.mock('./roommate-matching', () => ({ registerRoommateMatching: vi.fn() }));
+vi.mock('./roommate-safety', () => ({ registerRoommateSafety: vi.fn() }));
+vi.mock('./lookup', () => ({
+  getDistrictBySlug: mocks.getDistrictBySlug,
+  getCity: mocks.getCity,
+  getCityDepositFacts: mocks.getCityDepositFacts,
+  getDistrictTable: mocks.getDistrictTable,
+  lookupAddress: mocks.lookupAddress,
+  lookupBuilding: mocks.lookupBuilding,
+}));
+// Geocoding is a paid Google call: never made from a test.
+vi.mock('./geocode', () => ({ geocodeAddress: mocks.geocodeAddress }));
+
+const UUID = '3f2c8a1e-9b4d-4c7a-8e21-5d6f0a9b1c3e';
+const CHAT_ID = 4242;
+
+function fakeContext(text: string) {
+  const reply = vi.fn();
+  const ctx = {
+    chat: { id: CHAT_ID },
+    from: { language_code: 'ru' },
+    message: { text },
+    reply,
+  } as unknown as CommandContext<Context>;
+  return { ctx, reply };
+}
+
+function replyKey(reply: ReturnType<typeof vi.fn>): string {
+  expect(reply).toHaveBeenCalledTimes(1);
+  return reply.mock.calls[0][0] as string;
+}
+
+/** The callback data and URLs of a reply's inline keyboard, row by row. */
+function buttons(reply: ReturnType<typeof vi.fn>): string[] {
+  const markup = reply.mock.calls[0][1]?.reply_markup as
+    | { inline_keyboard: { callback_data?: string; url?: string }[][] }
+    | undefined;
+  return (markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data ?? b.url ?? '');
+}
+
+function report(source: string, fields: Partial<FigureReport> = {}): FigureReport {
+  return { source, rentalType: 'apartment', utilitiesComplete: true, ...fields };
+}
+
+const areaReports = [3_700, 4_000, 4_400, 5_000, 5_400].map((total) =>
+  report('user', { totalMonthlyAvg: total, rent: total - 800 }),
+);
+
+function areaReference(level: AreaReference['level']): AreaReference {
+  return {
+    level,
+    slug: level === 'district' ? 'mokotow' : 'warsaw',
+    name: level === 'district' ? 'Mokotów' : 'Warszawa',
+    summary: summarizeFigures(areaReports, { level, rentalType: 'all' }),
+  };
+}
+
+/** What `lookupBuilding` returns for building UUID: reported, district reference. */
+function buildingLookup(overrides: Partial<AddressLookup> = {}): AddressLookup {
+  return {
+    level: 'building',
+    address: 'Puławska 10',
+    citySlug: 'warsaw',
+    buildingId: UUID,
+    buildingSlug: 'pulawska-10',
+    placeId: 'place-1',
+    districtSlug: 'mokotow',
+    districtName: 'Mokotów',
+    building: summarizeFigures(
+      [report('user', { totalMonthlyAvg: 4_000, rent: 3_200 }), report('user', { rent: 3_400 })],
+      { level: 'building', rentalType: 'all' },
+    ),
+    reference: areaReference('district'),
+    neighbours: [],
+    deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
+    imprecise: false,
+    ...overrides,
+  };
+}
+
+/** The checker created the row, nobody reported: the area card of its district. */
+const unreportedLookup = () =>
+  buildingLookup({
+    level: 'district',
+    building: summarizeFigures([], { level: 'building', rentalType: 'all' }),
+  });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  // The matching switch is off unless a test turns it on (spec 07 §Switch).
+  vi.stubEnv('ROOMMATE_MATCHING_ENABLED', undefined);
+  mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'ru', isNew: true });
+  mocks.hasOpenIntake.mockResolvedValue(false);
+  mocks.lookupBuilding.mockResolvedValue(null);
+  mocks.getDistrictTable.mockResolvedValue([]);
+  mocks.getCity.mockResolvedValue(null);
+  mocks.handleRoommateText.mockResolvedValue('none');
+  mocks.cancelRoommate.mockResolvedValue(false);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('the capability list follows the matching switch at reply time', () => {
+  const mateLine = (text: string) => text.split('\n').filter((line) => line.startsWith('• /mate'));
+
+  it.each([
+    ['start', '/start'],
+    ['startAfterPayload', '/start web_checker'],
+  ] as const)('%s names /mate in the wording of the current state', async (key, text) => {
+    for (const [value, enabled] of [
+      [undefined, false],
+      ['true', true],
+      ['false', false],
+    ] as const) {
+      vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
+      const { ctx, reply } = fakeContext(text);
+      await handleStart(ctx);
+
+      expect(replyKey(reply)).toBe(capabilityText('ru', key, enabled));
+      expect(mateLine(replyKey(reply))).toEqual([
+        `• /mate — ${t('ru', enabled ? 'capabilityMateOn' : 'capabilityMateOff')}`,
+      ]);
+    }
+  });
+
+  it('/help names /mate in the wording of the current state', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    for (const [value, enabled] of [
+      [undefined, false],
+      ['true', true],
+      ['TRUE', false],
+    ] as const) {
+      vi.stubEnv('ROOMMATE_MATCHING_ENABLED', value);
+      const { ctx, reply } = fakeContext('/help');
+      await handleHelp(ctx);
+
+      expect(replyKey(reply)).toBe(capabilityText('uk', 'help', enabled));
+      expect(reply.mock.calls[0][1]).toEqual({ parse_mode: 'HTML' });
+      expect(mateLine(replyKey(reply))).toEqual([
+        `• /mate — ${t('uk', enabled ? 'capabilityMateOn' : 'capabilityMateOff')}`,
+      ]);
+    }
+  });
+
+  it('a building link that opens nothing falls back to the list of the current state', async () => {
+    vi.stubEnv('ROOMMATE_MATCHING_ENABLED', 'true');
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(
+      `${t('ru', 'buildingLinkFailed')}\n\n${capabilityText('ru', 'startAfterPayload', true)}`,
+    );
+  });
+});
+
+describe('handleStart', () => {
+  it('greets a plain /start and records it without a payload', async () => {
+    const { ctx, reply } = fakeContext('/start');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'start', false));
+    expect(mocks.touchChat).toHaveBeenCalledWith({
+      chatId: CHAT_ID,
+      locale: 'ru',
+      startPayload: null,
+    });
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: null,
+      is_new: true,
+    });
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+  });
+
+  it('starts the deposit flow for dep', async () => {
+    const { ctx, reply } = fakeContext('/start dep');
+    await handleStart(ctx);
+
+    expect(mocks.startDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+    expect(reply).not.toHaveBeenCalled();
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: 'dep',
+      is_new: true,
+    });
+  });
+
+  it('falls back to the generic reply for an unknown district', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(null);
+    const { ctx, reply } = fakeContext('/start d_atlantis');
+    await handleStart(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('atlantis');
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
+  });
+
+  it('does not look up a malformed district slug', async () => {
+    const { ctx, reply } = fakeContext('/start d_Mokotow');
+    await handleStart(ctx);
+
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
+  });
+
+  it.each([
+    ['a website link', 'web_checker'],
+    ['an attribution payload', 'thr_med'],
+    ['a payload with a space', 'dep now'],
+  ])('keeps the generic reply for %s', async (_label, payload) => {
+    const { ctx, reply } = fakeContext(`/start ${payload}`);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
+    expect(mocks.startDepositFlow).not.toHaveBeenCalled();
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(mocks.lookupBuilding).not.toHaveBeenCalled();
+  });
+
+  it('tracks and stores the raw payload, not the parsed one', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const raw = `b_${UUID.toUpperCase()}`;
+    const { ctx } = fakeContext(`/start ${raw}`);
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith(expect.objectContaining({ startPayload: raw }));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: raw,
+      is_new: false,
+    });
+    expect(mocks.lookupBuilding).toHaveBeenCalledWith(UUID);
+  });
+
+  it('tracks and stores a roommate link as it is', async () => {
+    const { ctx } = fakeContext('/start mate_fb_wawapolki2');
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith(
+      expect.objectContaining({ startPayload: 'mate_fb_wawapolki2' }),
+    );
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: 'mate_fb_wawapolki2',
+      is_new: true,
+    });
+  });
+
+  it('opens the roommate flow for a mate link, with its source and detail', async () => {
+    const { ctx, reply } = fakeContext('/start mate_fb_wawapolki2');
+    await handleStart(ctx);
+
+    expect(mocks.openRoommate).toHaveBeenCalledTimes(1);
+    expect(mocks.openRoommate).toHaveBeenCalledWith(
+      ctx,
+      { id: 'chat-row', locale: 'ru', isNew: true },
+      'ru',
+      { source: 'fb', detail: 'wawapolki2' },
+    );
+    expect(reply).not.toHaveBeenCalled();
+    expect(mocks.startDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['mate', { source: 'direct', detail: undefined }],
+    ['mate_tg', { source: 'tg', detail: undefined }],
+    ['mate_unknown_x', { source: 'other', detail: undefined }],
+  ])('opens the roommate flow for %s', async (payload, entry) => {
+    const { ctx } = fakeContext(`/start ${payload}`);
+    await handleStart(ctx);
+
+    expect(mocks.openRoommate).toHaveBeenCalledWith(ctx, expect.anything(), 'ru', entry);
+  });
+
+  it.each([
+    ['start', '/start'],
+    ['startAfterPayload', '/start web_checker'],
+  ] as const)('offers the roommate start button under %s', async (key, text) => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeContext(text);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(capabilityText('uk', key, false));
+    expect(buttons(reply)).toEqual(['rm:start']);
+    const markup = reply.mock.calls[0][1].reply_markup as {
+      inline_keyboard: { text: string }[][];
+    };
+    expect(markup.inline_keyboard[0][0].text).toBe(rt('uk', 'btnStart'));
+    expect(mocks.openRoommate).not.toHaveBeenCalled();
+  });
+
+  // Spec 04 §Start payloads, privacy fix: text that is not a deep link's shape
+  // can only be typed after /start, and free text never goes into an event.
+  it.each([
+    ['a typed sentence', 'my landlord keeps my deposit, jan@example.com +48 600 100 200'],
+    ['a payload with a space', 'dep now'],
+    ['a 65-character payload', `web_${'x'.repeat(61)}`],
+    ['a non-ASCII word', 'mokotów'],
+  ])('records %s after /start as invalid, never the text', async (_label, typed) => {
+    const { ctx, reply } = fakeContext(`/start ${typed}`);
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith({
+      chatId: CHAT_ID,
+      locale: 'ru',
+      startPayload: 'invalid',
+    });
+    expect(mocks.track).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_bot_started', {
+      payload: 'invalid',
+      is_new: true,
+    });
+    const recorded = JSON.stringify([mocks.touchChat.mock.calls, mocks.track.mock.calls]);
+    expect(recorded).not.toContain(typed);
+    for (const word of typed.split(/\s+/).filter((w) => w.length >= 4)) {
+      expect(recorded).not.toContain(word);
+    }
+    expect(replyKey(reply)).toBe(capabilityText('ru', 'startAfterPayload', false));
+  });
+});
+
+describe('handleStart with a building link (b_<uuid>)', () => {
+  const fallback = (locale: 'ru' | 'uk') =>
+    `${t(locale, 'buildingLinkFailed')}\n\n${capabilityText(locale, 'startAfterPayload', false)}`;
+
+  it('replies at once with the building’s card and buttons, as for its typed address', async () => {
+    const lookup = buildingLookup();
+    mocks.lookupBuilding.mockResolvedValue(lookup);
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(mocks.lookupBuilding).toHaveBeenCalledWith(UUID);
+    expect(replyKey(reply)).toBe(renderLookup(lookup, 'ru'));
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(buttons(reply)).toContain(`sub:b:${UUID}`);
+    expect(buttons(reply).some((url) => url.includes('/warsaw/building/pulawska-10'))).toBe(true);
+    // No request to type the address.
+    expect(replyKey(reply)).not.toContain(t('ru', 'buildingLinkFailed'));
+    expect(replyKey(reply)).not.toContain('Пришли адрес');
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', {
+      level: 'building',
+      district: 'mokotow',
+      has_building: true,
+      report_count: 2,
+      entry_source: 'link_building',
+      lookup_level: 'building',
+      source_kind: 'tenant',
+      n: 1,
+      incomplete: false,
+    });
+    expect(mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked')).toHaveLength(1);
+    // The link never goes through the typed-address path.
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.lookupAddress).not.toHaveBeenCalled();
+  });
+
+  it('records a building without reports as link_building with its district reference', async () => {
+    mocks.lookupBuilding.mockResolvedValue(unreportedLookup());
+    const { ctx } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_address_checked',
+        expect.objectContaining({
+          entry_source: 'link_building',
+          lookup_level: 'district',
+          has_building: true,
+          report_count: 0,
+          source_kind: 'tenant',
+          n: 5,
+        }),
+      ],
+    ]);
+  });
+
+  it('gives the area card starting with noBuildingData for a building without reports', async () => {
+    mocks.lookupBuilding.mockResolvedValue(unreportedLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toBe(renderLookup(unreportedLookup(), 'ru'));
+    expect(text.startsWith(`📍 <b>Puławska 10</b>\n${t('ru', 'noBuildingData')}\n`)).toBe(true);
+    expect(text).toContain(t('ru', 'areaHeader', { area: 'Mokotów' }));
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+  });
+
+  it('gives the city reference for a building without coordinates or district', async () => {
+    const lookup = buildingLookup({
+      level: 'city',
+      districtSlug: null,
+      districtName: null,
+      building: summarizeFigures([], { level: 'building', rentalType: 'all' }),
+      reference: areaReference('city'),
+    });
+    mocks.lookupBuilding.mockResolvedValue(lookup);
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toBe(renderLookup(lookup, 'ru'));
+    expect(text).toContain(t('ru', 'noBuildingData'));
+    expect(text).toContain(t('ru', 'cityHeader', { area: 'Варшава' }));
+    expect(text).not.toContain('данные по району');
+  });
+
+  it.each([
+    ['an unknown id', null],
+    ['a deleted building', null],
+    ['a building outside the checker city', null],
+  ])('gives the fallback and the address prompt for %s', async (_label, result) => {
+    mocks.lookupBuilding.mockResolvedValue(result);
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(mocks.lookupBuilding).toHaveBeenCalledWith(UUID);
+    expect(replyKey(reply)).toBe(fallback('ru'));
+    expect(mocks.track).not.toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', expect.anything());
+  });
+
+  it.each(['b_123', 'b_', `b_${UUID}0`, `b_${UUID.replace(/-/g, '')}`])(
+    'gives the fallback for the malformed %s without a building query',
+    async (payload) => {
+      const { ctx, reply } = fakeContext(`/start ${payload}`);
+      await handleStart(ctx);
+
+      expect(mocks.lookupBuilding).not.toHaveBeenCalled();
+      expect(replyKey(reply)).toBe(fallback('ru'));
+    },
+  );
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+    expect(replyKey(reply)).toBe(fallback('uk'));
+
+    mocks.lookupBuilding.mockResolvedValue(buildingLookup());
+    const second = fakeContext(`/start b_${UUID}`);
+    await handleStart(second.ctx);
+    expect(replyKey(second.reply)).toBe(renderLookup(buildingLookup(), 'uk'));
+  });
+
+  it('replies genericError on a database error, never silence', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.lookupBuilding.mockRejectedValue(new Error('connection refused'));
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'genericError'));
+    expect(mocks.track).not.toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', expect.anything());
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
+  });
+
+  it('keeps an open deposit intake open and mentions /cancel under the card', async () => {
+    mocks.hasOpenIntake.mockResolvedValue(true);
+    mocks.lookupBuilding.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(mocks.hasOpenIntake).toHaveBeenCalledWith('chat-row');
+    expect(replyKey(reply)).toBe(
+      `${renderLookup(buildingLookup(), 'ru')}\n\n${t('ru', 'intakeStillOpen')}`,
+    );
+    expect(t('ru', 'intakeStillOpen')).toContain('/cancel');
+    expect(t('uk', 'intakeStillOpen')).toContain('/cancel');
+    expect(mocks.cancelDepositFlow).not.toHaveBeenCalled();
+    expect(mocks.startDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it('mentions /cancel under the fallback too, while an intake is open', async () => {
+    mocks.hasOpenIntake.mockResolvedValue(true);
+    const { ctx, reply } = fakeContext('/start b_123');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(`${fallback('ru')}\n\n${t('ru', 'intakeStillOpen')}`);
+    expect(mocks.cancelDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it('adds no intake line without an open intake', async () => {
+    mocks.lookupBuilding.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).not.toContain('/cancel');
+  });
+});
+
+/** What `getDistrictBySlug('mokotow')` returns: by default a district with its own reference. */
+/**
+ * What `getDistrictBySlug` returns: the reference, the district's single number
+ * (its `/districts` row: tenant group of 12 reports) and no rank, as under the
+ * bot's `all` filter.
+ */
+function district(
+  name = 'Mokotów',
+  reference: AreaReference | null = areaReference('district'),
+  figure: { reportCount: number } | null = { reportCount: 12 },
+  rank: { position: number; total: number } | null = null,
+) {
+  return {
+    citySlug: 'warsaw',
+    slug: 'mokotow',
+    name,
+    deposit: { answered: 0, gotBack: 0, full: 0, medianDeposit: null },
+    reference,
+    figure,
+    rank,
+  };
+}
+
+/** The texts of a reply's inline buttons. */
+function buttonTexts(reply: ReturnType<typeof vi.fn>): string[] {
+  const markup = reply.mock.calls[0][1]?.reply_markup as
+    | { inline_keyboard: { text: string }[][] }
+    | undefined;
+  return (markup?.inline_keyboard ?? []).flat().map((b) => b.text);
+}
+
+/** A tap on an inline button with this callback data, matched as the bot matches it. */
+function fakeCallback(data: string) {
+  const reply = vi.fn();
+  const answerCallbackQuery = vi.fn();
+  const ctx = {
+    chat: { id: CHAT_ID },
+    match: data.match(SUBSCRIBE_CALLBACK),
+    answerCallbackQuery,
+    reply,
+  } as unknown as CallbackQueryContext<Context>;
+  return { ctx, reply, answerCallbackQuery };
+}
+
+describe('handleStart with a district link (d_<slug>)', () => {
+  beforeEach(() => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
+  });
+
+  const card = (
+    locale: 'ru' | 'uk',
+    reference: AreaReference | null = areaReference('district'),
+    rank: { position: number; total: number } | null = null,
+  ) => renderDistrict({ name: 'Mokotów', reference, deposit: district().deposit, rank }, locale);
+
+  it('answers with the district card and a save-interest button, saving nothing', async () => {
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(replyKey(reply)).toBe(card('ru'));
+    // The district's groups with N, from its reference on the contract.
+    expect(replyKey(reply)).toContain('📊 <b>Mokotów</b> — данные по району:');
+    expect(replyKey(reply)).toContain('👥 <b>Отчёты жильцов: 5</b>');
+    expect(replyKey(reply)).toContain('(медиана по 5 отчётам)');
+    // No rank under `all` (golden example 16), and no league table is read.
+    expect(replyKey(reply)).not.toContain('место из');
+    expect(mocks.getDistrictTable).not.toHaveBeenCalled();
+    // The blended city median is no longer read: the card needs no city lookup.
+    expect(mocks.getCity).not.toHaveBeenCalled();
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    expect(buttonTexts(reply)).toContain(t('ru', 'subscribeDistrict', { district: 'Mokotów' }));
+    expect(buttons(reply)).toContain('districts');
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(replyKey(reply)).not.toContain(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 12,
+      entry_source: 'link_district',
+      source_kind: 'tenant',
+      n: 5,
+      incomplete: false,
+    });
+    expect(mocks.track.mock.calls.filter(([, e]) => e === 'tg_district_checked')).toHaveLength(1);
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('uk'));
+    expect(buttonTexts(reply)).toContain(t('uk', 'subscribeDistrict', { district: 'Mokotów' }));
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+  });
+
+  it('escapes the district name in the card', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów <i>&</i>'));
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toContain('Mokotów &lt;i&gt;&amp;&lt;/i&gt;');
+    expect(replyKey(reply)).not.toContain('<i>&</i>');
+  });
+
+  it('answers a thin district with the city reference; report_count stays the district’s', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(
+      district('Mokotów', areaReference('city'), { reportCount: 2 }),
+    );
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toBe(card('ru', areaReference('city')));
+    expect(text).toContain('показываю Варшаву целиком');
+    expect(text).toContain('📊 <b>Варшава</b> — данные по городу:');
+    expect(text).toContain('(медиана по 5 отчётам)');
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 2,
+      entry_source: 'link_district',
+      source_kind: 'tenant',
+      n: 5,
+      incomplete: false,
+    });
+  });
+
+  it('passes a comparable rank through to the card', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(
+      district(
+        'Mokotów',
+        areaReference('district'),
+        { reportCount: 12 },
+        { position: 2, total: 2 },
+      ),
+    );
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('ru', areaReference('district'), { position: 2, total: 2 }));
+    expect(replyKey(reply)).toContain('🏷 2-е место из 2 по цене');
+  });
+
+  it('records report_count 0 and no rank for a district without a usable value', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów', null, null));
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(card('ru', null, null));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_district_checked', {
+      district: 'mokotow',
+      report_count: 0,
+      entry_source: 'link_district',
+      source_kind: 'none',
+      n: 0,
+      incomplete: false,
+    });
+  });
+
+  it('saves the interest only when its button is tapped', async () => {
+    const { ctx, reply } = fakeContext('/start d_mokotow');
+    await handleStart(ctx);
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+
+    const data = buttons(reply).find((b) => b.startsWith('sub:d:'))!;
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+    const tap = fakeCallback(data);
+    await handleSubscribe(tap.ctx);
+
+    expect(mocks.addSubscription).toHaveBeenCalledTimes(1);
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, {
+      districtSlug: 'mokotow',
+      citySlug: 'warsaw',
+    });
+    expect(replyKey(tap.reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+  });
+});
+
+/** A typed message that is not a command, as `bot.on('message:text')` receives it. */
+function fakeText(text: string) {
+  const reply = vi.fn();
+  const ctx = {
+    chat: { id: CHAT_ID },
+    from: { language_code: 'ru' },
+    message: { text },
+    reply,
+    replyWithChatAction: vi.fn(),
+  } as unknown as Parameters<typeof handleText>[0];
+  return { ctx, reply };
+}
+
+describe('handleText (typed address or district)', () => {
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({
+      id: 'city-1',
+      slug: 'warsaw',
+      districts: [{ id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' }],
+    });
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+  });
+
+  it('records a typed address as typed_address, once, with the answer quality', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-1', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeText('Puławska 10');
+    await handleText(ctx);
+
+    expect(replyKey(reply)).toBe(renderLookup(buildingLookup(), 'ru'));
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_address_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_address_checked',
+        {
+          level: 'building',
+          district: 'mokotow',
+          has_building: true,
+          report_count: 2,
+          entry_source: 'typed_address',
+          lookup_level: 'building',
+          source_kind: 'tenant',
+          n: 1,
+          incomplete: false,
+        },
+      ],
+    ]);
+    expect(mocks.lookupBuilding).not.toHaveBeenCalled();
+  });
+
+  it('records a typed district name as typed_district, once', async () => {
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(buttons(reply)).toContain('sub:d:mokotow');
+    const checks = mocks.track.mock.calls.filter(([, e]) => e === 'tg_district_checked');
+    expect(checks).toEqual([
+      [
+        CHAT_ID,
+        'tg_district_checked',
+        {
+          district: 'mokotow',
+          report_count: 12,
+          entry_source: 'typed_district',
+          source_kind: 'tenant',
+          n: 5,
+          incomplete: false,
+        },
+      ],
+    ]);
+  });
+
+  it('sends no check event for an address Google cannot find', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText('Nowhere 999');
+    await handleText(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'addressNotFound'));
+    expect(mocks.track).not.toHaveBeenCalledWith(CHAT_ID, 'tg_address_checked', expect.anything());
+  });
+});
+
+describe('handleText while a roommate step is open (spec 06 §Entry and routing)', () => {
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({
+      id: 'city-1',
+      slug: 'warsaw',
+      districts: [{ id: 'district-mokotow', slug: 'mokotow', nameKey: 'Mokotów' }],
+    });
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+  });
+
+  it('asks the roommate flow first, with the chat row and the text', async () => {
+    const { ctx } = fakeText('  Mokotów ');
+    await handleText(ctx);
+
+    expect(mocks.handleRoommateText).toHaveBeenCalledWith(ctx, 'chat-row', 'ru', 'Mokotów');
+  });
+
+  it('stops at a step that took the text: no deposit flow, district check or lookup', async () => {
+    mocks.handleRoommateText.mockResolvedValue('used');
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).not.toHaveBeenCalled();
+    expect(mocks.maybeOfferDeposit).not.toHaveBeenCalled();
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('at a button step answers an address as usual, then says /cancel leaves the questions', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-1', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeText('Puławska 10');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).not.toHaveBeenCalled();
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'Puławska 10', true);
+    expect(reply).toHaveBeenCalledTimes(2);
+    expect(reply.mock.calls[0][0]).toBe(renderLookup(buildingLookup(), 'ru'));
+    expect(reply.mock.calls[1][0]).toBe(rt('ru', 'roommateQuestionsOpen'));
+    expect(rt('ru', 'roommateQuestionsOpen')).toContain('/cancel');
+  });
+
+  it('at a button step answers a district name with its card, then the /cancel line', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    const { ctx, reply } = fakeText('Mokotów');
+    await handleText(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(reply).toHaveBeenCalledTimes(2);
+    expect(reply.mock.calls[1][0]).toBe(rt('ru', 'roommateQuestionsOpen'));
+  });
+
+  it('lets the deposit keyword reply stand alone at a button step', async () => {
+    mocks.handleRoommateText.mockResolvedValue('passed');
+    mocks.maybeOfferDeposit.mockResolvedValue(true);
+    const { ctx, reply } = fakeText('как вернуть залог');
+    await handleText(ctx);
+
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'как вернуть залог', true);
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('adds no roommate line without an open roommate step', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText('Nowhere 999');
+    await handleText(ctx);
+
+    expect(mocks.handleDepositText).toHaveBeenCalledWith(ctx, 'chat-row', 'ru', 'Nowhere 999');
+    expect(mocks.maybeOfferDeposit).toHaveBeenCalledWith(ctx, 'ru', 'Nowhere 999', false);
+    expect(replyKey(reply)).toBe(t('ru', 'addressNotFound'));
+  });
+});
+
+describe('handleCancel (/cancel)', () => {
+  it('closes an open roommate draft or edit step and leaves the deposit cases alone', async () => {
+    mocks.cancelRoommate.mockResolvedValue(true);
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+    expect(mocks.cancelDepositFlow).not.toHaveBeenCalled();
+  });
+
+  it('runs the deposit behaviour of today without an open roommate step', async () => {
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+    expect(mocks.cancelDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'ru');
+  });
+});
+
+describe('logBotError (bot.catch, spec 06 §Boundaries)', () => {
+  const TG_CHAT_ID = 987_654_321;
+  const TEXT = 'Puławska 10 m. 5, Jan Kowalski';
+
+  function botError(error: unknown, update: Record<string, unknown>) {
+    return new BotError(error, { update } as unknown as Context);
+  }
+
+  function logged(spy: ReturnType<typeof vi.spyOn>): string {
+    return JSON.stringify(spy.mock.calls);
+  }
+
+  it('logs only the message and the update type, never the chat id or the text', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logBotError(
+      botError(new Error('boom'), {
+        update_id: 1,
+        message: { chat: { id: TG_CHAT_ID }, from: { id: TG_CHAT_ID }, text: TEXT },
+      }),
+    );
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('[bot] unhandled error', 'message', 'boom');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    expect(logged(spy)).not.toContain('Puławska');
+    expect(logged(spy)).not.toContain('Kowalski');
+    spy.mockRestore();
+  });
+
+  it('keeps a failed call’s payload (it holds chat_id) out of the log', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new GrammyError(
+      "Call to 'sendMessage' failed!",
+      { ok: false, error_code: 400, description: 'Bad Request: chat not found' },
+      'sendMessage',
+      { chat_id: TG_CHAT_ID, text: TEXT },
+    );
+    logBotError(
+      botError(error, {
+        update_id: 2,
+        callback_query: { from: { id: TG_CHAT_ID }, data: 'rm:start' },
+      }),
+    );
+
+    expect(spy.mock.calls[0][1]).toBe('callback_query');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    expect(logged(spy)).not.toContain('Kowalski');
+    spy.mockRestore();
+  });
+
+  it('logs only the kind of a thrown non-error', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logBotError(botError({ chatId: TG_CHAT_ID }, { update_id: 3, message: { text: TEXT } }));
+
+    expect(spy).toHaveBeenCalledWith('[bot] unhandled error', 'message', 'object');
+    expect(logged(spy)).not.toContain(String(TG_CHAT_ID));
+    spy.mockRestore();
+  });
+});
+
+describe('typed text in bot events (spec 04 §Typed text in bot events)', () => {
+  const TYPED = 'Moja ulica 7 m. 12, Jan Kowalski';
+
+  beforeEach(() => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+  });
+
+  /** Every property value any tracked event carried, flattened to strings. */
+  function trackedValues(): string[] {
+    return mocks.track.mock.calls.flatMap(([, , properties]) =>
+      Object.values((properties ?? {}) as Record<string, unknown>).map(String),
+    );
+  }
+
+  it('tg_address_not_found carries no properties at all', async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const { ctx } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_address_not_found']]);
+    expect(trackedValues().some((value) => value.includes('ulica'))).toBe(false);
+  });
+
+  it('tg_address_outside_city carries only the geocoded city name', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-k', city: 'Kraków' });
+    mocks.lookupAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([
+      [CHAT_ID, 'tg_address_outside_city', { city: 'Kraków' }],
+    ]);
+    expect(trackedValues().some((value) => value.includes('ulica'))).toBe(false);
+    // The reply and its waitlist button are unchanged.
+    expect(buttons(reply)).toEqual(['cw:Kraków']);
+  });
+
+  it('tg_address_outside_city has no city property when geocoding resolved none', async () => {
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-x', city: null });
+    mocks.lookupAddress.mockResolvedValue(null);
+    const { ctx, reply } = fakeText(TYPED);
+    await handleText(ctx);
+
+    expect(mocks.track.mock.calls).toEqual([[CHAT_ID, 'tg_address_outside_city', {}]]);
+    const properties = mocks.track.mock.calls[0][2] as Record<string, unknown>;
+    expect('city' in properties).toBe(false);
+    expect('query' in properties).toBe(false);
+    expect(replyKey(reply)).toBe(t('ru', 'outsideCity'));
+  });
+});
+
+describe('links to the cost form (spec 04 §Links to the website)', () => {
+  /** The card's button that opens the cost form, parsed. */
+  function submitButton(reply: ReturnType<typeof vi.fn>): URL {
+    const url = buttons(reply).find((value) => value.includes('/costs/submit'));
+    expect(url).toBeDefined();
+    return new URL(url as string);
+  }
+
+  function expectNoChatId(url: URL) {
+    expect(url.toString()).not.toContain(String(CHAT_ID));
+    expect(url.toString()).not.toContain('tg_');
+  }
+
+  it('sends the building id from a b_ link with a reported building', async () => {
+    mocks.lookupBuilding.mockResolvedValue(buildingLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const url = submitButton(reply);
+    expect(url.pathname).toBe('/ru/warsaw/costs/submit');
+    expect(url.searchParams.get('b')).toBe(UUID);
+    expect(url.searchParams.get('p')).toBe('place-1');
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expect(url.searchParams.get('utm_source')).toBe('telegram');
+    expect(url.searchParams.get('utm_medium')).toBe('bot');
+    expect(url.searchParams.get('utm_campaign')).toBe('submit');
+    expectNoChatId(url);
+  });
+
+  it('sends the building id for a building without reports (area card)', async () => {
+    mocks.lookupBuilding.mockResolvedValue(unreportedLookup());
+    const { ctx, reply } = fakeContext(`/start b_${UUID}`);
+    await handleStart(ctx);
+
+    const url = submitButton(reply);
+    expect(url.searchParams.get('b')).toBe(UUID);
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expectNoChatId(url);
+  });
+
+  it('sends only p for a typed address without a building row', async () => {
+    mocks.handleDepositText.mockResolvedValue(false);
+    mocks.maybeOfferDeposit.mockResolvedValue(false);
+    mocks.getCity.mockResolvedValue({ id: 'city-1', slug: 'warsaw', districts: [] });
+    mocks.geocodeAddress.mockResolvedValue({ placeId: 'place-9', city: 'Warszawa' });
+    mocks.lookupAddress.mockResolvedValue(
+      buildingLookup({
+        level: 'district',
+        buildingId: null,
+        buildingSlug: null,
+        placeId: 'place-9',
+        building: null,
+      }),
+    );
+    const { ctx, reply } = fakeText('Puławska 99');
+    await handleText(ctx);
+
+    const url = submitButton(reply);
+    expect(url.searchParams.has('b')).toBe(false);
+    expect(url.searchParams.get('p')).toBe('place-9');
+    expect(url.searchParams.get('source')).toBe('tgbot');
+    expect(url.searchParams.get('utm_campaign')).toBe('submit');
+    expectNoChatId(url);
+  });
+});
+
+describe('handleSubscribe (save-interest buttons)', () => {
+  beforeEach(() => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+  });
+
+  it('saves a district interest and tracks it', async () => {
+    const { ctx, reply, answerCallbackQuery } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(mocks.getDistrictBySlug).toHaveBeenCalledWith('mokotow');
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, {
+      districtSlug: 'mokotow',
+      citySlug: 'warsaw',
+    });
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'district',
+      district: 'mokotow',
+      already: false,
+    });
+    expect(replyKey(reply)).toBe(t('ru', 'subscribedDistrict', { name: 'Mokotów' }));
+    expect(reply.mock.calls[0][1]).toMatchObject({ parse_mode: 'HTML' });
+  });
+
+  it('saves a building interest and tracks it', async () => {
+    mocks.addSubscription.mockResolvedValue({
+      created: true,
+      name: 'Puławska 10',
+      targetKey: `b:${UUID}`,
+    });
+    const { ctx, reply } = fakeCallback(`sub:b:${UUID}`);
+    await handleSubscribe(ctx);
+
+    expect(mocks.addSubscription).toHaveBeenCalledWith(CHAT_ID, { buildingId: UUID });
+    expect(mocks.getDistrictBySlug).not.toHaveBeenCalled();
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'building',
+      already: false,
+    });
+    expect(replyKey(reply)).toBe(t('ru', 'subscribedBuilding', { name: 'Puławska 10' }));
+  });
+
+  it('escapes district and building names in the reply', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district('Mokotów <i>&</i>'));
+    const districtTap = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(districtTap.ctx);
+    expect(replyKey(districtTap.reply)).toBe(
+      t('ru', 'subscribedDistrict', { name: 'Mokotów &lt;i&gt;&amp;&lt;/i&gt;' }),
+    );
+
+    mocks.addSubscription.mockResolvedValue({
+      created: true,
+      name: 'Puławska 10 <b>A & B</b>',
+      targetKey: `b:${UUID}`,
+    });
+    const buildingTap = fakeCallback(`sub:b:${UUID}`);
+    await handleSubscribe(buildingTap.ctx);
+    const text = replyKey(buildingTap.reply);
+    expect(text).toBe(
+      t('ru', 'subscribedBuilding', { name: 'Puławska 10 &lt;b&gt;A &amp; B&lt;/b&gt;' }),
+    );
+    expect(text).not.toContain('<b>A & B</b>');
+  });
+
+  it('says it is already saved on a repeat tap', async () => {
+    mocks.addSubscription.mockResolvedValue({ created: false, name: 'Mokotów', targetKey: 'd:x' });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'alreadySubscribed'));
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_subscribed', {
+      target: 'district',
+      district: 'mokotow',
+      already: true,
+    });
+  });
+
+  it('saves nothing for an unknown district and only answers the tap', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(null);
+    const { ctx, reply, answerCallbackQuery } = fakeCallback('sub:d:atlantis');
+    await handleSubscribe(ctx);
+
+    expect(mocks.addSubscription).not.toHaveBeenCalled();
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    expect(replyKey(reply)).toBe(t('uk', 'subscribedDistrict', { name: 'Mokotów' }));
+  });
+
+  it('says the interest is saved and that nothing is sent automatically', async () => {
+    mocks.getDistrictBySlug.mockResolvedValue(district());
+    mocks.addSubscription.mockResolvedValue({ created: true, name: 'Mokotów', targetKey: 'd:x' });
+    const { ctx, reply } = fakeCallback('sub:d:mokotow');
+    await handleSubscribe(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain('Сохранил интерес к району <b>Mokotów</b>');
+    expect(text).toContain('Автоматических уведомлений о новых данных пока нет');
+    expect(text).not.toMatch(/напишу|слежу/i);
+  });
+});
+
+describe('handleMy and the remove button', () => {
+  function fakeUnsubscribe(data: string) {
+    const reply = vi.fn();
+    const answerCallbackQuery = vi.fn();
+    const ctx = {
+      chat: { id: CHAT_ID },
+      match: data.match(UNSUBSCRIBE_CALLBACK),
+      answerCallbackQuery,
+      reply,
+    } as unknown as CallbackQueryContext<Context>;
+    return { ctx, reply, answerCallbackQuery };
+  }
+
+  it('lists saved interests under the new header with one remove button each', async () => {
+    mocks.listSubscriptions.mockResolvedValue([
+      { targetKey: 'b:building-1', name: 'Puławska 10', isWaitlist: false },
+      { targetKey: 'c:krakow', name: 'Kraków', isWaitlist: true },
+    ]);
+    const { ctx, reply } = fakeContext('/my');
+    await handleMy(ctx);
+
+    expect(replyKey(reply)).toBe(
+      `${t('ru', 'mySubsHeader')}\n\n• Puławska 10\n• Kraków <i>(${t('ru', 'waitlistSuffix')})</i>`,
+    );
+    expect(t('ru', 'mySubsHeader')).toContain('Сохранённые интересы');
+    expect(buttons(reply)).toEqual(['unsub:b:building-1', 'unsub:c:krakow']);
+    expect(mocks.listSubscriptions).toHaveBeenCalledWith(CHAT_ID);
+  });
+
+  it('answers an empty list without promising a message', async () => {
+    mocks.listSubscriptions.mockResolvedValue([]);
+    const { ctx, reply } = fakeContext('/my');
+    await handleMy(ctx);
+
+    expect(replyKey(reply)).toBe(t('ru', 'mySubsEmpty'));
+    expect(t('ru', 'mySubsEmpty')).not.toMatch(/напишу/i);
+  });
+
+  it('removes the tapped interest and confirms it', async () => {
+    const { ctx, reply, answerCallbackQuery } = fakeUnsubscribe('unsub:b:building-1');
+    await handleUnsubscribe(ctx);
+
+    expect(mocks.removeSubscription).toHaveBeenCalledWith(CHAT_ID, 'b:building-1');
+    expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_unsubscribed');
+    expect(replyKey(reply)).toBe(t('ru', 'unsubscribed'));
+  });
+
+  it('removes a waitlisted city and answers in Ukrainian', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeUnsubscribe('unsub:c:krakow');
+    await handleUnsubscribe(ctx);
+
+    expect(mocks.removeSubscription).toHaveBeenCalledWith(CHAT_ID, 'c:krakow');
+    expect(replyKey(reply)).toBe(t('uk', 'unsubscribed'));
+  });
+});
+
+/** Golden example 10 of spec 03 (the deposit fields only): 2 of 3 answered got it back. */
+const depositReports: FigureReport[] = [
+  { source: 'user', depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 4_000 },
+  { source: 'user', depositAmount: 4_000, depositReturned: true, depositReturnedAmount: 2_500 },
+  { source: 'user', depositAmount: 4_000, depositReturned: false, depositReturnedAmount: 0 },
+  { source: 'user', depositAmount: 4_000, depositReturned: null, isCurrentTenant: true },
+];
+
+describe('handleDeposit', () => {
+  it('states the city statistic as counts in the cards’ wording', async () => {
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain(
+      `${t('ru', 'depositHeader')}\n\nВернули залог полностью или частично: 2 из 3 ответивших (Варшава)\n`,
+    );
+    expect(text).toContain(t('ru', 'depositAdvice'));
+    expect(text).not.toMatch(/%|Типичный залог|Возвращают полностью/);
+    expect(mocks.track).toHaveBeenCalledWith(CHAT_ID, 'tg_deposit_viewed');
+  });
+
+  it('answers in Ukrainian for a Ukrainian chat', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    expect(replyKey(reply)).toContain(
+      'Повернули заставу повністю або частково: 2 з 3 тих, хто відповів (Варшава)',
+    );
+  });
+
+  it('says data is thin below three answers, and when the city is missing', async () => {
+    for (const facts of [{ deposit: summarizeDepositReturns(depositReports.slice(1)) }, null]) {
+      mocks.getCityDepositFacts.mockResolvedValue(facts);
+      const { ctx, reply } = fakeContext('/deposit');
+      await handleDeposit(ctx);
+
+      const text = replyKey(reply);
+      expect(text).toContain(t('ru', 'depositNoData'));
+      expect(text).not.toContain('ответивших');
+    }
+  });
+
+  it('answers in English for an English chat, its button opening the deposit gate', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: false });
+    mocks.getCityDepositFacts.mockResolvedValue({
+      deposit: summarizeDepositReturns(depositReports),
+    });
+    const { ctx, reply } = fakeContext('/deposit');
+    await handleDeposit(ctx);
+
+    const text = replyKey(reply);
+    expect(text).toContain(
+      `${t('en', 'depositHeader')}\n\nGot the deposit back, fully or partly: 2 of 3 who answered (Warsaw)\n`,
+    );
+    expect(text).toContain(t('en', 'depositAdvice'));
+    expect(text).not.toMatch(/\p{Script=Cyrillic}/u);
+    expect(buttonTexts(reply)[0]).toBe('😤 I’m not getting my deposit back');
+    expect(buttons(reply)[0]).toBe('dep:start');
+  });
+});
+
+describe('the en bot locale (spec 04 §English bot locale)', () => {
+  function fakeStart(text: string, languageCode: string | undefined) {
+    const reply = vi.fn();
+    const ctx = {
+      chat: { id: CHAT_ID },
+      from: languageCode ? { language_code: languageCode } : {},
+      message: { text },
+      reply,
+    } as unknown as CommandContext<Context>;
+    return { ctx, reply };
+  }
+
+  it.each<[string | undefined, BotLocale]>([
+    ['en-GB', 'en'],
+    ['pl', 'en'],
+    ['uk-UA', 'uk'],
+    ['ru', 'ru'],
+    ['de', 'ru'],
+    [undefined, 'ru'],
+  ])('a new chat with language code %s is stored as %s', async (languageCode, locale) => {
+    mocks.touchChat.mockImplementation(async (input: { locale?: BotLocale }) => ({
+      id: 'chat-row',
+      locale: input.locale ?? 'ru',
+      isNew: true,
+    }));
+    const { ctx, reply } = fakeStart('/start', languageCode);
+    await handleStart(ctx);
+
+    expect(mocks.touchChat).toHaveBeenCalledWith({ chatId: CHAT_ID, locale, startPayload: null });
+    expect(replyKey(reply)).toBe(capabilityText(locale, 'start', false));
+  });
+
+  it('an existing chat keeps its stored locale whatever the client language', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'uk', isNew: false });
+    const { ctx, reply } = fakeStart('/start', 'en-GB');
+    await handleStart(ctx);
+
+    expect(replyKey(reply)).toBe(capabilityText('uk', 'start', false));
+  });
+
+  it('the dep link of an English chat goes to the deposit flow, which gates it', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: true });
+    const { ctx, reply } = fakeStart('/start dep', 'en');
+    await handleStart(ctx);
+
+    expect(mocks.startDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it('/cancel in an English chat passes the English locale on', async () => {
+    mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale: 'en', isNew: false });
+    const { ctx } = fakeContext('/cancel');
+    await handleCancel(ctx);
+
+    expect(mocks.cancelRoommate).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+    expect(mocks.cancelDepositFlow).toHaveBeenCalledWith(ctx, 'chat-row', 'en');
+  });
+
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
+    '/lang in a %s chat offers the three languages, each in its own words',
+    async (locale) => {
+      mocks.touchChat.mockResolvedValue({ id: 'chat-row', locale, isNew: false });
+      const { ctx, reply } = fakeContext('/lang');
+      await handleLang(ctx);
+
+      expect(replyKey(reply)).toBe(t(locale, 'langPrompt'));
+      expect(buttonTexts(reply)).toEqual(['Русский', 'Українська', 'English']);
+      expect(buttons(reply)).toEqual(['lang:ru', 'lang:uk', 'lang:en']);
+      for (const data of buttons(reply)) expect(data).toMatch(LANG_CALLBACK);
+    },
+  );
+
+  it.each<BotLocale>(['ru', 'uk', 'en'])(
+    'a lang:%s tap sets the chat locale and answers in it',
+    async (locale) => {
+      const reply = vi.fn();
+      const answerCallbackQuery = vi.fn();
+      const ctx = {
+        chat: { id: CHAT_ID },
+        match: `lang:${locale}`.match(LANG_CALLBACK),
+        answerCallbackQuery,
+        reply,
+      } as unknown as CallbackQueryContext<Context>;
+      await handleLangChoice(ctx);
+
+      expect(mocks.setChatLocale).toHaveBeenCalledWith(CHAT_ID, locale);
+      expect(answerCallbackQuery).toHaveBeenCalledTimes(1);
+      expect(reply.mock.calls).toEqual([[t(locale, 'langSet')]]);
+    },
+  );
+
+  it('matches only the three languages', () => {
+    expect('lang:pl').not.toMatch(LANG_CALLBACK);
+    expect('lang:de').not.toMatch(LANG_CALLBACK);
+    expect('lang:english').not.toMatch(LANG_CALLBACK);
+  });
+});

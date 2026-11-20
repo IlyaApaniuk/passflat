@@ -2,6 +2,20 @@
 
 import { useTranslations } from 'next-intl';
 
+/** The items of `privacy.roommateMatching` after its title and intro, in page order. */
+const ROOMMATE_MATCHING_ITEMS = [
+  'fields',
+  'gender',
+  'channel',
+  'recipients',
+  'lifetime',
+  'deletion',
+  'drafts',
+  'reports',
+  'ban',
+  'analytics',
+] as const;
+
 export function PrivacyClient() {
   const t = useTranslations('privacy');
 
@@ -15,6 +29,7 @@ export function PrivacyClient() {
     t('dataSharing.processors.posthog'),
     t('dataSharing.processors.googleAnalytics'),
     t('dataSharing.processors.deepl'),
+    t('dataSharing.processors.telegram'),
   ];
 
   return (
@@ -95,12 +110,24 @@ export function PrivacyClient() {
             <ul>
               <li>{t('dataSharing.item1')}</li>
               <li>{t('dataSharing.item2')}</li>
+              <li>{t('dataSharing.item3')}</li>
             </ul>
 
             <h3>{t('dataSharing.processors.title')}</h3>
             <ul>
               {processors.map((p, i) => (
                 <li key={i}>{p}</li>
+              ))}
+            </ul>
+
+            {/* Roommate matching in the Telegram bot; the bot's intake intro links to this anchor */}
+            <h2 id="roommate-matching" className="scroll-mt-24">
+              {t('roommateMatching.title')}
+            </h2>
+            <p>{t('roommateMatching.intro')}</p>
+            <ul>
+              {ROOMMATE_MATCHING_ITEMS.map((key) => (
+                <li key={key}>{t(`roommateMatching.${key}`)}</li>
               ))}
             </ul>
 
@@ -111,6 +138,7 @@ export function PrivacyClient() {
               <li>{t('retention.listings')}</li>
               <li>{t('retention.costReports')}</li>
               <li>{t('retention.importedEmail')}</li>
+              <li>{t('retention.roommate')}</li>
             </ul>
 
             {/* Your Rights (GDPR) */}

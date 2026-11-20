@@ -29,14 +29,34 @@ export async function POST(request: NextRequest) {
   const cityNormalized = city.trim().toLowerCase();
   const slug = citySlug.trim();
 
+  // Only the city-launch class (spec 02): listings-interest rows carry a
+  // listingType and never get this e-mail. Rows saved before the classes were
+  // split are not relabelled, so a lost-type row stays selectable.
   const subscribers = await prisma.cityNotifySubscription.findMany({
-    where: { cityNormalized, notifiedAt: null },
+    where: {
+      cityNormalized,
+      listingType: '',
+      districtSlug: '',
+      consent: true,
+      notifiedAt: null,
+    },
   });
 
   let sent = 0;
   let failed = 0;
 
+  // Each row is claimed before sending (notifiedAt set only while still null),
+  // so overlapping manual runs send the e-mail once. A failed send releases the
+  // claim for a later run. At most once: a crash between the claim and the send
+  // loses that e-mail.
   for (const subscriber of subscribers) {
+    const claimedAt = new Date();
+    const claim = await prisma.cityNotifySubscription.updateMany({
+      where: { id: subscriber.id, notifiedAt: null },
+      data: { notifiedAt: claimedAt },
+    });
+    if (claim.count !== 1) continue; // another run has it
+
     const locale = resolveEmailLocale(subscriber.locale);
     const displayName = cityName?.trim() || subscriber.city;
 
@@ -46,19 +66,19 @@ export async function POST(request: NextRequest) {
       template: 'cityLaunch',
       data: {
         cityName: displayName,
-        cityUrl: localeUrl(locale, `/${slug}/replacement`),
+        cityUrl: localeUrl(locale, `/${slug}/costs`),
       },
     });
 
     if (!result.success) {
       failed += 1;
+      await prisma.cityNotifySubscription.updateMany({
+        where: { id: subscriber.id, notifiedAt: claimedAt },
+        data: { notifiedAt: null },
+      });
       continue;
     }
 
-    await prisma.cityNotifySubscription.update({
-      where: { id: subscriber.id },
-      data: { notifiedAt: new Date() },
-    });
     sent += 1;
   }
 

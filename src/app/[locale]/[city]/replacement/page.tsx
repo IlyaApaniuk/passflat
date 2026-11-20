@@ -33,6 +33,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: getAlternates(`/${city}/replacement`, await getLocale()),
+    // PRD 4 FR-29 (D78): the frozen list stays reachable but out of the index.
+    robots: { index: false, follow: true },
     openGraph: {
       title,
       description,

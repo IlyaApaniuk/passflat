@@ -9,9 +9,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
-import { median } from '@/lib/cost-stats';
+import { loadCityFigure, loadDistrictFigures } from '@/lib/cost-figures-query';
+import { areasWithFigure } from '@/lib/single-number-view';
+import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
+import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
 import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
@@ -26,12 +32,7 @@ interface PageProps {
 const getCity = cache((slug: string) =>
   prisma.city.findUnique({
     where: { slug },
-    select: {
-      id: true,
-      slug: true,
-      nameKey: true,
-      districts: { select: { slug: true, nameKey: true } },
-    },
+    select: { id: true, slug: true, nameKey: true },
   }),
 );
 
@@ -45,28 +46,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = t('costsSeo.cityMetaTitle', { city: cityName });
   const description = t('costsSeo.cityMetaDescription', { city: cityName });
 
-  // Rich cost share-card from the city-wide roll-up (median of district medians);
-  // generic OG when there's no data yet.
-  const buildings = await getBuildingsData(cityRec.id, null, null);
-  const districts = rollUpDistricts(buildings, cityRec.districts);
-  const pos = (vals: number[]) => median(vals.filter((v) => v > 0)) ?? 0;
-  const cityTotal = pos(districts.map((d) => d.medianTotal));
-  const cityRent = pos(districts.map((d) => d.medianRent));
-  const cityExpenses = pos(districts.map((d) => d.medianExpenses));
-  const reportCount = districts.reduce((s, d) => s + d.reportCount, 0);
-  const ogImage =
-    cityTotal > 0
-      ? getCostOgImage({
-          title: cityName,
-          subtitle: t('costs.overview.nReports', { count: reportCount }),
-          stat: `≈ ${cityTotal.toLocaleString()} zł`,
-          statLabel: t('costs.building.medianMonthlyTotal'),
-          split:
-            cityRent > 0 && cityExpenses > 0
-              ? `${t('costs.building.rent')} ≈ ${cityRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${cityExpenses.toLocaleString()}`
-              : undefined,
-        })
-      : getOgImage(title, description);
+  // Rich cost share-card from the city's single number (D23): its tenant group, else its
+  // asking prices, over the city's reports, labelled with the group and N; generic OG
+  // when there's no data yet.
+  const figure = await loadCityFigure(cityRec.id);
+  const ogImage = figure
+    ? getCostOgImage(figureOgCard(t, figure, { title: cityName, subtitle: description }))
+    : getOgImage(title, description);
 
   return {
     title,
@@ -86,8 +72,19 @@ export default async function CityCostsHub({ params }: PageProps) {
   const t = await getTranslations();
   const cityName = t(cityRec.nameKey);
 
-  const buildings = await getBuildingsData(cityRec.id, null, null);
-  const districts = rollUpDistricts(buildings, cityRec.districts);
+  // One number per district by D23 (spec 03 §Single-number surfaces): the district's
+  // tenant group, else its asking prices, over the district's reports, labelled with
+  // the group and N, the value `loadAreaReference` gives the district.
+  // The flatmate callout's profile count (PRD 4 FR-11), cached for an hour like the page; a
+  // rejected load renders the callout without a count line. Its per-person line (spec 08
+  // §Per-person line) is the bot's Warsaw split; a rejection or null → no line.
+  const [districtFigures, flatmateCounts, split] = await Promise.all([
+    loadDistrictFigures(cityRec.id),
+    loadFlatmateBlockCounts().catch(() => undefined),
+    loadWarsawPerPersonSplit().catch(() => null),
+  ]);
+  const districts = areasWithFigure(districtFigures);
+  const splitArea = split ? perPersonSplitArea(split, t) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -122,6 +119,15 @@ export default async function CityCostsHub({ params }: PageProps) {
               <ShareButton path={`/${city}`} source="city" size="default" />
             </div>
 
+            <div className="mt-8">
+              <FlatmateCallout
+                surface="hub"
+                counts={flatmateCounts}
+                split={split}
+                splitArea={splitArea}
+              />
+            </div>
+
             <h2 className="mt-10 text-xl font-semibold">{t('costsSeo.districtsHeading')}</h2>
 
             {districts.length === 0 ? (
@@ -142,30 +148,9 @@ export default async function CityCostsHub({ params }: PageProps) {
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             {d.name}
                           </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {d.buildingCount} ·{' '}
-                            {t('costs.overview.nReports', { count: d.reportCount })}
-                          </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-4">
-                          <div className="text-right tabular-nums">
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.medianMonthlyTotal')}
-                            </p>
-                            <p className="text-lg font-bold text-primary">
-                              ≈ {d.medianTotal.toLocaleString()} PLN
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.rent')} ≈ {d.medianRent.toLocaleString()}
-                              {d.medianExpenses > 0 && (
-                                <>
-                                  {' · '}
-                                  {t('costs.overview.expenses')} ≈{' '}
-                                  {d.medianExpenses.toLocaleString()}
-                                </>
-                              )}
-                            </p>
-                          </div>
+                          <BuildingFigureSummary figure={d.figure} />
                           <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
                       </CardContent>

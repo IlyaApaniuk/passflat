@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
@@ -8,6 +9,7 @@ import { MDXRemote } from 'next-mdx-remote';
 import type { BlogPost } from '@/lib/blog';
 import { TemplateDownload } from '@/components/documents/template-download';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import { affiliateHost, markdownToHtml } from '@/lib/blog-markdown';
 
 // Articles that end with a matching document-template download block.
 const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
@@ -15,23 +17,19 @@ const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
   'protokol-zdawczo-odbiorczy-warsaw': 'protokol',
 };
 
-// Hosts whose links earn a commission. Drives both the rel="sponsored"
-// annotation (Google requires it on paid links) and the click event.
-// prf.hn is Partnerize's tracking domain (Wise campaign).
-const AFFILIATE_HOSTS = ['connectorlink.online', 'prf.hn'];
+const DEFAULT_CITY = 'warsaw';
 
-function affiliateHost(href: string): string | null {
-  try {
-    const host = new URL(href).hostname.replace(/^www\./, '');
-    return AFFILIATE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) ? host : null;
-  } catch {
-    return null;
-  }
-}
-
-export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown } }) {
+export function BlogArticle({
+  post,
+  flatmateCallout,
+}: {
+  post: BlogPost & { mdxSource?: unknown };
+  /** `<FlatmateCallout surface="guide" />` from the server page (PRD 4 FR-12). */
+  flatmateCallout: ReactNode;
+}) {
   const t = useTranslations('blog');
   const tDocs = useTranslations('documents');
+  const tListings = useTranslations('listings');
   const posthog = usePostHog();
 
   // Markdown links render as plain <a>, so affiliate clicks are caught here by
@@ -114,6 +112,23 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
               />
             </div>
           )}
+
+          {/* PRD 4 FR-12: the end of every guide. The bridge line is the roommate page's, without
+              its cost_data_cta_clicked event (that one belongs to the roommate bridge). */}
+          <div className="mx-auto mt-10 max-w-3xl space-y-4">
+            <p className="text-sm">
+              <Link
+                href={`/${DEFAULT_CITY}/check`}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {tListings('roommateCostsBridge')}{' '}
+                <span className="font-medium text-primary underline-offset-4 hover:underline">
+                  {tListings('roommateCostsBridgeCta')}
+                </span>
+              </Link>
+            </p>
+            {flatmateCallout}
+          </div>
         </div>
       </section>
     </>
@@ -123,58 +138,4 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
 function MarkdownContent({ content }: { content: string }) {
   const html = markdownToHtml(content);
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-function markdownToHtml(md: string): string {
-  let html = md;
-
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // External links open in a new tab; affiliate links additionally carry
-  // rel="sponsored" (required for paid links) on top of the safety rel.
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, href: string) => {
-    if (!/^https?:\/\//.test(href)) return `<a href="${href}">${text}</a>`;
-    const rel = affiliateHost(href) ? 'sponsored nofollow noopener' : 'noopener';
-    return `<a href="${href}" target="_blank" rel="${rel}">${text}</a>`;
-  });
-
-  const lines = html.split('\n');
-  const result: string[] = [];
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      if (!inList) {
-        result.push('<ul>');
-        inList = true;
-      }
-      result.push(`<li>${trimmed.slice(2)}</li>`);
-    } else {
-      if (inList) {
-        result.push('</ul>');
-        inList = false;
-      }
-      if (
-        trimmed &&
-        !trimmed.startsWith('<h') &&
-        !trimmed.startsWith('<ul') &&
-        !trimmed.startsWith('<li') &&
-        !trimmed.startsWith('</') &&
-        !trimmed.startsWith('<ol')
-      ) {
-        result.push(`<p>${trimmed}</p>`);
-      } else if (trimmed) {
-        result.push(trimmed);
-      }
-    }
-  }
-  if (inList) result.push('</ul>');
-
-  return result.join('\n');
 }

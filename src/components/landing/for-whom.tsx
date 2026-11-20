@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/ui/reveal';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CalendarRange, Search, Users } from 'lucide-react';
+import { ArrowRight, MapPin, Search, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -15,27 +15,33 @@ interface PersonaConfig {
   iconBg: string;
 }
 
+/**
+ * The three segments of the thesis (PRD 4 FR-6, D48): renting a flat together
+ * and looking for a room both lead to the roommate page (the flatmate block and
+ * the room money block), checking a found flat leads to the checker. The frozen
+ * listing types (D5) have no card.
+ */
 const personas: PersonaConfig[] = [
   {
-    key: 'findHome',
-    icon: Search,
-    href: `/${DEFAULT_CITY}/replacement`,
-    color: 'from-blue-500/10 via-transparent to-transparent hover:border-blue-500/30',
-    iconBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  },
-  {
-    key: 'findRoommate',
+    key: 'rentTogether',
     icon: Users,
     href: `/${DEFAULT_CITY}/roommate`,
     color: 'from-violet-500/10 via-transparent to-transparent hover:border-violet-500/30',
     iconBg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
   },
   {
-    key: 'sublet',
-    icon: CalendarRange,
-    href: `/${DEFAULT_CITY}/sublet`,
-    color: 'from-amber-500/10 via-transparent to-transparent hover:border-amber-500/30',
-    iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    key: 'findRoom',
+    icon: Search,
+    href: `/${DEFAULT_CITY}/roommate`,
+    color: 'from-blue-500/10 via-transparent to-transparent hover:border-blue-500/30',
+    iconBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  },
+  {
+    key: 'checkFlat',
+    icon: MapPin,
+    href: `/${DEFAULT_CITY}/check`,
+    color: 'from-emerald-500/10 via-transparent to-transparent hover:border-emerald-500/30',
+    iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   },
 ];
 

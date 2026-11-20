@@ -8,16 +8,23 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Bell, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
+import { Bell, BookmarkPlus, CheckCircle2, Send, ArrowRight, Plus } from 'lucide-react';
 import type { ListingType } from '@/lib/listings-data';
+import {
+  interestOutcomeEvent,
+  responseErrorCode,
+  type RoommateIntent,
+} from '@/lib/analytics/interest-events';
 
 /**
  * Demand-capture for the empty listings state, organised as two intents:
- *   1. "Looking for a place?" → district-scoped notify waitlist (logged-in users
- *      get a one-tap subscribe; logged-out get the email form).
+ *   1. "Looking for a place?" → saves a district- or city-scoped interest (logged-in
+ *      users get a one-tap save; logged-out get the email form).
  *   2. "Renting out / passing on?" → post your own listing (supply hook).
- * Plus a subtle footer link into the open cost-data product. Honesty: we only
- * promise to email "when they appear" — no fake counts.
+ * Plus a subtle footer link into the open cost-data product. Honesty (spec 02 §Honest
+ * interest copy): no code sends an e-mail when listings appear, so the copy only says the
+ * interest is saved and that there are no automatic notifications yet — no fake counts.
+ * The parent keys it by `districtSlug`, so a success message does not survive a district change.
  */
 export function ListingsEmptyState({
   citySlug,
@@ -25,6 +32,8 @@ export function ListingsEmptyState({
   selectedDistrict,
   districtSlug,
   isLoggedIn,
+  intent,
+  showTitle = true,
 }: {
   citySlug: string;
   /** District display name (already translated from nameKey), or undefined for whole-city. */
@@ -34,6 +43,13 @@ export function ListingsEmptyState({
   listingType: ListingType;
   /** Logged-in users get a one-tap subscribe (email resolved from their session). */
   isLoggedIn: boolean;
+  /** The role the visitor chose on this page (roommate), sent with `listing_interest_saved`. */
+  intent?: RoommateIntent;
+  /**
+   * False below the "No offers match your filters" heading: there the district may have offers
+   * that other filters exclude, so "No listings in {district} yet" would not be true.
+   */
+  showTitle?: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -42,6 +58,8 @@ export function ListingsEmptyState({
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  // Absolute link to the page that deletes the saved row (spec 02 §Remove-interest link).
+  const [removeUrl, setRemoveUrl] = useState<string | null>(null);
 
   useEffect(() => {
     posthog?.capture('district_waitlist_viewed', {
@@ -55,6 +73,9 @@ export function ListingsEmptyState({
 
   const subscribe = async (withEmail: string | undefined) => {
     setStatus('loading');
+    let outcome: Parameters<typeof interestOutcomeEvent>[0];
+    let savedRemoveUrl: string | null = null;
+    const scope = { listingType, districtSlug, intent };
     try {
       const res = await fetch('/api/city-notify', {
         method: 'POST',
@@ -68,12 +89,26 @@ export function ListingsEmptyState({
           locale,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (res.ok) {
+        const body = (await res.json().catch(() => null)) as { removeUrl?: unknown } | null;
+        if (typeof body?.removeUrl === 'string') savedRemoveUrl = body.removeUrl;
+        outcome = { ...scope, status: res.status };
+      } else {
+        outcome = { ...scope, status: res.status, code: await responseErrorCode(res) };
+      }
+    } catch {
+      outcome = { ...scope, networkError: true };
+    }
+    // One event per submit: saved after a 2xx, failed otherwise (spec 01 §Interest events).
+    const { event, properties } = interestOutcomeEvent(outcome);
+    posthog?.capture(event, properties);
+    if (event === 'listing_interest_saved') {
+      setRemoveUrl(savedRemoveUrl);
       setStatus('success');
       setEmail('');
       setConsent(false);
       setConsentError(false);
-    } catch {
+    } else {
       setStatus('error');
     }
   };
@@ -106,18 +141,26 @@ export function ListingsEmptyState({
       };
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <Bell className="h-7 w-7 text-primary" />
+    <div className={`mx-auto w-full max-w-md px-4 ${showTitle ? 'py-10' : 'pb-10'}`}>
+      {showTitle && (
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <Bell className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold">{title}</h3>
         </div>
-        <h3 className="text-lg font-semibold">{title}</h3>
-      </div>
+      )}
 
       <div className="space-y-3 text-left">
         {/* Demand — looking for a place */}
         <div className="rounded-xl border bg-card p-4">
-          <p className="font-semibold">{t('listings.demandCapture.searchCardTitle')}</p>
+          <p className="font-semibold">
+            {t(
+              listingType === 'roommate'
+                ? 'listings.demandCapture.searchCardTitleRoommate'
+                : 'listings.demandCapture.searchCardTitle',
+            )}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
               isLoggedIn
@@ -127,9 +170,21 @@ export function ListingsEmptyState({
           </p>
 
           {status === 'success' ? (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
-              <span className="font-medium">{t('landing.cityNotify.success')}</span>
+            <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                <span className="font-medium">{t('listings.demandCapture.interestSaved')}</span>
+              </div>
+              {removeUrl && (
+                // A plain <a>, not the prefetching Link: the target page deletes on load.
+                <a
+                  href={removeUrl}
+                  rel="nofollow"
+                  className="mt-1.5 inline-block pl-7 text-xs text-muted-foreground underline hover:text-foreground"
+                >
+                  {t('listings.demandCapture.removeEmailLink')}
+                </a>
+              )}
             </div>
           ) : isLoggedIn ? (
             <div className="mt-3 space-y-2">
@@ -138,8 +193,8 @@ export function ListingsEmptyState({
                 disabled={status === 'loading'}
                 className="h-11 w-full"
               >
-                <Bell className="mr-2 h-4 w-4" />
-                {t('listings.demandCapture.notifyMeButton')}
+                <BookmarkPlus className="mr-2 h-4 w-4" />
+                {t('listings.demandCapture.saveInterestButton')}
               </Button>
               {status === 'error' && (
                 <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>
@@ -187,7 +242,7 @@ export function ListingsEmptyState({
                 className="h-11 w-full"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {t('listings.demandCapture.notifyMeButton')}
+                {t('listings.demandCapture.saveInterestButton')}
               </Button>
               {status === 'error' && (
                 <p className="text-xs text-destructive">{t('landing.cityNotify.error')}</p>

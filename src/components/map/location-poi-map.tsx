@@ -19,8 +19,11 @@ import {
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import type { ScoreSurface } from '@/components/buildings/location-score-block';
-import { MAP_COLORS, MAP_PIN, MAP_STYLE_URL, pinLabel } from '@/lib/map-style';
+import type { NeighbourFigure } from '@/lib/location-checker';
+import { MAP_PIN, MAP_STYLE_URL, figurePinColors, figurePinLabel } from '@/lib/map-style';
+import { singleNumberLabelText } from '@/lib/single-number-view';
 import { cn } from '@/lib/utils';
+import { FigureMapLegend } from './figure-map-legend';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -40,7 +43,9 @@ export interface NeighbourMarker {
   lat: number;
   lng: number;
   distanceM: number;
-  totalMedian: number | null;
+  /** One group's number with its N (D23), as `/api/location-score` sends it. */
+  figure: NeighbourFigure;
+  /** The building's visible reports over both groups: for analytics only, never shown. */
   reportCount: number;
 }
 
@@ -113,6 +118,8 @@ export default function LocationPoiMap({
   buildingId,
 }: LocationPoiMapProps) {
   const t = useTranslations('map');
+  // The group labels live under `costs.overview` (a shared namespace, also in the checker's provider).
+  const tRoot = useTranslations();
   const posthog = usePostHog();
   const [active, setActive] = useState<string[]>(() => LAYERS.map((layer) => layer.key));
   const [selected, setSelected] = useState<Selection | null>(null);
@@ -128,7 +135,7 @@ export default function LocationPoiMap({
         distance_m: selection.marker.distanceM,
         ...(selection.kind === 'poi'
           ? { category: selection.marker.category }
-          : { has_median: selection.marker.totalMedian != null }),
+          : { has_median: selection.marker.figure != null }),
       });
     },
     [buildingId, citySlug, posthog, surface],
@@ -175,33 +182,37 @@ export default function LocationPoiMap({
         </Marker>
 
         {showNeighbours &&
-          neighbours.map((neighbour) => (
-            <Marker
-              key={neighbour.id}
-              latitude={neighbour.lat}
-              longitude={neighbour.lng}
-              anchor="center"
-              onClick={(event) => {
-                event.originalEvent.stopPropagation();
-                select({ kind: 'neighbour', marker: neighbour });
-              }}
-            >
-              <button
-                type="button"
-                className="flex items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-md transition-transform hover:scale-110"
-                style={{
-                  width: MAP_PIN.radius * 2,
-                  height: MAP_PIN.radius * 2,
-                  background: MAP_COLORS.pinFill,
-                  border: `${MAP_PIN.strokeWidth}px solid ${MAP_COLORS.pinStroke}`,
-                  color: MAP_COLORS.pinText,
+          neighbours.map((neighbour) => {
+            const colors = figurePinColors(neighbour.figure.group);
+            return (
+              <Marker
+                key={neighbour.id}
+                latitude={neighbour.lat}
+                longitude={neighbour.lng}
+                anchor="center"
+                onClick={(event) => {
+                  event.originalEvent.stopPropagation();
+                  select({ kind: 'neighbour', marker: neighbour });
                 }}
-                aria-label={neighbour.address}
               >
-                {neighbour.totalMedian == null ? '—' : pinLabel(neighbour.totalMedian)}
-              </button>
-            </Marker>
-          ))}
+                <button
+                  type="button"
+                  data-group={neighbour.figure.group}
+                  className="flex items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-md transition-transform hover:scale-110"
+                  style={{
+                    width: MAP_PIN.radius * 2,
+                    height: MAP_PIN.radius * 2,
+                    background: colors.fill,
+                    border: `${MAP_PIN.strokeWidth}px solid ${colors.stroke}`,
+                    color: colors.text,
+                  }}
+                  aria-label={neighbour.address}
+                >
+                  {figurePinLabel(neighbour.figure)}
+                </button>
+              </Marker>
+            );
+          })}
 
         {visiblePois.map((poi) => {
           const Icon = CATEGORY_ICONS[poi.category] ?? MapPin;
@@ -250,11 +261,13 @@ export default function LocationPoiMap({
             ) : (
               <div className="max-w-[240px]">
                 <p className="text-sm font-medium leading-snug">{selected.marker.address}</p>
+                {/* One group's number with its label and N, never a blend (D23). */}
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {selected.marker.totalMedian != null &&
-                    `${formatMoney(selected.marker.totalMedian)} · `}
-                  {t('reports', { count: selected.marker.reportCount })} ·{' '}
+                  {formatMoney(selected.marker.figure.value)} ·{' '}
                   {formatDistance(selected.marker.distanceM)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {singleNumberLabelText(tRoot, selected.marker.figure)}
                 </p>
                 <Link
                   href={`/${citySlug}/building/${selected.marker.slug}`}
@@ -266,7 +279,7 @@ export default function LocationPoiMap({
                       city: citySlug,
                       building_id: buildingId,
                       target_building_slug: selected.marker.slug,
-                      has_median: selected.marker.totalMedian != null,
+                      has_median: selected.marker.figure != null,
                       report_count: selected.marker.reportCount,
                       distance_m: selected.marker.distanceM,
                     })
@@ -280,6 +293,11 @@ export default function LocationPoiMap({
           </Popup>
         )}
       </MapGL>
+
+      {/* Above the Mapbox logo, which sits bottom-left and must stay visible. */}
+      {showNeighbours && neighbours.length > 0 && (
+        <FigureMapLegend className="absolute bottom-8 left-2" />
+      )}
 
       {/* Top-left: the Mapbox logo sits bottom-left and their terms require it
           to stay visible, and the zoom controls own the top-right. */}

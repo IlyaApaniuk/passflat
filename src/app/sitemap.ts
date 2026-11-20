@@ -51,7 +51,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   let cityPages: MetadataRoute.Sitemap = [];
-  let listingPages: MetadataRoute.Sitemap = [];
   let buildingPages: MetadataRoute.Sitemap = [];
 
   try {
@@ -75,31 +74,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? [entry(`/${c.slug}/check`, 'weekly', 0.8), entry(`/${c.slug}/review`, 'weekly', 0.7)]
         : []),
       entry(`/${c.slug}/calculator`, 'weekly', 0.7),
-      entry(`/${c.slug}/replacement`, 'weekly', 0.7),
-      entry(`/${c.slug}/sublet`, 'weekly', 0.5),
-      entry(`/${c.slug}/roommate`, 'weekly', 0.5),
+      // PRD 4 FR-29 (D78): the frozen lists (/replacement, /sublet) and their listing details
+      // are not listed; the pages stay reachable and the two lists carry noindex, follow.
+      entry(`/${c.slug}/roommate`, 'weekly', 0.8),
       ...c.districts.map((d) => entry(`/${c.slug}/${d.slug}`, 'weekly', 0.6)),
     ]);
-
-    const listings = await prisma.listing.findMany({
-      where: { status: 'active' },
-      select: {
-        id: true,
-        slug: true,
-        type: true,
-        updatedAt: true,
-        building: { select: { city: { select: { slug: true } } } },
-      },
-    });
-
-    listingPages = listings.map((listing) => {
-      const citySlug = listing.building.city.slug;
-      const path = `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`;
-      return {
-        ...entry(path, 'weekly', 0.8),
-        lastModified: listing.updatedAt,
-      };
-    });
 
     const buildings = await prisma.building.findMany({
       where: { costReports: { some: { isVisible: true } } },
@@ -124,10 +103,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable — return static pages only
   }
 
-  const blogSlugs = new Set(getAllPosts().map((p) => p.slug));
-  const blogPages: MetadataRoute.Sitemap = Array.from(blogSlugs).map((slug) =>
-    entry(`/blog/${slug}`, 'monthly', 0.6),
-  );
+  // One entry per slug (the locales are its alternates). getAllPosts sorts newest first, so
+  // the first post of a slug carries the latest date among its locales.
+  const blogDates = new Map<string, string>();
+  for (const post of getAllPosts()) {
+    if (!blogDates.has(post.slug)) blogDates.set(post.slug, post.date);
+  }
+  const blogPages: MetadataRoute.Sitemap = Array.from(blogDates, ([slug, date]) => ({
+    ...entry(`/blog/${slug}`, 'monthly', 0.6),
+    lastModified: new Date(date),
+  }));
 
-  return [...staticPages, ...cityPages, ...blogPages, ...listingPages, ...buildingPages];
+  return [...staticPages, ...cityPages, ...blogPages, ...buildingPages];
 }

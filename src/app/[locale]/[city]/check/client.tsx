@@ -8,12 +8,7 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
-  Ambulance,
-  Beer,
-  Flame,
-  TrainTrack,
   MessageSquarePlus,
-  Music,
   CheckCircle2,
   Loader2,
   MapPin,
@@ -22,36 +17,39 @@ import {
   Send,
   Share2,
   WalletCards,
-  type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import {
+  addressCheckedProperties,
+  type SuccessfulCheckEvent,
+} from '@/lib/analytics/checker-events';
+import { answerProperties, type AnswerProperties } from '@/lib/cost-figures';
 import type { CityBounds } from '@/lib/listings-data';
+import type { LocationCheckerCosts, LocationCheckerNeighbour } from '@/lib/location-checker';
 import type { CategoryResult } from '@/lib/location-score';
 import { type PlaceResult } from '@/components/listings/address-autocomplete';
 import { AddressIntake } from '@/components/buildings/address-intake';
+import {
+  CheckerAreaReference,
+  CheckerBuildingFigures,
+} from '@/components/buildings/checker-figures';
 import {
   LocationScoreBlock,
   LocationScoreSkeleton,
   useDistanceFormatter,
 } from '@/components/buildings/location-score-block';
+import { NuisancesCard, nuisanceItems } from '@/components/buildings/nuisances-card';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
+import { TelegramBotCta, TelegramBotHint } from '@/components/costs/telegram-bot-cta';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface Neighbour {
-  id: string;
-  slug: string;
-  address: string;
-  lat: number;
-  lng: number;
-  distanceM: number;
-  totalMedian: number | null;
-  reportCount: number;
-}
+/** A neighbour pin: one group's number with its N (D23), from `/api/location-score`. */
+type Neighbour = LocationCheckerNeighbour;
 
 interface Nuisance {
   key: string;
@@ -84,18 +82,7 @@ interface CheckerPayload {
     categories: CategoryResult[];
     computedAt: string;
   };
-  costs: null | {
-    totalMedian: number | null;
-    districtMedian: number | null;
-    districtName: string | null;
-    rentMedian: number | null;
-    expensesMedian: number | null;
-    reportCount: number;
-    tenantReportCount: number;
-    sourceKind: 'tenant' | 'mixed' | 'scraped';
-    depositReturned: number;
-    depositAnswered: number;
-  };
+  costs: LocationCheckerCosts;
   neighbours?: Neighbour[];
   nuisances?: Nuisance[];
   tenantTags?: {
@@ -108,11 +95,10 @@ interface CheckerPayload {
 type ErrorKind = 'generic' | 'rateLimited' | 'notFound' | 'completeAddress';
 type LastAttempt = { kind: 'get'; placeId: string } | { kind: 'post'; place: PlaceResult };
 
-interface SuccessfulCheck {
+interface SuccessfulCheck extends SuccessfulCheckEvent {
   sequence: number;
-  buildingId: string;
-  hasData: boolean;
-  source: 'shared_url' | 'address_search';
+  /** Which level answered and how (spec 01 §Answer quality), from `answerProperties`. */
+  answer: AnswerProperties;
 }
 
 /** A check that ended in nothing. Reported so `checker_viewed` minus
@@ -130,14 +116,6 @@ interface CheckerClientProps {
   cityBounds: CityBounds | null;
   initialPlaceId: string | null;
 }
-
-const NUISANCE_ICONS: Record<string, LucideIcon> = {
-  fireStation: Flame,
-  hospital: Ambulance,
-  railway: TrainTrack,
-  nightclub: Music,
-  bars: Beer,
-};
 
 function isInsideBounds(lat: number, lng: number, bounds: CityBounds) {
   return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
@@ -277,7 +255,6 @@ export function CheckerClient({
   initialPlaceId,
 }: CheckerClientProps) {
   const t = useTranslations('checker');
-  const locale = useLocale();
   // Shared with the location-score block, so a nuisance and a supermarket are
   // never a metre apart in how far away they read.
   const formatDistance = useDistanceFormatter();
@@ -322,12 +299,10 @@ export function CheckerClient({
       return;
     }
     capturedCheckSequenceRef.current = successfulCheck.sequence;
-    posthog.capture('address_checked', {
-      city: citySlug,
-      building_id: successfulCheck.buildingId,
-      has_data: successfulCheck.hasData,
-      source: successfulCheck.source,
-    });
+    posthog.capture(
+      'address_checked',
+      addressCheckedProperties(citySlug, successfulCheck, successfulCheck.answer),
+    );
   }, [citySlug, posthog, successfulCheck]);
 
   // Failures are deferred the same way and share the sequence counter with the
@@ -405,8 +380,9 @@ export function CheckerClient({
         setSuccessfulCheck({
           sequence,
           buildingId: payload.building.id,
-          hasData: payload.costs !== null,
+          hasData: payload.costs.building.reportCount > 0,
           source: attempt.kind === 'get' ? 'shared_url' : 'address_search',
+          answer: answerProperties(payload.costs.building, payload.costs.reference),
         });
       } catch {
         if (sequence !== requestSequenceRef.current) return;
@@ -480,12 +456,15 @@ export function CheckerClient({
     if (lastAttemptRef.current) void loadScore(lastAttemptRef.current);
   };
 
-  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us') => {
+  /** The building itself has visible reports (the reference alone is not the building's data). */
+  const hasBuildingData = (result?.costs.building.reportCount ?? 0) > 0;
+
+  const captureCta = (cta: 'form' | 'follow' | 'building' | 'share' | 'tell_us' | 'telegram') => {
     posthog?.capture('checker_cta_clicked', {
       source: 'checker',
       city: citySlug,
       building_id: result?.building.id,
-      has_data: result?.costs !== null,
+      has_data: hasBuildingData,
       cta,
     });
   };
@@ -504,24 +483,6 @@ export function CheckerClient({
       toast.error(t('shareError'));
     }
   };
-
-  const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-
-  /**
-   * The building against its district, as a verdict. Withheld under 3% — at that
-   * distance "pricier" is noise dressed up as a finding.
-   */
-  const districtVerdict = (() => {
-    const costs = result?.costs;
-    if (!costs?.totalMedian || !costs.districtMedian || !costs.districtName) return null;
-    const delta = (costs.totalMedian - costs.districtMedian) / costs.districtMedian;
-    if (Math.abs(delta) < 0.03) return null;
-    return {
-      cheaper: delta < 0,
-      percent: Math.round(Math.abs(delta) * 100),
-      district: costs.districtName,
-    };
-  })();
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -605,40 +566,15 @@ export function CheckerClient({
             {/* Noise sources. Needs no tenant input, so unlike the tag block
                 below it has something to say on the very first check. */}
             {result.nuisances && result.nuisances.length > 0 && (
-              <Card>
-                <CardHeader className="pb-0">
-                  <CardTitle className="text-lg">{t('nuisances.title')}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{t('nuisances.subtitle')}</p>
-                </CardHeader>
-                <CardContent className="grid gap-3 px-4 sm:grid-cols-2 sm:px-6">
-                  {result.nuisances.map((nuisance) => {
-                    const Icon = NUISANCE_ICONS[nuisance.key] ?? AlertCircle;
-                    return (
-                      <div
-                        key={nuisance.key}
-                        className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3.5"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
-                          <Icon className="h-[18px] w-[18px] text-amber-600 dark:text-amber-500" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">{t(`nuisances.${nuisance.key}`)}</p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                            {nuisance.report === 'count'
-                              ? t('nuisances.count', {
-                                  count: nuisance.count,
-                                  distance: formatDistance(nuisance.nearestM),
-                                })
-                              : `${nuisance.name ? `${nuisance.name} · ` : ''}${formatDistance(nuisance.nearestM)}`}
-                            {' · '}
-                            {t(`nuisances.${nuisance.key}Note`)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+              <NuisancesCard
+                title={t('nuisances.title')}
+                subtitle={t('nuisances.subtitle')}
+                items={nuisanceItems(
+                  result.nuisances,
+                  (key, values) => t(`nuisances.${key}`, values),
+                  formatDistance,
+                )}
+              />
             )}
 
             <Card>
@@ -663,7 +599,7 @@ export function CheckerClient({
               </CardContent>
             </Card>
 
-            {result.costs ? (
+            {hasBuildingData ? (
               <Card className="border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
                 <CardContent className="p-5 sm:p-6">
                   <div className="flex items-start gap-3">
@@ -672,78 +608,20 @@ export function CheckerClient({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">{t('costs.availableTitle')}</p>
-                      {result.costs.totalMedian != null && (
-                        <p className="mt-2 text-3xl font-bold tabular-nums text-primary">
-                          ≈ {numberFormatter.format(result.costs.totalMedian)} zł
-                          <span className="ml-1 text-sm font-medium text-muted-foreground">
-                            / {t('costs.month')}
-                          </span>
-                        </p>
-                      )}
-                      {districtVerdict && (
-                        <p className="mt-1 text-sm font-medium">
-                          {districtVerdict.cheaper ? (
-                            <span className="text-emerald-600 dark:text-emerald-400">
-                              {t('costs.cheaperThanDistrict', {
-                                percent: districtVerdict.percent,
-                                district: districtVerdict.district,
-                              })}
-                            </span>
-                          ) : (
-                            <span className="text-amber-600 dark:text-amber-500">
-                              {t('costs.pricierThanDistrict', {
-                                percent: districtVerdict.percent,
-                                district: districtVerdict.district,
-                              })}
-                            </span>
-                          )}
-                        </p>
-                      )}
                     </div>
                   </div>
 
-                  {(result.costs.rentMedian != null || result.costs.expensesMedian != null) && (
-                    <div className="mt-5 grid grid-cols-2 gap-3">
-                      {result.costs.rentMedian != null && (
-                        <div className="rounded-xl border bg-background/70 p-3">
-                          <p className="text-xs text-muted-foreground">{t('costs.rent')}</p>
-                          <p className="mt-1 font-semibold tabular-nums">
-                            ≈ {numberFormatter.format(result.costs.rentMedian)} zł
-                          </p>
-                        </div>
-                      )}
-                      {result.costs.expensesMedian != null && (
-                        <div className="rounded-xl border bg-background/70 p-3">
-                          <p className="text-xs text-muted-foreground">{t('costs.expenses')}</p>
-                          <p className="mt-1 font-semibold tabular-nums">
-                            ≈ {numberFormatter.format(result.costs.expensesMedian)} zł
-                          </p>
-                        </div>
-                      )}
+                  {/* The building's groups with their N (spec 03 §Checker),
+                      then the labelled district or city figures beside them:
+                      values with labels and N, no cheaper/pricier verdict. */}
+                  <div className="mt-3">
+                    <CheckerBuildingFigures summary={result.costs.building} />
+                  </div>
+                  {result.costs.reference && (
+                    <div className="mt-4 border-t pt-4">
+                      <CheckerAreaReference costs={result.costs} cityName={cityName} />
                     </div>
                   )}
-
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {result.costs.sourceKind === 'tenant'
-                      ? t('costs.sourceTenant', { count: result.costs.tenantReportCount })
-                      : result.costs.sourceKind === 'mixed'
-                        ? t('costs.sourceMixed', {
-                            tenantCount: result.costs.tenantReportCount,
-                            listingCount: result.costs.reportCount - result.costs.tenantReportCount,
-                          })
-                        : t('costs.sourceScraped', { count: result.costs.reportCount })}
-                    {result.costs.depositAnswered > 0 && (
-                      <>
-                        {' · '}
-                        <span className="font-medium text-foreground">
-                          {t('costs.depositReturned', {
-                            returned: result.costs.depositReturned,
-                            answered: result.costs.depositAnswered,
-                          })}
-                        </span>
-                      </>
-                    )}
-                  </p>
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button asChild className="w-full sm:w-auto">
@@ -768,6 +646,11 @@ export function CheckerClient({
                       </Link>
                     </Button>
                   </div>
+                  <div onClickCapture={() => captureCta('telegram')}>
+                    <TelegramBotCta buildingId={result.building.id} source="checker" />
+                  </div>
+                  {/* Outside the wrapper: a tap on the hint is not a CTA click. */}
+                  <TelegramBotHint />
                 </CardContent>
               </Card>
             ) : (
@@ -798,7 +681,23 @@ export function CheckerClient({
                         returnTo={`/${citySlug}/check?p=${encodeURIComponent(result.building.placeId)}`}
                       />
                     </div>
+                    {/* The empty state is where the bot earns its place: nothing
+                        to show today, but a chat can come back when it changes. */}
+                    <div onClickCapture={() => captureCta('telegram')}>
+                      <TelegramBotCta buildingId={result.building.id} source="empty" />
+                    </div>
+                    <TelegramBotHint />
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* No report for this building: the area's figures, labelled as
+                the district's or the city's and never as the building's (FR-33). */}
+            {!hasBuildingData && result.costs.reference && (
+              <Card>
+                <CardContent className="p-5 sm:p-6">
+                  <CheckerAreaReference costs={result.costs} cityName={cityName} />
                 </CardContent>
               </Card>
             )}

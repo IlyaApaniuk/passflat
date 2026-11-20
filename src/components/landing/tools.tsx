@@ -65,7 +65,7 @@ export async function Tools({ citySlug = DEFAULT_CITY }: ToolsProps) {
                 </div>
                 <h3 className="mb-2 text-xl font-semibold">{title}</h3>
                 <p className="mb-4 flex-1 text-muted-foreground">{description}</p>
-                <span className="inline-flex items-center text-sm font-medium text-accent">
+                <span className="inline-flex items-center text-sm font-medium text-primary">
                   {cta}
                   <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>

@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { DashboardClient } from './client';
-import { getDistrictCostStats, getCityCostStats } from '@/lib/cost-baselines';
+import { loadAreaReference } from '@/lib/cost-figures-query';
+import { ownReportReference } from '@/lib/own-report-reference';
 import type { ReportComparison } from '@/components/costs/cost-reports-panel';
 
 export default async function DashboardPage() {
@@ -111,25 +112,18 @@ export default async function DashboardPage() {
     createdAt: f.createdAt.toISOString(),
   }));
 
-  // "You vs your area" — one comparison per report (most recent first, since the
-  // query is ordered desc). District/city stats are React-cached so reports that
-  // share a district resolve to a single query.
+  // "Your costs beside your area": one block per report (most recent first, since
+  // the query is ordered desc), set beside the area reference of the figure
+  // contract (spec 03 §Comparisons). The loader is cached under the `costs` tag,
+  // so reports that share a district resolve to one query.
+  const t = await getTranslations();
   const reportComparisons: ReportComparison[] = await Promise.all(
     costReports
       .filter((r) => r.totalMonthlyAvg != null)
       .map(async (r) => {
-        const area = r.areaM2 != null ? Number(r.areaM2) : null;
-        const rentNum = r.rent != null ? Number(r.rent) : null;
-        const totalNum = Number(r.totalMonthlyAvg);
-        const perM2 = (v: number | null) =>
-          v != null && area != null && area > 0 ? Math.round(v / area) : null;
-
-        const [districtStats, cityStats] = await Promise.all([
-          r.building.districtId
-            ? getDistrictCostStats(r.building.districtId)
-            : Promise.resolve(null),
-          getCityCostStats(r.building.cityId),
-        ]);
+        const reference = ownReportReference(
+          await loadAreaReference({ districtId: r.building.districtId, cityId: r.building.cityId }),
+        );
 
         return {
           reportId: r.id,
@@ -144,13 +138,19 @@ export default async function DashboardPage() {
               ? ('flagged' as const)
               : ('visible' as const),
           periodicCount: r.periodicCharges.length,
-          user: {
-            total: Math.round(totalNum),
-            rentPerM2: perM2(rentNum),
-            totalPerM2: perM2(totalNum),
+          own: {
+            total: Math.round(Number(r.totalMonthlyAvg)),
+            rent: r.rent != null ? Number(r.rent) : null,
+            areaM2: r.areaM2 != null ? Number(r.areaM2) : null,
+            utilitiesComplete: r.utilitiesComplete,
           },
-          districtStats,
-          cityStats,
+          reference,
+          // A district's `nameKey` is its display name; a city's is a message key.
+          areaName: reference
+            ? reference.level === 'district'
+              ? reference.name
+              : t(reference.name)
+            : null,
         };
       }),
   );

@@ -31,7 +31,15 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // Metadata runs before the layout's own guard: a path such as `/nonexistent.ext` reaches this
+  // segment as a "locale", and reading translations for it turned the 404 into a 500 (FR-30).
+  if (!hasLocale(routing.locales, locale)) notFound();
   const t = await getTranslations('meta');
   return {
     title: {

@@ -6,6 +6,12 @@ import { motion } from 'framer-motion';
 import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Link } from '@/i18n/navigation';
+import {
+  comparableRanks,
+  type RentalTypeFilter,
+  type SingleNumberFigure,
+} from '@/lib/cost-figures';
+import { isAllInTotal, singleNumberLabel } from '@/lib/single-number-view';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -17,17 +23,34 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-export interface DistrictStatsData {
+/** One district with its single number under the page's rental-type filter (`loadDistrictFigures`). */
+export interface DistrictFigureRow {
   slug: string;
   name: string;
-  buildingCount: number;
-  reportCount: number;
+  figure: SingleNumberFigure;
+}
+
+/** The cells of a row, all from the row's one group; 0 = no value (shown as "—"). */
+interface DistrictCells {
   medianTotal: number;
   medianRent: number;
-  medianAdminFee: number;
+  medianExpenses: number;
   medianRentPerM2: number;
   medianTotalPerM2: number;
-  medianExpenses: number;
+  reportCount: number;
+}
+
+function cellsOf(figure: SingleNumberFigure): DistrictCells {
+  const allIn = isAllInTotal(figure);
+  return {
+    // A known part stays in the total column, labelled as such; rent alone is not a total.
+    medianTotal: figure.metric === 'rent' ? 0 : figure.value,
+    medianRent: figure.rent?.value ?? 0,
+    medianExpenses: allIn ? (figure.expenses?.value ?? 0) : 0,
+    medianRentPerM2: figure.rentPerM2?.value ?? 0,
+    medianTotalPerM2: allIn ? (figure.completeTotalPerM2?.value ?? 0) : 0,
+    reportCount: figure.reportCount,
+  };
 }
 
 type SortKey =
@@ -41,19 +64,42 @@ type SortKey =
 type SortDir = 'asc' | 'desc';
 
 interface DistrictComparisonProps {
-  stats: DistrictStatsData[];
+  rows: DistrictFigureRow[];
+  rentalType: RentalTypeFilter;
   citySlug: string;
 }
 
-export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps) {
+/**
+ * The district tab (spec 03 §Single-number surfaces, D23): each district's own single number
+ * over its reports, labelled with its group and N. Sorting is a display order. A bar sets a
+ * district against the others only inside a comparable rank (`comparableRanks`: same group,
+ * same single rental type, all-in totals, N ≥ 5 each); under "all" no bar is drawn.
+ */
+export function DistrictComparison({ rows, rentalType, citySlug }: DistrictComparisonProps) {
   const t = useTranslations();
   const [sortKey, setSortKey] = useState<SortKey>('medianTotal');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  // Only districts that actually have reports under the current rental-type
-  // filter. Zeroed rows come from computedDistrictStats when a filter excludes
-  // every building in a district.
-  const districtsWithData = useMemo(() => stats.filter((s) => s.buildingCount > 0), [stats]);
+  // Districts without a usable figure under the filter are not passed in.
+  const districtsWithData = useMemo(
+    () => rows.map((row) => ({ ...row, ...cellsOf(row.figure) })),
+    [rows],
+  );
+
+  // The bar scale of each ranked district: the widest all-in total of its own rank.
+  const barScale = useMemo(() => {
+    const scale = new Map<string, number>();
+    const ranks = comparableRanks(
+      rows
+        .filter((row) => isAllInTotal(row.figure))
+        .map((row) => ({ slug: row.slug, figure: row.figure, rentalType })),
+    );
+    for (const rank of ranks) {
+      const max = Math.max(...rank.map((item) => item.figure.value));
+      for (const item of rank) scale.set(item.slug, max);
+    }
+    return scale;
+  }, [rows, rentalType]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -67,12 +113,6 @@ export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps)
       return (av - bv) * dir;
     });
   }, [districtsWithData, sortKey, sortDir]);
-
-  // Widest total sets the inline-bar scale so every row is comparable.
-  const maxTotal = useMemo(
-    () => districtsWithData.reduce((m, s) => Math.max(m, s.medianTotal || 0), 0),
-    [districtsWithData],
-  );
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -109,16 +149,18 @@ export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps)
       <Card>
         <CardContent className="space-y-4 p-4 sm:p-6">
           {/* Legend for the inline "Всего" bar: it stacks rent + the rest. */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-3 rounded-sm bg-primary" />
-              {t('costs.compare.metricRent')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-3 rounded-sm bg-muted-foreground/30" />
-              {t('costs.compare.metricExpenses')}
-            </span>
-          </div>
+          {barScale.size > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-3 rounded-sm bg-primary" />
+                {t('costs.compare.metricRent')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-3 rounded-sm bg-muted-foreground/30" />
+                {t('costs.compare.metricExpenses')}
+              </span>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <Table>
@@ -200,8 +242,17 @@ export function DistrictComparison({ stats, citySlug }: DistrictComparisonProps)
                       >
                         {s.name}
                       </Link>
+                      <p className="mt-0.5 text-xs font-normal text-muted-foreground">
+                        {singleNumberLabel(s.figure)
+                          .map((message) => t(message.key, message.values))
+                          .join(', ')}
+                      </p>
                     </TableCell>
-                    <TotalBarCell total={s.medianTotal} rent={s.medianRent} maxTotal={maxTotal} />
+                    <TotalBarCell
+                      total={s.medianTotal}
+                      rent={s.medianRent}
+                      maxTotal={barScale.get(s.slug) ?? null}
+                    />
                     <MoneyCell value={s.medianRent} />
                     <MoneyCell value={s.medianExpenses} />
                     <MoneyCell value={s.medianRentPerM2} suffix={` ${t('costs.overview.perM2')}`} />
@@ -255,10 +306,10 @@ function SortHead({
 }
 
 /**
- * The "Всего в месяц" cell: the bold total plus a stacked inline bar whose
- * length is the total relative to the widest district, split into rent (primary)
- * and the remainder (everything else). Gives ranking + composition at a glance
- * without a separate chart. Hidden on mobile to keep the table readable.
+ * The "Всего в месяц" cell: the bold total, and for a ranked district a stacked
+ * inline bar whose length is the total relative to the widest district of its
+ * rank, split into rent (primary) and the remainder (everything else). Hidden on
+ * mobile to keep the table readable.
  */
 function TotalBarCell({
   total,
@@ -267,7 +318,8 @@ function TotalBarCell({
 }: {
   total: number;
   rent: number;
-  maxTotal: number;
+  /** The widest total of the district's comparable rank; null = not ranked, no bar. */
+  maxTotal: number | null;
 }) {
   if (!total || total <= 0) {
     return (
@@ -277,7 +329,15 @@ function TotalBarCell({
     );
   }
 
-  const barPct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+  if (maxTotal == null || maxTotal <= 0) {
+    return (
+      <TableCell className="text-right">
+        <span className="font-bold tabular-nums text-primary">≈ {total.toLocaleString()} PLN</span>
+      </TableCell>
+    );
+  }
+
+  const barPct = (total / maxTotal) * 100;
   // Rent as a share of the total; the remaining segment reads as expenses & other.
   const rentPct = rent > 0 ? Math.min((rent / total) * 100, 100) : 0;
 

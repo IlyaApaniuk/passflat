@@ -5,6 +5,7 @@ node_modules/
 
 # next.js
 .next/
+.next-e2e/
 out/
 
 # production
@@ -61,3 +62,12 @@ coverage/
 # local data dumps (otodom scrape / import staging — not source)
 /dataset_otodom-*.json
 /importable-otodom-*.json
+
+# Ralph build loop (scripts/ralph.sh)
+ralph/logs/
+ralph/STOP
+ralph/status.json
+ralph/.lock
+
+# Personal Claude Code settings
+.claude/settings.local.json

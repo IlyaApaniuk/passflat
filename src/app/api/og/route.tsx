@@ -16,6 +16,7 @@ const MAX_LENGTHS = {
   subtitle: 320,
   stat: 48,
   statLabel: 96,
+  figureLabel: 96,
   split: 120,
   scoreLabel: 96,
 } as const;
@@ -24,6 +25,13 @@ const MAX_LENGTHS = {
 // zero-width formatting chars that could be used to scramble the card's text.
 // eslint-disable-next-line no-control-regex -- matching control chars is the point
 const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+/**
+ * Link-preview cache (spec 09 §HTTP headers, FR-31, Assumption values): a card's text lives in
+ * its URL, so a URL always draws the same card. Set only on the rendered card; a thrown error is
+ * Next's own 500 without this header.
+ */
+const OG_CACHE_CONTROL = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
 
 function readParam(searchParams: URLSearchParams, key: keyof typeof MAX_LENGTHS): string | null {
   const raw = searchParams.get(key);
@@ -42,6 +50,9 @@ export async function GET(request: NextRequest) {
   // language-agnostic and does no number/locale formatting itself.
   const stat = readParam(searchParams, 'stat');
   const statLabel = readParam(searchParams, 'statLabel');
+  // The number's group and N ("Tenant reports (3)", D23): drawn on the stat's row so
+  // the card keeps its height.
+  const figureLabel = readParam(searchParams, 'figureLabel');
   const split = readParam(searchParams, 'split');
   const rawScoreParam = searchParams.get('score');
   const rawScore = rawScoreParam == null ? Number.NaN : Number(rawScoreParam);
@@ -151,16 +162,30 @@ export async function GET(request: NextRequest) {
               {statLabel}
             </div>
           ) : null}
-          <div
-            style={{
-              display: 'flex',
-              fontSize: '76px',
-              fontWeight: 800,
-              color: '#8bde54',
-              letterSpacing: '-0.03em',
-            }}
-          >
-            {stat}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                fontSize: '76px',
+                fontWeight: 800,
+                color: '#8bde54',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {stat}
+            </div>
+            {figureLabel ? (
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: '26px',
+                  color: '#94a3b8',
+                  marginBottom: '14px',
+                }}
+              >
+                {figureLabel}
+              </div>
+            ) : null}
           </div>
           {split ? (
             <div style={{ display: 'flex', fontSize: '26px', color: '#e2e8f0', marginTop: '10px' }}>
@@ -244,6 +269,7 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
+      headers: { 'Cache-Control': OG_CACHE_CONTROL },
     },
   );
 }

@@ -22,7 +22,7 @@ interface FrontMatter {
 
 const CONTENT_DIR = path.join(process.cwd(), 'src/content/blog');
 
-function parseFrontMatter(raw: string): { data: FrontMatter; content: string } {
+export function parseFrontMatter(raw: string): { data: FrontMatter; content: string } {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) throw new Error('Invalid MDX frontmatter');
 

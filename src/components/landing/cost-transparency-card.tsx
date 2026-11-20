@@ -6,18 +6,11 @@ import { useHasContributed } from '@/hooks/use-has-contributed';
 import { Reveal } from '@/components/ui/reveal';
 import { Button } from '@/components/ui/button';
 import { Lock, CheckCircle2 } from 'lucide-react';
+import type { FeaturedBuilding } from '@/lib/home-figures';
+import { singleNumberHeadingKey, singleNumberLabelText } from '@/lib/single-number-view';
 
-export interface CostBuildingData {
-  address: string;
-  district: string;
-  reportsCount: number;
-  avgRent: number;
-  avgAdminFee: number;
-  avgElectricity: number;
-  avgInternet: number;
-  avgGasHeating: number;
-  totalMonthly: number;
-}
+/** The featured building (`loadFeaturedBuilding`): one group's single number and breakdown. */
+export type CostBuildingData = FeaturedBuilding;
 
 const DEFAULT_CITY = 'warsaw';
 
@@ -63,30 +56,40 @@ export function CostTransparencyCard({
   // confirmed to have access — never reveals gated UI optimistically.
   const hasContributed = useHasContributed(hasContributedInitial);
 
+  // With a featured building every line is that building's chosen group (D23) and
+  // an unknown line shows "—"; the sample numbers appear only without any building.
+  const figure = buildingData?.figure ?? null;
+  const line = (value: number | null | undefined, sample: number) =>
+    buildingData
+      ? value == null
+        ? '—'
+        : `${format.number(value)} PLN`
+      : `${format.number(sample)} PLN`;
+
   const costData = [
     {
       label: t('common.rent'),
-      value: `${format.number(buildingData?.avgRent ?? 3200)} PLN`,
+      value: line(figure?.rent?.value, 3200),
       visible: true,
     },
     {
       label: t('common.adminFee'),
-      value: `${format.number(buildingData?.avgAdminFee ?? 450)} PLN`,
+      value: line(buildingData?.adminFee, 450),
       visible: true,
     },
     {
       label: t('landing.costTransparency.electricity'),
-      value: `${format.number(buildingData?.avgElectricity ?? 280)} PLN`,
+      value: line(buildingData?.electricity, 280),
       visible: hasContributed,
     },
     {
       label: t('landing.costTransparency.internet'),
-      value: `${format.number(buildingData?.avgInternet ?? 89)} PLN`,
+      value: line(buildingData?.internet, 89),
       visible: hasContributed,
     },
     {
       label: t('landing.costTransparency.gasHeating'),
-      value: `${format.number(buildingData?.avgGasHeating ?? 180)} PLN`,
+      value: line(buildingData?.gasHeating, 180),
       visible: hasContributed,
     },
   ];
@@ -129,14 +132,14 @@ export function CostTransparencyCard({
 
         {hasContributed ? (
           <div className="relative mt-6 rounded-xl border border-accent/30 bg-accent/5 p-4 text-center">
-            <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-accent">
+            <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary">
               <CheckCircle2 className="h-4 w-4" />
               {t('landing.costTransparency.alreadyContributedDesc')}
             </div>
             <TrackedLink
               placement="landing_cost_card_all"
               href={`/${citySlug}/costs`}
-              className="text-sm font-medium text-accent hover:underline"
+              className="text-sm font-medium text-primary hover:underline"
             >
               {t('landing.costTransparency.exploreCosts')}
             </TrackedLink>
@@ -150,7 +153,7 @@ export function CostTransparencyCard({
               <TrackedLink
                 placement="landing_cost_card_submit_secondary"
                 href={`/${citySlug}/costs/submit`}
-                className="text-sm font-medium text-accent hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {t('landing.costTransparency.submitCosts')}
               </TrackedLink>
@@ -159,10 +162,17 @@ export function CostTransparencyCard({
         )}
 
         {/* Total */}
-        <div className="relative mt-6 flex items-center justify-between border-t border-border/50 pt-4">
-          <span className="text-muted-foreground">{t('common.totalMonthly')}</span>
-          <span className="text-2xl font-bold text-accent">
-            ~{format.number(buildingData?.totalMonthly ?? 4199)} PLN
+        <div className="relative mt-6 flex items-center justify-between gap-3 border-t border-border/50 pt-4">
+          <div className="min-w-0">
+            <span className="text-muted-foreground">
+              {figure ? t(singleNumberHeadingKey(figure)) : t('common.totalMonthly')}
+            </span>
+            {figure && (
+              <p className="text-xs text-muted-foreground">{singleNumberLabelText(t, figure)}</p>
+            )}
+          </div>
+          <span className="shrink-0 text-2xl font-bold text-foreground">
+            ~{format.number(figure?.value ?? 4199)} PLN
           </span>
         </div>
       </div>

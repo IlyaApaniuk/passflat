@@ -20,11 +20,6 @@ import {
   MessageSquare,
   FileSignature,
   Key,
-  Camera,
-  MapPin,
-  Bell,
-  Users,
-  HandshakeIcon,
   Lock,
   Unlock,
   BarChart3,
@@ -39,18 +34,15 @@ import {
 
 const DEFAULT_CITY = 'warsaw';
 
-type TabKey = 'seekers' | 'listers' | 'costs';
+// PRD 4 FR-16 (D80): the "passing on a lease" (listers) tab is removed; listings are frozen (D5).
+const TABS = ['seekers', 'costs'] as const;
+type TabKey = (typeof TABS)[number];
 
 const TAB_COLORS: Record<TabKey, { active: string; icon: string; number: string }> = {
   seekers: {
     active: 'border-blue-500/50 bg-blue-500/15 text-blue-600 dark:text-blue-400',
     icon: 'text-blue-500 border-blue-500/50 bg-blue-500/20',
     number: 'bg-blue-500 text-white',
-  },
-  listers: {
-    active: 'border-violet-500/50 bg-violet-500/15 text-violet-600 dark:text-violet-400',
-    icon: 'text-violet-500 border-violet-500/50 bg-violet-500/20',
-    number: 'bg-violet-500 text-white',
   },
   costs: {
     active: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
@@ -87,14 +79,6 @@ export function HowItWorksClient({
     { icon: MessageSquare, title: t('seekers.step3Title'), desc: t('seekers.step3Desc') },
     { icon: FileSignature, title: t('seekers.step4Title'), desc: t('seekers.step4Desc') },
     { icon: Key, title: t('seekers.step5Title'), desc: t('seekers.step5Desc') },
-  ];
-
-  const listerSteps = [
-    { icon: Camera, title: t('listers.step1Title'), desc: t('listers.step1Desc') },
-    { icon: MapPin, title: t('listers.step2Title'), desc: t('listers.step2Desc') },
-    { icon: Bell, title: t('listers.step3Title'), desc: t('listers.step3Desc') },
-    { icon: Users, title: t('listers.step4Title'), desc: t('listers.step4Desc') },
-    { icon: HandshakeIcon, title: t('listers.step5Title'), desc: t('listers.step5Desc') },
   ];
 
   const costSteps: { icon: typeof Search; title: string; desc: ReactNode }[] = [
@@ -138,9 +122,11 @@ export function HowItWorksClient({
         <div className="container mx-auto px-4">
           {/* Tab Buttons */}
           <div className="mx-auto mb-12 flex max-w-lg flex-wrap justify-center gap-2">
-            {(['seekers', 'listers', 'costs'] as const).map((tab) => (
+            {TABS.map((tab) => (
               <button
                 key={tab}
+                type="button"
+                aria-pressed={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
                 className={`rounded-full border px-5 py-2.5 text-sm font-medium transition-all ${
                   activeTab === tab
@@ -148,12 +134,7 @@ export function HowItWorksClient({
                     : 'border-border/50 text-muted-foreground hover:border-border hover:bg-secondary/50'
                 }`}
               >
-                {t(
-                  `tab${tab.charAt(0).toUpperCase() + tab.slice(1)}` as
-                    | 'tabSeekers'
-                    | 'tabListers'
-                    | 'tabCosts',
-                )}
+                {t(tab === 'seekers' ? 'tabSeekers' : 'tabCosts')}
               </button>
             ))}
           </div>
@@ -175,12 +156,7 @@ export function HowItWorksClient({
               </div>
 
               <div className="space-y-6">
-                {(activeTab === 'seekers'
-                  ? seekerSteps
-                  : activeTab === 'listers'
-                    ? listerSteps
-                    : costSteps
-                ).map((step, i, arr) => (
+                {(activeTab === 'seekers' ? seekerSteps : costSteps).map((step, i, arr) => (
                   <div key={i} className="flex gap-5">
                     <div className="flex shrink-0 flex-col items-center">
                       <div
@@ -232,14 +208,6 @@ export function HowItWorksClient({
                     <Link href="/warsaw/replacement">
                       <Search className="h-4 w-4" />
                       {t('seekers.cta')}
-                    </Link>
-                  </Button>
-                )}
-                {activeTab === 'listers' && (
-                  <Button size="lg" className="gap-2" asChild>
-                    <Link href="/create-listing">
-                      <Plus className="h-4 w-4" />
-                      {t('listers.cta')}
                     </Link>
                   </Button>
                 )}

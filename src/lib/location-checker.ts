@@ -1,5 +1,13 @@
 import { cleanStreet } from '@/lib/address';
-import { median } from '@/lib/cost-stats';
+import {
+  singleNumberFigure,
+  summarizeFigures,
+  type AreaReference,
+  type DepositReturns,
+  type FigureReport,
+  type FigureSummary,
+  type SingleNumberFigure,
+} from '@/lib/cost-figures';
 import { transliterate } from '@/lib/slugify';
 
 export const LOCATION_CHECK_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -33,34 +41,41 @@ export interface CityBounds {
   west: number;
 }
 
-export interface LocationCheckerCostReport {
-  source: string;
-  totalMonthlyAvg: unknown;
-  rent: unknown;
-  /** null when the tenancy is still running, so it says nothing either way. */
-  depositReturned?: boolean | null;
+/**
+ * The report fields a neighbour's single number reads: the contract's headline
+ * metrics (complete total, known part, rent) depend on these alone, so the
+ * neighbour shows the headline its own building page shows. Shared by the
+ * checker route and the bot, so both select the same fields.
+ */
+export const NEIGHBOUR_REPORT_SELECT = {
+  source: true,
+  utilitiesComplete: true,
+  totalMonthlyAvg: true,
+  rent: true,
+} as const;
+
+/** A neighbour's single number: its group, metric, value and N (spec 03 §Single-number surfaces). */
+export type NeighbourFigure = Pick<SingleNumberFigure, 'group' | 'metric' | 'value' | 'n'>;
+
+/** The deposit statistic of the area a building is set against (spec 03 §Rules). */
+interface LocationCheckerDeposit {
+  /** The same level as `LocationCheckerCosts.reference`. */
+  level: AreaReference['level'];
+  /** Shown only when `answered >= MIN_DEPOSIT_ANSWERS`. */
+  returns: DepositReturns;
 }
 
+/** The checker's cost answer, read from the figure contract's loaders (spec 03 §Checker). */
 export interface LocationCheckerCosts {
-  totalMedian: number | null;
+  /** The building's own figures; `reportCount` 0 when nobody has reported. */
+  building: FigureSummary;
   /**
-   * The district's median, so the building's figure can be stated as a verdict
-   * rather than a number. "5 800 zł" answers nothing on its own; "12% above the
-   * district" is the thing a reader actually wanted to know.
+   * The labelled area the building is set against: its district from
+   * MIN_AREA_REPORTS reports, otherwise the city; null when the city has none.
    */
-  districtMedian: number | null;
-  districtName: string | null;
-  rentMedian: number | null;
-  expensesMedian: number | null;
-  reportCount: number;
-  tenantReportCount: number;
-  sourceKind: 'tenant' | 'mixed' | 'scraped';
-  /**
-   * Deposits returned out of tenancies that ended. The single fact no listing
-   * will ever print, which is why it earns the one line the card can spare.
-   */
-  depositReturned: number;
-  depositAnswered: number;
+  reference: AreaReference | null;
+  /** The reference area's deposit statistic; null without a reference. */
+  deposit: LocationCheckerDeposit | null;
 }
 
 /** A neighbour with known costs, for the map layer only its own pages can show. */
@@ -71,7 +86,9 @@ export interface LocationCheckerNeighbour {
   lat: number;
   lng: number;
   distanceM: number;
-  totalMedian: number | null;
+  /** The tenant group when it has a usable value, else the asking prices, shown with its label and N. */
+  figure: NeighbourFigure;
+  /** The building's visible reports over both groups: an analytics count, never shown as a figure's N. */
   reportCount: number;
 }
 
@@ -112,7 +129,7 @@ export interface LocationCheckerResponse {
     categories: unknown;
     computedAt: Date;
   };
-  costs: LocationCheckerCosts | null;
+  costs: LocationCheckerCosts;
   /**
    * Buildings nearby that already have cost reports. Almost every checked
    * address has none of its own, so without these the result would end on a
@@ -313,44 +330,19 @@ export function resetLocationCheckRateLimit(): void {
   ipTimestamps.clear();
 }
 
-function finiteNumber(value: unknown): number | null {
-  if (value == null) return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-/** Public, source-aware cost teaser derived only from already-visible reports. */
-export function aggregateLocationCheckerCosts(
-  reports: LocationCheckerCostReport[],
-): LocationCheckerCosts | null {
-  if (reports.length === 0) return null;
-
-  const tenantReportCount = reports.filter(
-    (report) => report.source === 'user' || report.source === 'import',
-  ).length;
-  const scrapedCount = reports.filter((report) => report.source === 'scraped').length;
-
-  const sourceKind: LocationCheckerCosts['sourceKind'] =
-    scrapedCount === reports.length ? 'scraped' : scrapedCount > 0 ? 'mixed' : 'tenant';
-
-  return {
-    totalMedian: median(reports.map((report) => finiteNumber(report.totalMonthlyAvg))),
-    districtMedian: null,
-    districtName: null,
-    rentMedian: median(reports.map((report) => finiteNumber(report.rent))),
-    expensesMedian: median(
-      reports.map((report) => {
-        const total = finiteNumber(report.totalMonthlyAvg);
-        const rent = finiteNumber(report.rent);
-        return total != null && rent != null ? Math.max(0, total - rent) : null;
-      }),
-    ),
-    reportCount: reports.length,
-    tenantReportCount,
-    sourceKind,
-    depositReturned: reports.filter((report) => report.depositReturned === true).length,
-    depositAnswered: reports.filter((report) => report.depositReturned != null).length,
-  };
+/** Rent or a total as the contract uses it: finite and above zero. */
+/**
+ * A neighbour's single number (D23) from its already-visible reports, supplied
+ * by the caller with `NEIGHBOUR_REPORT_SELECT`: `singleNumberFigure` over the
+ * building's summary, the tenant group when it has a usable value, else the
+ * asking prices, else null (the neighbour is not shown). Never a blend of the
+ * two groups, and no second median code: the contract computes it.
+ */
+export function neighbourFigure(reports: FigureReport[]): NeighbourFigure | null {
+  const figure = singleNumberFigure(
+    summarizeFigures(reports, { level: 'building', rentalType: 'all' }),
+  );
+  return figure && { group: figure.group, metric: figure.metric, value: figure.value, n: figure.n };
 }
 
 /** Stable suffix for the rare case where two normalized addresses map to one slug. */

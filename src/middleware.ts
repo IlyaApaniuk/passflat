@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { routing } from './i18n/routing';
 import { captureReferralFromRequest } from './lib/referral';
 import { captureAnonIdFromRequest } from './lib/anon-id';
+import { loginNextPath } from './lib/safe-next-path';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -89,7 +90,8 @@ export default async function middleware(request: NextRequest) {
   if (isProtectedPath(pathWithoutLocale) && !user) {
     const currentLocale = locale || routing.defaultLocale;
     const loginUrl = new URL(`/${currentLocale}/auth/login`, request.url);
-    loginUrl.searchParams.set('next', pathname);
+    const next = loginNextPath(pathname, request.nextUrl.search);
+    if (next) loginUrl.searchParams.set('next', next);
     const redirectResponse = NextResponse.redirect(loginUrl);
     response.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);

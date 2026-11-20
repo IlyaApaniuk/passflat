@@ -7,7 +7,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { trackServerEvent, flushPostHog, captureServerException } from '@/lib/posthog-server';
 import { validateCostReport, capFreeText } from '@/lib/cost-validation';
-import { median, perAreaValues } from '@/lib/cost-stats';
+import { loadAreaReference } from '@/lib/cost-figures-query';
+import { ownReportReference } from '@/lib/own-report-reference';
 import { classifyRef } from '@/lib/referral';
 import { generateBuildingSlug, transliterate } from '@/lib/slugify';
 import { normalizeAddress, cleanStreet } from '@/lib/address';
@@ -715,67 +716,34 @@ export async function POST(request: NextRequest) {
       anonymous: isAnon,
     });
 
-    // Post-submit payload for the "you vs your district" comparison + the
-    // district-fill share nudge (the share trigger). The just-created report is
-    // included in the district median. District filling is the realistic viral
-    // unit — reachable via area chats, no fragile apartment-count denominator.
-    const [buildingReportCount, bldgDistrict, districtReports] = await Promise.all([
+    // Post-submit payload (spec 03 §Comparisons, FR-29): the submitter's own
+    // figures beside the area reference of the figure contract, i.e. the tenant
+    // reports of the district (from MIN_AREA_REPORTS) or else the city, each with
+    // its own N, never an overpay or saving verdict. The `costs` tag was expired
+    // above, so the reference is read fresh. The district slug feeds the
+    // district-fill share invite.
+    const [buildingReportCount, bldgDistrict, areaReference] = await Promise.all([
       prisma.costReport.count({ where: { buildingId: building.id, isVisible: true } }),
       building.districtId
         ? prisma.district.findUnique({
             where: { id: building.districtId },
-            select: { nameKey: true, slug: true },
+            select: { slug: true },
           })
         : Promise.resolve(null),
-      building.districtId
-        ? prisma.costReport.findMany({
-            where: {
-              building: { districtId: building.districtId },
-              isVisible: true,
-              totalMonthlyAvg: { not: null },
-            },
-            select: { totalMonthlyAvg: true, rent: true, areaM2: true },
-            take: 5000,
-          })
-        : Promise.resolve([]),
+      loadAreaReference({ districtId: building.districtId, cityId: city.id }),
     ]);
 
-    // Per-m² figures (rent + total) for both the user and the district median,
-    // so the comparison holds across different flat sizes — not just headline rent.
-    const toNum = (v: unknown) => (v == null ? null : Number(v));
-    const userArea = areaM2 ? parseFloat(areaM2) : null;
-    const userRentNum = rent ? parseFloat(rent) : null;
-    const perM2 = (value: number | null) =>
-      value != null && userArea != null && userArea > 0 ? Math.round(value / userArea) : null;
-    const roundOrNull = (v: number | null) => (v == null ? null : Math.round(v));
-
     const comparison = {
-      userTotal: totalMonthlyAvg || null,
       buildingReportCount,
       buildingSlug: building.slug,
-      districtName: bldgDistrict?.nameKey ?? null,
       districtSlug: bldgDistrict?.slug ?? null,
-      districtMedian: median(districtReports.map((r) => Number(r.totalMonthlyAvg))),
-      districtReportCount: districtReports.length,
-      userRentPerM2: perM2(userRentNum),
-      userTotalPerM2: perM2(totalMonthlyAvg || null),
-      districtMedianRentPerM2: roundOrNull(
-        median(
-          perAreaValues(
-            districtReports.map((r) => ({ value: toNum(r.rent), areaM2: toNum(r.areaM2) })),
-          ),
-        ),
-      ),
-      districtMedianTotalPerM2: roundOrNull(
-        median(
-          perAreaValues(
-            districtReports.map((r) => ({
-              value: toNum(r.totalMonthlyAvg),
-              areaM2: toNum(r.areaM2),
-            })),
-          ),
-        ),
-      ),
+      own: {
+        total: totalMonthlyAvg || null,
+        rent: rent ? parseFloat(rent) : null,
+        areaM2: areaM2 ? parseFloat(areaM2) : null,
+        utilitiesComplete: typeof utilitiesComplete === 'boolean' ? utilitiesComplete : null,
+      },
+      reference: ownReportReference(areaReference),
     };
 
     return NextResponse.json({ costReport, wasFlagged, comparison }, { status: 201 });

@@ -1,0 +1,396 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createElement, type ReactElement, type ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
+import type { PerPersonSplit } from '@/lib/roommate/room-costs';
+
+const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
+type Locale = (typeof LOCALES)[number];
+
+const messages = Object.fromEntries(
+  LOCALES.map((locale) => [
+    locale,
+    JSON.parse(
+      readFileSync(join(process.cwd(), 'src/i18n/messages', `${locale}.json`), 'utf8'),
+    ) as Record<string, unknown>,
+  ]),
+) as Record<Locale, Record<string, unknown>>;
+
+// The real ICU rendering of the chosen locale file, as the shared locale layout's provider
+// serves it (`listings` is in SHARED_CLIENT_NAMESPACES).
+const { capture, state, namespaces } = vi.hoisted(() => ({
+  capture: vi.fn(),
+  state: { locale: 'en' as 'pl' | 'en' | 'ru' | 'uk' },
+  namespaces: [] as (string | undefined)[],
+}));
+vi.mock('next-intl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next-intl')>();
+  return {
+    ...actual,
+    useTranslations: (namespace?: string) => {
+      namespaces.push(namespace);
+      return actual.createTranslator({
+        locale: state.locale,
+        messages: messages[state.locale] as never,
+        namespace: namespace as never,
+        onError: (error) => {
+          throw error;
+        },
+      });
+    },
+    useLocale: () => state.locale,
+  };
+});
+vi.mock('posthog-js/react', () => ({ usePostHog: () => ({ capture }) }));
+
+import { FindFlatmateBlock } from './find-flatmate-block';
+
+const DISTRICTS = [
+  { slug: 'mokotow', name: 'Mokotów' },
+  { slug: 'wola', name: 'Wola' },
+  { slug: 'praga-poludnie', name: 'Praga-Południe' },
+];
+
+const COUNTS: FlatmateBlockCounts = {
+  status: 'counts',
+  total: 7,
+  top: [
+    { slug: 'mokotow', count: 4 },
+    { slug: 'wola', count: 2 },
+    { slug: 'praga-poludnie', count: 1 },
+  ],
+  byDistrict: { mokotow: 4, wola: 2, 'praga-poludnie': 1 },
+};
+
+function text(counts: FlatmateBlockCounts | undefined, locale: Locale = 'en'): string {
+  state.locale = locale;
+  const html = renderToStaticMarkup(
+    createElement(FindFlatmateBlock, { counts, districts: DISTRICTS }),
+  );
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+type AnyElement = ReactElement<{
+  children?: ReactNode;
+  href?: string;
+  target?: string;
+  rel?: string;
+  onClick?: () => void;
+}>;
+
+function findAll(node: ReactNode, match: (el: AnyElement) => boolean): AnyElement[] {
+  if (Array.isArray(node)) return node.flatMap((child) => findAll(child, match));
+  if (!node || typeof node !== 'object' || !('props' in node)) return [];
+  const el = node as AnyElement;
+  return [...(match(el) ? [el] : []), ...findAll(el.props.children, match)];
+}
+
+function botLink(counts: FlatmateBlockCounts = COUNTS): AnyElement | undefined {
+  state.locale = 'en';
+  const tree = FindFlatmateBlock({ counts, districts: DISTRICTS });
+  return findAll(tree, (el) => el.type === 'a')[0];
+}
+
+describe('FindFlatmateBlock', () => {
+  beforeEach(() => {
+    capture.mockClear();
+    namespaces.length = 0;
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('renders the EN copy with the count, the named districts, how it works and the languages', () => {
+    expect(text(COUNTS)).toBe(
+      'Looking for someone to rent with? 7 people in Warsaw already have a profile. ' +
+        'Districts named most often: Mokotów: 4 profiles Wola: 2 profiles Praga-Południe: 1 profile ' +
+        'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+        'Contacts appear only when the interest is mutual. ' +
+        'The bot speaks English, Russian and Ukrainian. Open the bot in Telegram',
+    );
+  });
+
+  it.each<[Locale, string, string, string]>([
+    [
+      'pl',
+      'Szukasz kogoś do wspólnego wynajmu?',
+      'W Warszawie profil ma już 7 osób.',
+      'Otwórz bota w Telegramie',
+    ],
+    [
+      'ru',
+      'Ищешь, с кем снять квартиру?',
+      'В Варшаве анкету уже создали 7 человек.',
+      'Открыть бота в Telegram',
+    ],
+    [
+      'uk',
+      'Шукаєш, з ким зняти квартиру?',
+      'У Варшаві анкету вже створили 7 людей.',
+      'Відкрити бота в Telegram',
+    ],
+  ])('renders the %s title, count and button', (locale, title, count, button) => {
+    const rendered = text(COUNTS, locale);
+    expect(rendered.startsWith(`${title} ${count}`)).toBe(true);
+    expect(rendered.endsWith(button)).toBe(true);
+  });
+
+  it.each<[Locale, string]>([
+    // PRD 4 FR-17: the Polish line says there is no Polish bot version yet (D50).
+    [
+      'pl',
+      'Bot mówi po angielsku, rosyjsku i ukraińsku — polskiej wersji jeszcze nie ma, po angielsku poradzisz sobie w minutę.',
+    ],
+    ['en', 'The bot speaks English, Russian and Ukrainian.'],
+    ['ru', 'Бот говорит по-английски, по-русски и по-украински.'],
+    ['uk', 'Бот говорить англійською, російською та українською.'],
+  ])('names the bot languages in %s (D50)', (locale, languages) => {
+    expect(text(COUNTS, locale)).toContain(languages);
+  });
+
+  it.each<[Locale, number, string]>([
+    ['pl', 1, 'W Warszawie profil ma już 1 osoba.'],
+    ['pl', 2, 'W Warszawie profil mają już 2 osoby.'],
+    ['pl', 5, 'W Warszawie profil ma już 5 osób.'],
+    ['pl', 22, 'W Warszawie profil mają już 22 osoby.'],
+    ['en', 1, '1 person in Warsaw already has a profile.'],
+    ['en', 2, '2 people in Warsaw already have a profile.'],
+    ['ru', 1, 'В Варшаве анкету уже создал 1 человек.'],
+    ['ru', 3, 'В Варшаве анкету уже создали 3 человека.'],
+    ['ru', 11, 'В Варшаве анкету уже создали 11 человек.'],
+    ['ru', 21, 'В Варшаве анкету уже создал 21 человек.'],
+    ['uk', 1, 'У Варшаві анкету вже створила 1 людина.'],
+    ['uk', 4, 'У Варшаві анкету вже створили 4 людини.'],
+    ['uk', 5, 'У Варшаві анкету вже створили 5 людей.'],
+  ])('ICU plural: %s with %i', (locale, total, sentence) => {
+    expect(text({ status: 'counts', total, top: [], byDistrict: {} }, locale)).toContain(sentence);
+  });
+
+  it.each<[Locale, string]>([
+    ['pl', 'Mokotów: 4 profile Wola: 2 profile Praga-Południe: 1 profil'],
+    ['ru', 'Mokotów: 4 анкеты Wola: 2 анкеты Praga-Południe: 1 анкета'],
+    ['uk', 'Mokotów: 4 анкети Wola: 2 анкети Praga-Południe: 1 анкета'],
+  ])('district items in %s use the website names and their own counts', (locale, items) => {
+    expect(text(COUNTS, locale)).toContain(items);
+  });
+
+  it('zero: "Be among the first", no number and no district list', () => {
+    const rendered = text({ status: 'counts', total: 0, top: [], byDistrict: {} });
+    expect(rendered).toContain('Be among the first.');
+    expect(rendered).not.toMatch(/\d/);
+    expect(rendered).not.toContain('Districts named most often');
+    expect(rendered).toContain('The bot speaks English, Russian and Ukrainian.');
+    expect(rendered).toContain('Open the bot in Telegram');
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'pl')).toContain(
+      'Bądź wśród pierwszych.',
+    );
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'ru')).toContain(
+      'Будь среди первых.',
+    );
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} }, 'uk')).toContain(
+      'Будь серед перших.',
+    );
+  });
+
+  it('a database error: the block without counts (no count sentence, no districts, still the button)', () => {
+    const rendered = text({ status: 'unavailable' });
+    expect(rendered).toBe(
+      'Looking for someone to rent with? ' +
+        'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+        'Contacts appear only when the interest is mutual. ' +
+        'The bot speaks English, Russian and Ukrainian. Open the bot in Telegram',
+    );
+  });
+
+  it('a total with no named district (all "any district") shows the count without the list', () => {
+    const rendered = text({ status: 'counts', total: 3, top: [], byDistrict: {} });
+    expect(rendered).toContain('3 people in Warsaw already have a profile.');
+    expect(rendered).not.toContain('Districts named most often');
+  });
+
+  it('without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: title, how, languages and "not connected"; no count line, no button (PRD 4 FR-2)', () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    const expected =
+      'Looking for someone to rent with? ' +
+      'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+      'Contacts appear only when the interest is mutual. ' +
+      'The bot speaks English, Russian and Ukrainian. The Telegram bot is not connected yet.';
+    // Never null; counts are not loaded without a bot, and passed ones are not shown either.
+    expect(FindFlatmateBlock({ districts: DISTRICTS })).not.toBeNull();
+    expect(text(undefined)).toBe(expected);
+    expect(text(COUNTS)).toBe(expected);
+    expect(text({ status: 'counts', total: 0, top: [], byDistrict: {} })).toBe(expected);
+    expect(findAll(FindFlatmateBlock({ districts: DISTRICTS }), (el) => el.type === 'a')).toEqual(
+      [],
+    );
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it.each<[Locale, string]>([
+    ['pl', 'Bot Telegram nie jest jeszcze podłączony.'],
+    ['en', 'The Telegram bot is not connected yet.'],
+    ['ru', 'Telegram-бот пока не подключён.'],
+    ['uk', 'Telegram-бот поки не підключений.'],
+  ])('the "not connected" line in %s, under the languages line, ends the block', (locale, line) => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    const rendered = text(undefined, locale);
+    const languages = (messages[locale].listings as { findFlatmate: { languages: string } })
+      .findFlatmate.languages;
+    expect(rendered.endsWith(`${languages} ${line}`)).toBe(true);
+  });
+
+  it('with the username, the block never shows the "not connected" line', () => {
+    for (const locale of LOCALES) {
+      const notConnected = (messages[locale].listings as { findFlatmate: { notConnected: string } })
+        .findFlatmate.notConnected;
+      expect(text(COUNTS, locale)).not.toContain(notConnected);
+      expect(text(undefined, locale)).not.toContain(notConnected);
+    }
+  });
+
+  it('with the username but no counts passed: no count line, still the button', () => {
+    expect(text(undefined)).toBe(
+      'Looking for someone to rent with? ' +
+        'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+        'Contacts appear only when the interest is mutual. ' +
+        'The bot speaks English, Russian and Ukrainian. Open the bot in Telegram',
+    );
+    const links = findAll(FindFlatmateBlock({ districts: DISTRICTS }), (el) => el.type === 'a');
+    expect(links.map((link) => link.props.href)).toEqual([
+      'https://t.me/passflat_test_bot?start=mate_web_roommate',
+    ]);
+  });
+
+  it('its own button: the roommate deep link, a new tab, mate_web_roommate', () => {
+    const link = botLink();
+    expect(link?.props.href).toBe('https://t.me/passflat_test_bot?start=mate_web_roommate');
+    expect(link?.props.target).toBe('_blank');
+    expect(link?.props.rel).toBe('noopener noreferrer');
+    expect(
+      findAll(FindFlatmateBlock({ counts: COUNTS, districts: DISTRICTS }), (el) => el.type === 'a'),
+    ).toHaveLength(1);
+  });
+
+  it('fires one telegram_bot_opened per click with source=roommate and no building context', () => {
+    const link = botLink();
+    expect(capture).not.toHaveBeenCalled();
+    link?.props.onClick?.();
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith('telegram_bot_opened', {
+      source: 'roommate',
+      has_building_context: false,
+    });
+    link?.props.onClick?.();
+    expect(capture).toHaveBeenCalledTimes(2);
+  });
+
+  it('the same button in the zero and error states', () => {
+    for (const counts of [
+      { status: 'counts', total: 0, top: [], byDistrict: {} },
+      { status: 'unavailable' },
+    ] as FlatmateBlockCounts[]) {
+      expect(botLink(counts)?.props.href).toBe(
+        'https://t.me/passflat_test_bot?start=mate_web_roommate',
+      );
+    }
+  });
+
+  it('reads only the listings namespace', () => {
+    text(COUNTS);
+    expect(namespaces.length).toBeGreaterThan(0);
+    expect(new Set(namespaces)).toEqual(
+      new Set(['listings.findFlatmate', 'listings.flatmateCallout']),
+    );
+  });
+});
+
+describe('FindFlatmateBlock: the per-person line (spec 08 §Per-person line, PRD 4 FR-13)', () => {
+  /** PRD 4 §5 example 1 as `loadWarsawPerPersonSplit` returns it. */
+  const SPLIT: PerPersonSplit = { value: 2_450, n: 5, level: 'city', name: 'city.warsaw' };
+
+  // No default parameters: an explicit `undefined` must reach the block.
+  function withSplit(
+    locale: Locale,
+    split: PerPersonSplit | null | undefined,
+    splitArea: string | undefined,
+  ): string {
+    state.locale = locale;
+    const html = renderToStaticMarkup(
+      createElement(FindFlatmateBlock, { counts: COUNTS, districts: DISTRICTS, split, splitArea }),
+    );
+    return html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('EN: the bot sentence right under the title, before the count line', () => {
+    expect(withSplit('en', SPLIT, 'Warsaw')).toMatch(
+      /^Looking for someone to rent with\? For two people about 2,450 zł each \(half of the median flat, 5 tenant reports, Warsaw\)\. 7 people in Warsaw already have a profile\./,
+    );
+  });
+
+  it.each<[Locale, string, RegExp]>([
+    [
+      'pl',
+      'Warszawa',
+      /Na dwie osoby — około 2450 zł na osobę \(połowa mediany całych mieszkań, Warszawa; zgłoszenia najemców: 5\)\./,
+    ],
+    [
+      'ru',
+      'Варшава',
+      /На двоих — примерно по 2\s450 zł с человека \(половина медианы по целым квартирам, Варшава; отчёты жильцов: 5\)\./,
+    ],
+    [
+      'uk',
+      'Варшава',
+      /Удвох — приблизно по 2\s450 zł з людини \(половина медіани за цілими квартирами, Варшава; звіти мешканців: 5\)\./,
+    ],
+  ])('%s: the sentence with the area the server resolved', (locale, area, sentence) => {
+    expect(withSplit(locale, SPLIT, area)).toMatch(sentence);
+  });
+
+  it('no split, a null split or no area name → no line; the rest of the block is unchanged', () => {
+    const without = text(COUNTS);
+    for (const [split, area] of [
+      [undefined, 'Warsaw'],
+      [null, 'Warsaw'],
+      [SPLIT, undefined],
+    ] as const) {
+      const rendered = withSplit('en', split, area);
+      expect(rendered).not.toContain('For two people');
+      expect(rendered).toBe(without);
+    }
+  });
+
+  it('shows without the bot username too (a cost figure, not a bot feature), once', () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    const rendered = withSplit('en', SPLIT, 'Warsaw');
+    expect(rendered.match(/For two people/g)).toHaveLength(1);
+    expect(rendered).toContain('The Telegram bot is not connected yet.');
+  });
+
+  it('never a percentage, "market", "cheaper" or an asking price', () => {
+    for (const locale of LOCALES) {
+      const line = withSplit(locale, SPLIT, 'Warsaw');
+      expect(line).not.toMatch(/%|market|cheaper|rynk|taniej|рыноч|дешевл|ринков|дешевш/i);
+      expect(line).not.toMatch(/asking|объявлен|оголошен|ogłosze/i);
+    }
+  });
+});

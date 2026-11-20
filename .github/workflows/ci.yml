@@ -12,7 +12,7 @@ concurrency:
 jobs:
   verify:
     name: Lint, typecheck, test & build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +72,7 @@ jobs:
   # critical path for the lint/typecheck/test/build gate above.
   e2e:
     name: E2E smoke (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Don't fail the overall CI run if only the smoke test is flaky.
     continue-on-error: true
     steps:

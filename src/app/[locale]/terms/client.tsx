@@ -2,6 +2,18 @@
 
 import { useTranslations } from 'next-intl';
 
+/** The items of `termsPage.matching` after its title and intro, in page order. */
+const MATCHING_ITEMS = [
+  'adults',
+  'content',
+  'money',
+  'reports',
+  'hiding',
+  'ranking',
+  'statement',
+  'redress',
+] as const;
+
 export function TermsClient() {
   const t = useTranslations('termsPage');
 
@@ -138,7 +150,18 @@ export function TermsClient() {
             <h2>{t('law.title')}</h2>
             <p>{t('law.text')}</p>
 
-            {/* 12. Contact */}
+            {/* 12. Roommate matching; the bot's statement of reasons links to this anchor */}
+            <h2 id="matching" className="scroll-mt-24">
+              {t('matching.title')}
+            </h2>
+            <p>{t('matching.intro')}</p>
+            <ul>
+              {MATCHING_ITEMS.map((key) => (
+                <li key={key}>{t(`matching.${key}`)}</li>
+              ))}
+            </ul>
+
+            {/* 13. Contact */}
             <h2>{t('contact.title')}</h2>
             <p>{t('contact.text')}</p>
             <p>{t('contact.operator')}</p>
@@ -146,11 +169,11 @@ export function TermsClient() {
               <a href="mailto:contact@passflat.com">contact@passflat.com</a>
             </p>
 
-            {/* 13. Force Majeure */}
+            {/* 14. Force Majeure */}
             <h2>{t('forceMajeure.title')}</h2>
             <p>{t('forceMajeure.text')}</p>
 
-            {/* 14. Changes */}
+            {/* 15. Changes */}
             <h2>{t('changes.title')}</h2>
             <p>{t('changes.text')}</p>
           </article>

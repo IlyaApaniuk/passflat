@@ -30,25 +30,22 @@ import {
   ROOM_AREA_PRESETS,
   type CostLine,
 } from '@/lib/cost-calculator';
-
-export interface DistrictCalcData {
-  slug: string;
-  name: string;
-  /** Real district median rent per m² (0 when none). */
-  rentPerM2: number;
-  /** Real district median czynsz/komunalka lump per m² (0 when none). */
-  czynszPerM2: number;
-  reportCount: number;
-  /** Whether the district sample is dense enough to anchor czynsz to real data. */
-  reliable: boolean;
-}
+import type { DistrictCalcData } from '@/lib/calculator-baseline';
 
 interface Props {
   citySlug: string;
   cityName: string;
   districts: DistrictCalcData[];
   cityRentPerM2: number;
+  /** The group and N of `cityRentPerM2` ("Tenant reports (120)"), rendered by the page. */
+  cityRentLabel: string | null;
   initialDistrict: string | null;
+  /**
+   * The flatmate callout (spec 08 §Callout placements, FR-12), rendered by the server page: an
+   * async server component cannot be imported here. Its links take their labels as props, so the
+   * scoped provider (`calculator`, `common`, `share`) needs no other namespace.
+   */
+  flatmateCallout: ReactNode;
 }
 
 const CITY_VALUE = '__city';
@@ -93,7 +90,9 @@ export function CalculatorClient({
   cityName,
   districts,
   cityRentPerM2,
+  cityRentLabel,
   initialDistrict,
+  flatmateCallout,
 }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
@@ -159,8 +158,7 @@ export function CalculatorClient({
     posthog?.capture('calculator_cta_clicked', { city: citySlug, cta });
 
   // Where "see real data" should point: the district page when it has data, else the hub.
-  const dataHref =
-    selected && selected.reportCount > 0 ? `/${citySlug}/${selected.slug}` : `/${citySlug}/costs`;
+  const dataHref = selected?.hasData ? `/${citySlug}/${selected.slug}` : `/${citySlug}/costs`;
 
   // "All districts" is an explicit city-wide choice, so a city-median rent reads
   // as expected there — only a *specific* district falling back to the city median
@@ -168,10 +166,19 @@ export function CalculatorClient({
   const isCityWide = districtValue === CITY_VALUE;
   const rentBasisLabel =
     rent.basis === 'district'
-      ? t('calculator.result.basisData', { count: selected?.reportCount ?? 0 })
+      ? t('calculator.result.basisData')
       : rent.basis === 'city'
         ? t(isCityWide ? 'calculator.result.basisCityWide' : 'calculator.result.basisCityFallback')
         : t('calculator.result.basisNone');
+  // Which group the rent and the czynsz come from, with the N of the number used (D23).
+  const rentGroupLabel =
+    rent.basis === 'district'
+      ? (selected?.rentLabel ?? null)
+      : rent.basis === 'city'
+        ? cityRentLabel
+        : null;
+  const czynszGroupLabel =
+    komunalka.czynszBasis === 'data' ? (selected?.czynszLabel ?? null) : null;
 
   const breakdownRow = (line: CostLine | undefined, label: string, sub?: string) =>
     line ? (
@@ -300,6 +307,9 @@ export function CalculatorClient({
                 <Badge variant="outline" className="mt-1 font-normal">
                   {rentBasisLabel}
                 </Badge>
+                {rentGroupLabel && (
+                  <p className="mt-1 text-xs text-muted-foreground">{rentGroupLabel}</p>
+                )}
               </div>
               <span className="shrink-0 text-lg font-semibold tabular-nums">
                 {rent.basis === 'none' ? '—' : `≈ ${fmtRange(rent.low, rent.high)}`}
@@ -335,6 +345,7 @@ export function CalculatorClient({
                     {komunalka.czynszBasis === 'data'
                       ? t('calculator.result.czynszData')
                       : t('calculator.result.czynszSub')}
+                    {czynszGroupLabel && ` · ${czynszGroupLabel}`}
                   </p>
                   <Accordion type="single" collapsible>
                     <AccordionItem value="czynsz" className="border-0">
@@ -407,6 +418,8 @@ export function CalculatorClient({
       <p className="mt-4 text-center text-xs text-muted-foreground">
         {t('calculator.sourcesNote')}
       </p>
+
+      <div className="mt-8">{flatmateCallout}</div>
     </div>
   );
 }

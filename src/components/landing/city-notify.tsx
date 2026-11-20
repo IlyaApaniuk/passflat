@@ -8,8 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Send, CheckCircle2, MapPin } from 'lucide-react';
+import { Send, CheckCircle2, MapPin } from 'lucide-react';
 
+/**
+ * The home "Live outside Warsaw?" form (PRD 4 FR-19, D79): a demand signal for other cities. It
+ * stores a city-launch row through `/api/city-notify`; the one promised e-mail is the manual
+ * city-launch route's (D33, D47). Passflat works only in Warsaw for now (D6): the badge says so.
+ */
 export function CityNotify() {
   const t = useTranslations('landing.cityNotify');
   const locale = useLocale();
@@ -53,8 +58,8 @@ export function CityNotify() {
       <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <Reveal variant="left">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
-              <Globe className="h-4 w-4" />
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-primary">
+              <MapPin className="h-4 w-4" />
               {t('badge')}
             </div>
 
@@ -62,12 +67,7 @@ export function CityNotify() {
               {t('title')}
             </h2>
 
-            <p className="mb-8 text-lg text-muted-foreground">{t('subtitle')}</p>
-
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <MapPin className="h-5 w-5 text-accent" />
-              <span>{t('currentCity')}</span>
-            </div>
+            <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
           </Reveal>
 
           <Reveal variant="right">

@@ -6,12 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, MapPin } from 'lucide-react';
-import { relativeCostStyle } from '@/lib/cost-color';
-import { DistrictPositionBar } from './district-position-bar';
 import { ShareButton } from './share-button';
-import type { AreaMetric, AreaStats } from '@/lib/cost-baselines';
+import { OwnCostsReference } from './own-costs-reference';
+import type { OwnReportFigures, OwnReportReference } from '@/lib/own-report-reference';
 
-/** A single cost report paired with its district + city area statistics. */
+/** A single cost report paired with the area reference of the figure contract. */
 export type ReportComparison = {
   reportId: string;
   address: string;
@@ -22,30 +21,19 @@ export type ReportComparison = {
   createdAt: string;
   status: 'flagged' | 'visible';
   periodicCount: number;
-  user: { total: number; rentPerM2: number | null; totalPerM2: number | null };
-  districtStats: AreaStats | null;
-  cityStats: AreaStats;
+  own: OwnReportFigures;
+  /** The district's or the city's tenant reports (`loadAreaReference`), or null. */
+  reference: OwnReportReference | null;
+  /** The reference's area in the visitor's locale. */
+  areaName: string | null;
 };
 
-// A district needs at least this many reports before its p25–p75 band is worth
-// drawing as a position bar; below it we fall back to a plain median delta line.
-const BAND_MIN = 3;
-
-const hasBand = (m: AreaMetric | undefined, count: number): boolean =>
-  count >= BAND_MIN &&
-  m != null &&
-  m.median != null &&
-  m.p25 != null &&
-  m.p75 != null &&
-  m.p75 > m.p25;
-
 /**
- * Unified "your costs vs your area" panel for the dashboard — one tab per cost
- * report (most recent first), each showing the report's headline plus position
- * bars against its own district (and the city median for reference), an edit
- * shortcut and a personal share. Replaces the old single-report comparison card
- * + the separate report list: the stat and the report live together, and an
- * edit round-trips straight back here with fresh numbers.
+ * Unified "your costs beside your area" panel for the dashboard: one tab per cost
+ * report (most recent first), each showing the report's own figures beside the
+ * area's tenant reports with their N (spec 03 §Comparisons: no overpay, saving,
+ * percentage or position bar against one report), an edit shortcut and a
+ * personal share. An edit round-trips straight back here with fresh numbers.
  */
 export function CostReportsPanel({
   reports,
@@ -85,48 +73,12 @@ export function CostReportsPanel({
 
 function ReportCard({ report: r, userId }: { report: ReportComparison; userId: string }) {
   const t = useTranslations();
-  const fmt = (v: number | null) => (v == null ? '—' : `≈${v.toLocaleString()}`);
-
-  const districtMedianTotal = r.districtStats?.total.median ?? null;
-  const totalDelta = districtMedianTotal != null ? r.user.total - districtMedianTotal : null;
-
-  const metrics = [
-    {
-      key: 'total',
-      label: t('dashboard.costComparison.total'),
-      unit: 'PLN',
-      value: r.user.total as number | null,
-      d: r.districtStats?.total,
-      c: r.cityStats.total,
-    },
-    {
-      key: 'rentPerM2',
-      label: t('dashboard.costComparison.rentPerM2'),
-      unit: 'zł/m²',
-      value: r.user.rentPerM2,
-      d: r.districtStats?.rentPerM2,
-      c: r.cityStats.rentPerM2,
-    },
-    {
-      key: 'totalPerM2',
-      label: t('dashboard.costComparison.totalPerM2'),
-      unit: 'zł/m²',
-      value: r.user.totalPerM2,
-      d: r.districtStats?.totalPerM2,
-      c: r.cityStats.totalPerM2,
-    },
-  ].filter((m) => m.value != null);
-
-  const cityCaption = metrics
-    .filter((m) => m.c.median != null)
-    .map((m) => `${m.label} ${fmt(m.c.median)} ${m.unit}`)
-    .join(' · ');
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      {/* Header: address + district (left) and the headline total (right). The
-          actions (edit / share) live in a footer row below. */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      {/* Header: address + district. The total is in the figures below, with its
+          label (a report without all utilities is a known part, FR-25). */}
+      <div className="flex flex-col gap-1">
         <div className="min-w-0">
           {r.status === 'flagged' && (
             <Badge
@@ -147,102 +99,15 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             <p className="mt-0.5 text-sm text-muted-foreground">{r.districtName}</p>
           )}
         </div>
-        <p className="shrink-0 text-lg font-bold text-primary">
-          {r.user.total.toLocaleString()} PLN
-          <span className="text-sm font-normal text-muted-foreground">{t('common.perMonth')}</span>
-        </p>
       </div>
 
-      {/* Headline: how this report's monthly total sits vs the district median. */}
-      {totalDelta != null && totalDelta !== 0 && (
-        <span
-          className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
-            totalDelta > 0 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'
-          }`}
-        >
-          {totalDelta > 0
-            ? t('costs.submit.comparisonOverpay', { amount: totalDelta.toLocaleString() })
-            : t('costs.submit.comparisonSave', { amount: Math.abs(totalDelta).toLocaleString() })}
-        </span>
-      )}
-
-      {/* Per-metric position bars vs the district (band) or a plain delta line. */}
-      <div className="mt-4 space-y-4">
-        {metrics.map((m) => {
-          const value = m.value as number;
-          if (m.d?.median == null) {
-            return (
-              <div key={m.key} className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium">{m.label}</span>
-                <span className="tabular-nums">
-                  {fmt(value)} {m.unit}
-                </span>
-              </div>
-            );
-          }
-          if (hasBand(m.d, r.districtStats?.count ?? 0)) {
-            return (
-              <DistrictPositionBar
-                key={m.key}
-                label={m.label}
-                value={value}
-                median={m.d.median}
-                p25={m.d.p25!}
-                p75={m.d.p75!}
-                unit={m.unit}
-              />
-            );
-          }
-          // Thin district → simple "yours / district median" delta line.
-          const pct = m.d.median > 0 ? Math.round(((value - m.d.median) / m.d.median) * 100) : 0;
-          const chipCls = pct === 0 ? 'bg-muted text-muted-foreground' : '';
-          const chipStyle = pct === 0 ? undefined : relativeCostStyle(pct);
-          const deltaLabel =
-            pct === 0
-              ? t('costs.building.onPar')
-              : pct > 0
-                ? t('costs.building.percentHigher', { percent: pct })
-                : t('costs.building.percentLower', { percent: Math.abs(pct) });
-          return (
-            <div key={m.key} className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium">{m.label}</span>
-              <span className="flex items-center gap-2">
-                <span className="whitespace-nowrap tabular-nums">
-                  <span className="font-semibold text-primary">{fmt(value)}</span>
-                  <span className="text-muted-foreground">
-                    {' '}
-                    / {fmt(m.d.median)} {m.unit}
-                  </span>
-                </span>
-                <span
-                  className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${chipCls}`}
-                  style={chipStyle}
-                >
-                  {deltaLabel}
-                </span>
-              </span>
-            </div>
-          );
-        })}
+      {/* The report's figures beside the area's tenant reports, each with its N. */}
+      <div className="mt-4">
+        <OwnCostsReference own={r.own} reference={r.reference} areaName={r.areaName} />
       </div>
 
-      {/* City median reference + district sample size. */}
-      {(cityCaption || r.districtStats) && (
-        <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
-          {cityCaption && (
-            <span>
-              {t('dashboard.costComparison.city')}: {cityCaption}
-            </span>
-          )}
-          {cityCaption && r.districtStats ? ' · ' : ''}
-          {r.districtStats && (
-            <span>{t('costs.overview.nReports', { count: r.districtStats.count })}</span>
-          )}
-        </p>
-      )}
-
-      {/* Actions: edit this report + share the comparison (whose OG card brags
-          when below the area, stays neutral otherwise). Stacked full-width on
+      {/* Actions: edit this report + share a district invite (no percentage in
+          the link, so the share card stays neutral). Stacked full-width on
           mobile, right-aligned on desktop. */}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button size="sm" variant="outline" className="w-full gap-1.5 sm:w-auto" asChild>
@@ -251,11 +116,9 @@ function ReportCard({ report: r, userId }: { report: ReportComparison; userId: s
             {t('common.edit')}
           </Link>
         </Button>
-        {districtMedianTotal != null && districtMedianTotal > 0 && r.districtSlug && (
+        {r.districtSlug && (
           <ShareButton
-            path={`/${r.citySlug}/costs/share?pct=${Math.round(
-              ((r.user.total - districtMedianTotal) / districtMedianTotal) * 100,
-            )}&d=${r.districtSlug}&amt=${r.user.total}`}
+            path={`/${r.citySlug}/costs/share?d=${r.districtSlug}`}
             source="dashboard-comparison"
             refToken={userId}
             label={t('dashboard.costComparison.share')}

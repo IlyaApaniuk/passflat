@@ -13,7 +13,7 @@ export function CityLaunchEmail({ t, data }: { t: EmailTranslator; data: CityLau
       <Text style={contentStyles.heading}>{t('cityLaunch.heading', { city: data.cityName })}</Text>
       <Text style={contentStyles.subheading}>{t('cityLaunch.intro', { city: data.cityName })}</Text>
 
-      <Text style={contentStyles.bodyText}>{t('cityLaunch.body', { city: data.cityName })}</Text>
+      <Text style={contentStyles.bodyText}>{t('cityLaunch.body')}</Text>
 
       <Section style={contentStyles.actions}>
         <EmailButton href={data.cityUrl} label={t('cityLaunch.cta')} />

@@ -11,17 +11,12 @@ import { JsonLd, organizationJsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 
 type PageProps = { params: Promise<{ locale: string }> };
 
-// Display-only counts, cached so this page renders statically (no per-request
+// Display-only count, cached so this page renders statically (no per-request
 // DB hit). The `hasContributed` personalization is resolved on the client.
+// PRD 4 FR-16 (D80): no listings count any more; the key is bumped with the shape.
 const getAboutStats = unstable_cache(
-  async () => {
-    const [listings, costReports] = await Promise.all([
-      prisma.listing.count({ where: { status: 'active' } }),
-      prisma.costReport.count(),
-    ]);
-    return { listings, costReports };
-  },
-  ['about-stats'],
+  async () => ({ costReports: await prisma.costReport.count() }),
+  ['about-stats-v2'],
   { revalidate: 300 },
 );
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,7 +38,7 @@ export default async function AboutPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  let stats: { listings: number; costReports: number } | undefined;
+  let stats: { costReports: number } | undefined;
 
   try {
     stats = await getAboutStats();

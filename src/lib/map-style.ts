@@ -6,6 +6,9 @@
  * those decisions live.
  */
 
+import type { FigureGroupKey, SingleNumberFigure } from '@/lib/cost-figures';
+import { isAllInTotal } from '@/lib/single-number-view';
+
 /** Calm grey basemap: our pins are the subject, so the map must not compete. */
 export const MAP_STYLE_URL = 'mapbox://styles/mapbox/light-v11';
 
@@ -14,6 +17,10 @@ export const MAP_COLORS = {
   pinFill: '#ffffff',
   pinStroke: '#4f46e5',
   pinText: '#312e81',
+  /** Pin of a building whose number comes from asking prices (spec 03 §Single-number surfaces). */
+  askingPinFill: '#f1f5f9',
+  askingPinStroke: '#64748b',
+  askingPinText: '#334155',
   /** Cluster ramp, darkening with size. */
   cluster: ['#6366f1', '#4f46e5', '#4338ca'] as const,
   clusterText: '#ffffff',
@@ -35,4 +42,29 @@ export function pinLabel(value: number): string {
   if (value <= 0) return '';
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
   return `${Math.round(value)}`;
+}
+
+/**
+ * The pin text of a single number (D23): the abbreviated value, with "+" when
+ * it is not an all-in total (a known part or rent only). The cost map and the
+ * checker's neighbour pins both use it, so a "+" means the same on each.
+ */
+export function figurePinLabel(figure: Pick<SingleNumberFigure, 'value' | 'metric'>): string {
+  const label = pinLabel(figure.value);
+  return label && !isAllInTotal(figure) ? `${label}+` : label;
+}
+
+/** Fill, stroke and text of a single number's pin: asking prices in grey. */
+export function figurePinColors(group: FigureGroupKey): {
+  fill: string;
+  stroke: string;
+  text: string;
+} {
+  return group === 'asking'
+    ? {
+        fill: MAP_COLORS.askingPinFill,
+        stroke: MAP_COLORS.askingPinStroke,
+        text: MAP_COLORS.askingPinText,
+      }
+    : { fill: MAP_COLORS.pinFill, stroke: MAP_COLORS.pinStroke, text: MAP_COLORS.pinText };
 }

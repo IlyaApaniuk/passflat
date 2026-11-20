@@ -7,8 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'] as const;
+import { FAQ_ITEMS } from './faq-items';
 
 export async function FAQ() {
   const t = await getTranslations('landing.faq');
@@ -19,7 +18,7 @@ export async function FAQ() {
 
       <div className="relative z-10 container mx-auto max-w-3xl px-4 sm:px-6">
         <Reveal className="mb-12 text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-primary">
             <HelpCircle className="h-4 w-4" />
             FAQ
           </div>
@@ -30,14 +29,12 @@ export async function FAQ() {
 
         <Reveal delay={0.1}>
           <Accordion type="single" collapsible className="w-full">
-            {FAQ_KEYS.map((key, i) => (
-              <AccordionItem key={key} value={key} className="border-border/50">
+            {FAQ_ITEMS.map(({ q, a }) => (
+              <AccordionItem key={q} value={q} className="border-border/50">
                 <AccordionTrigger className="text-base font-medium hover:no-underline">
-                  {t(key)}
+                  {t(q)}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  {t(`a${i + 1}` as const)}
-                </AccordionContent>
+                <AccordionContent className="text-muted-foreground">{t(a)}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

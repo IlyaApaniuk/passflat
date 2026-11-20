@@ -9,9 +9,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
-import { getBuildingsData, rollUpDistricts } from '@/lib/cost-aggregates';
+import { getBuildingsData } from '@/lib/cost-aggregates';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
+import { loadDistrictFigures } from '@/lib/cost-figures-query';
+import { buildingsForRentalType } from '@/lib/costs-overview-filter';
+import {
+  isAllInTotal,
+  singleNumberHeadingKey,
+  singleNumberLabelText,
+} from '@/lib/single-number-view';
+import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
-import { ArrowLeft, ArrowRight, Building2, Calculator, Plus, Users } from 'lucide-react';
+import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { AreaReferenceGroups } from '@/components/buildings/figure-group-block';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
+import { districtRoommateSection } from '@/lib/roommate/district-section';
+import { loadRoomCostAreas } from '@/lib/roommate/room-costs';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
+import { ArrowLeft, ArrowRight, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies (cost data is open) → cacheable for crawlers.
 export const revalidate = 3600;
@@ -27,7 +42,8 @@ const getCity = cache((slug: string) =>
       id: true,
       slug: true,
       nameKey: true,
-      districts: { select: { slug: true, nameKey: true } },
+      // `id` too: the roommate section's room cost reference (`loadRoomCostAreas`) reads it.
+      districts: { select: { id: true, slug: true, nameKey: true } },
     },
   }),
 );
@@ -46,22 +62,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     city: cityName,
   });
 
-  // Rich cost share-card from the district roll-up; generic OG when no data.
-  const buildings = await getBuildingsData(cityRec.id, district, null);
-  const [rollup] = rollUpDistricts(buildings, [districtRec]);
-  const ogImage =
-    rollup && rollup.medianTotal > 0
-      ? getCostOgImage({
-          title: districtRec.nameKey,
-          subtitle: `${cityName} · ${t('costs.overview.nReports', { count: rollup.reportCount })}`,
-          stat: `≈ ${rollup.medianTotal.toLocaleString()} zł`,
-          statLabel: t('costs.building.medianMonthlyTotal'),
-          split:
-            rollup.medianRent > 0 && (rollup.medianExpenses ?? 0) > 0
-              ? `${t('costs.building.rent')} ≈ ${rollup.medianRent.toLocaleString()} · ${t('costs.building.expenses')} ≈ ${(rollup.medianExpenses ?? 0).toLocaleString()}`
-              : undefined,
-        })
-      : getOgImage(title, description);
+  // Rich cost share-card from the district's single number (D23), the figure the page's
+  // header card shows, labelled with the group and N; generic OG when no data.
+  const figure =
+    (await loadDistrictFigures(cityRec.id)).find((d) => d.slug === district)?.figures.all ?? null;
+  const ogImage = figure
+    ? getCostOgImage(figureOgCard(t, figure, { title: districtRec.nameKey, subtitle: cityName }))
+    : getOgImage(title, description);
 
   return {
     title,
@@ -69,6 +76,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: getAlternates(`/${city}/${district}`, await getLocale()),
     openGraph: { title, description, images: [ogImage] },
   };
+}
+
+type Translate = Awaited<ReturnType<typeof getTranslations>>;
+
+/**
+ * The district's one number (D23): its tenant group, else its asking prices, with
+ * the group and N, and that same group's rent, expenses and per m² (the last two
+ * only for an all-in total, as on the overview cards).
+ */
+function DistrictFigureCard({
+  figure,
+  buildingCount,
+  t,
+}: {
+  figure: SingleNumberFigure;
+  buildingCount: number;
+  t: Translate;
+}) {
+  const allIn = isAllInTotal(figure);
+  const details = [
+    figure.metric !== 'rent' && figure.rent
+      ? `${t('costs.overview.rent')} ≈ ${figure.rent.value.toLocaleString()}`
+      : null,
+    allIn && figure.expenses
+      ? `${t('costs.overview.expenses')} ≈ ${figure.expenses.value.toLocaleString()}`
+      : null,
+    allIn && figure.completeTotalPerM2
+      ? `${t('costs.building.totalPerM2Compare')} ≈ ${Math.round(figure.completeTotalPerM2.value).toLocaleString()} ${t('costs.overview.perM2')}`
+      : null,
+  ].filter((detail): detail is string => detail !== null);
+
+  return (
+    <Card className="mt-6 border-primary/20 bg-primary/5">
+      <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
+        <div>
+          <p className="text-xs text-muted-foreground">{t(singleNumberHeadingKey(figure))}</p>
+          <p className="text-3xl font-bold text-primary">≈ {figure.value.toLocaleString()} PLN</p>
+          <p className="mt-1 text-xs text-muted-foreground">{singleNumberLabelText(t, figure)}</p>
+          {details.length > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">{details.join(' · ')}</p>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {t('costs.overview.nBuildings', { count: buildingCount })}
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default async function DistrictCostsPage({ params }: PageProps) {
@@ -83,8 +138,37 @@ export default async function DistrictCostsPage({ params }: PageProps) {
   const t = await getTranslations();
   const cityName = t(cityRec.nameKey);
 
-  const buildings = await getBuildingsData(cityRec.id, district, null);
-  const [rollup] = rollUpDistricts(buildings, [districtRec]);
+  // One number per building and for the district by D23 (spec 03 §Single-number
+  // surfaces): the district figure is a summary over the district's reports, the
+  // value and N `loadAreaReference` gives it; a building without a usable figure is
+  // not listed.
+  // The roommate section's profile counts (spec 09 §District section, PRD 4 FR-26), cached for
+  // an hour and expired on every profile write; a rejected load renders the section without a
+  // count line. Its room cost reference and per-person split (FR-27) are the bot's loader for a
+  // profile naming this district (`loadRoomCostAreas`, no second aggregation); a rejected load
+  // renders the section without figure lines and without the split.
+  const [buildingsData, districtFigures, flatmateCounts, roomArea] = await Promise.all([
+    getBuildingsData(cityRec.id, district, null),
+    loadDistrictFigures(cityRec.id),
+    loadFlatmateBlockCounts().catch(() => undefined),
+    loadRoomCostAreas(cityRec, [district])
+      .then(([area]) => area)
+      .catch((error: unknown) => {
+        console.error(
+          '[district] room costs failed',
+          error instanceof Error ? error.message : 'unknown error',
+        );
+        return undefined;
+      }),
+  ]);
+  const buildings = buildingsForRentalType(buildingsData, 'all');
+  const figure = districtFigures.find((d) => d.slug === district)?.figures.all ?? null;
+  const roommate = districtRoommateSection({
+    slug: district,
+    counts: flatmateCounts,
+    area: roomArea,
+    translate: t,
+  });
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -112,40 +196,8 @@ export default async function DistrictCostsPage({ params }: PageProps) {
               {t('costsSeo.districtIntro', { district: districtRec.nameKey, city: cityName })}
             </p>
 
-            {rollup && (
-              <Card className="mt-6 border-primary/20 bg-primary/5">
-                <CardContent className="flex flex-wrap items-end justify-between gap-4 p-5">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('costs.overview.medianMonthlyTotal')}
-                    </p>
-                    <p className="text-3xl font-bold text-primary">
-                      ≈ {rollup.medianTotal.toLocaleString()} PLN
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t('costs.overview.rent')} ≈ {rollup.medianRent.toLocaleString()}
-                      {rollup.medianExpenses > 0 && (
-                        <>
-                          {' · '}
-                          {t('costs.overview.expenses')} ≈ {rollup.medianExpenses.toLocaleString()}
-                        </>
-                      )}
-                      {rollup.medianTotalPerM2 > 0 && (
-                        <>
-                          {' · '}
-                          {t('costs.building.totalPerM2Compare')} ≈{' '}
-                          {Math.round(rollup.medianTotalPerM2).toLocaleString()}{' '}
-                          {t('costs.overview.perM2')}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('costs.overview.nBuildings', { count: rollup.buildingCount })} ·{' '}
-                    {t('costs.overview.nReports', { count: rollup.reportCount })}
-                  </p>
-                </CardContent>
-              </Card>
+            {figure && (
+              <DistrictFigureCard figure={figure} buildingCount={buildings.length} t={t} />
             )}
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -166,6 +218,49 @@ export default async function DistrictCostsPage({ params }: PageProps) {
               </Button>
               <ShareButton path={`/${city}/${district}`} source="district" size="default" />
             </div>
+
+            <section aria-labelledby="district-roommate-title" className="mt-10 space-y-4">
+              <h2 id="district-roommate-title" className="text-xl font-semibold">
+                {t('costsSeo.districtRoommateHeading', { district: districtRec.nameKey })}
+              </h2>
+              {roommate.countLine && (
+                <p className="font-medium">
+                  {roommate.countLine.key === 'costsSeo.districtProfileCount'
+                    ? t(roommate.countLine.key, {
+                        district: districtRec.nameKey,
+                        n: roommate.countLine.n,
+                      })
+                    : t(roommate.countLine.key, { district: districtRec.nameKey })}
+                </p>
+              )}
+              {roommate.room && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{t('costsSeo.districtRoomLead')}</p>
+                  {roommate.room.cityFallback && (
+                    <p className="text-sm text-muted-foreground">
+                      {t('costsSeo.districtRoomCityFallback', {
+                        district: districtRec.nameKey,
+                        ...roommate.room.cityFallback,
+                      })}
+                    </p>
+                  )}
+                  <AreaReferenceGroups
+                    reference={roommate.room.reference}
+                    area={roommate.room.areaName}
+                    oneObservationLabel={t(
+                      roommate.room.oneObservation.key,
+                      roommate.room.oneObservation.values,
+                    )}
+                  />
+                </div>
+              )}
+              <FlatmateCallout
+                surface="district"
+                counts={flatmateCounts}
+                split={roommate.split}
+                splitArea={roommate.splitArea}
+              />
+            </section>
 
             <h2 className="mt-10 text-xl font-semibold">
               {t('costsSeo.buildingsHeading', { district: districtRec.nameKey })}
@@ -188,20 +283,9 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                           <h3 className="font-semibold transition-colors group-hover:text-primary">
                             {b.address}
                           </h3>
-                          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                            <Users className="h-3.5 w-3.5" />
-                            {t('costs.overview.nReports', { count: b.reports })}
-                          </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-4">
-                          <div className="text-right tabular-nums">
-                            <p className="text-xs text-muted-foreground">
-                              {t('costs.overview.medianMonthlyTotal')}
-                            </p>
-                            <p className="text-lg font-bold text-primary">
-                              ≈ {b.medianTotal.toLocaleString()} PLN
-                            </p>
-                          </div>
+                          <BuildingFigureSummary figure={b.figure} />
                           <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                         </div>
                       </CardContent>

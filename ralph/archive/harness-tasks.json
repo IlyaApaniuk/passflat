@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "prd": "Harness setup (before PRD 1), 2026-11-18",
+  "tasks": [
+    {
+      "id": "T000",
+      "milestone": "M0",
+      "title": "Add the npm verify script used as the gate of every task",
+      "spec": "docs/development-workflow.md#the-gate",
+      "dependsOn": [],
+      "status": "done",
+      "acceptance": [
+        "package.json has a `verify` script that runs, in this order and stopping at the first failure: `npm run lint`, `npm run typecheck`, `npm run knip`, `npm test`, `npm run build`",
+        "docs/development-workflow.md names `npm run verify` as the gate and lists the five steps; the sentence saying the script does not exist yet is removed",
+        "CI (.github/workflows/ci.yml) is unchanged"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 1,
+      "notes": "Harness self-test: small, real and safe. Run it as the first loop dry run."
+    },
+    {
+      "id": "T001",
+      "milestone": "M0",
+      "title": "Run the Playwright smoke tests on their own port and build directory",
+      "spec": "docs/development-workflow.md#end-to-end-tests",
+      "dependsOn": ["T000"],
+      "status": "done",
+      "acceptance": [
+        "playwright.config.ts takes the port from one constant set to 3100 and the base URL from it; `NEXT_PUBLIC_APP_URL` in its dummy env follows the constant",
+        "the web server is never reused locally: `reuseExistingServer` is false, so a server on 3100 that the run did not start fails the run instead of being tested",
+        "the e2e build and server use a separate Next build directory `.next-e2e`: next.config.mjs reads `distDir` from `NEXT_DIST_DIR` (default `.next`) and the Playwright web server sets `NEXT_DIST_DIR=.next-e2e`; `next start` serves on the constant port",
+        "`.next-e2e/` is ignored by git, ESLint, Prettier and knip; the owner's dev server on port 3000 keeps running untouched during `npm run test:e2e`",
+        "the CI e2e job still passes with the same command (`npm run test:e2e`)",
+        "docs/development-workflow.md end-to-end section and the Learnings line about port 3000 in ralph/progress.md are updated"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 1,
+      "notes": "Until this task is done, iterations must not run `npm run test:e2e`: the current config builds into `.next` and reuses whatever answers on port 3000, which is the owner's dev server."
+    }
+  ]
+}

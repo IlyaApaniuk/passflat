@@ -6,6 +6,9 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/ui/reveal';
 import { useIsTouch } from '@/hooks/use-reveal';
+import type { SingleNumberFigure } from '@/lib/cost-figures';
+import type { DepositClaim } from '@/lib/deposit-claim';
+import { singleNumberGroupLabel } from '@/lib/single-number-view';
 import { BarChart3, MapPinned, Sparkles } from 'lucide-react';
 
 const DEFAULT_CITY = 'warsaw';
@@ -14,22 +17,30 @@ const MIN_STAT_THRESHOLD = 5;
 interface HeroProps {
   stats?: {
     buildingsWithCosts: number;
-    pricePerM2: number | null;
-    expensesMonthly: number | null;
-    depositMedian: number | null;
-    depositReturnedPct: number | null;
+    /** The city's single number (D23): the per m² and expenses tiles come from its group. */
+    cityFigure: Pick<SingleNumberFigure, 'group' | 'completeTotalPerM2' | 'expenses'> | null;
+    deposit: DepositClaim | null;
   };
+}
+
+interface HeroStat {
+  value: string;
+  label: string;
+  /** The group and N of the value ("Tenant reports (57)"), for cost figures. */
+  source?: string;
 }
 
 export function Hero({ stats: liveStats }: HeroProps) {
   const t = useTranslations('landing.hero');
+  const tRoot = useTranslations();
   const posthog = usePostHog();
   const isTouch = useIsTouch();
 
   // Top-of-funnel instrumentation: which hero CTA gets clicked. (The hero headline
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
-  // then. The current headline is the loss-aversion framing.)
+  // then. The current headline is the thesis: who to rent with and what it costs
+  // per person, D83.)
   const onCtaClick = (cta: 'view_costs' | 'check_address') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
@@ -48,30 +59,49 @@ export function Hero({ stats: liveStats }: HeroProps) {
       : null;
 
   // Per-m² median (the product wedge) and the monthly "Расходы" (komunalka on
-  // top of rent) are values, not counts, so they show whenever present.
-  const pricePerM2 = liveStats?.pricePerM2 ?? null;
-  const priceStat =
-    pricePerM2 && pricePerM2 > 0
-      ? { value: `≈${pricePerM2} ${t('statsPriceUnit')}`, label: t('statsPricePerM2') }
+  // top of rent) are values, not counts, so they show whenever present. Both come
+  // from the city's single-number group (tenant reports, else asking prices) and
+  // say which, with the N of that value; they exist only for all-in totals.
+  const cityFigure = liveStats?.cityFigure ?? null;
+  const sourceOf = (n: number) => {
+    if (!cityFigure) return undefined;
+    const label = singleNumberGroupLabel({ group: cityFigure.group, n });
+    return tRoot(label.key, label.values);
+  };
+
+  const perM2 = cityFigure?.completeTotalPerM2 ?? null;
+  const priceStat: HeroStat | null =
+    perM2 && perM2.value > 0
+      ? {
+          value: `≈${Math.round(perM2.value)} ${t('statsPriceUnit')}`,
+          label: t('statsPricePerM2'),
+          source: sourceOf(perM2.n),
+        }
       : null;
 
-  const expensesMonthly = liveStats?.expensesMonthly ?? null;
-  const expensesStat =
-    expensesMonthly && expensesMonthly > 0
-      ? { value: `≈${expensesMonthly} ${t('statsExpensesUnit')}`, label: t('statsExpenses') }
+  const expenses = cityFigure?.expenses ?? null;
+  const expensesStat: HeroStat | null =
+    expenses && expenses.value > 0
+      ? {
+          value: `≈${Math.round(expenses.value)} ${t('statsExpensesUnit')}`,
+          label: t('statsExpenses'),
+          source: sourceOf(expenses.n),
+        }
       : null;
 
-  // Deposit (upfront cash) + the share who got it back, in one block — the last
-  // piece of the "full cost of moving in" picture.
-  const depositMedian = liveStats?.depositMedian ?? null;
-  const depositReturnedPct = liveStats?.depositReturnedPct ?? null;
-  const depositStat =
-    depositMedian && depositMedian > 0 && depositReturnedPct != null
-      ? { value: `≈${depositMedian} zł`, label: t('statsDeposit', { pct: depositReturnedPct }) }
-      : null;
+  // Deposit (upfront cash) + "X of N who answered got it back, fully or
+  // partly", in one block — the last piece of the "full cost of moving in"
+  // picture. `depositClaim` withholds it below MIN_DEPOSIT_ANSWERS answers.
+  const deposit = liveStats?.deposit ?? null;
+  const depositStat = deposit
+    ? {
+        value: `≈${deposit.medianDeposit} zł`,
+        label: t('statsDeposit', { gotBack: deposit.gotBack, answered: deposit.answered }),
+      }
+    : null;
 
   // Per-m² value, coverage, then the two hidden costs (monthly extras + deposit).
-  const stats = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>
+  const stats: HeroStat[] = [priceStat, buildingsStat, expensesStat, depositStat].flatMap((s) =>
     s ? [s] : [],
   );
 
@@ -93,13 +123,19 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
       <div className="relative z-10 container mx-auto px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-5xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-primary">
             <Sparkles className="h-4 w-4" />
             <span>{t('badge')}</span>
           </div>
 
-          <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl">
-            <span className="block whitespace-pre-line">{t('title')}</span>
+          {/* The thesis H1 (D83) is a sentence, not a three-word punchline: at md:text-7xl /
+              lg:text-8xl it took four to five lines on a 1280 px desktop and pushed the CTAs
+              below the fold, so the desktop steps are one size smaller. */}
+          <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            {/* The H1 is one sentence over two keys (D83): the space keeps the heading's text
+                ("…Warsaw, and what…") whole for crawlers and screen readers; between two
+                block spans it renders nothing. */}
+            <span className="block whitespace-pre-line">{t('title')}</span>{' '}
             {/* pb keeps descenders (y, g) from being clipped: -webkit-background-clip:text
                 paints the gradient only inside the box, so the box must extend below the
                 baseline for the tight leading-[1.05] line. */}
@@ -111,8 +147,8 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </p>
 
           {/* Two actions, two intents: browse the data or probe one address.
-              Everything else the hero used to ask for (reviews, the niche
-              rental modes) lives in the nav and its own sections — one screen,
+              Everything else the hero used to ask for (reviews, the listing
+              types) lives in the nav and its own sections — one screen,
               one verb. */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             {/* Primary CTA — the cost data itself. Deliberately NOT a submit
@@ -156,38 +192,27 @@ export function Hero({ stats: liveStats }: HeroProps) {
                   delay={i * 0.1}
                   className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
                 >
-                  <div className="text-2xl font-bold text-accent sm:whitespace-nowrap sm:text-3xl">
+                  <div className="text-2xl font-bold text-foreground sm:whitespace-nowrap sm:text-3xl">
                     {stat.value}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground sm:text-sm">{stat.label}</div>
+                  {stat.source && (
+                    <div className="mt-0.5 text-xs text-muted-foreground">{stat.source}</div>
+                  )}
                 </Reveal>
               ))}
             </Reveal>
           )}
 
-          {/* Niche rental modes — SEO entries, not first-screen actions, so
-              they trail the medians instead of crowding the CTA row. */}
+          {/* The roommate entry (PRD 4 FR-6): one chip after the medians. The
+              frozen listing types (D5) are no longer promoted here. */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-            <Link
-              href={`/${DEFAULT_CITY}/replacement`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              {t('trustLeaseTakeovers')}
-            </Link>
             <Link
               href={`/${DEFAULT_CITY}/roommate`}
               className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              {t('trustRoommate')}
-            </Link>
-            <Link
-              href={`/${DEFAULT_CITY}/sublet`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              {t('trustSublet')}
+              {tRoot('listings.roommateRoles.findFlatmate')}
             </Link>
           </div>
         </div>
