@@ -30,7 +30,7 @@ export async function CostTransparency({
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           {/* Content */}
           <Reveal variant="left">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-primary">
               <Eye className="h-4 w-4" />
               {t('landing.costTransparency.badge')}
             </div>

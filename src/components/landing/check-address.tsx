@@ -33,7 +33,7 @@ export async function CheckAddress({ citySlug = DEFAULT_CITY }: CheckAddressProp
 
       <div className="relative z-10 container mx-auto max-w-3xl px-4 text-center sm:px-6">
         <Reveal>
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-primary">
             <Sparkles className="h-4 w-4" />
             {t('badge')}
           </div>

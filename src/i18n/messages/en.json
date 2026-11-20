@@ -73,7 +73,8 @@
     "error": "Something went wrong",
     "checkAddress": "Check an address",
     "buildingReviews": "Building reviews",
-    "findFlatmate": "Find a flatmate"
+    "findFlatmate": "Find a flatmate",
+    "menu": "Menu"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",

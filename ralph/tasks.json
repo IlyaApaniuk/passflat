@@ -705,7 +705,7 @@
       "title": "Contrast of accent text, 44 px tap targets and an accessible hamburger (FR-34)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger",
       "dependsOn": ["T120", "T121"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "text-accent used as a text colour is replaced in the files of spec 09 §Current state (figures → text-foreground, badges and link texts → text-primary, icons keep text-accent); the hero source line becomes text-xs text-muted-foreground",
         "min-h-11 (min-w-11 on square controls) on the hamburger, the mobile pill, the mobile language buttons, the cookie banner buttons, the costs list/map toggle, and the listings sort trigger and map toggle",
@@ -714,7 +714,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Assumption classes. The site has no theme switch."
     },
     {
@@ -769,7 +769,7 @@
       "milestone": "M5",
       "title": "PRD 4 final check and handoff (FR-37)",
       "spec": "docs/specs/05-measurement-docs.md#prd-4-final-check",
-      "dependsOn": ["T156", "T158"],
+      "dependsOn": ["T156", "T158", "T159"],
       "status": "todo",
       "acceptance": [
         "npm run verify and npm run test:e2e pass",
@@ -797,6 +797,22 @@
       "milestone": "M3",
       "title": "Nominative-safe city and district names after a governing noun (FR-22 follow-up)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#nominative-safe-templates",
+      "status": "todo"
+    },
+    {
+      "dependsOn": ["T155"],
+      "acceptance": [
+        "src/app/[locale]/blog/warsaw-rent-prices/page.tsx: the deposit figure <p className=\"shrink-0 text-4xl font-bold tabular-nums text-accent\"> (countOfTotal, about line 401) uses text-foreground; the card's border-accent/30 bg-accent/5 stays",
+        "src/components/landing/accent-text.test.ts (or a sibling static test) also scans that page with the same rule: text-accent only on icon lines",
+        "No other file changes colour; src/components/costs/cost-access-card.tsx keeps bg-accent/10 text-accent on its 28 px icon circle (an icon, allowed by the spec)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found by T155: spec 09 Current state lists only the landing files; this figure on the data report is the one remaining text use of text-accent outside src/components/ui. Assumption classes, as FR-34.",
+      "id": "T159",
+      "milestone": "M4",
+      "title": "Data report: the deposit figure in text-foreground instead of text-accent (FR-34 follow-up)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger",
       "status": "todo"
     }
   ]

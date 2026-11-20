@@ -134,6 +134,46 @@ test.describe('how it works and FAQ on /en', () => {
   });
 });
 
+// PRD 4 FR-34 (spec 09 §Contrast, tap targets and the hamburger): on a phone the
+// hamburger is a named 44 px toggle that reports and controls the menu panel, and
+// the mobile pill is 44 px tall. The bar keeps its height (T155 measured 58 px
+// at 320 - 1023 px with py-1.5 below lg).
+test.describe('mobile header on /en', () => {
+  test.use({ locale: 'en-US', viewport: { width: 375, height: 800 } });
+
+  test('the hamburger toggles #mobile-menu with aria-expanded; 44 px targets', async ({ page }) => {
+    await page.goto('/en');
+    const header = page.locator('header');
+    const menu = header.getByRole('button', { name: 'Menu' });
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+    await expect(menu).toHaveAttribute('aria-controls', 'mobile-menu');
+    await expect(menu).toHaveAttribute('type', 'button');
+    await expect(page.locator('#mobile-menu')).toHaveCount(0);
+
+    const box = await menu.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    const pill = await header.locator('a[href$="/warsaw/roommate"] button').boundingBox();
+    expect(pill?.height).toBeGreaterThanOrEqual(44);
+    const bar = await header.locator(':scope > div > div').first().boundingBox();
+    expect(Math.round(bar?.height ?? 0)).toBe(58);
+
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    const panel = page.locator('#mobile-menu');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Find a flatmate' })).toBeVisible();
+    for (const code of ['PL', 'EN', 'RU', 'UK']) {
+      const language = await panel.getByRole('button', { name: code, exact: true }).boundingBox();
+      expect(language?.height, code).toBeGreaterThanOrEqual(44);
+    }
+
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#mobile-menu')).toHaveCount(0);
+  });
+});
+
 // PRD 4 FR-5: "Find a flatmate" leads the header nav (desktop viewport, so the
 // first match is the nav link, not the mobile pill); building reviews left it.
 // Locale detection follows Accept-Language, so each case pins the browser

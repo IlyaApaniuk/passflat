@@ -73,7 +73,8 @@
     "error": "Щось пішло не так",
     "checkAddress": "Перевірити адресу",
     "buildingReviews": "Відгуки про будинки",
-    "findFlatmate": "Знайти співмешканця"
+    "findFlatmate": "Знайти співмешканця",
+    "menu": "Меню"
   },
   "upload": {
     "progress": "Завантаження фото {done}/{total}…",

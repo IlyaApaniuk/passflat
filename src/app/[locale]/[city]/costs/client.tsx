@@ -478,7 +478,7 @@ export function CostsOverviewClient({
                     <div className="flex w-full items-center gap-1 rounded-lg border bg-background p-1 sm:w-auto">
                       <button
                         onClick={() => setViewMode('list')}
-                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-3 sm:text-sm ${
+                        className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-3 sm:text-sm ${
                           viewMode === 'list'
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-foreground'
@@ -489,7 +489,7 @@ export function CostsOverviewClient({
                       </button>
                       <button
                         onClick={() => setViewMode('map')}
-                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-3 sm:text-sm ${
+                        className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-3 sm:text-sm ${
                           viewMode === 'map'
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-foreground'

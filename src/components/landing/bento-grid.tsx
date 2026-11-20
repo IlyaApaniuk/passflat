@@ -117,7 +117,7 @@ export async function BentoGrid() {
                 {item.featured && (
                   <Link
                     href={`/${DEFAULT_CITY}/costs`}
-                    className="group/link mt-4 inline-flex items-center text-accent hover:underline"
+                    className="group/link mt-4 inline-flex items-center text-primary hover:underline"
                   >
                     {t('exploreCta')}
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/link:translate-x-1" />

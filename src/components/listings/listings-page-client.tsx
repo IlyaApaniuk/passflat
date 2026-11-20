@@ -207,7 +207,7 @@ function ListingsPageInner({
   });
   const sortSelect = (
     <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-      <SelectTrigger className="w-[140px] sm:w-[180px]">
+      <SelectTrigger className="min-h-11 w-[140px] sm:w-[180px]">
         <SelectValue placeholder={t('listings.sort.sortBy')} />
       </SelectTrigger>
       <SelectContent>
@@ -342,7 +342,12 @@ function ListingsPageInner({
                 {/* ml-auto keeps sort and map on the right when the count line is absent. */}
                 <div className="ml-auto flex shrink-0 items-center gap-2">
                   {sortSelect}
-                  <Button variant="outline" size="icon" onClick={() => setShowMap(!showMap)}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="min-h-11 min-w-11"
+                    onClick={() => setShowMap(!showMap)}
+                  >
                     {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
                   </Button>
                 </div>

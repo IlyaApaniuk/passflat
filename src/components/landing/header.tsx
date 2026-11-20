@@ -112,7 +112,9 @@ export function Header({ initialUser }: HeaderProps = {}) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        <div className="relative flex items-center justify-between rounded-full border border-border/50 bg-background/95 px-4 sm:px-6 py-3">
+        {/* py-1.5 below lg: the 44px pill and hamburger (FR-34) keep the bar at
+            its 58px height; the desktop row (32px controls) keeps py-3. */}
+        <div className="relative flex items-center justify-between rounded-full border border-border/50 bg-background/95 px-4 sm:px-6 py-1.5 lg:py-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
@@ -242,7 +244,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
             <Link href={`/${DEFAULT_CITY}/roommate`} onClick={trackCta('header_mobile')}>
               <Button
                 size="sm"
-                className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
+                className="min-h-11 rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
                 {t('common.findFlatmate')}
               </Button>
@@ -250,9 +252,12 @@ export function Header({ initialUser }: HeaderProps = {}) {
 
             {/* Mobile Menu Button (animated hamburger) */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="relative w-8 h-8 flex items-center justify-center"
-              aria-label="Toggle menu"
+              className="relative min-h-11 min-w-11 flex items-center justify-center"
+              aria-label={t('common.menu')}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               <div className="flex flex-col gap-1.5">
                 <motion.span
@@ -276,6 +281,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
+              id="mobile-menu"
               initial={{ y: -10 }}
               animate={{ y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -306,7 +312,7 @@ export function Header({ initialUser }: HeaderProps = {}) {
                       switchLocale(lang.code);
                       setMobileMenuOpen(false);
                     }}
-                    className="flex-1 text-xs rounded-full"
+                    className="min-h-11 flex-1 text-xs rounded-full"
                   >
                     {lang.code.toUpperCase()}
                   </Button>

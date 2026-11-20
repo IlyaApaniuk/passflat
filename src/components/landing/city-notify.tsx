@@ -53,7 +53,7 @@ export function CityNotify() {
       <div className="relative z-10 container mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <Reveal variant="left">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-accent">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm text-primary">
               <Globe className="h-4 w-4" />
               {t('badge')}
             </div>

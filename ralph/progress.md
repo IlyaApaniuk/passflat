@@ -176,6 +176,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A dotted single-segment path (`/x.ext`) skips the middleware and reaches `/[locale]` as a "locale"; the home page's `dynamicParams = false` 404s it without a render (before it, `next start` hung on such a request). Next's build table hides `/favicon.ico`: look in `.next/app-path-routes-manifest.json`.
 - `next/og` `ImageResponse` renders a real PNG in Vitest (node) and under `npx tsx`: read the body and check the size from the IHDR bytes (example: `src/app/icon-routes.test.ts`).
 - `next.config.mjs` imports in Vitest with `vi.mock('next-intl/plugin', () => ({ default: () => (c) => c }))`; call `headers()` etc. on the default export (example: `src/next-config-headers.test.ts`). Response headers on `/` in e2e need `test.use({ locale: 'pl-PL' })`, or the response is the `/en` page after the redirect.
+- A static test that pulls a JSX opening tag out of source must let `=>` through (`onClick={() => …}`): `<Name\b(?:=>|[^>])*>`, not `<Name[^>]*>` (example: `tags()` in `src/components/tap-targets.test.ts`).
 
 ## Log
 
@@ -5201,3 +5202,26 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Assumptions applied** (spec 09 FR-31): the OG cache values (`OG_CACHE_CONTROL` in `src/app/api/og/route.tsx`) and the three header values (`SECURITY_HEADERS` in `next.config.mjs`). A cached card changes only when its URL changes; a figure update reaches previews within a day at the CDN (up to a week stale while revalidating).
   - The framing header stays open (Q-13, T154 blocked). No copy, no new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 11:40 · T155 · done
+
+- Done (PRD 4 FR-34; spec 09 §Contrast, tap targets and the hamburger):
+  - **Accent text** (spec 09 Current state files, all under `src/components/landing/`): badge chips → `text-primary` (`hero.tsx`, `faq.tsx`, `check-address.tsx`, `cost-transparency.tsx`, `city-notify.tsx`; their inherited icons follow the chip); link texts → `text-primary` (`tools.tsx` CTA span, `bento-grid.tsx` explore link, both `cost-transparency-card.tsx` links); the card's "already contributed" status line → `text-primary` (treated as a badge); figures → `text-foreground` (hero stat value, the card total). The hero source line is `mt-0.5 text-xs text-muted-foreground` (was `text-[11px] text-muted-foreground/80 sm:text-xs`). Icons with their own `text-accent` are unchanged.
+  - **Tap targets**: `min-h-11` on the mobile pill (keeps `size="sm"` so its width is unchanged), the four mobile language buttons, both cookie banner buttons (`cookie-consent.tsx`), the costs list/map toggle buttons (`[city]/costs/client.tsx`), the listings sort `SelectTrigger`; `min-h-11 min-w-11` on the hamburger (was `w-8 h-8`) and the listings map toggle (`size="icon"`).
+  - **Hamburger** (`header.tsx`): `type="button"`, `aria-label={t('common.menu')}`, `aria-expanded={mobileMenuOpen}`, `aria-controls="mobile-menu"`; the mobile panel `motion.div` has `id="mobile-menu"`.
+  - **Header height kept**: the bar is `py-1.5 lg:py-3` (was `py-3`), so the 44 px pill and hamburger keep the mobile bar at 58 px and the header at 90 px. Measured with a temporary probe (deleted) at 320, 360, 375, 390, 409, 411, 414, 420, 430, 768, 1023 and 1280 px in pl, en, ru, uk: bar 58 / header 90 everywhere, hamburger 44 × 44 inside the bar, no header overflow (the `max-[410px]` wordmark rule still holds).
+  - Tests: new `src/components/landing/accent-text.test.ts` (static; the eight files allow `text-accent` only on lines with `<svg`, `Icon`, `className="h-4 w-4` or in `ICON_LINES` (4 exact lines: the `Search` icon in check-address, `item.icon` in bento-grid, `MapPin` and `CheckCircle2` in city-notify), with a stale-entry check; the hero figure and source line; the card total and its two links); new `src/components/tap-targets.test.ts` (static: cookie buttons, costs toggle, listings sort trigger and map toggle); `src/components/landing/header.test.ts` new describe "Hamburger" (static source attributes; rendered in four locales: `aria-label` = `common.menu`, `aria-expanded` false/true, `#mobile-menu` only when open and holding the nav; pill and language buttons `min-h-11`); `e2e/home.spec.ts` new "mobile header on /en" (375 px: button named "Menu", aria attributes, 44 px hamburger, pill and language buttons, bar 58 px, click opens and closes `#mobile-menu`).
+  - Docs: `docs/specs/README.md` FR-34 row → tasks "T155, T159" (Planned until T159); spec 09 §Contrast gets a "Built (T155)" note.
+  - New task **T159** (also added to T157's `dependsOn`): the data report's deposit figure `blog/warsaw-rent-prices/page.tsx:401` (`text-4xl … text-accent`) is the one text use outside the spec's file list; `cost-access-card.tsx`'s `text-accent` is a 28 px icon circle and stays.
+- Checks:
+  - `npx vitest run src/components/landing/accent-text.test.ts src/components/tap-targets.test.ts src/components/landing/header.test.ts src/i18n/`: 8 files / 91 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 180 files / 3629 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 19 passed (the new mobile-header test among them). `next-env.d.ts` restored.
+  - Not verified: a contrast measurement tool (no axe / Lighthouse run; `text-primary` and `text-foreground` are the site's existing text tokens), real phones, pages with a database (costs and listings controls are checked statically only; the e2e build has no DB). Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29)**: `common.menu`: en "Menu", pl "Menu", ru «Меню», uk «Меню». Read by the client component `Header` (`src/components/landing/header.tsx`) through `useTranslations()`; `common` is in `SHARED_CLIENT_NAMESPACES`, provided by the locale layout's `NextIntlClientProvider`.
+  - **Assumptions applied** (spec 09 FR-34, classes): the colour mapping above (badge chips' icons turn primary with the chip; the "already contributed" line is a badge); the pill keeps `size="sm"`; the header bar's `py-1.5 lg:py-3` (not named by the spec) to keep the header height; the four `ICON_LINES` in `accent-text.test.ts`.
+  - Visible change to look at: the landing chips and links turn blue (`--primary`) instead of light green, the hero and card figures turn near-black. The site has no theme switch, so `.dark` values were not looked at.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T159 is small and runnable now).

@@ -152,10 +152,10 @@ export function CookieConsent() {
               </a>
             </p>
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={handleDecline}>
+              <Button variant="outline" size="sm" className="min-h-11" onClick={handleDecline}>
                 {t.decline}
               </Button>
-              <Button size="sm" onClick={handleAccept}>
+              <Button size="sm" className="min-h-11" onClick={handleAccept}>
                 {t.accept}
               </Button>
             </div>

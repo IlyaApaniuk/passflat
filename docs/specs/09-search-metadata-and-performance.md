@@ -389,6 +389,11 @@ FR-34 (**Assumption**: classes).
 - Test (`src/components/landing/accent-text.test.ts`, static): the listed files contain
   `text-accent` only on lines that also contain `<svg`, `Icon`, `className="h-4 w-4` or are in an
   allow list of icon lines the task names; a static test asserts the header's aria attributes.
+- Built (T155): badge chips' inherited icons follow the chip to `text-primary`; the cost card's
+  "already contributed" line counts as a badge (`text-primary`). The mobile pill keeps
+  `size="sm"` (its width) plus `min-h-11`. The header bar is `py-1.5 lg:py-3`, so the 44 px
+  controls keep the mobile bar at 58 px and the header at 90 px (measured 320 – 1023 px). The data
+  report's deposit figure (`blog/warsaw-rent-prices/page.tsx`) is outside this list: task T159.
 
 ## Labels, the banner's privacy link, heading order and a skip link
 

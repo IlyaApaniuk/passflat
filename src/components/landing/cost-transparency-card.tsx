@@ -132,14 +132,14 @@ export function CostTransparencyCard({
 
         {hasContributed ? (
           <div className="relative mt-6 rounded-xl border border-accent/30 bg-accent/5 p-4 text-center">
-            <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-accent">
+            <div className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary">
               <CheckCircle2 className="h-4 w-4" />
               {t('landing.costTransparency.alreadyContributedDesc')}
             </div>
             <TrackedLink
               placement="landing_cost_card_all"
               href={`/${citySlug}/costs`}
-              className="text-sm font-medium text-accent hover:underline"
+              className="text-sm font-medium text-primary hover:underline"
             >
               {t('landing.costTransparency.exploreCosts')}
             </TrackedLink>
@@ -153,7 +153,7 @@ export function CostTransparencyCard({
               <TrackedLink
                 placement="landing_cost_card_submit_secondary"
                 href={`/${citySlug}/costs/submit`}
-                className="text-sm font-medium text-accent hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {t('landing.costTransparency.submitCosts')}
               </TrackedLink>
@@ -171,7 +171,7 @@ export function CostTransparencyCard({
               <p className="text-xs text-muted-foreground">{singleNumberLabelText(t, figure)}</p>
             )}
           </div>
-          <span className="shrink-0 text-2xl font-bold text-accent">
+          <span className="shrink-0 text-2xl font-bold text-foreground">
             ~{format.number(figure?.value ?? 4199)} PLN
           </span>
         </div>

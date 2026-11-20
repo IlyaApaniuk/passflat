@@ -195,6 +195,70 @@ describe('Header entries (PRD 4 FR-5)', () => {
   });
 });
 
+// PRD 4 FR-34, spec 09 §Contrast, tap targets and the hamburger.
+describe('Hamburger (PRD 4 FR-34)', () => {
+  const source = readFileSync(join(process.cwd(), 'src/components/landing/header.tsx'), 'utf8');
+
+  /** The opening tag of the one element whose attributes contain `marker`. */
+  function openingTag(html: string, marker: string): string {
+    const tags = [...html.matchAll(/<[a-z][^>]*>/g)].map(([tag]) => tag);
+    const found = tags.filter((tag) => tag.includes(marker));
+    expect(found, marker).toHaveLength(1);
+    return found[0];
+  }
+
+  beforeEach(() => {
+    state.locale = 'en';
+  });
+
+  it('declares type, a translated label, aria-expanded and aria-controls in the source', () => {
+    const button = source.match(
+      /<button\s[^>]*onClick=\{\(\) => setMobileMenuOpen\(!mobileMenuOpen\)\}[^>]*>/,
+    );
+    expect(button).not.toBeNull();
+    const tag = button![0];
+    expect(tag).toContain('type="button"');
+    expect(tag).toContain("aria-label={t('common.menu')}");
+    expect(tag).toContain('aria-expanded={mobileMenuOpen}');
+    expect(tag).toContain('aria-controls="mobile-menu"');
+    expect(tag).toMatch(/className="[^"]*\bmin-h-11 min-w-11\b[^"]*"/);
+    expect(tag).not.toMatch(/\bw-8\b|\bh-8\b|Toggle menu/);
+    // The panel it controls carries the id, once.
+    expect(source.match(/id="mobile-menu"/g)).toHaveLength(1);
+  });
+
+  it('renders the label of common.menu in every locale and aria-expanded="false" when closed', () => {
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const html = render(false);
+      const tag = openingTag(html, 'aria-controls="mobile-menu"');
+      expect(tag, locale).toContain('type="button"');
+      expect(tag, locale).toContain(`aria-label="${messages[locale].common.menu as string}"`);
+      expect(tag, locale).toContain('aria-expanded="false"');
+      // Closed: the controlled panel is not in the markup.
+      expect(html, locale).not.toContain('id="mobile-menu"');
+    }
+  });
+
+  it('renders aria-expanded="true" and the panel with id="mobile-menu" when open', () => {
+    const html = render(true);
+    expect(openingTag(html, 'aria-controls="mobile-menu"')).toContain('aria-expanded="true"');
+    const panel = openingTag(html, 'id="mobile-menu"');
+    // The panel is the one that holds the mobile nav.
+    expect(html.slice(html.indexOf(panel))).toMatch(/^<div[^>]*>\s*<nav/);
+  });
+
+  it('gives the mobile pill and the four mobile language buttons min-h-11', () => {
+    const html = render(true);
+    const pill = html.match(/<a href="\/warsaw\/roommate"><button[^>]*>/);
+    expect(pill).not.toBeNull();
+    expect(pill![0]).toMatch(/class="[^"]*\bmin-h-11\b/);
+    const languageButtons = [...html.matchAll(/<button[^>]*>(PL|EN|RU|UK)<\/button>/g)];
+    expect(languageButtons.map(([, code]) => code).sort()).toEqual(['EN', 'PL', 'RU', 'UK']);
+    for (const [tag] of languageButtons) expect(tag).toMatch(/class="[^"]*\bmin-h-11\b/);
+  });
+});
+
 describe('Header copy keys', () => {
   it('drops common.costsShort, whose only reader was the old pill', () => {
     const source = readFileSync(join(process.cwd(), 'src/components/landing/header.tsx'), 'utf8');

@@ -122,7 +122,7 @@ export function Hero({ stats: liveStats }: HeroProps) {
 
       <div className="relative z-10 container mx-auto px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-5xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-primary">
             <Sparkles className="h-4 w-4" />
             <span>{t('badge')}</span>
           </div>
@@ -185,14 +185,12 @@ export function Hero({ stats: liveStats }: HeroProps) {
                   delay={i * 0.1}
                   className="rounded-2xl border border-border/50 bg-card/50 p-4 text-center backdrop-blur-sm"
                 >
-                  <div className="text-2xl font-bold text-accent sm:whitespace-nowrap sm:text-3xl">
+                  <div className="text-2xl font-bold text-foreground sm:whitespace-nowrap sm:text-3xl">
                     {stat.value}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground sm:text-sm">{stat.label}</div>
                   {stat.source && (
-                    <div className="mt-0.5 text-[11px] text-muted-foreground/80 sm:text-xs">
-                      {stat.source}
-                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">{stat.source}</div>
                   )}
                 </Reveal>
               ))}
