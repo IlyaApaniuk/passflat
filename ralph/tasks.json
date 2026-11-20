@@ -497,14 +497,14 @@
       "title": "Guide bodies: reported-costs wording in every line that links to the checker, costs or a building (FR-24, part 1)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
       "dependsOn": ["T141"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/content/blog-bodies.test.ts (new, written first): every body line that links to /check, /costs or /building passes FORBIDDEN[locale], unless the line is in an allow list with a one-line reason",
         "Every flagged line is reworded with the smallest change by the inflection table of spec 09 §Guide bodies (the 'reported' or 'from reports' meaning) until the test passes; the progress entry lists every changed line; a one-off node script may do the replacement and is not committed",
         "The cesja guide's /replacement links are left as they are (Q-7, T146)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D25. The gap review counted 74 flagged link lines with the old lists."
     },
     {
