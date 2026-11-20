@@ -807,13 +807,13 @@
         "No other file changes colour; src/components/costs/cost-access-card.tsx keeps bg-accent/10 text-accent on its 28 px icon circle (an icon, allowed by the spec)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found by T155: spec 09 Current state lists only the landing files; this figure on the data report is the one remaining text use of text-accent outside src/components/ui. Assumption classes, as FR-34.",
       "id": "T159",
       "milestone": "M4",
       "title": "Data report: the deposit figure in text-foreground instead of text-accent (FR-34 follow-up)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

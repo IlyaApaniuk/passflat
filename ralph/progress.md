@@ -5266,3 +5266,19 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Assumption applied** (spec 09 FR-22, shapes): the apposition form ("miasta / города / міста {city}") rather than name-first for these two keys; the scan's word lists (`GOVERNING_WORD_BEFORE_NAME`).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next` (T159 is runnable; T157, the PRD 4 final check, runs after it).
+
+### 2026-11-20 12:20 · T159 · done
+
+- Done (PRD 4 FR-34 follow-up; spec 09 §Contrast, tap targets and the hamburger):
+  - `src/app/[locale]/blog/warsaw-rent-prices/page.tsx`: the deposit figure (`countOfTotal`, line 401) is `shrink-0 text-4xl font-bold tabular-nums text-foreground` (was `text-accent`); its card keeps `border-accent/30 bg-accent/5`. No other file changes colour.
+  - `src/components/landing/accent-text.test.ts`: `FILES` and `ICON_LINES` are now repo-relative paths, and the data report page joins the scan (same rule: `text-accent` only on icon lines); the stale-entry check also asserts each `ICON_LINES` key is a scanned file; new tests: the deposit figure is `text-foreground` on the unchanged accent card, and `cost-access-card.tsx` keeps `bg-accent/10 text-accent` on its `h-7 w-7` icon circle. Mutation check: with the old class back, the page scan and the figure test fail (2 of 15).
+  - Docs: `docs/specs/README.md` FR-34 row → Done; spec 09 §Contrast gets a "Built (T159)" note; `docs/ops/deploy-copy-review.md` lists T159 under "No copy".
+- Checks:
+  - `npx vitest run src/components/landing/accent-text.test.ts`: 15 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 180 files / 3643 tests; build OK (185 pages). `next-env.d.ts` restored.
+  - Not run: `npm run test:e2e` (not in the task's checks; the page needs a DB, which the e2e build lacks). Not verified: a contrast measurement or the rendered page. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Assumption applied** (spec 09 FR-34, classes): the deposit figure is a figure value → `text-foreground` (near-black instead of light green on the light-green card).
+  - No copy, new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T157, the PRD 4 final check).

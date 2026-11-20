@@ -7,19 +7,29 @@ import { describe, expect, it } from 'vitest';
 // `text-foreground`, badge chips and link texts `text-primary`, and only icons
 // keep `text-accent`.
 
-const FILES = [
-  'hero.tsx',
-  'faq.tsx',
-  'check-address.tsx',
-  'cost-transparency-card.tsx',
-  'tools.tsx',
-  'bento-grid.tsx',
-  'cost-transparency.tsx',
-  'city-notify.tsx',
-] as const;
+const LANDING = 'src/components/landing';
 
-const read = (file: string) =>
-  readFileSync(join(process.cwd(), 'src/components/landing', file), 'utf8');
+/** The data report's deposit figure (T159, the FR-34 follow-up). */
+const DATA_REPORT = 'src/app/[locale]/blog/warsaw-rent-prices/page.tsx';
+
+/** The 28 px icon circle of the access card: an icon, so `text-accent` stays (T159). */
+const ACCESS_CARD = 'src/components/costs/cost-access-card.tsx';
+
+const FILES = [
+  ...[
+    'hero.tsx',
+    'faq.tsx',
+    'check-address.tsx',
+    'cost-transparency-card.tsx',
+    'tools.tsx',
+    'bento-grid.tsx',
+    'cost-transparency.tsx',
+    'city-notify.tsx',
+  ].map((file) => `${LANDING}/${file}`),
+  DATA_REPORT,
+];
+
+const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 /** `text-accent` as a colour class, also behind a variant (`group-hover:`); not `text-accent-foreground`. */
 const ACCENT_TEXT = /(?<![\w-])text-accent(?![\w-])/;
@@ -32,13 +42,13 @@ const ICON_MARKERS = ['<svg', 'Icon', 'className="h-4 w-4'];
  * A change to one of these lines fails the test until the entry is updated.
  */
 const ICON_LINES: Record<string, string[]> = {
-  'check-address.tsx': [
+  [`${LANDING}/check-address.tsx`]: [
     '<Search className="h-5 w-5 shrink-0 text-muted-foreground transition-colors group-hover:text-accent" />',
   ],
-  'bento-grid.tsx': [
+  [`${LANDING}/bento-grid.tsx`]: [
     "<item.icon className={`text-accent ${item.featured ? 'h-7 w-7' : 'h-5 w-5'}`} />",
   ],
-  'city-notify.tsx': [
+  [`${LANDING}/city-notify.tsx`]: [
     '<MapPin className="h-5 w-5 text-accent" />',
     '<CheckCircle2 className="h-7 w-7 text-accent" />',
   ],
@@ -62,6 +72,7 @@ describe('text-accent only on icons (PRD 4 FR-34)', () => {
 
   it('keeps every allow-listed icon line present (no stale entries)', () => {
     for (const [file, lines] of Object.entries(ICON_LINES)) {
+      expect(FILES, file).toContain(file);
       const present = accentLines(file).map(({ line }) => line);
       for (const line of lines) expect(present, file).toContain(line);
     }
@@ -76,7 +87,7 @@ describe('text-accent only on icons (PRD 4 FR-34)', () => {
   });
 
   it('shows the hero figures in text-foreground and the source line in text-xs text-muted-foreground', () => {
-    const hero = read('hero.tsx');
+    const hero = read(`${LANDING}/hero.tsx`);
     expect(hero).toMatch(
       /<div className="text-2xl font-bold text-foreground[^"]*">\s*\{stat\.value\}/,
     );
@@ -88,10 +99,28 @@ describe('text-accent only on icons (PRD 4 FR-34)', () => {
   });
 
   it('shows the cost card total in text-foreground and its links in text-primary', () => {
-    const card = read('cost-transparency-card.tsx');
+    const card = read(`${LANDING}/cost-transparency-card.tsx`);
     expect(card).toMatch(/<span className="shrink-0 text-2xl font-bold text-foreground">/);
     expect(
       card.match(/className="text-sm font-medium text-primary hover:underline"/g),
     ).toHaveLength(2);
+  });
+
+  it('shows the data report deposit figure in text-foreground on the accent card (T159)', () => {
+    const report = read(DATA_REPORT);
+    expect(report).toContain('<Card className="mt-4 border-accent/30 bg-accent/5">');
+    expect(report).toMatch(
+      /<p className="shrink-0 text-4xl font-bold tabular-nums text-foreground">\s*\{t\('costs\.building\.figures\.countOfTotal'/,
+    );
+  });
+
+  it('keeps text-accent on the access card icon circle (an icon, T159)', () => {
+    const card = read(ACCESS_CARD);
+    expect(card).toContain(
+      "accent: { card: 'border-accent/50 bg-accent/5', badge: 'bg-accent/10 text-accent' }",
+    );
+    expect(card).toMatch(
+      /className=\{`flex h-7 w-7 shrink-0 items-center justify-center rounded-full \$\{TONE\[tone\]\.badge\}`\}/,
+    );
   });
 });

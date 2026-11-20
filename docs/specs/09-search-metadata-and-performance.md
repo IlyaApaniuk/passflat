@@ -402,6 +402,9 @@ FR-34 (**Assumption**: classes).
   `size="sm"` (its width) plus `min-h-11`. The header bar is `py-1.5 lg:py-3`, so the 44 px
   controls keep the mobile bar at 58 px and the header at 90 px (measured 320 – 1023 px). The data
   report's deposit figure (`blog/warsaw-rent-prices/page.tsx`) is outside this list: task T159.
+- Built (T159): that deposit figure is `text-foreground` on the unchanged `border-accent/30
+bg-accent/5` card, and `accent-text.test.ts` scans the page with the same rule. The access
+  card's `bg-accent/10 text-accent` is a 28 px icon circle and keeps the accent.
 
 ## Labels, the banner's privacy link, heading order and a skip link
 

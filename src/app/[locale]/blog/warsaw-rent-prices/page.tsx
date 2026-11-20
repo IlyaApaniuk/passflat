@@ -398,7 +398,7 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
                 </p>
                 <Card className="mt-4 border-accent/30 bg-accent/5">
                   <CardContent className="flex items-center gap-4 p-5">
-                    <p className="shrink-0 text-4xl font-bold tabular-nums text-accent">
+                    <p className="shrink-0 text-4xl font-bold tabular-nums text-foreground">
                       {t('costs.building.figures.countOfTotal', {
                         count: report.deposit.gotBack,
                         total: report.deposit.answered,
