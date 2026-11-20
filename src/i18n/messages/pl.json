@@ -23,8 +23,8 @@
     "learnMore": "Dowiedz się więcej"
   },
   "meta": {
-    "homeTitle": "Passflat — wynajem w Warszawie: koszty, ogłoszenia, dokumenty",
-    "homeDescription": "Realne koszty wynajmu w Warszawie od samych najemców, ogłoszenia (cesja, współlokator, podnajem) i darmowe wzory dokumentów. Poznaj prawdziwą cenę przed podpisaniem.",
+    "homeTitle": "Passflat — wynajem w Warszawie: zgłoszone koszty, poradniki, dokumenty",
+    "homeDescription": "Koszty wynajmu w Warszawie zgłoszone przez najemców, według budynków i dzielnic, zawsze z liczbą zgłoszeń; sprawdzenie adresu, kalkulator, poradniki i wzory dokumentów.",
     "aboutDescription": "Passflat — serwis najmu w Warszawie: realne koszty od najemców (czynsz, media, kaucje), ogłoszenia o cesji i podnajmie oraz darmowe wzory dokumentów. Wszystko widać przed podpisaniem.",
     "howItWorksDescription": "Jak działa Passflat: zobacz realne koszty według budynków i dzielnic Warszawy, przekaż najem, znajdź współlokatora lub podnajem i pobierz darmowe wzory dokumentów. Krok po kroku i przejrzyście.",
     "contactDescription": "Skontaktuj się z zespołem Passflat — pytanie, problem, pomysł na współpracę lub opinia o serwisie przejrzystych kosztów najmu.",
@@ -87,7 +87,7 @@
       "badge": "Już dostępne w Warszawie",
       "title": "Nie przepłacaj\nza wynajem",
       "titleHighlight": "w Warszawie.",
-      "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją, i sfinalizuj ją na gotowych wzorach dokumentów.",
+      "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją.",
       "browseCta": "Przeglądaj oferty",
       "addCta": "Dodaj ogłoszenie",
       "trustLeaseTakeoversDesc": "Znajdź najemcę, który przejmie Twój najem i zachowaj kaucję",
@@ -95,7 +95,7 @@
       "trustRealCostDesc": "Koszty mediów zgłoszone przez najemców — zaplanujesz wydatki przed podpisaniem",
       "trustVerified": "Oferty od społeczności",
       "trustVerifiedDesc": "Oferty i opinie o budynkach od społeczności, z jawnymi cenami",
-      "costsCta": "Zobacz prawdziwe koszty",
+      "costsCta": "Zobacz zgłoszone koszty",
       "trustLine": "Dane są otwarte — za darmo i bez konta",
       "calculatorCta": "Kalkulator",
       "templatesCta": "Wzory dokumentów",
@@ -291,7 +291,7 @@
       "freeNote": "Bez zakładania konta."
     },
     "footer": {
-      "tagline": "Wynajem w Warszawie bez niespodzianek: cała prawda o kosztach od najemców, ogłoszenia i darmowe wzory dokumentów.",
+      "tagline": "Koszty wynajmu w Warszawie zgłoszone przez najemców, z liczbą zgłoszeń; poradniki i wzory dokumentów.",
       "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
       "product": "Produkt",
       "browseListings": "Cesje najmu",
@@ -341,7 +341,7 @@
       "calculatorDescription": "Policz pełny koszt najmu w dzielnicy: czynsz, opłaty i kaucja — zanim podpiszesz umowę.",
       "calculatorCta": "Policz",
       "templatesTitle": "Wzory dokumentów",
-      "templatesDescription": "Umowa najmu, protokół zdawczo-odbiorczy i wypowiedzenie — gotowe wzory po polsku.",
+      "templatesDescription": "Cesja umowy najmu, protokół zdawczo-odbiorczy, umowa podnajmu i umowa współlokatorska — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku.",
       "templatesCta": "Otwórz wzory"
     }
   },

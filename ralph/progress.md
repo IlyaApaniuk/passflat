@@ -161,6 +161,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - e2e runs Desktop Chrome with an `en-US` browser locale, and next-intl's locale detection sends `/` to `/en`: a test of the Polish `/` needs `test.use({ locale: 'pl-PL' })` (example: the header tests in `e2e/home.spec.ts`). Phone layouts can be measured in a temporary spec with `page.setViewportSize` and `getBoundingClientRect` / `scrollWidth` in `page.evaluate`.
 - A nested async server component (the home page's `HomeContent`) is tested without RSC: `await` the page, call the Suspense child's `type()`, walk the element tree by component identity; `vi.doMock` in a top-level loop before the dynamic `import('./page')` stubs many sections at once (example: `src/app/[locale]/home-thesis.test.ts`).
 - In e2e, a section with `aria-labelledby` is a `region` named by its heading: `getByRole('region', { name })` finds it, while `locator('section').filter({ has: heading })` also matches sections that merely contain such a heading.
+- A copy pattern for Polish "prawd-" (truth) also matches "sprawdz-" (check): anchor it at a word start with a Polish letter class (`(^|[^a-ząćęłńóśźż])prawd`, `REAL_OR_TRUTH` in `honesty-copy.test.ts`); `\b` does not work next to non-ASCII letters.
 
 ## Log
 
@@ -3947,4 +3948,53 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - `cta_click {placement: 'flatmate_callout_home'}` and `telegram_bot_opened {source: 'home'}` are new values of existing events (spec 01 §PRD 4 values). The readout docs (`docs/analytics/activation-funnels.md`) belong to spec 05's task.
   - The other surfaces (building, hub, district, calculator, guide, report) are not placed yet; they are their own tasks (FR-11, FR-12, FR-26). The per-person line (`split`) is T129.
   - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:20 · T124 · done
+
+- Done (PRD 4 FR-10, spec 08 §Home copy, honest cost-first rewrite; the thesis-first versions stay with Q-6 / T125):
+  - Copy only, in four locales (`src/i18n/messages/{pl,en,ru,uk}.json`, applied by a scratchpad script that replaces each `"<key>": <old>` exactly once): `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`, `landing.hero.costsCta`, `landing.hero.subtitle` (the templates clause dropped, the cost sentence kept), `landing.tools.templatesDescription`. No component changed; the ForWhom keys are untouched (T121).
+  - `docs/specs/README.md` PRD 4 map: FR-10 → Done.
+- Tests:
+  - `src/i18n/honesty-copy.test.ts`: the five keys join `REWRITTEN_KEYS` (`landing.hero.subtitle` was already there) and pass `FORBIDDEN`. New `HOME_COPY_KEYS` (the six) per locale: no "real" family or "truth" (`REAL_OR_TRUTH`, word-start "prawd"/«правд» so "sprawdzenie" passes), no listings (`LISTINGS`), no `FREE`, no `PROMISE`, no `{`. The EN title, description, tagline and CTA equal spec 08's drafts; every title starts "Passflat — " (cost-first kept) and the three meta/tagline values name Warsaw; each subtitle ends with its cost sentence and names no templates. A self-check proves the patterns catch the old wording.
+  - New `src/i18n/templates-description.test.ts`: `public/documents/` holds exactly the 20 files (four stems × Polish `.docx` + `.pdf` + `-en`/`-ru`/`-uk` PDFs); per locale the sentence names the same four languages (`LANGUAGE_WORDS`) and the four documents (`DOCUMENT_WORDS`), and none of the old ones (lease agreement, termination notice); the EN value equals the spec; the language check fails on the old two-language sentences.
+- Checks:
+  - `npx vitest run src/i18n/ src/components/landing/`: 9 files / 84 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 151 files / 3249 tests; build OK (183 pages).
+  - `npm run test:e2e` exit 0: 13 passed (the `website counts failed` / `fetch failed` lines are the database-less e2e build, as before).
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no event, no message sent. The pages were not looked at in a browser (copy only; the render paths are unchanged).
+- Did not work: the first PL "truth" pattern `prawd` matched "sprawdzenie adresu" in the new description; it now needs a word start.
+- Owner review:
+  - **Draft copy (agent copy, D29).** EN from spec 08 §Home copy; `templatesDescription` in all four locales from spec 08; **the PL, RU and UK of the other five keys are the agent's drafts.**
+    - `meta.homeTitle`:
+      - pl "Passflat — wynajem w Warszawie: zgłoszone koszty, poradniki, dokumenty"
+      - en "Passflat — Warsaw rentals: reported costs, guides, documents"
+      - ru «Passflat — аренда в Варшаве: расходы по отчётам жильцов, гайды, документы»
+      - uk «Passflat — оренда у Варшаві: витрати за звітами мешканців, гайди, документи»
+    - `meta.homeDescription`:
+      - pl "Koszty wynajmu w Warszawie zgłoszone przez najemców, według budynków i dzielnic, zawsze z liczbą zgłoszeń; sprawdzenie adresu, kalkulator, poradniki i wzory dokumentów."
+      - en "Rental costs in Warsaw as tenants reported them, by building and district, each with its number of reports; an address check, a calculator, guides and document templates."
+      - ru «Расходы на аренду в Варшаве, о которых сообщили жильцы, по домам и районам — всегда с числом отчётов; проверка адреса, калькулятор, гайды и шаблоны документов.»
+      - uk «Витрати на оренду у Варшаві, про які повідомили мешканці, за будинками й районами — завжди з кількістю звітів; перевірка адреси, калькулятор, гайди та шаблони документів.»
+    - `landing.footer.tagline`:
+      - pl "Koszty wynajmu w Warszawie zgłoszone przez najemców, z liczbą zgłoszeń; poradniki i wzory dokumentów."
+      - en "Rental costs in Warsaw as tenants reported them, with their counts; guides and document templates."
+      - ru «Расходы на аренду в Варшаве, о которых сообщили жильцы, с числом отчётов; гайды и шаблоны документов.»
+      - uk «Витрати на оренду у Варшаві, про які повідомили мешканці, з кількістю звітів; гайди та шаблони документів.»
+    - `landing.hero.costsCta`: pl "Zobacz zgłoszone koszty" · en "See reported costs" · ru «Смотреть расходы по отчётам» · uk «Дивитися витрати за звітами»
+    - `landing.hero.subtitle` (only the clause about templates removed):
+      - pl "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją."
+      - en "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal."
+      - ru «Коммуналка, депозиты и скрытые расходы вскрываются уже после подписания. Посмотри, о каких расходах сообщили жильцы, — до сделки.»
+      - uk «Комуналка, застави та приховані витрати спливають уже після підписання. Подивись, про які витрати повідомили мешканці, — до угоди.»
+    - `landing.tools.templatesDescription` (spec 08 in four locales):
+      - pl "Cesja umowy najmu, protokół zdawczo-odbiorczy, umowa podnajmu i umowa współlokatorska — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku."
+      - en "Lease assignment (cesja), handover protocol, sublease agreement and flatmate agreement — Polish originals with English, Russian and Ukrainian versions."
+      - ru «Цессия договора аренды, протокол приёма-передачи, договор субаренды и соглашение соседей — польские оригиналы с версиями на английском, русском и украинском.»
+      - uk «Цесія договору оренди, акт приймання-передачі, договір суборенди та угода співмешканців — польські оригінали з версіями англійською, російською та українською.»
+    - Draft notes: the terms follow existing copy — PL "zgłoszenia" (the N label), RU «отчёты» / «жильцы» and UK «звіти» / «мешканці» (the old hero subtitle), «гайды» / «гайди» / "poradniki" (`meta.blogDescription`). "Each with its number of reports" became PL "zawsze z liczbą zgłoszeń", RU «всегда с числом отчётов», UK «завжди з кількістю звітів» ("always with").
+  - Namespaces and providers: `meta.*` is read by the locale layout's `generateMetadata` (server, also the OG image text); the hero (client) reads `landing.hero.*` and the footer (isomorphic) `landing.footer.*`, both under `landing` in `SHARED_CLIENT_NAMESPACES`; `Tools` is a server component (`getTranslations('landing.tools')`) and shows the templates card only with `isDocumentTemplatesEnabled()`.
+  - The home title, description and tagline change in search results and link previews after deploy; the thesis-first versions are Q-6 (T125).
+  - Unchanged and still saying "real" / listings / "free" beside the new copy (not FR-10's keys): `meta.aboutDescription`, `meta.howItWorksDescription`, `meta.blogDescription`, `landing.hero.trustLine` (Q-11), `landing.footer.expanding` (Q-10). Spec 09 §Honesty keys (T138, T139) owns the honesty sweep.
+  - No assumption value beyond the drafts; no new table, migration or event.
 - Next: `node scripts/ralph-tasks.mjs next`.

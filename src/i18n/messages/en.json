@@ -23,8 +23,8 @@
     "learnMore": "Learn more"
   },
   "meta": {
-    "homeTitle": "Passflat — Warsaw rentals: costs, listings, documents",
-    "homeDescription": "Real rental costs in Warsaw from tenants themselves, listings (lease takeover, roommate, sublet) and free document templates. Know the real price before you sign.",
+    "homeTitle": "Passflat — Warsaw rentals: reported costs, guides, documents",
+    "homeDescription": "Rental costs in Warsaw as tenants reported them, by building and district, each with its number of reports; an address check, a calculator, guides and document templates.",
     "aboutDescription": "Passflat — a Warsaw rental service: real costs from tenants (rent, utilities, deposits), lease-takeover and sublet listings, and free document templates. Everything visible before you sign.",
     "howItWorksDescription": "How Passflat works: see real costs by building and district in Warsaw, take over a lease, find a roommate or sublet, and download free document templates. Step by step, transparently.",
     "contactDescription": "Get in touch with the Passflat team — a question, an issue, a partnership idea, or feedback about our transparent rental-cost service.",
@@ -87,7 +87,7 @@
       "badge": "Now live in Warsaw",
       "title": "Don't overpay for rent",
       "titleHighlight": "in Warsaw.",
-      "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal, and close it with ready-made document templates.",
+      "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal.",
       "browseCta": "Browse Listings",
       "addCta": "Post a Listing",
       "trustLeaseTakeoversDesc": "Find tenants to take over your lease and keep your deposit",
@@ -95,7 +95,7 @@
       "trustRealCostDesc": "Utility costs reported by tenants, so you can plan before you sign",
       "trustVerified": "Community listings",
       "trustVerifiedDesc": "Listings and building reviews from the community, with prices shown openly",
-      "costsCta": "See real costs",
+      "costsCta": "See reported costs",
       "trustLine": "The data is open — free, no account",
       "calculatorCta": "Calculator",
       "templatesCta": "Document templates",
@@ -291,7 +291,7 @@
       "freeNote": "No account needed."
     },
     "footer": {
-      "tagline": "Renting in Warsaw without surprises: the full truth on costs from tenants, listings, and free document templates.",
+      "tagline": "Rental costs in Warsaw as tenants reported them, with their counts; guides and document templates.",
       "expanding": "Starting in Warsaw, expanding across Europe.",
       "product": "Product",
       "browseListings": "Lease Takeovers",
@@ -341,7 +341,7 @@
       "calculatorDescription": "Estimate the full cost of renting in a district: rent, utilities and deposit — before you sign.",
       "calculatorCta": "Calculate",
       "templatesTitle": "Document templates",
-      "templatesDescription": "Lease agreement, handover protocol and termination notice — ready-made templates in Polish and English.",
+      "templatesDescription": "Lease assignment (cesja), handover protocol, sublease agreement and flatmate agreement — Polish originals with English, Russian and Ukrainian versions.",
       "templatesCta": "Open templates"
     }
   },

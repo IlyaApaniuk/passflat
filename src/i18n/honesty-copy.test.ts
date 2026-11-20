@@ -68,7 +68,58 @@ const REWRITTEN_KEYS = [
   // PRD 4 FR-3 (spec 08 §Roommate page shell and metadata).
   'listings.titleRoommate',
   'listings.roommateH1',
+  // PRD 4 FR-10 (spec 08 §Home copy); landing.hero.subtitle is above.
+  'meta.homeTitle',
+  'meta.homeDescription',
+  'landing.footer.tagline',
+  'landing.hero.costsCta',
+  'landing.tools.templatesDescription',
 ];
+
+/** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
+const HOME_COPY_KEYS = [
+  'meta.homeTitle',
+  'meta.homeDescription',
+  'landing.footer.tagline',
+  'landing.hero.costsCta',
+  'landing.hero.subtitle',
+  'landing.tools.templatesDescription',
+];
+
+/**
+ * The "real" family and "the full truth" (D25), per locale. "Truth" needs a word
+ * start: "sprawdzenie" (a check) contains "prawd".
+ */
+const REAL_OR_TRUTH: Record<Locale, RegExp> = {
+  en: /\breal\b|truth|true price/i,
+  pl: /realn|(^|[^a-ząćęłńóśźż])prawd/i,
+  ru: /реальн|(^|[^а-яё])правд|настоящ/i,
+  uk: /реальн|(^|[^а-яіїєґ'ʼ])правд|справжн/i,
+};
+
+/** Listings, frozen and not promoted (D5). */
+const LISTINGS: Record<Locale, RegExp> = {
+  en: /listing/i,
+  pl: /ogłosze/i,
+  ru: /объявлен/i,
+  uk: /оголошен/i,
+};
+
+/** Document templates, which the hero subtitle no longer names. */
+const TEMPLATES: Record<Locale, RegExp> = {
+  en: /template/i,
+  pl: /wzor|wzór/i,
+  ru: /шаблон/i,
+  uk: /шаблон/i,
+};
+
+/** The cost sentence the hero subtitle keeps. */
+const SUBTITLE_COST_SENTENCE: Record<Locale, string> = {
+  en: 'See the costs tenants reported — before the deal.',
+  pl: 'Sprawdź koszty zgłoszone przez najemców — przed decyzją.',
+  ru: 'Посмотри, о каких расходах сообщили жильцы, — до сделки.',
+  uk: 'Подивись, про які витрати повідомили мешканці, — до угоди.',
+};
 
 /** The roommate page's title, description and h1 (PRD 4 FR-3, appendix seo.md table A, §8). */
 const ROOMMATE_SHELL_KEYS = [
@@ -179,6 +230,66 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
         expect(value as string, `${locale}: ${key}`).not.toContain('{');
       }
     }
+  });
+
+  it('the home copy (PRD 4 FR-10): no "real", no "truth", no listings, no "free", no placeholder', () => {
+    for (const locale of LOCALES) {
+      for (const key of HOME_COPY_KEYS) {
+        const value = valueAt(locale, key);
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect(value as string, `${locale}: ${key}`).not.toMatch(REAL_OR_TRUTH[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(LISTINGS[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toContain('{');
+      }
+    }
+  });
+
+  it('the home copy keeps the cost-first positioning and the EN drafts of spec 08', () => {
+    expect(valueAt('en', 'meta.homeTitle')).toBe(
+      'Passflat — Warsaw rentals: reported costs, guides, documents',
+    );
+    expect(valueAt('en', 'meta.homeDescription')).toBe(
+      'Rental costs in Warsaw as tenants reported them, by building and district, each with its number of reports; an address check, a calculator, guides and document templates.',
+    );
+    expect(valueAt('en', 'landing.footer.tagline')).toBe(
+      'Rental costs in Warsaw as tenants reported them, with their counts; guides and document templates.',
+    );
+    expect(valueAt('en', 'landing.hero.costsCta')).toBe('See reported costs');
+    for (const locale of LOCALES) {
+      const title = valueAt(locale, 'meta.homeTitle') as string;
+      // The thesis-first title is Q-6 (T125): the cost site stays first.
+      expect(title, locale).toMatch(/^Passflat — /);
+      for (const key of ['meta.homeTitle', 'meta.homeDescription', 'landing.footer.tagline']) {
+        expect(valueAt(locale, key) as string, `${locale}: ${key}`).toMatch(/Warsz|Warsaw|Варшав/);
+      }
+      const subtitle = valueAt(locale, 'landing.hero.subtitle') as string;
+      expect(subtitle, locale).toContain(SUBTITLE_COST_SENTENCE[locale]);
+      expect(subtitle.endsWith(SUBTITLE_COST_SENTENCE[locale]), locale).toBe(true);
+      expect(subtitle, locale).not.toMatch(TEMPLATES[locale]);
+    }
+  });
+
+  it('the home copy patterns catch the old wording', () => {
+    expect('See real costs').toMatch(REAL_OR_TRUTH.en);
+    expect('the full truth on costs').toMatch(REAL_OR_TRUTH.en);
+    expect('Zobacz prawdziwe koszty').toMatch(REAL_OR_TRUTH.pl);
+    expect('cała prawda o kosztach').toMatch(REAL_OR_TRUTH.pl);
+    expect('Realne koszty').toMatch(REAL_OR_TRUTH.pl);
+    expect('sprawdzenie adresu').not.toMatch(REAL_OR_TRUTH.pl);
+    expect('вся правда о расходах').toMatch(REAL_OR_TRUTH.ru);
+    expect('вся правда про витрати').toMatch(REAL_OR_TRUTH.uk);
+    expect('Смотреть реальные расходы').toMatch(REAL_OR_TRUTH.ru);
+    expect('Узнай настоящую цену').toMatch(REAL_OR_TRUTH.ru);
+    expect('Дізнайся справжню ціну').toMatch(REAL_OR_TRUTH.uk);
+    expect('costs, listings, documents').toMatch(LISTINGS.en);
+    expect('koszty, ogłoszenia, dokumenty').toMatch(LISTINGS.pl);
+    expect('расходы, объявления, документы').toMatch(LISTINGS.ru);
+    expect('витрати, оголошення, документи').toMatch(LISTINGS.uk);
+    expect('free document templates').toMatch(FREE);
+    expect('ready-made document templates').toMatch(TEMPLATES.en);
+    expect('na gotowych wzorach dokumentów').toMatch(TEMPLATES.pl);
   });
 
   it('the en.json search finds no claim about reported figures', () => {

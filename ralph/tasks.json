@@ -195,7 +195,7 @@
       "title": "Home title, description, footer tagline, costs CTA and subtitle: honest cost-first rewrite; the templates sentence (FR-10)",
       "spec": "docs/specs/08-site-structure-and-entries.md#home-copy",
       "dependsOn": ["T121"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "meta.homeTitle, meta.homeDescription, landing.footer.tagline, landing.hero.costsCta ('See reported costs') and landing.hero.subtitle (no 'document templates', the cost sentence kept) are rewritten in four locales from the EN drafts of spec 08 §Home copy: no 'real' family, no 'truth', no listings (D5), no new 'free' claim (Q-12), today's cost-first positioning kept (the thesis-first versions are Q-6, T125)",
         "landing.tools.templatesDescription names the four documents of public/documents/ (lease assignment or cesja, handover protocol, sublease agreement, flatmate agreement) as Polish originals with English, Russian and Ukrainian versions, from spec 08, in four locales",
@@ -205,7 +205,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D25, D5. Appendix seo.md table K is headed 'owner decision (positioning)': it is not shipped here (Q-6, T125)."
     },
     {
