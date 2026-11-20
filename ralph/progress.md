@@ -152,7 +152,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Every stored report that does not hide runs `roommateReport.updateMany` with `targetProfile: { hiddenAt: { not: null } }` (`decideLateReports`, `store.ts`): a Prisma fake serving report taps needs `updateMany` and a `targetProfile` key in its `matches`.
 - A race between a request's check and its write is tested by holding that request at the write: `mockImplementationOnce` that awaits a gate, then the real `getMockImplementation()`; run the other request in the gap (example: `reportAcrossHide` in `roommate-hide.test.ts`).
 - `BotLocale` is `ru | uk | en` (no `TextLocale` / `RoommateLocale`); `dt()` takes `DepositLocale` (`ru | uk`), so a deposit text needs `depositLocale(locale)` and an entry point gates `en` (`startDepositFlow`); deposit-flow tests that tap `dep:lang:*` mock `./store` with `setChatLocale` (example: `src/lib/bot/deposit-gate.test.ts`).
-- Under `--permission-mode dontAsk` every binary missing from `permissions.allow` in `ralph/settings.json` is denied (`sips`, `date`, `psql`, ...): a task that needs one blocks with the exact commands for the owner (T114), or the owner adds a `Bash(<tool> *)` rule first. A PNG's width and height are readable without a tool: `node -e` over bytes 16 - 23 of the header.
+- Under `--permission-mode dontAsk` every binary missing from `permissions.allow` in `ralph/settings.json` is denied (`date`, `psql`, ...): a task that needs one blocks with the exact commands for the owner, or the owner adds a `Bash(<tool> *)` rule first (`sips` is allowed since T114). A PNG's width and height are readable without a tool: `node -e` over bytes 16 - 23 of the header.
+- `sips` writes PNGs with weak deflate (the T114 avatar: 224,648 bytes; the same filtered bytes at zlib level 9: 167,387): shrink a sips PNG losslessly by re-deflating only its IDAT with `node:zlib`, and prove the pixels unchanged by `sips -s format bmp` on both files and a byte compare.
 - A task that ends `failed` or `blocked` with work in the tree gets that work stashed by the loop as `ralph-wip <task> <status> <timestamp>` (untracked files too, and any unrelated uncommitted file such as an owner edit) and popped when the task runs again; a prepared test file can wait there, but never leave a failing test in the tree for another task.
 - `Bash(npm run bot:*)` is denied by `ralph/settings.json`, and so is a `VAR=value npx tsx …` prefix: prove a script that needs a given environment from a scratchpad Node runner (`spawnSync('npx', ['tsx', '--env-file-if-exists=<scratchpad env file>', 'scripts/<x>.ts'], { cwd, env })`, example: T116), never by enabling the npm script.
 - Node's `--env-file` / `--env-file-if-exists` never overrides a variable already set in the environment: a value on the command line wins over `.env.local` (proven in T116 for `npm run bot:posts`).
@@ -5379,3 +5380,31 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The PRD 4 status in `docs/product/` (roadmap, PRD header, decision review) still reads "decomposed, 40 tasks". The loop did not edit product documents; closing or updating PRD 4 there is the owner's step (ralph-start / Fable).
   - No new table, migration or event name.
 - Next: none runnable in PRD 4. Answer Q-1 – Q-13 (and T117's username), then `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 14:40 · T114 · done
+
+- Done (M7, D77; the owner's answer: `sips` allowed in `ralph/settings.json`):
+  - `public/bot-avatar.png`: 512 × 512 PNG, 8-bit RGB, no alpha, 167,387 bytes, made from `public/logo.png` (1536 × 1024, RGB, no alpha) with exactly these commands in the repo root:
+
+    ```sh
+    sips -c 1024 1024 public/logo.png --out public/bot-avatar.png
+    sips -z 512 512 public/bot-avatar.png
+    node <scratchpad>/png-redeflate.mjs public/bot-avatar.png <scratchpad>/bot-avatar-l9.png   # then copied over public/bot-avatar.png
+    ```
+
+    The two `sips` commands produced the image (224,648 bytes, over the 200 kB limit: sips deflates weakly). The third step is a one-off, lossless Node script (built-ins only, not committed): it copies every chunk sips wrote (IHDR, gAMA, cHRM, eXIf, iTXt, IEND) unchanged and replaces the IDAT chunks with one IDAT holding the same inflated bytes (sips' own row filters) deflated at zlib level 9 (`memLevel: 9`, `Z_FILTERED`). Proof that nothing visible changed: `sips -s format bmp` on the sips file and on the final file gives two 786,486-byte BMPs that are byte-identical. Resizing before cropping (`sips -z 512 768` then `-c 512 512`) gave the same size (224,874), so the order is not the cause.
+
+  - Look: the rounded-square gradient mark with the white house is centred with a thin white margin on every side and nothing cut (image read back). The corners keep the logo's off-white background (253 – 255 per channel, as the logo's own corners); no transparency, no new colour. No dependency added (`package.json` untouched).
+  - `src/lib/bot/bot-avatar.test.ts` (written in the blocked attempt, restored from the stash): PNG signature and `IHDR` at bytes 12 – 15, width and height at 16 – 23 = 512, size < 200 × 1024 bytes. It passes for any 512 × 512 PNG under 200 kB.
+  - `docs/specs/README.md`: the T114 row of the owner tooling map → Done.
+
+- Checks:
+  - `npx vitest run src/lib/bot/bot-avatar.test.ts`: 3 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 181 files / 3646 tests; build OK (185 pages). `next-env.d.ts` restored.
+  - Not verified: how Telegram renders the photo (T115 sends it with `setMyProfilePhoto`; nothing was sent). Nothing deployed, no migration, no event, no message sent.
+- Did not work: the plain `sips` output is 224,648 bytes and fails the < 200 kB check; solved by the lossless re-deflate above, not by a lower limit or a palette export.
+- Owner review:
+  - The owner may replace `public/bot-avatar.png` with another 512 × 512 PNG (under 200 kB) before running `npm run bot:profile` (T115); the test reads only the header and the size.
+  - **Deviation to confirm:** the task says "made with `sips`"; the pixels are sips', but the committed file is re-deflated by a Node one-off to meet the size limit. If you prefer the raw sips file, run the two `sips` commands again and raise `MAX_BYTES` in the test (and the task's "under 200 kB") to 250 kB.
+  - No copy, table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T115, `npm run bot:profile`, is now runnable: it depended on T114; T117 stays blocked on the production bot username).

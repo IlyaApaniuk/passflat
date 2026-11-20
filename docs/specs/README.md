@@ -34,7 +34,7 @@ acceptance criteria, since no spec file exists for owner tooling. Checks never c
 
 | Work                                                             | Reference                                                                                                  | Task | Status  |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- | ------- |
-| Bot avatar `public/bot-avatar.png`, 512 × 512 from the logo      | D77                                                                                                        | T114 | Planned |
+| Bot avatar `public/bot-avatar.png`, 512 × 512 from the logo      | D77                                                                                                        | T114 | Done    |
 | Bot profile texts module and `npm run bot:profile` (`--dry-run`) | D77; `src/lib/bot/README.md` "Going live"; `../development-workflow.md` "Commands with additional effects" | T115 | Planned |
 | One place for the production bot's username; `<bot>` placeholder | D76; `../marketing/roommate-posts.md` "How to use a template"                                              | T116 | Done    |
 | Set the production bot username (owner question)                 | D76 (Open)                                                                                                 | T117 | Blocked |

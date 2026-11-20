@@ -13,14 +13,14 @@
       "title": "Bot avatar: public/bot-avatar.png, a 512 x 512 square made from the logo (D77)",
       "spec": "src/lib/bot/README.md#going-live",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "public/bot-avatar.png exists and is committed: a 512 x 512 PNG made from public/logo.png (1536 x 1024: the rounded-square gradient mark centred on a white background) with the mark centred and the logo's background colour kept (no transparency, no new colour); made with the system `sips` tool in a one-off command, for example `sips -c 1024 1024 public/logo.png --out public/bot-avatar.png` (centre crop to the square) then `sips -z 512 512 public/bot-avatar.png`; the exact commands are named in the progress entry. sharp is not a dependency and no dependency is added",
         "A unit test (src/lib/bot/bot-avatar.test.ts) reads the PNG header of public/bot-avatar.png without a new dependency (the PNG signature, then the IHDR width and height at bytes 16 - 23) and asserts 512 x 512, and that the file is under 200 kB; it passes for any 512 x 512 PNG, so the owner may replace the file with his own",
         "The progress entry's Owner review says the owner may replace public/bot-avatar.png with another 512 x 512 PNG before running `npm run bot:profile` (T115)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D77 (evening of 2026-11-19). The avatar is what T115 sends with setMyProfilePhoto. If the sandbox denies `sips`, block the task with the exact commands for the owner; never add an image dependency for this.\nBlocked: sips is not in the ralph/settings.json allow list and the loop sandbox denies it; the owner runs the two sips commands from the T114 progress entry (or adds Bash(sips *) to the allow list) and unblocks T114; the unit test is written and waits in the ralph-wip T114 stash\nOwner answer: sips allowed in ralph/settings.json; make public/bot-avatar.png as the task says"
     },
     {
