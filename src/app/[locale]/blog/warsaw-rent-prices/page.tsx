@@ -29,6 +29,8 @@ import {
   singleNumberLabelText,
 } from '@/lib/single-number-view';
 import { figureOgCard } from '@/lib/single-number-metadata';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
 import { ArrowRight, Calculator, Plus } from 'lucide-react';
 
 // A data report assembled from the live cost DB. Rendered on demand (not
@@ -63,25 +65,29 @@ const fmt = (n: number) =>
 async function getReport() {
   const city = await getCity();
   if (!city) return null;
-  const [cityFigure, districtFigures, buildings, depositReports] = await Promise.all([
-    loadCityFigure(city.id),
-    loadDistrictFigures(city.id),
-    getBuildingsData(city.id, null, null),
-    // Deposit reality — same definition as the landing hero (`depositClaim`): the
-    // tenant group's median amount and "X of N who answered got it back, fully
-    // or partly", or nothing below MIN_DEPOSIT_ANSWERS answers.
-    prisma.costReport.findMany({
-      where: { building: { cityId: city.id }, isVisible: true },
-      select: {
-        source: true,
-        depositAmount: true,
-        depositReturned: true,
-        depositReturnedAmount: true,
-        isCurrentTenant: true,
-      },
-      take: 5000,
-    }),
-  ]);
+  const [cityFigure, districtFigures, buildings, depositReports, perPersonSplit] =
+    await Promise.all([
+      loadCityFigure(city.id),
+      loadDistrictFigures(city.id),
+      getBuildingsData(city.id, null, null),
+      // Deposit reality — same definition as the landing hero (`depositClaim`): the
+      // tenant group's median amount and "X of N who answered got it back, fully
+      // or partly", or nothing below MIN_DEPOSIT_ANSWERS answers.
+      prisma.costReport.findMany({
+        where: { building: { cityId: city.id }, isVisible: true },
+        select: {
+          source: true,
+          depositAmount: true,
+          depositReturned: true,
+          depositReturnedAmount: true,
+          isCurrentTenant: true,
+        },
+        take: 5000,
+      }),
+      // The callout's per-person line (spec 08 §Per-person line): the bot's Warsaw split; a
+      // rejection or null → no line, the report still renders.
+      loadWarsawPerPersonSplit().catch(() => null),
+    ]);
 
   // The lead's listing-vs-reality example: a real building whose single number is an
   // all-in total with a visible gap to its rent (both from the same group). Most
@@ -109,6 +115,7 @@ async function getReport() {
         }
       : null,
     deposit: depositClaim(depositReports),
+    perPersonSplit,
   };
 }
 
@@ -296,9 +303,16 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
             )}
 
             {/* PRD 4 FR-12: the flatmate callout under the city figure, its own surface so the
-                readout tells it from the guides; no counts (spec 08 §Callout placements). */}
+                readout tells it from the guides; no counts (spec 08 §Callout placements). The
+                per-person line renders here only (spec 08 §Per-person line). */}
             <div className="mt-6">
-              <FlatmateCallout surface="report" />
+              <FlatmateCallout
+                surface="report"
+                split={report.perPersonSplit}
+                splitArea={
+                  report.perPersonSplit ? perPersonSplitArea(report.perPersonSplit, t) : undefined
+                }
+              />
             </div>
 
             {/* Anatomy of the real monthly cost */}

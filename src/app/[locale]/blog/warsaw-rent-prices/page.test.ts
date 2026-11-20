@@ -33,6 +33,8 @@ const state = vi.hoisted(() => ({
   cityFigure: null as SingleNumberFigure | null,
   /** The props of every `FlatmateCallout` the page rendered. */
   callouts: [] as unknown[],
+  /** What `loadWarsawPerPersonSplit` resolves to; an Error rejects. */
+  split: null as unknown,
 }));
 
 vi.mock('next-intl/server', async () => {
@@ -66,6 +68,13 @@ vi.mock('@/lib/cost-aggregates', () => ({ getBuildingsData: vi.fn(async () => []
 vi.mock('@/lib/cost-figures-query', () => ({
   loadCityFigure: vi.fn(async () => state.cityFigure),
   loadDistrictFigures: vi.fn(async () => []),
+}));
+// The split's loader is tested over reports in `src/lib/roommate/per-person-consistency.test.ts`.
+vi.mock('@/lib/roommate/room-costs', () => ({
+  loadWarsawPerPersonSplit: vi.fn(async () => {
+    if (state.split instanceof Error) throw state.split;
+    return state.split;
+  }),
 }));
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) =>
@@ -194,11 +203,13 @@ describe('blog data report: the flatmate callout', () => {
     state.deposits = [];
     state.callouts = [];
     state.cityFigure = CITY_FIGURE;
+    state.split = null;
   });
 
   it('renders FlatmateCallout once with surface "report" and no counts', async () => {
     await renderReport();
-    expect(state.callouts).toEqual([{ surface: 'report' }]);
+    expect(state.callouts).toEqual([{ surface: 'report', split: null, splitArea: undefined }]);
+    expect(Object.keys(state.callouts[0] as object)).not.toContain('counts');
   });
 
   it('sits under the city figure and before the anatomy section', async () => {
@@ -215,7 +226,7 @@ describe('blog data report: the flatmate callout', () => {
     state.cityFigure = null;
     const page = await renderReport();
     expect(page).not.toContain('≈ 4 321 zł');
-    expect(state.callouts).toEqual([{ surface: 'report' }]);
+    expect(state.callouts).toEqual([{ surface: 'report', split: null, splitArea: undefined }]);
     expect(page.indexOf(report('en').anatomyTitle)).toBeGreaterThan(
       page.indexOf('FLATMATE_CALLOUT'),
     );
@@ -227,6 +238,50 @@ describe('blog data report: the flatmate callout', () => {
       'utf8',
     );
     expect(source).not.toContain('loadFlatmateBlockCounts');
-    expect(source).toContain('<FlatmateCallout surface="report" />');
+    expect(source).toMatch(/<FlatmateCallout\s+surface="report"/);
+    expect(source).not.toMatch(/counts=/);
+  });
+});
+
+// PRD 4 FR-13 (spec 08 §Per-person line): the callout carries the bot's Warsaw split; the report
+// renders the line only through the callout.
+describe('blog data report: the per-person line', () => {
+  const SPLIT = { value: 2_450, n: 5, level: 'city', name: 'city.warsaw' };
+
+  beforeEach(() => {
+    state.locale = 'en';
+    state.deposits = [];
+    state.callouts = [];
+    state.cityFigure = CITY_FIGURE;
+  });
+
+  it('passes the split and its own area, named on the server, to the one callout', async () => {
+    state.split = SPLIT;
+    await renderReport();
+    expect(state.callouts).toEqual([{ surface: 'report', split: SPLIT, splitArea: 'Warsaw' }]);
+    state.callouts = [];
+    state.locale = 'pl';
+    await renderReport();
+    expect(state.callouts).toEqual([{ surface: 'report', split: SPLIT, splitArea: 'Warszawa' }]);
+  });
+
+  it('null or a rejection → no split for the callout; the report still renders', async () => {
+    for (const split of [null, new Error('db down')]) {
+      state.split = split;
+      state.callouts = [];
+      const page = await renderReport();
+      expect(state.callouts).toEqual([{ surface: 'report', split: null, splitArea: undefined }]);
+      expect(page).toContain(report('en').anatomyTitle);
+    }
+  });
+
+  it('the split joins the report loads; the page itself words no per-person line', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/app/[locale]/blog/warsaw-rent-prices/page.tsx'),
+      'utf8',
+    );
+    expect(source).toMatch(/Promise\.all\(\[[\s\S]*loadWarsawPerPersonSplit\(\)[\s\S]*\]\)/);
+    expect(source).not.toContain("perPerson'");
+    expect(source).not.toContain('flatmateCallout.perPerson');
   });
 });

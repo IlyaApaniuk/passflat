@@ -403,7 +403,8 @@
     "flatmateCallout": {
       "homeTitle": "Passflat helps people in Warsaw find someone to rent with and see what it costs per person",
       "title": "Looking for someone to rent with in Warsaw?",
-      "roommateLink": "See the figures per person and the profiles"
+      "roommateLink": "See the figures per person and the profiles",
+      "perPerson": "For two people about {value} each (half of the median flat, {count} tenant reports, {area})."
     },
     "roomMoney": {
       "title": "Found a room? What it will cost you per person, and is it safe to pay the deposit?",

@@ -12,9 +12,11 @@ import {
   getCityWithDistricts,
 } from '@/lib/listings-query';
 import type { CityBounds } from '@/lib/listings-data';
-import { canLoadFlatmateCounts } from '@/lib/roommate/flatmate-block';
+import { canLoadFlatmateCounts, pageHasFlatmateBlock } from '@/lib/roommate/flatmate-block';
 import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { loadRoomMoneyReference, pageHasRoomMoneyBlock } from '@/lib/roommate/room-money';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
 import type { RoomMoneyFigures } from '@/components/listings/room-money-block';
 
 interface PageProps {
@@ -55,22 +57,27 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   // empty city (spec 02 §Empty states). The "Looking for someone to rent with" block's counts
   // (spec 02 §Find a flatmate) are loaded only with a bot to join (the block itself renders
   // without them, spec 08 §Roommate page default view), and the room money block's city room
-  // reference (spec 02 §Room money block) only where that block can show.
-  const [listings, cityOfferCount, flatmateCounts, roomReference] = await Promise.all([
-    queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
-    countCityListings({ cityId: city.id, type: 'roommate' }),
-    canLoadFlatmateCounts(citySlug) ? loadFlatmateBlockCounts() : undefined,
-    pageHasRoomMoneyBlock(citySlug) ? loadRoomMoneyReference(city.id) : undefined,
-  ]);
+  // reference (spec 02 §Room money block) only where that block can show. The flatmate block's
+  // per-person line (spec 08 §Per-person line) is the bot's Warsaw split, on the block's page.
+  const [listings, cityOfferCount, flatmateCounts, roomReference, perPersonSplit] =
+    await Promise.all([
+      queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
+      countCityListings({ cityId: city.id, type: 'roommate' }),
+      canLoadFlatmateCounts(citySlug) ? loadFlatmateBlockCounts() : undefined,
+      pageHasRoomMoneyBlock(citySlug) ? loadRoomMoneyReference(city.id) : undefined,
+      pageHasFlatmateBlock(citySlug) ? loadWarsawPerPersonSplit().catch(() => null) : null,
+    ]);
   const serialized = listings.map(serializeListing);
 
   // Absent → no block; null → the block without its figures line. The reference's name is the
-  // city's `nameKey`, rendered here because the `city` namespace never reaches the client.
-  let roomMoney: RoomMoneyFigures | null | undefined;
-  if (roomReference !== undefined) {
-    const t = await getTranslations();
-    roomMoney = roomReference && { reference: roomReference, areaName: t(roomReference.name) };
-  }
+  // city's `nameKey`, rendered here because the `city` namespace never reaches the client; so
+  // is the split's own area.
+  const t = await getTranslations();
+  const roomMoney: RoomMoneyFigures | null | undefined =
+    roomReference === undefined
+      ? undefined
+      : roomReference && { reference: roomReference, areaName: t(roomReference.name) };
+  const perPersonArea = perPersonSplit ? perPersonSplitArea(perPersonSplit, t) : undefined;
 
   const districts = city.districts.map((d) => ({
     slug: d.slug,
@@ -94,6 +101,8 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
       cityOfferCount={cityOfferCount}
       flatmateCounts={flatmateCounts}
       roomMoney={roomMoney}
+      perPersonSplit={perPersonSplit}
+      perPersonArea={perPersonArea}
       isLoggedIn={!!user}
     />
   );

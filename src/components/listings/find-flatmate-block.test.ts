@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
+import type { PerPersonSplit } from '@/lib/roommate/room-costs';
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -35,8 +36,12 @@ vi.mock('next-intl', async (importOriginal) => {
         locale: state.locale,
         messages: messages[state.locale] as never,
         namespace: namespace as never,
+        onError: (error) => {
+          throw error;
+        },
       });
     },
+    useLocale: () => state.locale,
   };
 });
 vi.mock('posthog-js/react', () => ({ usePostHog: () => ({ capture }) }));
@@ -290,6 +295,91 @@ describe('FindFlatmateBlock', () => {
   it('reads only the listings namespace', () => {
     text(COUNTS);
     expect(namespaces.length).toBeGreaterThan(0);
-    expect(new Set(namespaces)).toEqual(new Set(['listings.findFlatmate']));
+    expect(new Set(namespaces)).toEqual(
+      new Set(['listings.findFlatmate', 'listings.flatmateCallout']),
+    );
+  });
+});
+
+describe('FindFlatmateBlock: the per-person line (spec 08 §Per-person line, PRD 4 FR-13)', () => {
+  /** PRD 4 §5 example 1 as `loadWarsawPerPersonSplit` returns it. */
+  const SPLIT: PerPersonSplit = { value: 2_450, n: 5, level: 'city', name: 'city.warsaw' };
+
+  // No default parameters: an explicit `undefined` must reach the block.
+  function withSplit(
+    locale: Locale,
+    split: PerPersonSplit | null | undefined,
+    splitArea: string | undefined,
+  ): string {
+    state.locale = locale;
+    const html = renderToStaticMarkup(
+      createElement(FindFlatmateBlock, { counts: COUNTS, districts: DISTRICTS, split, splitArea }),
+    );
+    return html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('EN: the bot sentence right under the title, before the count line', () => {
+    expect(withSplit('en', SPLIT, 'Warsaw')).toMatch(
+      /^Looking for someone to rent with\? For two people about 2,450 zł each \(half of the median flat, 5 tenant reports, Warsaw\)\. 7 people in Warsaw already have a profile\./,
+    );
+  });
+
+  it.each<[Locale, string, RegExp]>([
+    [
+      'pl',
+      'Warszawa',
+      /Na dwie osoby — około 2450 zł na osobę \(połowa mediany całych mieszkań, Warszawa; zgłoszenia najemców: 5\)\./,
+    ],
+    [
+      'ru',
+      'Варшава',
+      /На двоих — примерно по 2\s450 zł с человека \(половина медианы по целым квартирам, Варшава; отчёты жильцов: 5\)\./,
+    ],
+    [
+      'uk',
+      'Варшава',
+      /Удвох — приблизно по 2\s450 zł з людини \(половина медіани за цілими квартирами, Варшава; звіти мешканців: 5\)\./,
+    ],
+  ])('%s: the sentence with the area the server resolved', (locale, area, sentence) => {
+    expect(withSplit(locale, SPLIT, area)).toMatch(sentence);
+  });
+
+  it('no split, a null split or no area name → no line; the rest of the block is unchanged', () => {
+    const without = text(COUNTS);
+    for (const [split, area] of [
+      [undefined, 'Warsaw'],
+      [null, 'Warsaw'],
+      [SPLIT, undefined],
+    ] as const) {
+      const rendered = withSplit('en', split, area);
+      expect(rendered).not.toContain('For two people');
+      expect(rendered).toBe(without);
+    }
+  });
+
+  it('shows without the bot username too (a cost figure, not a bot feature), once', () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    const rendered = withSplit('en', SPLIT, 'Warsaw');
+    expect(rendered.match(/For two people/g)).toHaveLength(1);
+    expect(rendered).toContain('The Telegram bot is not connected yet.');
+  });
+
+  it('never a percentage, "market", "cheaper" or an asking price', () => {
+    for (const locale of LOCALES) {
+      const line = withSplit(locale, SPLIT, 'Warsaw');
+      expect(line).not.toMatch(/%|market|cheaper|rynk|taniej|рыноч|дешевл|ринков|дешевш/i);
+      expect(line).not.toMatch(/asking|объявлен|оголошен|ogłosze/i);
+    }
   });
 });

@@ -165,6 +165,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A page that renders the async `FlatmateCallout` cannot go through `renderToStaticMarkup` whole: mock `@/components/roommate/flatmate-callout` (as `area-figures-consistency.test.ts` does for the hub), or find the element and render `await FlatmateCallout(element.props)` (example: `src/app/[locale]/[city]/hub-callout.test.ts`).
 - A nested `NextIntlClientProvider` with `messages` replaces the layout's messages (no merge): a scoped client tree sees only its own namespaces. Prove a tree under it by mocking `useTranslations` over the provider's `messages` prop with `onError` throwing (example: `src/app/[locale]/[city]/calculator/flatmate-callout-placement.test.ts`).
 - The real `BuildingCostsClient` renders in Vitest (state `building` from `summarizeFigures` over two `user` reports) with `next-intl` (`useTranslations`, `useLocale`), `posthog-js/react`, `@/i18n/navigation`, `Footer`, `ShareButton`, `FollowBuildingButton`, `LocationScore` and `TenantTags` mocked (example: `building/[slug]/flatmate-callout-placement.test.ts`).
+- The per-person line is `loadWarsawPerPersonSplit` (`room-costs.ts`) + `perPersonLineValues` / `perPersonSplitArea` / `perPersonAmount` (`per-person-line.ts`); `FlatmateCallout` calls `getLocale()` only when it has a split, so a test that passes one mocks `getLocale` in `next-intl/server`, and `FindFlatmateBlock` tests mock `useLocale`.
+- A test helper with default parameters turns an explicit `undefined` argument into the default: when a test checks an absent prop, the helper takes every argument without defaults.
 
 ## Log
 
@@ -4139,3 +4141,79 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_guide' | 'flatmate_callout_report'}` and `telegram_bot_opened {source: 'guide' | 'report'}` (payloads `mate_web_guide` / `mate_web_report`).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next` (T129 adds the per-person line to the report callout).
+
+### 2026-11-20 09:05 · T129 · done
+
+- Done (PRD 4 FR-13, spec 08 §Per-person line):
+  - `src/lib/roommate/room-costs.ts`: new `loadWarsawPerPersonSplit()`. It reads the Warsaw row by slug (`LOCATION_CHECKER_CITY_SLUG`), selecting `id` and `districts { id, slug, nameKey }`, and returns `loadRoomCostAreas(city, [])[0]?.split ?? null`. A missing row → null; any error → null, logging only `error.message` (`[roommate] per-person split failed`). It adds no aggregation: the split comes from the bot's own loader and `perPersonSplit` (D61, D71).
+  - New pure `src/lib/roommate/per-person-line.ts`:
+    - `perPersonLineValues(split, areaName)` → `{ value, count, area } | null`; null without a split or an area name.
+    - `perPersonSplitArea(split, translate)`: a district's `nameKey` as is, the city's through the server translator.
+    - `perPersonAmount(value, locale)` → `value.toLocaleString(locale) + ' zł'`.
+    - It imports only the `PerPersonSplit` type, so client components can import it.
+  - `FlatmateCallout` (server) gains `split?` and `splitArea?`. The line renders right under the h2; `getLocale()` is called only when there is a line. `FindFlatmateBlock` (client) gains the same two props and renders the line under its title, before the count line. It does so also without the bot username: it is a cost figure, not a bot feature. It reads `listings.flatmateCallout` through a second scoped translator (flat keys) and `useLocale()`.
+  - Each page adds the loader to its existing parallel load and resolves the area on the server:
+    - roommate page (`Promise.all`, only where `pageHasFlatmateBlock`, `.catch(() => null)`; `ListingsPageClient` gets `perPersonSplit` + `perPersonArea` and passes them to the block);
+    - home (`HomeContent`'s `allSettled`; a rejection → null);
+    - hub (`Promise.all`, `.catch(() => null)`);
+    - data report (`getReport`'s `Promise.all`, `.catch(() => null)`; only the callout renders the line).
+    - One line per page.
+  - Copy: the new key `listings.flatmateCallout.perPerson` in four locales; it joins `REWRITTEN_KEYS` in `honesty-copy.test.ts`.
+  - `docs/specs/README.md` PRD 4 map: FR-13 → Done.
+- Tests:
+  - New `src/lib/roommate/per-person-consistency.test.ts`, over one Prisma mock that applies `rentalType`, `rooms: { gte }` and the city filter:
+    - PRD 4 §5 golden cases through `loadWarsawPerPersonSplit` + `perPersonLineValues`: example 1 → `{ value: 2450, count: 5, area: 'Warsaw' }`, example 2 → null, example 3 → null.
+    - The Warsaw read is by slug with districts; the D71 `where` is checked; a missing row or a rejection → null, with only the message logged.
+    - For all three examples, `perPersonSplit(loadAreaReference(... minRooms 2))` + the helper, the website loader, and the bot's `roomCostsReply({ anyDistrict: true }, 'en')` (its `roomSplit` line parsed back) agree on value, N and area.
+  - New `per-person-line.test.ts`: the pure helper's null cases, area resolution, and the amount per locale (en "2,450 zł", pl "2450 zł", ru/uk "2 450 zł").
+  - `find-flatmate-block.test.ts`: the `next-intl` mock gains `useLocale` and an `onError` throw. New cases:
+    - EN line under the title, before the count;
+    - PL/RU/UK sentences;
+    - null, undefined or no area → the block is byte-identical to before;
+    - shown without the username, once;
+    - no %, "market", "cheaper" or asking-price words in four locales.
+    - The namespace test now expects `listings.findFlatmate` + `listings.flatmateCallout`.
+  - `flatmate-callout.test.ts`:
+    - its `next-intl/server` mock gains `getLocale`;
+    - the line under each title on home, hub and report, once;
+    - the four locales;
+    - null, undefined or no area → identical markup;
+    - no forbidden words;
+    - still only the `listings` namespace; the client links get no new prop.
+  - Page tests:
+    - `home-thesis.test.ts`, `hub-callout.test.ts`, `roommate/page.test.ts` and `warsaw-rent-prices/page.test.ts` mock `@/lib/roommate/room-costs`.
+    - Each asserts the new props (`split: null, splitArea: undefined` by default) and the resolved split → area "Warsaw" (report: "Warszawa" in pl; roommate page: a district split keeps "Mokotów").
+    - A rejection → no line and the rest still renders; another city on the roommate page → no load.
+    - Hub and report source scans check that the loader sits in the existing `Promise.all`.
+- Checks:
+  - Focused Vitest (`src/app`, `src/components/listings`, `src/components/roommate`, `src/lib/roommate`, bot room costs, `src/i18n`, area consistency): 58 files / 1045 passed after two fixes (below).
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 157 files / 3352 tests;
+    - build OK. `/[locale]` stays `● 5m`; the roommate page, hub and report are `ƒ` as before.
+  - `npm run test:e2e` exit 0: 13 passed. The e2e server logs `[roommate] per-person split failed` with Prisma's "can't reach database" message, as it already does for the website counts: there is no database in e2e, so the home page renders without the line.
+  - `next-env.d.ts` restored.
+  - No page was looked at in a browser with data; the render tests are the proof. Nothing deployed, no migration, no event, no message sent.
+- Did not work: two new "no line" tests first passed `undefined` into helpers with default parameters, so the default split was used; the helpers now take every argument explicitly.
+- Owner review:
+  - **Draft copy (agent copy, D29):** `listings.flatmateCallout.perPerson`, new:
+    - en "For two people about {value} each (half of the median flat, {count} tenant reports, {area})." (the bot's `roomSplit` verbatim)
+    - pl "Na dwie osoby — około {value} na osobę (połowa mediany całych mieszkań, {area}; zgłoszenia najemców: {count})." (spec 08)
+    - ru «На двоих — примерно по {value} с человека (половина медианы по целым квартирам, {area}; отчёты жильцов: {count}).» (the bot verbatim)
+    - uk «Удвох — приблизно по {value} з людини (половина медіани за цілими квартирами, {area}; звіти мешканців: {count}).» (the bot verbatim)
+    - No other key changed.
+  - **Namespaces and providers:**
+    - `FlatmateCallout` reads `listings` on the server (`getTranslations('listings')`) and `getLocale()`.
+    - `FindFlatmateBlock` (client, roommate page) reads `listings.findFlatmate` and `listings.flatmateCallout`. Both are in `SHARED_CLIENT_NAMESPACES` from the locale layout's provider, with no scoped provider on that route; `client-namespaces.test.ts` passes.
+    - `FlatmateCalloutLinks` gets no new prop and reads no namespace.
+    - The area name (`city.warsaw`) is resolved on each server page; no client component reads a `city.*` key.
+  - **Assumptions applied (spec 08, FR-13 surfaces):**
+    - The line shows on the roommate block, the home section, the hub callout and the data report callout. The district callout is spec 09 (T148).
+    - Placement: under the h2 in both components.
+  - **Agent's choices:**
+    - Amount format: `toLocaleString(<page locale>)` + " zł" ("2,450 zł" en, "2450 zł" pl, "2 450 zł" ru/uk). This is the room money block's `toLocaleString`, but with an explicit locale so the server and the browser agree. The bot always writes "2 450 zł".
+    - The block's line shows without the bot username.
+    - The hub serves every city, but the split is always Warsaw's, like the callout's Warsaw copy (T126 noted the same for the callout).
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.

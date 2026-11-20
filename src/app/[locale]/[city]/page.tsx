@@ -16,6 +16,8 @@ import { ShareButton } from '@/components/costs/share-button';
 import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
 import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
 import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
@@ -74,12 +76,15 @@ export default async function CityCostsHub({ params }: PageProps) {
   // tenant group, else its asking prices, over the district's reports, labelled with
   // the group and N, the value `loadAreaReference` gives the district.
   // The flatmate callout's profile count (PRD 4 FR-11), cached for an hour like the page; a
-  // rejected load renders the callout without a count line.
-  const [districtFigures, flatmateCounts] = await Promise.all([
+  // rejected load renders the callout without a count line. Its per-person line (spec 08
+  // §Per-person line) is the bot's Warsaw split; a rejection or null → no line.
+  const [districtFigures, flatmateCounts, split] = await Promise.all([
     loadDistrictFigures(cityRec.id),
     loadFlatmateBlockCounts().catch(() => undefined),
+    loadWarsawPerPersonSplit().catch(() => null),
   ]);
   const districts = areasWithFigure(districtFigures);
+  const splitArea = split ? perPersonSplitArea(split, t) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -115,7 +120,12 @@ export default async function CityCostsHub({ params }: PageProps) {
             </div>
 
             <div className="mt-8">
-              <FlatmateCallout surface="hub" counts={flatmateCounts} />
+              <FlatmateCallout
+                surface="hub"
+                counts={flatmateCounts}
+                split={split}
+                splitArea={splitArea}
+              />
             </div>
 
             <h2 className="mt-10 text-xl font-semibold">{t('costsSeo.districtsHeading')}</h2>

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FLATMATE_SURFACES, type FlatmateSurface } from '@/lib/analytics/telegram-events';
 import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
+import type { PerPersonSplit } from '@/lib/roommate/room-costs';
 
 // PRD 4 FR-8 (spec 08 §Flatmate callout): the shared callout, rendered with the real locale files.
 
@@ -38,6 +39,7 @@ vi.mock('next-intl', async (importOriginal) => ({
 vi.mock('next-intl/server', async () => {
   const { createTranslator } = await import('next-intl');
   return {
+    getLocale: async () => state.locale,
     // A missing key throws instead of rendering its path.
     getTranslations: async (namespace?: string) => {
       namespaces.push(namespace);
@@ -275,6 +277,91 @@ describe('FlatmateCallout', () => {
       'utf8',
     );
     expect(source).not.toMatch(/from 'next-intl/);
+  });
+
+  describe('the per-person line (spec 08 §Per-person line, PRD 4 FR-13)', () => {
+    /** PRD 4 §5 example 1 as `loadWarsawPerPersonSplit` returns it. */
+    const SPLIT: PerPersonSplit = { value: 2_450, n: 5, level: 'city', name: 'city.warsaw' };
+
+    // No default parameters: an explicit `undefined` must reach the callout.
+    async function withSplit(
+      surface: FlatmateSurface,
+      locale: Locale,
+      split: PerPersonSplit | null | undefined,
+      splitArea: string | undefined,
+    ): Promise<string> {
+      state.locale = locale;
+      return renderToStaticMarkup(
+        await FlatmateCallout({ surface, counts: COUNTS, split, splitArea }),
+      );
+    }
+
+    it.each(['home', 'hub', 'report'] as const)(
+      '%s in EN: the bot sentence under the title, once',
+      async (surface) => {
+        const rendered = text(await withSplit(surface, 'en', SPLIT, 'Warsaw'));
+        const title = text(
+          at('en', `listings.flatmateCallout.${surface === 'home' ? 'homeTitle' : 'title'}`) ?? '',
+        );
+        expect(
+          rendered.startsWith(
+            `${title} For two people about 2,450 zł each (half of the median flat, 5 tenant reports, Warsaw). `,
+          ),
+        ).toBe(true);
+        expect(rendered.match(/For two people/g)).toHaveLength(1);
+        expect(rendered).toContain('7 people in Warsaw already have a profile.');
+      },
+    );
+
+    it.each<[Locale, string, RegExp]>([
+      [
+        'pl',
+        'Warszawa',
+        /Na dwie osoby — około 2450 zł na osobę \(połowa mediany całych mieszkań, Warszawa; zgłoszenia najemców: 5\)\./,
+      ],
+      [
+        'ru',
+        'Варшава',
+        /На двоих — примерно по 2\s450 zł с человека \(половина медианы по целым квартирам, Варшава; отчёты жильцов: 5\)\./,
+      ],
+      [
+        'uk',
+        'Варшава',
+        /Удвох — приблизно по 2\s450 zł з людини \(половина медіани за цілими квартирами, Варшава; звіти мешканців: 5\)\./,
+      ],
+    ])('%s: the sentence in the page locale', async (locale, area, sentence) => {
+      expect(text(await withSplit('hub', locale, SPLIT, area))).toMatch(sentence);
+    });
+
+    it('no split, a null split or no area name → no line; nothing else changes', async () => {
+      state.locale = 'en';
+      const without = renderToStaticMarkup(
+        await FlatmateCallout({ surface: 'hub', counts: COUNTS }),
+      );
+      for (const [split, area] of [
+        [undefined, 'Warsaw'],
+        [null, 'Warsaw'],
+        [SPLIT, undefined],
+      ] as const) {
+        expect(await withSplit('hub', 'en', split, area)).toBe(without);
+      }
+    });
+
+    it('never a percentage, "market", "cheaper" or an asking price, in any locale', async () => {
+      for (const locale of LOCALES) {
+        const rendered = text(await withSplit('report', locale, SPLIT, 'Warsaw'));
+        expect(rendered).not.toMatch(/%|market|cheaper|rynk|taniej|рыноч|дешевл|ринков|дешевш/i);
+        expect(rendered).not.toMatch(/asking|объявлен|оголошен|ogłosze/i);
+      }
+    });
+
+    it('the line needs no other namespace and reaches the client links as nothing', async () => {
+      state.locale = 'en';
+      const tree = await FlatmateCallout({ surface: 'report', split: SPLIT, splitArea: 'Warsaw' });
+      expect(namespaces).toEqual(['listings']);
+      const links = findElement(tree, FlatmateCalloutLinks)?.props as LinksProps;
+      expect(Object.keys(links).sort()).toEqual(['bot', 'placement', 'roommateLabel', 'surface']);
+    });
   });
 
   describe.each(FLATMATE_SURFACES)('clicks on %s', (surface) => {

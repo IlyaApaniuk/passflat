@@ -281,7 +281,7 @@
       "title": "The per-person line on the roommate block, the home section, the hub and the data report (FR-13)",
       "spec": "docs/specs/08-site-structure-and-entries.md#per-person-line",
       "dependsOn": ["T118", "T123", "T126", "T128"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/roommate/room-costs.ts gains loadWarsawPerPersonSplit(): it reads the Warsaw city row with its districts (id, slug, nameKey) by slug, returns the city entry's split from loadRoomCostAreas(city, []) and catches every error → null; no new aggregation (D71: apartments with 2+ rooms, tenant group, N ≥ 2, all-in median halved)",
         "One key listings.flatmateCallout.perPerson with {value}, {count} and {area}: EN, RU and UK = the bot's roomSplit sentences verbatim, PL from spec 08 §Per-person line; the key joins REWRITTEN_KEYS and passes",
@@ -292,7 +292,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D61, D71: the rule is the bot's, unchanged. The website surfaces are an Assumption under the thesis (D48: per-person figures from the figure contract), listed for the owner in decision review row 12. CLAUDE.md cost data honesty: no second aggregation."
     },
     {

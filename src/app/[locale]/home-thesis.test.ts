@@ -13,13 +13,17 @@ const en = JSON.parse(
   readFileSync(join(process.cwd(), 'src/i18n/messages/en.json'), 'utf8'),
 ) as Record<string, unknown>;
 
-const { loadFlatmateBlockCounts } = vi.hoisted(() => ({ loadFlatmateBlockCounts: vi.fn() }));
+const { loadFlatmateBlockCounts, loadWarsawPerPersonSplit } = vi.hoisted(() => ({
+  loadFlatmateBlockCounts: vi.fn(),
+  loadWarsawPerPersonSplit: vi.fn(),
+}));
 
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('next-intl/server', async () => {
   const { createTranslator } = await import('next-intl');
   return {
     setRequestLocale: vi.fn(),
+    getLocale: async () => 'en',
     getTranslations: async (namespace?: string) =>
       createTranslator({
         locale: 'en',
@@ -45,6 +49,7 @@ vi.mock('@/lib/home-figures', () => ({
   }),
 }));
 vi.mock('@/lib/roommate/website-counts', () => ({ loadFlatmateBlockCounts }));
+vi.mock('@/lib/roommate/room-costs', () => ({ loadWarsawPerPersonSplit }));
 vi.mock('posthog-js/react', () => ({ usePostHog: () => undefined }));
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) =>
@@ -108,6 +113,8 @@ async function homeContent(): Promise<ReactElement> {
 describe('home thesis section (FR-9)', () => {
   beforeEach(() => {
     loadFlatmateBlockCounts.mockReset();
+    loadWarsawPerPersonSplit.mockReset();
+    loadWarsawPerPersonSplit.mockResolvedValue(null);
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
   });
 
@@ -124,8 +131,14 @@ describe('home thesis section (FR-9)', () => {
     expect(order.filter((type) => type === FlatmateCallout)).toHaveLength(1);
 
     const callout = findElement(main, (element) => element.type === FlatmateCallout);
-    expect(callout?.props).toEqual({ surface: 'home', counts: COUNTS });
+    expect(callout?.props).toEqual({
+      surface: 'home',
+      counts: COUNTS,
+      split: null,
+      splitArea: undefined,
+    });
     expect(loadFlatmateBlockCounts).toHaveBeenCalledTimes(1);
+    expect(loadWarsawPerPersonSplit).toHaveBeenCalledTimes(1);
   });
 
   it('counts resolved: the thesis h2 and the count line', async () => {
@@ -143,7 +156,12 @@ describe('home thesis section (FR-9)', () => {
     loadFlatmateBlockCounts.mockRejectedValue(new Error('db down'));
     const { FlatmateCallout } = await import('@/components/roommate/flatmate-callout');
     const callout = findElement(await homeContent(), (element) => element.type === FlatmateCallout);
-    expect(callout?.props).toEqual({ surface: 'home', counts: undefined });
+    expect(callout?.props).toEqual({
+      surface: 'home',
+      counts: undefined,
+      split: null,
+      splitArea: undefined,
+    });
 
     const html = renderToStaticMarkup(
       await FlatmateCallout(callout?.props as Parameters<typeof FlatmateCallout>[0]),
@@ -153,5 +171,47 @@ describe('home thesis section (FR-9)', () => {
     expect(html).not.toContain('Be among the first');
     expect(html).toContain('href="/warsaw/roommate"');
     expect(html).not.toContain('t.me');
+  });
+});
+
+describe('home thesis section: the per-person line (spec 08 §Per-person line, FR-13)', () => {
+  beforeEach(() => {
+    loadFlatmateBlockCounts.mockReset();
+    loadFlatmateBlockCounts.mockResolvedValue(COUNTS);
+    loadWarsawPerPersonSplit.mockReset();
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+  });
+
+  async function calloutHtml(): Promise<{ props: Record<string, unknown>; html: string }> {
+    const { FlatmateCallout } = await import('@/components/roommate/flatmate-callout');
+    const callout = findElement(await homeContent(), (element) => element.type === FlatmateCallout);
+    const props = callout?.props as Parameters<typeof FlatmateCallout>[0];
+    return { props, html: renderToStaticMarkup(await FlatmateCallout(props)) };
+  }
+
+  it('the split joins the allSettled: the line under the thesis title, area named on the server', async () => {
+    loadWarsawPerPersonSplit.mockResolvedValue({
+      value: 2_450,
+      n: 5,
+      level: 'city',
+      name: 'city.warsaw',
+    });
+    const { props, html } = await calloutHtml();
+    expect(props).toMatchObject({ splitArea: 'Warsaw' });
+    expect(html).toContain(
+      'For two people about 2,450 zł each (half of the median flat, 5 tenant reports, Warsaw).',
+    );
+    expect(html.match(/For two people/g)).toHaveLength(1);
+  });
+
+  it.each([
+    ['a null split', () => loadWarsawPerPersonSplit.mockResolvedValue(null)],
+    ['a rejected split', () => loadWarsawPerPersonSplit.mockRejectedValue(new Error('db down'))],
+  ])('%s → no line; the section and its count still render', async (_label, arrange) => {
+    arrange();
+    const { props, html } = await calloutHtml();
+    expect(props).toMatchObject({ split: null, splitArea: undefined });
+    expect(html).not.toContain('For two people');
+    expect(html).toContain('7 people in Warsaw already have a profile.');
   });
 });

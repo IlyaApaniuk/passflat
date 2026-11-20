@@ -20,6 +20,7 @@ import { FindFlatmateBlock } from '@/components/listings/find-flatmate-block';
 import { RoomMoneyBlock, type RoomMoneyFigures } from '@/components/listings/room-money-block';
 import { ListingsPageSkeleton } from '@/components/listings/listings-page-skeleton';
 import { MapSkeleton } from '@/components/map/map-skeleton';
+import type { PerPersonSplit } from '@/lib/roommate/room-costs';
 // Isomorphic (no 'use client', the non-async `useTranslations`), imported directly as the
 // building client does (spec 08 §Current state).
 import { Footer } from '@/components/landing/footer';
@@ -76,6 +77,12 @@ interface Props {
    * never shows the block; null shows the block without its figures line.
    */
   roomMoney?: RoomMoneyFigures | null;
+  /**
+   * `/warsaw/roommate` only (spec 08 §Per-person line): the bot's Warsaw split and its own
+   * area's name, resolved on the server; absent or null → the flatmate block has no such line.
+   */
+  perPersonSplit?: PerPersonSplit | null;
+  perPersonArea?: string;
   isLoggedIn?: boolean;
 }
 
@@ -96,6 +103,8 @@ function ListingsPageInner({
   cityOfferCount,
   flatmateCounts,
   roomMoney,
+  perPersonSplit,
+  perPersonArea,
   isLoggedIn = false,
 }: Props) {
   const t = useTranslations();
@@ -412,7 +421,12 @@ function ListingsPageInner({
                 {/* Spec 08 §Roommate page default view: first in the scrolling list, so it
                     scrolls with the list; the list stays rendered below. */}
                 {layout.showFlatmateBlock && (
-                  <FindFlatmateBlock counts={flatmateCounts} districts={districts} />
+                  <FindFlatmateBlock
+                    counts={flatmateCounts}
+                    districts={districts}
+                    split={perPersonSplit}
+                    splitArea={perPersonArea}
+                  />
                 )}
                 {/* Spec 02 §Room money block: "I'm looking for a room" or no offer in the city. */}
                 {showRoomMoney && (

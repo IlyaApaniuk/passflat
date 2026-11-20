@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getAlternates } from '@/lib/seo';
 import { Hero } from '@/components/landing/hero';
 import { CheckAddress } from '@/components/landing/check-address';
@@ -18,6 +18,8 @@ import { LandingContent } from '@/components/landing/landing-content';
 import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { prisma } from '@/lib/prisma';
 import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
+import { loadWarsawPerPersonSplit } from '@/lib/roommate/room-costs';
+import { perPersonSplitArea } from '@/lib/roommate/per-person-line';
 import { depositClaim } from '@/lib/deposit-claim';
 import {
   loadFeaturedBuilding,
@@ -152,18 +154,24 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [statsResult, costResult, districtResult, flatmateResult] = await Promise.allSettled([
-    getStatsCached(),
-    getTopBuildingCostDataCached(),
-    getDistrictMediansCached(),
-    loadFlatmateBlockCounts(),
-  ]);
+  const [statsResult, costResult, districtResult, flatmateResult, splitResult] =
+    await Promise.allSettled([
+      getStatsCached(),
+      getTopBuildingCostDataCached(),
+      getDistrictMediansCached(),
+      loadFlatmateBlockCounts(),
+      loadWarsawPerPersonSplit(),
+    ]);
 
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
   const districtMedians = districtResult.status === 'fulfilled' ? districtResult.value : [];
   // A rejection → no count line; the thesis section still renders with its links.
   const flatmateCounts = flatmateResult.status === 'fulfilled' ? flatmateResult.value : undefined;
+  // Spec 08 §Per-person line: a rejection or null → no per-person line. The split's own area
+  // is a city `nameKey`, resolved here on the server.
+  const split = splitResult.status === 'fulfilled' ? splitResult.value : null;
+  const splitArea = split ? perPersonSplitArea(split, await getTranslations()) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -175,7 +183,12 @@ async function HomeContent() {
           <Hero stats={heroStats} />
           {/* The thesis right under the hero (PRD 4 FR-9, D48). */}
           <div className="container mx-auto max-w-3xl px-4 pt-12 sm:px-6 sm:pt-16">
-            <FlatmateCallout surface="home" counts={flatmateCounts} />
+            <FlatmateCallout
+              surface="home"
+              counts={flatmateCounts}
+              split={split}
+              splitArea={splitArea}
+            />
           </div>
           <CheckAddress citySlug={DEFAULT_CITY} />
           <Districts medians={districtMedians} />

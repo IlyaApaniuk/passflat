@@ -1,6 +1,8 @@
 import { groupFigureRows } from '@/lib/building-figures-view';
 import type { AreaReference } from '@/lib/cost-figures';
 import { loadAreaReference } from '@/lib/cost-figures-query';
+import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
+import { prisma } from '@/lib/prisma';
 
 /**
  * The room cost reference next to the roommate counts (PRD 3 FR-17, spec 06 §Room cost
@@ -119,4 +121,28 @@ export async function loadRoomCostAreas(
       };
     }),
   );
+}
+
+/**
+ * The website's per-person line for Warsaw (spec 08 §Per-person line, PRD 4 FR-13): the split
+ * of the bot's "any district" reference (`loadRoomCostAreas(city, [])`), so the site and the bot
+ * show the same value and N and no second aggregation exists. Null when Warsaw is missing, the
+ * rule has no figure, or anything fails (only the error's message is logged).
+ */
+export async function loadWarsawPerPersonSplit(): Promise<PerPersonSplit | null> {
+  try {
+    const city = await prisma.city.findUnique({
+      where: { slug: LOCATION_CHECKER_CITY_SLUG },
+      select: { id: true, districts: { select: { id: true, slug: true, nameKey: true } } },
+    });
+    if (!city) return null;
+    const [area] = await loadRoomCostAreas(city, []);
+    return area?.split ?? null;
+  } catch (error) {
+    console.error(
+      '[roommate] per-person split failed',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    return null;
+  }
 }

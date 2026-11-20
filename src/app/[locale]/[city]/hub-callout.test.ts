@@ -15,7 +15,10 @@ const en = JSON.parse(
   readFileSync(join(process.cwd(), 'src/i18n/messages/en.json'), 'utf8'),
 ) as Record<string, Record<string, string>>;
 
-const { loadFlatmateBlockCounts } = vi.hoisted(() => ({ loadFlatmateBlockCounts: vi.fn() }));
+const { loadFlatmateBlockCounts, loadWarsawPerPersonSplit } = vi.hoisted(() => ({
+  loadFlatmateBlockCounts: vi.fn(),
+  loadWarsawPerPersonSplit: vi.fn(),
+}));
 
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('@/lib/prisma', () => ({
@@ -30,6 +33,7 @@ vi.mock('@/lib/cost-figures-query', () => ({
   loadCityFigure: async () => null,
 }));
 vi.mock('@/lib/roommate/website-counts', () => ({ loadFlatmateBlockCounts }));
+vi.mock('@/lib/roommate/room-costs', () => ({ loadWarsawPerPersonSplit }));
 vi.mock('next-intl/server', async () => {
   const { createTranslator } = await import('next-intl');
   return {
@@ -89,6 +93,8 @@ async function renderCallout(all: ReactElement[]): Promise<string> {
 describe('city hub flatmate callout (FR-11)', () => {
   beforeEach(() => {
     loadFlatmateBlockCounts.mockReset();
+    loadWarsawPerPersonSplit.mockReset();
+    loadWarsawPerPersonSplit.mockResolvedValue(null);
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
   });
 
@@ -97,8 +103,14 @@ describe('city hub flatmate callout (FR-11)', () => {
     const all = await hub();
     const callouts = all.filter((element) => element.type === FlatmateCallout);
     expect(callouts).toHaveLength(1);
-    expect(callouts[0].props).toEqual({ surface: 'hub', counts: COUNTS });
+    expect(callouts[0].props).toEqual({
+      surface: 'hub',
+      counts: COUNTS,
+      split: null,
+      splitArea: undefined,
+    });
     expect(loadFlatmateBlockCounts).toHaveBeenCalledTimes(1);
+    expect(loadWarsawPerPersonSplit).toHaveBeenCalledTimes(1);
 
     const share = all.findIndex((element) => element.type === ShareButton);
     const callout = all.indexOf(callouts[0]);
@@ -127,7 +139,12 @@ describe('city hub flatmate callout (FR-11)', () => {
     loadFlatmateBlockCounts.mockRejectedValue(new Error('db down'));
     const all = await hub();
     const callout = all.find((element) => element.type === FlatmateCallout);
-    expect(callout?.props).toEqual({ surface: 'hub', counts: undefined });
+    expect(callout?.props).toEqual({
+      surface: 'hub',
+      counts: undefined,
+      split: null,
+      splitArea: undefined,
+    });
 
     const html = await renderCallout(all);
     expect(html).toMatch(/^<section /);
@@ -141,6 +158,39 @@ describe('city hub flatmate callout (FR-11)', () => {
     const html = await renderCallout(await hub());
     expect(html).not.toContain('already ha');
     expect(html).not.toContain('Be among the first');
+  });
+
+  it('the per-person line (spec 08 §Per-person line): the split in the parallel load, its area named on the server', async () => {
+    loadFlatmateBlockCounts.mockResolvedValue(COUNTS);
+    loadWarsawPerPersonSplit.mockResolvedValue({
+      value: 2_450,
+      n: 5,
+      level: 'city',
+      name: 'city.warsaw',
+    });
+    const all = await hub();
+    const callout = all.find((element) => element.type === FlatmateCallout);
+    expect(callout?.props).toMatchObject({ surface: 'hub', splitArea: 'Warsaw' });
+    const html = await renderCallout(all);
+    expect(html).toContain(
+      'For two people about 2,450 zł each (half of the median flat, 5 tenant reports, Warsaw).',
+    );
+    expect(html.match(/For two people/g)).toHaveLength(1);
+    // The split joins the existing Promise.all, next to the counts.
+    expect(PAGE_SOURCE).toMatch(
+      /Promise\.all\(\[[\s\S]*loadFlatmateBlockCounts\(\)[\s\S]*loadWarsawPerPersonSplit\(\)[\s\S]*\]\)/,
+    );
+  });
+
+  it('a rejected split → no per-person line; the page and its count still render', async () => {
+    loadFlatmateBlockCounts.mockResolvedValue(COUNTS);
+    loadWarsawPerPersonSplit.mockRejectedValue(new Error('db down'));
+    const all = await hub();
+    const callout = all.find((element) => element.type === FlatmateCallout);
+    expect(callout?.props).toMatchObject({ split: null, splitArea: undefined });
+    const html = await renderCallout(all);
+    expect(html).not.toContain('For two people');
+    expect(html).toContain('7 people in Warsaw already have a profile.');
   });
 
   it('the hub stays ISR: revalidate 3600, no request-time API', () => {

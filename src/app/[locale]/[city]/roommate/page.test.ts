@@ -1,12 +1,14 @@
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { findMany, getCityWithDistricts, cityFindUnique, costReportFindMany } = vi.hoisted(() => ({
-  findMany: vi.fn(),
-  getCityWithDistricts: vi.fn(),
-  cityFindUnique: vi.fn(),
-  costReportFindMany: vi.fn(),
-}));
+const { findMany, getCityWithDistricts, cityFindUnique, costReportFindMany, loadSplit } =
+  vi.hoisted(() => ({
+    findMany: vi.fn(),
+    getCityWithDistricts: vi.fn(),
+    cityFindUnique: vi.fn(),
+    costReportFindMany: vi.fn(),
+    loadSplit: vi.fn(async (): Promise<unknown> => null),
+  }));
 
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('next/navigation', () => ({
@@ -36,6 +38,8 @@ vi.mock('@/lib/listings-query', () => ({
   parseSearchParams: () => ({}),
 }));
 vi.mock('@/components/listings/listings-page-client', () => ({ ListingsPageClient: () => null }));
+// The split's own loader is tested over reports in `per-person-consistency.test.ts`.
+vi.mock('@/lib/roommate/room-costs', () => ({ loadWarsawPerPersonSplit: loadSplit }));
 
 import { getLocale } from 'next-intl/server';
 import { getAlternates, getOgImage } from '@/lib/seo';
@@ -50,6 +54,8 @@ type ClientProps = {
     reference: { level: string; slug: string; name: string; summary: unknown };
     areaName: string;
   } | null;
+  perPersonSplit?: unknown;
+  perPersonArea?: string;
 };
 
 function cityRecord(slug: string) {
@@ -201,6 +207,63 @@ describe('/[city]/roommate page: the room money block figures (spec 02 §Room mo
     expect(costReportFindMany).not.toHaveBeenCalled();
     expect(cityFindUnique).not.toHaveBeenCalled();
     expect(props.roomMoney).toBeUndefined();
+  });
+});
+
+describe('/[city]/roommate page: the per-person line (spec 08 §Per-person line, PRD 4 FR-13)', () => {
+  const SPLIT = { value: 2_450, n: 5, level: 'city', name: 'city.warsaw' };
+
+  beforeEach(() => {
+    findMany.mockReset();
+    findMany.mockResolvedValue([]);
+    cityFindUnique.mockResolvedValue({ slug: 'warsaw', nameKey: 'city.warsaw' });
+    costReportFindMany.mockResolvedValue([]);
+    loadSplit.mockReset();
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('warsaw: the bot split in the parallel load, its own area named on the server', async () => {
+    loadSplit.mockResolvedValue(SPLIT);
+    const props = await render('warsaw');
+    expect(loadSplit).toHaveBeenCalledTimes(1);
+    expect(props.perPersonSplit).toEqual(SPLIT);
+    expect(props.perPersonArea).toBe('Warsaw');
+  });
+
+  it('a district-level split keeps its district name as is', async () => {
+    loadSplit.mockResolvedValue({ ...SPLIT, level: 'district', name: 'Mokotów' });
+    expect((await render('warsaw')).perPersonArea).toBe('Mokotów');
+  });
+
+  it('null (no figure) or a rejection → no line; the page still renders with its counts', async () => {
+    loadSplit.mockResolvedValue(null);
+    let props = await render('warsaw');
+    expect(props.perPersonSplit).toBeNull();
+    expect(props.perPersonArea).toBeUndefined();
+
+    loadSplit.mockRejectedValue(new Error('timeout'));
+    props = await render('warsaw');
+    expect(props.perPersonSplit).toBeNull();
+    expect(props.perPersonArea).toBeUndefined();
+    expect(props.flatmateCounts).toEqual({ status: 'counts', total: 0, top: [] });
+  });
+
+  it('needs no bot username (a cost figure)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    loadSplit.mockResolvedValue(SPLIT);
+    expect((await render('warsaw')).perPersonArea).toBe('Warsaw');
+  });
+
+  it('another city (no flatmate block): no split load', async () => {
+    const props = await render('krakow');
+    expect(loadSplit).not.toHaveBeenCalled();
+    expect(props.perPersonSplit).toBeNull();
+    expect(props.perPersonArea).toBeUndefined();
   });
 });
 

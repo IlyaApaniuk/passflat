@@ -403,7 +403,8 @@
     "flatmateCallout": {
       "homeTitle": "Passflat pomaga znaleźć w Warszawie kogoś do wspólnego wynajmu i zobaczyć, ile to kosztuje na osobę",
       "title": "Szukasz kogoś do wspólnego wynajmu w Warszawie?",
-      "roommateLink": "Zobacz koszty na osobę i profile"
+      "roommateLink": "Zobacz koszty na osobę i profile",
+      "perPerson": "Na dwie osoby — około {value} na osobę (połowa mediany całych mieszkań, {area}; zgłoszenia najemców: {count})."
     },
     "roomMoney": {
       "title": "Masz pokój na oku? Ile zapłacisz na osobę i czy można bezpiecznie wpłacić kaucję?",

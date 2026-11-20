@@ -76,6 +76,8 @@ const REWRITTEN_KEYS = [
   'landing.tools.templatesDescription',
   // PRD 4 FR-12 (spec 08 §Callout placements).
   'blog.ctaText',
+  // PRD 4 FR-13 (spec 08 §Per-person line): the bot's roomSplit wording.
+  'listings.flatmateCallout.perPerson',
 ];
 
 /** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
