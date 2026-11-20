@@ -400,13 +400,13 @@
       "title": "The roommate e-mail card and the target of 'I have a free room' (FR-20, owner question Q-4)",
       "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms",
       "dependsOn": ["T134"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-4 with (a): ListingsEmptyState does not render the capture on the roommate page (kept on /replacement and /sublet); 'I have a free room' points to the room money block's links; PRD 1 FR-15's sign-in test is retargeted; spec 05 notes for E13 that the roommate page no longer saves interest",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-4 (PRD 4, decision review row 4). The roommate page's e-mail 'save interest' card competes with the bot and E13 counts it; 'I have a free room' leads through a login wall to a frozen listing form. (a) remove the card from the roommate page only and point the free-room role to the room money block's links (proposal). (b) keep both. Personal data and an experiment's count are the owner's call.\nOwner answer: Q-4, D81, not the proposal: keep both; the e-mail card stays on the roommate page (E13 keeps counting it) and 'I have a free room' keeps its target; only FR-18's wording, already built in T134; no code change: close with the answer in the progress entry"
     },
     {

@@ -5620,3 +5620,14 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Unchanged, worth knowing:** the sign-up still sends the confirmation e-mail (`emails.cityNotifyConfirmation`), so a subscriber gets it now and the launch e-mail later; the copy promises only the latter.
   - No table, migration, event name or Assumption constant in code.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:35 · T136 · done
+
+- Done (PRD 4 FR-20, spec 08 §Dead-end forms; the owner's answer Q-4, D81, not the proposal: answer (b), keep both). The acceptance's (b) line applies: no code change, the task closes with the answer here.
+  - **The answer:** `ListingsEmptyState` keeps the e-mail "save interest" card on the roommate page, so E13 keeps counting `listing_interest_saved` from it (spec 05's E13 note is unchanged). "I have a free room" keeps its target (sign-in, then the listing form), so PRD 1 FR-15's sign-in test stands. The only change Q-4 asked for is FR-18's wording, already built in T134.
+  - Checked in the tree: `src/components/listings/listings-empty-state.tsx` still sends `listing_interest_saved` with the roommate role, and `roommate-role-selector.test.ts` still covers the `/create-listing` target.
+  - `docs/specs/README.md`: FR-20 (Q-4) row → Done. No code, copy, test or other doc changed.
+- Checks: `npm run verify` exit 0. Lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 186 files / 3724 tests; build OK (185 pages). `next-env.d.ts` restored. Nothing deployed, no migration, no event.
+- Did not work: nothing.
+- Owner review: nothing (the answer is yours, D81; no draft copy, table, migration or Assumption).
+- Next: `node scripts/ralph-tasks.mjs next`.
