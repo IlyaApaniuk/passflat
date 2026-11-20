@@ -75,9 +75,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? [entry(`/${c.slug}/check`, 'weekly', 0.8), entry(`/${c.slug}/review`, 'weekly', 0.7)]
         : []),
       entry(`/${c.slug}/calculator`, 'weekly', 0.7),
-      entry(`/${c.slug}/replacement`, 'weekly', 0.7),
-      entry(`/${c.slug}/sublet`, 'weekly', 0.5),
-      entry(`/${c.slug}/roommate`, 'weekly', 0.5),
+      // PRD 4 FR-28 (Assumption): the roommate page outranks the frozen lists (D5).
+      entry(`/${c.slug}/replacement`, 'weekly', 0.4),
+      entry(`/${c.slug}/sublet`, 'weekly', 0.4),
+      entry(`/${c.slug}/roommate`, 'weekly', 0.8),
       ...c.districts.map((d) => entry(`/${c.slug}/${d.slug}`, 'weekly', 0.6)),
     ]);
 
@@ -124,10 +125,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable — return static pages only
   }
 
-  const blogSlugs = new Set(getAllPosts().map((p) => p.slug));
-  const blogPages: MetadataRoute.Sitemap = Array.from(blogSlugs).map((slug) =>
-    entry(`/blog/${slug}`, 'monthly', 0.6),
-  );
+  // One entry per slug (the locales are its alternates). getAllPosts sorts newest first, so
+  // the first post of a slug carries the latest date among its locales.
+  const blogDates = new Map<string, string>();
+  for (const post of getAllPosts()) {
+    if (!blogDates.has(post.slug)) blogDates.set(post.slug, post.date);
+  }
+  const blogPages: MetadataRoute.Sitemap = Array.from(blogDates, ([slug, date]) => ({
+    ...entry(`/blog/${slug}`, 'monthly', 0.6),
+    lastModified: new Date(date),
+  }));
 
   return [...staticPages, ...cityPages, ...blogPages, ...listingPages, ...buildingPages];
 }

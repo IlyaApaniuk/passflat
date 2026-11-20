@@ -611,7 +611,7 @@
       "title": "Sitemap priorities and lastmod, robots, and the submit page's own title and description (FR-28)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
       "dependsOn": ["T138"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Sitemap: /[city]/roommate weekly 0.8, /replacement and /sublet 0.4, blog entries with lastModified from post.date; the listing-detail loop stays (Q-1, T150); a test with mocked data asserts them",
         "robots: allow ['/', '/api/og']; disallow /api/, /dashboard/, /messages/, /create-listing/, /auth/ and /admin/, bare and with the /en, /ru and /uk prefixes (one helper); isIndexable false → disallow all as today; a test over the output",
@@ -620,7 +620,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Priorities are Assumptions. The Instagram handle is Q-8 (T151)."
     },
     {

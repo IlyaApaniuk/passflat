@@ -17,9 +17,15 @@ interface PageProps {
 // Without its own canonical this page inherited the layout's, which pointed at
 // the homepage — the conversion target of the whole funnel declaring itself a
 // duplicate of another page. Not in the sitemap, but linked from everywhere.
+// Its own title and description (PRD 4 FR-28) instead of the layout's home ones.
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, city } = await params;
-  return { alternates: getAlternates(`/${city}/costs/submit`, locale) };
+  const t = await getTranslations({ locale, namespace: 'costs.submit' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    alternates: getAlternates(`/${city}/costs/submit`, locale),
+  };
 }
 
 export default async function SubmitCostsPage({ params, searchParams }: PageProps) {

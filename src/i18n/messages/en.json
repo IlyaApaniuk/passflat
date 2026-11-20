@@ -1167,6 +1167,8 @@
       "description": "Help the community by sharing your own expenses",
       "pageTitle": "Submit Your Costs",
       "pageSubtitle": "Help others make an informed decision. It takes less than 2 minutes.",
+      "metaTitle": "Add the costs of your flat in Warsaw",
+      "metaDescription": "Two minutes: rent, czynsz, utilities and deposit for your building. Shown only as aggregates with their counts.",
       "rentalType": "What are you renting?",
       "wholeApartment": "Whole apartment",
       "room": "Room",

@@ -155,6 +155,9 @@ const REWRITTEN_KEYS = [
   ...COST_PAGE_KEYS,
   // PRD 4 FR-21, part 2 (spec 09 §Honesty keys under test).
   ...REPORT_PAGE_KEYS,
+  // PRD 4 FR-28 (spec 09 §Sitemap, robots, structured data and the submit page's metadata).
+  'costs.submit.metaTitle',
+  'costs.submit.metaDescription',
 ];
 
 /**
