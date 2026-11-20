@@ -430,7 +430,7 @@
       "title": "Shared honesty rules with the wider forbidden lists; cost-page titles and descriptions under the test (FR-21, part 1)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#honesty-keys-under-test",
       "dependsOn": ["T119", "T124"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/i18n/honesty-rules.ts (exported, no test code) holds FORBIDDEN per locale and honesty-copy.test.ts imports it; the lists grow as spec 09 §Honesty keys under test gives (EN real, market, truth; PL rzeczywist, prawdziw, rynk; RU настоящ, рыночн; UK справжн, ринков), keeping the existing alternatives and lookaheads; nothing is loosened",
         "Every existing REWRITTEN_KEYS value the wider lists flag is reworded in four locales or, when it is not a claim about figures, listed in ALLOWED_KEY_MATCHES with a one-line reason; the progress entry lists both",
@@ -438,7 +438,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D25; spec 03 §Marketing copy; CLAUDE.md (never 'market', never 'verified', no invented statistics). Owned elsewhere: the home keys (T124), about.values.principle1Desc (T132), the roommate page keys (T119), costs.submit.meta* (T149)."
     },
     {

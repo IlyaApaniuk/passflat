@@ -512,7 +512,7 @@
       "featuresAmenities": "Features & Amenities",
       "thingsToKnow": "Good to know",
       "buildingInfo": "Building Information",
-      "buildingCostHint": "Want to see the actual utility costs for this building reported by tenants?",
+      "buildingCostHint": "Want to see the utility costs tenants reported for this building?",
       "viewBuildingCosts": "View Building Cost Reports",
       "monthlyCosts": "Monthly Costs",
       "imInterested": "Write to Tenant",
@@ -772,7 +772,7 @@
       "supplyCardTitle": "Renting out or passing it on?",
       "supplyCardBody": "Post it for free — lease takeover, flatmate, or sublet.",
       "consentNote": "By tapping you agree to data processing — <privacyLink>privacy policy</privacyLink>.",
-      "costCtaTitle": "See real rental costs",
+      "costCtaTitle": "See reported rental costs",
       "costCtaButton": "View costs"
     },
     "navListings": "Listings"
@@ -969,8 +969,8 @@
     }
   },
   "calculator": {
-    "metaTitle": "Rent calculator for {city} — what it really costs (rent + utilities)",
-    "metaDescription": "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities based on Warsaw tariffs — admin fee (czynsz), heating, electricity, water, garbage, internet.",
+    "metaTitle": "Warsaw rent calculator: rent plus utilities per month",
+    "metaDescription": "Estimate a month of renting in Warsaw: the district's median rent with its source and N plus utilities at Warsaw tariffs: czynsz, heating, water, internet.",
     "breadcrumb": "Calculator",
     "badge": "Cost calculator",
     "h1": "What renting in {city} costs with all payments included",
@@ -1017,24 +1017,24 @@
     "sourcesNote": "Tariffs: MPWiK, district heating, G11, waste collection in Warsaw (2025–2026). Rent — Passflat report medians."
   },
   "costsSeo": {
-    "cityMetaTitle": "Rent in {city}: real costs by district",
+    "cityMetaTitle": "{city}: reported rental costs by district",
     "cityMetaDescription": "Reported rental costs in {city} — rent, utilities and deposits, by district. Crowdsourced, open data.",
     "cityH1": "What renting in {city} costs: reported figures by district",
     "cityIntro": "Median costs reported by tenants themselves — rent, utilities (komunalka) and deposits — across the districts of {city}. Pick a district to see the buildings.",
     "districtsHeading": "Costs by district",
     "exploreAll": "All buildings & filters",
     "emptyCity": "No data yet — be the first to add your costs.",
-    "districtMetaTitle": "Rent in {district}, {city} — real tenant costs",
-    "districtMetaDescription": "Real rental costs in {district}, {city}: rent, utilities and deposits, building by building. Crowdsourced from tenants.",
+    "districtMetaTitle": "{district}, {city} — rent costs and room prices",
+    "districtMetaDescription": "Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building.",
     "districtH1": "Rent in {district}",
     "districtIntro": "Reported rental costs in {district}, {city} — rent, utilities and deposits, building by building.",
     "buildingsHeading": "Buildings in {district}",
     "backToCity": "All {city} districts",
     "emptyDistrict": "No reports here yet — be the first to add yours.",
-    "buildingMetaTitle": "{address}, {city} — real rental costs",
+    "buildingMetaTitle": "{address}, {city} — reported rental costs",
     "buildingMetaDescriptionWithData": "Reported costs of renting at {address}, {city}: ≈ {total} zł/mo in total (rent ≈ {rent}, utilities ≈ {expenses}). {reports}.",
     "buildingMetaDescriptionPartial": "Reported costs of renting at {address}, {city}: {metric, select, knownPartTotal {the known part of the costs is ≈ {value} zł/mo} rent {rent ≈ {value} zł/mo, other costs unknown} other {≈ {value} zł/mo in total}}. {reports}.",
-    "buildingMetaDescription": "Real rental costs for {address}, {city}: rent, utilities and deposit. See the data or add yours."
+    "buildingMetaDescription": "{address}, {city}: no report for this building yet — we show the district or Warsaw reference with its group and N. Add your own costs."
   },
   "costs": {
     "title": "Cost Transparency",

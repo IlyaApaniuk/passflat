@@ -512,7 +512,7 @@
       "featuresAmenities": "Udogodnienia",
       "thingsToKnow": "Co warto wiedzieć",
       "buildingInfo": "Informacje o budynku",
-      "buildingCostHint": "Chcesz zobaczyć rzeczywiste koszty mediów w tym budynku zgłoszone przez najemców?",
+      "buildingCostHint": "Chcesz zobaczyć koszty mediów w tym budynku zgłoszone przez najemców?",
       "viewBuildingCosts": "Zobacz raporty kosztów budynku",
       "monthlyCosts": "Koszty miesięczne",
       "imInterested": "Napisz do najemcy",
@@ -772,7 +772,7 @@
       "supplyCardTitle": "Wynajmujesz lub przekazujesz?",
       "supplyCardBody": "Dodaj za darmo — cesja, współlokator lub podnajem.",
       "consentNote": "Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.",
-      "costCtaTitle": "Zobacz realne koszty najmu",
+      "costCtaTitle": "Zobacz zgłoszone koszty najmu",
       "costCtaButton": "Zobacz koszty"
     },
     "navListings": "Ogłoszenia"
@@ -969,8 +969,8 @@
     }
   },
   "calculator": {
-    "metaTitle": "Kalkulator wynajmu w {city} — ile naprawdę kosztuje (czynsz najmu + media)",
-    "metaDescription": "Oszacuj realny miesięczny koszt wynajmu w {city}: czynsz najmu z mediany lokatorów plus media według stawek Warszawy — czynsz administracyjny, ogrzewanie, prąd, woda, wywóz śmieci, internet.",
+    "metaTitle": "Kalkulator kosztów najmu w Warszawie: czynsz i media",
+    "metaDescription": "Policz koszt najmu w Warszawie: czynsz wg mediany dla dzielnicy (z grupą i N) plus media wg stawek — czynsz administracyjny, ogrzewanie, prąd, woda, internet.",
     "breadcrumb": "Kalkulator",
     "badge": "Kalkulator kosztów",
     "h1": "Ile kosztuje wynajem w {city} z wszystkimi opłatami",
@@ -1017,24 +1017,24 @@
     "sourcesNote": "Stawki: MPWiK, ciepło systemowe, G11, wywóz śmieci w Warszawie (2025–2026). Czynsz najmu — mediany zgłoszeń Passflat."
   },
   "costsSeo": {
-    "cityMetaTitle": "Wynajem w {city}: realne koszty według dzielnic",
+    "cityMetaTitle": "{city}: zgłoszone koszty najmu według dzielnic",
     "cityMetaDescription": "Zgłoszone koszty wynajmu w {city} — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności.",
     "cityH1": "Ile kosztuje wynajem w {city}: zgłoszone dane według dzielnic",
     "cityIntro": "Mediany kosztów od samych najemców — czynsz, opłaty (komunalka) i kaucje — w dzielnicach {city}. Wybierz dzielnicę, aby zobaczyć budynki.",
     "districtsHeading": "Koszty według dzielnic",
     "exploreAll": "Wszystkie budynki i filtry",
     "emptyCity": "Brak danych — dodaj swoje koszty jako pierwszy.",
-    "districtMetaTitle": "Wynajem w {district}, {city} — realne koszty najemców",
-    "districtMetaDescription": "Realne koszty wynajmu w {district}, {city}: czynsz, opłaty i kaucje, budynek po budynku. Dane od najemców.",
+    "districtMetaTitle": "{district}, {city} — koszty najmu i pokoju",
+    "districtMetaDescription": "Koszty najmu w dzielnicy {district} ({city}) wg zgłoszeń: czynsz, opłaty, budynek po budynku.",
     "districtH1": "Wynajem w {district}",
     "districtIntro": "Zgłoszone koszty wynajmu w {district}, {city} — czynsz, opłaty i kaucje, budynek po budynku.",
     "buildingsHeading": "Budynki w {district}",
     "backToCity": "Wszystkie dzielnice {city}",
     "emptyDistrict": "Brak raportów — dodaj swój jako pierwszy.",
-    "buildingMetaTitle": "{address}, {city} — realne koszty najmu",
+    "buildingMetaTitle": "{address}, {city} — koszty najmu wg zgłoszeń",
     "buildingMetaDescriptionWithData": "Zgłoszone koszty wynajmu — {address}, {city}: razem ≈ {total} zł/mies. (czynsz ≈ {rent}, opłaty ≈ {expenses}). {reports}.",
     "buildingMetaDescriptionPartial": "Zgłoszone koszty wynajmu — {address}, {city}: {metric, select, knownPartTotal {znana część kosztów ≈ {value} zł miesięcznie} rent {czynsz ≈ {value} zł miesięcznie, pozostałe koszty nieznane} other {razem ≈ {value} zł miesięcznie}}. {reports}.",
-    "buildingMetaDescription": "Realne koszty wynajmu — {address}, {city}: czynsz, opłaty i kaucja. Sprawdź dane albo dodaj swoje."
+    "buildingMetaDescription": "{address}, {city}: brak zgłoszeń dla tego budynku — pokazujemy odniesienie dla dzielnicy lub Warszawy z grupą i liczbą zgłoszeń. Dodaj swoje koszty."
   },
   "costs": {
     "title": "Przejrzystość kosztów",

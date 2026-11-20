@@ -92,6 +92,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Mount-time effects can be unit-tested in React's commit order (children before parents, re-run on changed deps) with the harness in `src/components/providers/posthog-provider.test.ts`.
 - Bulk copy edits across the four locale files: a scratchpad script that replaces `"<lastKey>": <JSON.stringify(old)>` exactly once per file keeps the formatting; it is idempotent, but a rewritten value equal to a sibling's reports "found 2 times" (harmless).
 - `src/i18n/honesty-copy.test.ts` fails on any en.json value matching "verified", "checked", "actually" or "in full"; a legitimate new match goes into its `ALLOWED_EN_MATCHES` with a reason.
+- The claim words per locale (`FORBIDDEN`) live in `src/i18n/honesty-rules.ts` and are imported by every honesty test; a legitimate match in a rewritten key goes into `ALLOWED_KEY_MATCHES` (`<locale>:<key>` → reason) in `honesty-copy.test.ts`, never into a looser pattern.
 - Deposit verdict lines are a `strength*` phrase key plus a `rule*` explanation key, composed by `RULE_LINES` in `deposit-flow.ts`; a general-rule case (FR-43) shows the `rule*` key alone. `renderVerdict` and `processContract` are exported for tests (example: `src/lib/bot/deposit-general-rule.test.ts`).
 - A new `FigureGroup` / `SingleNumberFigure` field means: bump every figure cache key (`cost-figures-building`, `-area-reference`, `-district-figures`, `cost-aggregates-buildings-figures`, the pinned one in `cost-aggregates.test.ts`) and add it to the `figure()` fixture factories of `single-number-surfaces.test.ts`, `CostsMap.test.ts` and `costs-overview-filter.test.ts`.
 - Area pages (`/[city]`, `/[city]/[district]`) and landing components render end-to-end in Vitest over one Prisma mock with `Footer` and `ShareButton` mocked to `null` (example: `src/lib/area-figures-consistency.test.ts`).
@@ -4483,3 +4484,94 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Namespaces and providers:** `ListingsEmptyState` (client) reads `listings.demandCapture.*` through `useTranslations()`; `listings` is in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider, and the roommate, replacement and sublet pages (`ListingsPageClient`) have no scoped provider. `RoommateRoleSelector`, `FindFlatmateBlock` and `ListingsNoMatch` read the changed keys through the same `listings` namespace (the async server `FlatmateCallout` reads `findFlatmate.languages` server-side); `client-namespaces.test.ts` passes. No wiring changed.
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 09:40 · T138 · done
+
+- Done (PRD 4 FR-21, part 1 of 2; spec 09 §Honesty keys under test):
+  - New `src/i18n/honesty-rules.ts` (exported, no test code): `FORBIDDEN` per locale (and the `HonestyLocale` type), the spec's wider lists, keeping every earlier alternative and lookahead:
+    - en `/verified|checked|actually|really|in full|\breal\b|market|truth/i`
+    - pl `+ rzeczywist|prawdziw|rynk`
+    - ru `+ настоящ|рыночн`
+    - uk `+ справжн|ринков`
+  - `src/i18n/honesty-copy.test.ts` imports it; the local `FORBIDDEN` is gone. The frontmatter and bodies tests (FR-23, FR-24) are meant to import the same module.
+  - **Wider lists over the existing `REWRITTEN_KEYS`: no value flagged.** Reworded: none. `ALLOWED_KEY_MATCHES` (new, `<locale>:<key>` → reason): empty. Every value the wider lists hit outside `REWRITTEN_KEYS` was already caught by the old lists (the `ALLOWED_EN_MATCHES` keys, `landing.forWhom.rentTogether.title` uk «повністю», ru `termsPage.payments.immediate` «настоящие Условия»), so none is a new finding for this test.
+  - Copy in four locales (scratchpad script, exact-once replacement per file, 9 lines per file), all nine keys added to `REWRITTEN_KEYS` as `COST_PAGE_KEYS`: `costsSeo.buildingMetaTitle`, `buildingMetaDescription`, `districtMetaTitle`, `districtMetaDescription`, `cityMetaTitle`, `calculator.metaTitle`, `calculator.metaDescription`, `listings.demandCapture.costCtaTitle`, `listings.detail.buildingCostHint`. No code changed: the calculator page still passes `{ city }`, which the literal-Warsaw values ignore.
+- Tests:
+  - `honesty-copy.test.ts`, new cases:
+    - the FORBIDDEN loop skips `ALLOWED_KEY_MATCHES` entries; every entry must be a rewritten key that still matches, with a reason;
+    - a self-check: every earlier word (verified … in full, zweryfikow … w całości, проверенн … полностью, перевірен … повністю) and the new family (real, market, truth; rzeczywist, prawdziw, rynk; настоящ, рыночн; справжн, ринков) are caught; "fully or partly" in pl/ru/uk, "realistic", "sprawdzenie", "reported costs" pass; no `g` flag;
+    - the nine keys in four locales: no FORBIDDEN, "real"/"truth", "actual" (`ACTUAL`: actual, faktyczn/rzeczywist, фактическ/действительн, фактичн/дійсн), market, percentage, "free" or promise; building and district templates keep their placeholders; the calculator keys hold no placeholder and name Warsaw; `districtMetaDescription` names no room or flatmate (the shorter table C variant);
+    - table B: the no-figure description says "no report yet", "district or Warsaw" and "group and N" in each locale, with no digit or currency; the EN drafts of tables B, C, G and the PL district and calculator titles verbatim.
+  - `src/lib/single-number-metadata.test.ts`: the no-figure case expects the table B text and renders it in four locales without a digit, placeholder or raw key.
+- Checks:
+  - Focused Vitest (`src/i18n/`, `single-number-metadata.test.ts`): 5 files / 65 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 161 files / 3449 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks; every changed page is a `/[city]/…` page, which returns 500 in the e2e build). No page looked at in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29).** Tables B and G and table C's title are the appendix drafts (`docs/product/reviews/2026-11-19-site-audit/seo.md`) verbatim; `districtMetaDescription` is table C cut before the room clause; `cityMetaTitle`, `costCtaTitle` and `buildingCostHint` are the agent's own drafts (no table holds them). RU/UK keep «вы» / «ви» on these pages, as the tables and the surrounding cost-page copy do.
+    - `costsSeo.buildingMetaTitle` (table B):
+      - pl "{address}, {city} — koszty najmu wg zgłoszeń"
+      - en "{address}, {city} — reported rental costs"
+      - ru «{address}, {city} — расходы на аренду по отчётам»
+      - uk «{address}, {city} — витрати на оренду за звітами»
+      - old en "{address}, {city} — real rental costs"
+    - `costsSeo.buildingMetaDescription` (no figure, table B):
+      - pl "{address}, {city}: brak zgłoszeń dla tego budynku — pokazujemy odniesienie dla dzielnicy lub Warszawy z grupą i liczbą zgłoszeń. Dodaj swoje koszty."
+      - en "{address}, {city}: no report for this building yet — we show the district or Warsaw reference with its group and N. Add your own costs."
+      - ru «{address}, {city}: отчётов по этому дому пока нет — показываем ориентир по району или Варшаве с группой и числом N. Добавьте свои расходы.»
+      - uk «{address}, {city}: звітів по цьому будинку ще немає — показуємо орієнтир по району або Варшаві з групою і числом N. Додайте свої витрати.»
+      - old en "Real rental costs for {address}, {city}: rent, utilities and deposit. See the data or add yours."
+      - The page shows the labelled district/Warsaw reference when the area has one, otherwise nothing (FR-33): in that rare case the description promises a reference that is absent.
+    - `costsSeo.districtMetaTitle` (table C):
+      - pl "{district}, {city} — koszty najmu i pokoju"
+      - en "{district}, {city} — rent costs and room prices"
+      - ru «{district} ({city}) — аренда и комната по отчётам»
+      - uk «{district} ({city}) — оренда і кімната за звітами»
+      - old en "Rent in {district}, {city} — real tenant costs"
+      - **Note:** the title names rooms now, while the district page shows room figures only after the district section task (FR-26/27, spec 09 §District section). The spec ships the title as table C and relies on one deploy for both (Assumption).
+    - `costsSeo.districtMetaDescription` (table C, shorter variant; the district section task switches it to the full one):
+      - pl "Koszty najmu w dzielnicy {district} ({city}) wg zgłoszeń: czynsz, opłaty, budynek po budynku."
+      - en "Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building."
+      - ru «Расходы на аренду в районе {district} ({city}) по отчётам: аренда, коммуналка и депозиты по домам.»
+      - uk «Витрати на оренду в районі {district} ({city}) за звітами: оренда, комуналка й застави по будинках.»
+      - old en "Real rental costs in {district}, {city}: rent, utilities and deposits, building by building. Crowdsourced from tenants."
+    - `costsSeo.cityMetaTitle` (agent draft, the city first, nominative-safe for T140):
+      - pl "{city}: zgłoszone koszty najmu według dzielnic"
+      - en "{city}: reported rental costs by district"
+      - ru «{city}: расходы на аренду по районам из отчётов жильцов»
+      - uk «{city}: витрати на оренду за районами зі звітів мешканців»
+      - old en "Rent in {city}: real costs by district" (pl "Wynajem w {city}: …", which T140's preposition scan would fail).
+    - `calculator.metaTitle` (table G, "Warszawa" literal while Warsaw is the only city, D6):
+      - pl "Kalkulator kosztów najmu w Warszawie: czynsz i media"
+      - en "Warsaw rent calculator: rent plus utilities per month"
+      - ru «Калькулятор аренды в Варшаве: аренда плюс коммуналка»
+      - uk «Калькулятор оренди у Варшаві: оренда плюс комуналка»
+      - old en "Rent calculator for {city} — what it really costs (rent + utilities)"
+    - `calculator.metaDescription` (table G):
+      - pl "Policz koszt najmu w Warszawie: czynsz wg mediany dla dzielnicy (z grupą i N) plus media wg stawek — czynsz administracyjny, ogrzewanie, prąd, woda, internet."
+      - en "Estimate a month of renting in Warsaw: the district's median rent with its source and N plus utilities at Warsaw tariffs: czynsz, heating, water, internet."
+      - ru «Оцените месяц аренды в Варшаве: медиана аренды по району с источником и N плюс коммуналка по варшавским тарифам — чинш, отопление, свет, вода, интернет.»
+      - uk «Оцініть місяць оренди у Варшаві: медіана оренди по району з джерелом і N плюс комуналка за варшавськими тарифами — чинш, опалення, світло, вода, інтернет.»
+      - old en "Estimate the real monthly cost of renting in {city}: rent from the tenant median plus utilities …"
+    - `listings.demandCapture.costCtaTitle` (agent draft):
+      - pl "Zobacz zgłoszone koszty najmu"
+      - en "See reported rental costs"
+      - ru «Узнать расходы на аренду по отчётам»
+      - uk «Дізнатися витрати на оренду за звітами»
+      - old en "See real rental costs"
+    - `listings.detail.buildingCostHint` (agent draft; "actual" / «фактические» dropped):
+      - pl "Chcesz zobaczyć koszty mediów w tym budynku zgłoszone przez najemców?"
+      - en "Want to see the utility costs tenants reported for this building?"
+      - ru «Хотите увидеть коммунальные расходы в этом доме по отчётам жильцов?»
+      - uk «Хочете побачити комунальні витрати в цьому будинку за звітами мешканців?»
+      - old en "Want to see the actual utility costs for this building reported by tenants?"
+      - No code reads this key today (the frozen listing detail does not render it); it is rewritten because the task names it.
+  - **The "N" in tables B and G** is literal in all four locales ("with its group and N", «с группой и числом N»), as the appendix drafts it; if a snippet should say "number of reports" instead, it is one word per file (the table B test matches "group and N").
+  - **Namespaces and providers:** `ListingsEmptyState` (client) reads `listings.demandCapture.costCtaTitle` through `useTranslations()`; `listings` is in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider, with no scoped provider on the listings pages. The `costsSeo.*` and `calculator.meta*` keys are read only server-side in `generateMetadata` (`getTranslations()`: building, district, city and calculator pages). No wiring changed.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T139: the data report and page keys, FR-21 part 2; it imports `FORBIDDEN` from `src/i18n/honesty-rules.ts` and can use `ALLOWED_KEY_MATCHES`).

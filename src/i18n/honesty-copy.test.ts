@@ -2,9 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { FORBIDDEN } from './honesty-rules';
+
 // Spec 03 §Marketing copy (FR-31, D25): marketing keys use "costs tenants
 // reported" / "reported costs" wording; none says "verified", "checked by
 // tenants", "actually pay" or "returned in full" about reported figures.
+// The claim words per locale are shared with the guide tests (spec 09 §Honesty keys under test).
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -52,6 +55,22 @@ const HELP_ABOUT_KEYS = [
   ),
   'about.team.description2',
   'about.values.principle1Desc',
+];
+
+/**
+ * The cost pages' titles and descriptions and the two cost CTAs rewritten by PRD 4 FR-21, part 1
+ * (spec 09 §Honesty keys under test; appendix seo.md tables B, C and G).
+ */
+const COST_PAGE_KEYS = [
+  'costsSeo.buildingMetaTitle',
+  'costsSeo.buildingMetaDescription',
+  'costsSeo.districtMetaTitle',
+  'costsSeo.districtMetaDescription',
+  'costsSeo.cityMetaTitle',
+  'calculator.metaTitle',
+  'calculator.metaDescription',
+  'listings.demandCapture.costCtaTitle',
+  'listings.detail.buildingCostHint',
 ];
 
 /** The spec's list as found on 2026-11-19, plus the keys the en.json search found with it. */
@@ -106,7 +125,17 @@ const REWRITTEN_KEYS = [
   // is owned here, not by spec 09 §Honesty keys.
   ...HOW_IT_WORKS_KEYS,
   ...HELP_ABOUT_KEYS,
+  // PRD 4 FR-21, part 1 (spec 09 §Honesty keys under test).
+  ...COST_PAGE_KEYS,
 ];
+
+/**
+ * `<locale>:<key>` entries of REWRITTEN_KEYS whose value matches FORBIDDEN in a sense that is
+ * not a claim about figures (for example a disclaimer telling the reader to check the real
+ * bill), each with a one-line reason. Never loosen a pattern instead. Empty on 2026-11-20: the
+ * wider lists of spec 09 flagged no rewritten value.
+ */
+const ALLOWED_KEY_MATCHES: Record<string, string> = {};
 
 /** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
 const HOME_COPY_KEYS = [
@@ -181,12 +210,20 @@ const PROMISE: Record<Locale, RegExp> = {
   uk: /гарант|знайдемо|знайдеш|за \d+ (дн|тижн)|підберемо/i,
 };
 
-/** Claim words per locale; "fully or partly" in any language is allowed. */
-const FORBIDDEN: Record<Locale, RegExp> = {
-  en: /verified|checked|actually|really|in full/i,
-  pl: /zweryfikow|sprawdzon|naprawdę|realn|faktycznie|w całości(?! lub)/i,
-  ru: /проверенн|на самом деле|реальн|по факту|полностью(?! или)/i,
-  uk: /перевірен|насправді|реальн|за фактом|повністю(?! або)/i,
+/** "Actual" as a quality claim; FORBIDDEN catches "actually" but not the adjective. */
+const ACTUAL: Record<Locale, RegExp> = {
+  en: /actual/i,
+  pl: /faktyczn|rzeczywist/i,
+  ru: /фактическ|действительн/i,
+  uk: /фактичн|дійсн/i,
+};
+
+/** The room and flatmate words the district description adds only with the district section. */
+const ROOMS_OR_FLATMATES: Record<Locale, RegExp> = {
+  en: /room|flatmate/i,
+  pl: /pok[oó]j|współlokator/i,
+  ru: /комнат|сосед/i,
+  uk: /кімнат|сусід/i,
 };
 
 /**
@@ -215,12 +252,171 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     }
   });
 
-  it('no rewritten key claims verified, checked or actually-paid figures, or returns in full', () => {
+  it('no rewritten key claims verified, checked, real or market figures, or returns in full', () => {
     for (const locale of LOCALES) {
       for (const key of REWRITTEN_KEYS) {
+        if (`${locale}:${key}` in ALLOWED_KEY_MATCHES) continue;
         expect(valueAt(locale, key) as string, `${locale}: ${key}`).not.toMatch(FORBIDDEN[locale]);
       }
     }
+  });
+
+  it('every allowed match is a rewritten key that still matches, with a reason', () => {
+    for (const [entry, reason] of Object.entries(ALLOWED_KEY_MATCHES)) {
+      const [locale, key] = entry.split(':') as [Locale, string];
+      expect(LOCALES, entry).toContain(locale);
+      expect(REWRITTEN_KEYS, entry).toContain(key);
+      expect(valueAt(locale, key) as string, entry).toMatch(FORBIDDEN[locale]);
+      expect(reason.trim().length, entry).toBeGreaterThan(0);
+    }
+  });
+
+  it('the shared lists keep every earlier word and lookahead and catch the wider family', () => {
+    const caught: Record<Locale, string[]> = {
+      en: [
+        'verified',
+        'checked',
+        'actually',
+        'really',
+        'in full',
+        'real costs',
+        'Real rental costs',
+        'market prices',
+        'the truth',
+      ],
+      pl: [
+        'zweryfikowane',
+        'sprawdzone',
+        'naprawdę',
+        'realne koszty',
+        'faktycznie',
+        'w całości',
+        'rzeczywiste koszty',
+        'prawdziwa cena',
+        'ceny rynkowe',
+        'na rynku najmu',
+      ],
+      ru: [
+        'проверенные',
+        'на самом деле',
+        'реальные расходы',
+        'по факту',
+        'полностью',
+        'настоящая цена',
+        'рыночные цены',
+      ],
+      uk: [
+        'перевірені',
+        'насправді',
+        'реальні витрати',
+        'за фактом',
+        'повністю',
+        'справжня ціна',
+        'ринкові ціни',
+      ],
+    };
+    const passed: Record<Locale, string[]> = {
+      en: ['fully or partly', 'reported costs', 'realistic budget', 'sprawdzenie'],
+      pl: ['w całości lub częściowo', 'zgłoszone koszty', 'sprawdzenie adresu'],
+      ru: ['полностью или частично', 'расходы по отчётам'],
+      uk: ['повністю або частково', 'витрати за звітами'],
+    };
+    for (const locale of LOCALES) {
+      for (const text of caught[locale]) expect(text, locale).toMatch(FORBIDDEN[locale]);
+      for (const text of passed[locale]) expect(text, locale).not.toMatch(FORBIDDEN[locale]);
+    }
+    // Shared patterns carry no `g` flag, so repeated tests give the same answer.
+    for (const locale of LOCALES) expect(FORBIDDEN[locale].flags, locale).not.toContain('g');
+  });
+
+  it('the cost-page titles, descriptions and CTAs (PRD 4 FR-21): no claim, "actual", market or percentage', () => {
+    expect(COST_PAGE_KEYS).toHaveLength(9);
+    for (const locale of LOCALES) {
+      for (const key of COST_PAGE_KEYS) {
+        const value = valueAt(locale, key) as string;
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect(value, `${locale}: ${key}`).not.toMatch(FORBIDDEN[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(REAL_OR_TRUTH[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(ACTUAL[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(/market|rynk|рын|ринк/i);
+        expect(value, `${locale}: ${key}`).not.toMatch(/%|procent|процент|відсот/i);
+        expect(value, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+      }
+      // The templates keep their placeholders; the calculator names Warsaw literally (D6).
+      for (const key of ['costsSeo.buildingMetaTitle', 'costsSeo.buildingMetaDescription']) {
+        const value = valueAt(locale, key) as string;
+        expect(value, `${locale}: ${key}`).toContain('{address}');
+        expect(value, `${locale}: ${key}`).toContain('{city}');
+      }
+      for (const key of ['costsSeo.districtMetaTitle', 'costsSeo.districtMetaDescription']) {
+        const value = valueAt(locale, key) as string;
+        expect(value, `${locale}: ${key}`).toContain('{district}');
+        expect(value, `${locale}: ${key}`).toContain('{city}');
+      }
+      expect(valueAt(locale, 'costsSeo.cityMetaTitle') as string, locale).toContain('{city}');
+      for (const key of ['calculator.metaTitle', 'calculator.metaDescription']) {
+        const value = valueAt(locale, key) as string;
+        expect(value, `${locale}: ${key}`).not.toContain('{');
+        expect(value, `${locale}: ${key}`).toMatch(/Warsz|Warsaw|Варшав/);
+      }
+      // The shorter table C variant until the district section ships (spec 09 §District section).
+      expect(valueAt(locale, 'costsSeo.districtMetaDescription') as string, locale).not.toMatch(
+        ROOMS_OR_FLATMATES[locale],
+      );
+      expect(valueAt(locale, 'listings.detail.buildingCostHint') as string, locale).not.toContain(
+        '{',
+      );
+      expect(
+        valueAt(locale, 'listings.demandCapture.costCtaTitle') as string,
+        locale,
+      ).not.toContain('{');
+    }
+  });
+
+  it('the building page without a figure: no report yet, a district or Warsaw reference with its group and N (table B)', () => {
+    expect(valueAt('en', 'costsSeo.buildingMetaTitle')).toBe(
+      '{address}, {city} — reported rental costs',
+    );
+    expect(valueAt('en', 'costsSeo.buildingMetaDescription')).toBe(
+      '{address}, {city}: no report for this building yet — we show the district or Warsaw reference with its group and N. Add your own costs.',
+    );
+    const parts: Record<Locale, RegExp[]> = {
+      en: [/no report for this building yet/, /district or Warsaw/, /group and N/],
+      pl: [/brak zgłoszeń dla tego budynku/, /dzielnicy lub Warszawy/, /z grupą i liczbą zgłoszeń/],
+      ru: [/отчётов по этому дому пока нет/, /по району или Варшаве/, /с группой и числом N/],
+      uk: [/звітів по цьому будинку ще немає/, /по району або Варшаві/, /з групою і числом N/],
+    };
+    for (const locale of LOCALES) {
+      const value = valueAt(locale, 'costsSeo.buildingMetaDescription') as string;
+      for (const part of parts[locale]) expect(value, locale).toMatch(part);
+      // No figure in this variant: no number, no currency.
+      expect(value, locale).not.toMatch(/\d|zł|PLN/);
+    }
+  });
+
+  it('the district, city and calculator EN drafts (tables C and G)', () => {
+    expect(valueAt('en', 'costsSeo.districtMetaTitle')).toBe(
+      '{district}, {city} — rent costs and room prices',
+    );
+    expect(valueAt('en', 'costsSeo.districtMetaDescription')).toBe(
+      'Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building.',
+    );
+    expect(valueAt('pl', 'costsSeo.districtMetaTitle')).toBe(
+      '{district}, {city} — koszty najmu i pokoju',
+    );
+    expect(valueAt('en', 'costsSeo.cityMetaTitle')).toBe(
+      '{city}: reported rental costs by district',
+    );
+    expect(valueAt('en', 'calculator.metaTitle')).toBe(
+      'Warsaw rent calculator: rent plus utilities per month',
+    );
+    expect(valueAt('en', 'calculator.metaDescription')).toBe(
+      "Estimate a month of renting in Warsaw: the district's median rent with its source and N plus utilities at Warsaw tariffs: czynsz, heating, water, internet.",
+    );
+    expect(valueAt('pl', 'calculator.metaTitle')).toBe(
+      'Kalkulator kosztów najmu w Warszawie: czynsz i media',
+    );
   });
 
   it('the deposit claims say "got it back, fully or partly" with both counts', () => {

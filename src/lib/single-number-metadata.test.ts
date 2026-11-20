@@ -167,10 +167,21 @@ describe('buildingMetaDescription', () => {
     );
   });
 
-  it('without a figure it carries no number', () => {
+  it('without a figure it carries no number and names the area reference (table B)', () => {
     expect(buildingMetaDescription(t, { ...base, address: 'ul. Długa', figure: null })).toBe(
-      'Real rental costs for ul. Długa, Warsaw: rent, utilities and deposit. See the data or add yours.',
+      'ul. Długa, Warsaw: no report for this building yet — we show the district or Warsaw reference with its group and N. Add your own costs.',
     );
+    for (const locale of LOCALES) {
+      const text = buildingMetaDescription(translator(locale), {
+        ...base,
+        address: 'ul. Długa',
+        format: format(locale),
+        figure: null,
+      });
+      expect(text, locale).toMatch(/^ul\. Długa, Warsaw: /);
+      expect(text, locale).not.toMatch(/\d|\{/);
+      expect(text, locale).not.toMatch(RAW_KEY);
+    }
   });
 
   it('renders every case in every locale with the value and the group label', () => {
