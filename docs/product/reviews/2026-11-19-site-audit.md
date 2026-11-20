@@ -18,6 +18,9 @@
   `2026-11-19-site-audit/`, so the appendix is complete. PRD 4 is written from this file:
   `../prd/prd-4-site-improvements.md`, with `../prd/prd-4-decision-review.md`; the "PRD 4" column
   below keeps the proposed mapping, and the PRD's own requirement table is the one that counts.
+- **Update (2026-11-20, third night run):** the "PRD 4" column of the table of findings now names
+  the requirement ids PRD 4 version 0.1 actually uses (the proposed numbers collided with them),
+  plus the owner questions and the PRD's Later list. The findings themselves are unchanged.
 - **What was audited:** branch `chore/agent-harness` as the future site (PRD 1 and PRD 3 built, not
   deployed) and https://passflat.com as it is today (pre-PRD-1 build, read-only GET). Every finding
   says which. The bot CTAs render only with `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, unset in
@@ -230,43 +233,43 @@ legal or consent text, personal data).
 
 ## Table of findings
 
-| ID   | Title                                                         | Route                                              | Appendix ids           | Size | Rank | PRD 4              |
-| ---- | ------------------------------------------------------------- | -------------------------------------------------- | ---------------------- | ---- | ---- | ------------------ |
-| S-1  | Flatmate block hidden behind a tap; frozen shell first        | `/warsaw/roommate`                                 | ST-2, FU-1, SE-2       | S    | 1    | M1 FR-1            |
-| S-2  | Roommate metadata, H1, landmarks, `h-dvh`, footer             | `/warsaw/roommate`                                 | ST-5, FU-2, SE-1, PE-2 | S    | 1    | M1 FR-2, FR-3      |
-| S-3  | Home never states the thesis; no bot entry                    | `/`                                                | ST-1, FU-3             | M    | 1    | M2 FR-8, FR-9      |
-| S-4  | Header has no flatmate entry                                  | all                                                | ST-4                   | S    | 1    | M1 FR-4            |
-| S-5  | Frozen listings promoted everywhere                           | `/`, 404, building, dashboard                      | ST-3, PE-5, FU-6       | M    | 1    | M1 FR-5, FR-6      |
-| S-6  | No cost surface links to the roommate page or the bot         | building, district, hub, calculator, blog          | ST-4, FU-6, SE-8       | M    | 1    | M2 FR-10           |
-| S-7  | No per-person figure next to the flatmate block               | `/warsaw/roommate`                                 | FU-4                   | M    | 1    | M2 FR-11           |
-| S-8  | District pages: room reference, per-person line, counts       | `/[city]/[district]`                               | SE-9, ST-9             | M    | 1    | M3 FR-19           |
-| S-9  | Checker bot handoff is a muted link                           | `/warsaw/check`                                    | FU-7, PE-4             | S    | 2    | M2 FR-12           |
-| S-10 | Role tap shows nothing without the bot username               | `/warsaw/roommate`                                 | FU-5                   | S    | 1    | M1 FR-7            |
-| S-11 | How-it-works, About, Help describe a marketplace              | `/`, `/how-it-works`, `/about`, `/help`            | ST-6, FU-9             | M–L  | 2    | M2 FR-13; Open Q-3 |
-| S-12 | Dead-end forms (city notify, e-mail card, free room)          | `/`, `/warsaw/roommate`                            | ST-7, FU-11, FU-14     | S    | 2    | Open Q-2, Q-4      |
-| S-13 | Sitemap and structured data favour frozen listings            | `/sitemap.xml`, JSON-LD                            | ST-8, SE-6, SE-7       | S    | 2    | M3 FR-20; Open Q-1 |
-| S-14 | Polish visitor's expectation; chat links need the locale      | `/warsaw/roommate`, posting kit                    | ST-10, FU-10           | S    | 2    | M2 FR-14           |
-| S-15 | Two district navigations; hub orphaned                        | `/`, `/warsaw`                                     | ST-9                   | S    | 3    | M1 FR-6            |
-| S-16 | Templated "real" titles outside the honesty test              | building, district, city, calculator, report, home | SE-3, FU-8             | S    | 1    | M3 FR-15           |
-| S-17 | Blog frontmatter "77 % in full"; "real" in 52 files           | `/blog/*`                                          | SE-4, FU-12            | S    | 1    | M3 FR-16           |
-| S-18 | Title rewrites for page-1 pages with CTR < 1 %                | guides, calculator, report                         | SE-3, SE-10            | S    | 2    | M3 FR-17           |
-| S-19 | Nominative district and city names in titles                  | `/[city]/[district]`, calculator                   | SE-5                   | S    | 2    | M3 FR-15           |
-| S-20 | Guides: no entry to the roommate page or the bot              | `/blog/[slug]`                                     | FU-12, SE-8, SE-10     | M    | 2    | M2 FR-10           |
-| S-21 | Blog details: cesja promise, raw links, non-localised JSON-LD | `/blog/*`                                          | SE-10, SE-7            | S    | 2    | M3 FR-18, FR-20    |
-| S-22 | robots blocks `/api/og`; inherited metadata                   | `/robots.txt`, `/costs/submit`                     | SE-11                  | S    | 3    | M3 FR-20           |
-| S-23 | `/favicon.ico` and apple icon return 500                      | all                                                | PE-1                   | S    | 1    | M4 FR-21           |
-| S-24 | Roommate page auth call and queries per request               | `/warsaw/roommate`                                 | PE-3                   | M    | 2    | M4 FR-25           |
-| S-25 | Supabase client on every page                                 | all                                                | PE-6                   | M    | 2    | M4 FR-26           |
-| S-26 | 67 – 103 kB i18n JSON on every page                           | all                                                | PE-7                   | M    | 2    | Later              |
-| S-27 | `/api/og` uncached                                            | link previews                                      | PE-8                   | S    | 2    | M4 FR-22           |
-| S-28 | Security headers absent                                       | all                                                | PE-9                   | S    | 2    | M4 FR-23           |
-| S-29 | Accent lime as text 1.63:1                                    | `/`                                                | PE-10                  | S    | 2    | M4 FR-24           |
-| S-30 | Tap targets < 44 px; hamburger aria                           | header, banner, `/warsaw/costs`                    | PE-11                  | S    | 2    | M4 FR-24           |
-| S-31 | Labels, banner locale, heading order, skip link               | checker, `/`, all                                  | PE-12 – PE-14          | S    | 3    | M4 FR-27           |
-| S-32 | Fonts preload, dead MDX import, unreferenced PNGs             | all, blog                                          | PE-15 – PE-17          | S    | 3    | Later              |
-| S-33 | Template languages differ per locale                          | `/`                                                | FU-13                  | S    | 2    | M2 FR-13           |
-| S-34 | «ты»/«вы», "open" vs "unlock", "expanding", dead keys         | roommate, `/`, footer                              | FU-15 – FU-17, ST-12   | S    | 3    | Later; Open        |
-| S-35 | Live-only honesty leftovers (deploy checklist)                | live                                               | ST-11                  | S    | 3    | M5 FR-30           |
+| ID   | Title                                                         | Route                                              | Appendix ids           | Size | Rank | PRD 4                                                    |
+| ---- | ------------------------------------------------------------- | -------------------------------------------------- | ---------------------- | ---- | ---- | -------------------------------------------------------- |
+| S-1  | Flatmate block hidden behind a tap; frozen shell first        | `/warsaw/roommate`                                 | ST-2, FU-1, SE-2       | S    | 1    | M1 FR-1; Open Q-5 (FR-7)                                 |
+| S-2  | Roommate metadata, H1, landmarks, `h-dvh`, footer             | `/warsaw/roommate`                                 | ST-5, FU-2, SE-1, PE-2 | S    | 1    | M1 FR-3, FR-4                                            |
+| S-3  | Home never states the thesis; no bot entry                    | `/`                                                | ST-1, FU-3             | M    | 1    | M1 FR-6; M2 FR-8 – FR-10; Open Q-6                       |
+| S-4  | Header has no flatmate entry                                  | all                                                | ST-4                   | S    | 1    | M1 FR-5                                                  |
+| S-5  | Frozen listings promoted everywhere                           | `/`, 404, building, dashboard                      | ST-3, PE-5, FU-6       | M    | 1    | M1 FR-6; M2 FR-11; Open Q-5 (FR-7)                       |
+| S-6  | No cost surface links to the roommate page or the bot         | building, district, hub, calculator, blog          | ST-4, FU-6, SE-8       | M    | 1    | M2 FR-8, FR-11, FR-12                                    |
+| S-7  | No per-person figure next to the flatmate block               | `/warsaw/roommate`                                 | FU-4                   | M    | 1    | M2 FR-13; M3 FR-27                                       |
+| S-8  | District pages: room reference, per-person line, counts       | `/[city]/[district]`                               | SE-9, ST-9             | M    | 1    | M3 FR-26, FR-27                                          |
+| S-9  | Checker bot handoff is a muted link                           | `/warsaw/check`                                    | FU-7, PE-4             | S    | 2    | M2 FR-14                                                 |
+| S-10 | Role tap shows nothing without the bot username               | `/warsaw/roommate`                                 | FU-5                   | S    | 1    | M1 FR-2                                                  |
+| S-11 | How-it-works, About, Help describe a marketplace              | `/`, `/how-it-works`, `/about`, `/help`            | ST-6, FU-9             | M–L  | 2    | M2 FR-15; Open Q-3 (FR-16)                               |
+| S-12 | Dead-end forms (city notify, e-mail card, free room)          | `/`, `/warsaw/roommate`                            | ST-7, FU-11, FU-14     | S    | 2    | M2 FR-18; Open Q-2 (FR-19), Q-4 (FR-20)                  |
+| S-13 | Sitemap and structured data favour frozen listings            | `/sitemap.xml`, JSON-LD                            | ST-8, SE-6, SE-7       | S    | 2    | M3 FR-28; Open Q-1 (FR-29), Q-8; Later (structured data) |
+| S-14 | Polish visitor's expectation; chat links need the locale      | `/warsaw/roommate`, posting kit                    | ST-10, FU-10           | S    | 2    | M2 FR-17                                                 |
+| S-15 | Two district navigations; hub orphaned                        | `/`, `/warsaw`                                     | ST-9                   | S    | 3    | M1 FR-5, FR-6                                            |
+| S-16 | Templated "real" titles outside the honesty test              | building, district, city, calculator, report, home | SE-3, FU-8             | S    | 1    | M2 FR-10; M3 FR-21                                       |
+| S-17 | Blog frontmatter "77 % in full"; "real" in 52 files           | `/blog/*`                                          | SE-4, FU-12            | S    | 1    | M3 FR-23, FR-24                                          |
+| S-18 | Title rewrites for page-1 pages with CTR < 1 %                | guides, calculator, report                         | SE-3, SE-10            | S    | 2    | M3 FR-25; Open Q-7                                       |
+| S-19 | Nominative district and city names in titles                  | `/[city]/[district]`, calculator                   | SE-5                   | S    | 2    | M3 FR-22                                                 |
+| S-20 | Guides: no entry to the roommate page or the bot              | `/blog/[slug]`                                     | FU-12, SE-8, SE-10     | M    | 2    | M2 FR-12                                                 |
+| S-21 | Blog details: cesja promise, raw links, non-localised JSON-LD | `/blog/*`                                          | SE-10, SE-7            | S    | 2    | M3 FR-24, FR-25; Later (FR-28 structured data)           |
+| S-22 | robots blocks `/api/og`; inherited metadata                   | `/robots.txt`, `/costs/submit`                     | SE-11                  | S    | 3    | M3 FR-28                                                 |
+| S-23 | `/favicon.ico` and apple icon return 500                      | all                                                | PE-1                   | S    | 1    | M4 FR-30                                                 |
+| S-24 | Roommate page auth call and queries per request               | `/warsaw/roommate`                                 | PE-3                   | M    | 2    | Later (FR-32)                                            |
+| S-25 | Supabase client on every page                                 | all                                                | PE-6                   | M    | 2    | Later (FR-33)                                            |
+| S-26 | 67 – 103 kB i18n JSON on every page                           | all                                                | PE-7                   | M    | 2    | Later                                                    |
+| S-27 | `/api/og` uncached                                            | link previews                                      | PE-8                   | S    | 2    | M4 FR-31                                                 |
+| S-28 | Security headers absent                                       | all                                                | PE-9                   | S    | 2    | M4 FR-31; Open Q-13; Later (CSP)                         |
+| S-29 | Accent lime as text 1.63:1                                    | `/`                                                | PE-10                  | S    | 2    | M4 FR-34                                                 |
+| S-30 | Tap targets < 44 px; hamburger aria                           | header, banner, `/warsaw/costs`                    | PE-11                  | S    | 2    | M4 FR-34                                                 |
+| S-31 | Labels, banner locale, heading order, skip link               | checker, `/`, all                                  | PE-12 – PE-14          | S    | 3    | Later (FR-35)                                            |
+| S-32 | Fonts preload, dead MDX import, unreferenced PNGs             | all, blog                                          | PE-15 – PE-17          | S    | 3    | Later                                                    |
+| S-33 | Template languages differ per locale                          | `/`                                                | FU-13                  | S    | 2    | M2 FR-10                                                 |
+| S-34 | «ты»/«вы», "open" vs "unlock", "expanding", dead keys         | roommate, `/`, footer                              | FU-15 – FU-17, ST-12   | S    | 3    | M2 FR-18; Open Q-9 – Q-11; Later (dead keys)             |
+| S-35 | Live-only honesty leftovers (deploy checklist)                | live                                               | ST-11                  | S    | 3    | M5 FR-36                                                 |
 
 ## What was checked and found fine
 

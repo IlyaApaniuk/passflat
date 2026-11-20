@@ -679,7 +679,7 @@ Acceptance criteria (when the owner answers): `CityNotify` no longer renders on 
   while the checker uses them; the checker's `checker.outside.*` copy is rewritten in four
   locales; the manual city-launch route is unchanged (D33).
 Edge cases: none
-Data: no change to stored rows
+Data: no change to stored rows · Analytics: none
 Screen: src/app/[locale]/page.tsx, src/components/landing/city-notify.tsx
 Copy: agent draft after the answer
 Depends on: D6, D33
@@ -1573,3 +1573,6 @@ With the audit's finding ids, not in this PRD:
   §5 example 1 quote the bot's per-person wording with its area; FR-26 and §5 example 4 quote the
   district-first count shape and cite example 4; §6 counts seven callout placements; the §8
   templates sentence names the four files of `public/documents/` (as FR-10 and spec 08 do).
+- **0.1, 2026-11-20, review of the decomposition (third night run, before the owner's review).**
+  Agent clarification, nothing new: FR-19 states its empty analytics field. The audit's table of
+  findings now names this PRD's requirement ids instead of the audit's proposed numbers.
