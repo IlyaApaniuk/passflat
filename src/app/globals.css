@@ -370,22 +370,6 @@ html body[data-scroll-locked] {
   transform: none;
 }
 
-/* One-shot fade used when swapping keyed content (e.g. how-it-works tabs),
- * replacing framer-motion's AnimatePresence. */
-@keyframes step-fade {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.step-fade {
-  animation: step-fade 0.25s ease both;
-}
-
 /* Hero scroll-down hint (replaces a framer-motion infinite loop). */
 @keyframes scroll-hint {
   0%,

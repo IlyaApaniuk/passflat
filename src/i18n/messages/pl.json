@@ -31,8 +31,7 @@
     "helpDescription": "Odpowiedzi na najczęstsze pytania Passflat: cesja najmu, raporty kosztów, ogłoszenia i konto. Zajrzyj do sekcji FAQ.",
     "blogDescription": "Poradniki o najmie w Warszawie: ukryte koszty i dopłaty, zwrot kaucji, umowy najmu, liczniki i internet oraz porady dla obcokrajowców.",
     "termsDescription": "Regulamin Passflat: zasady ogłoszeń, raportów kosztów, praw użytkowników i działania platformy.",
-    "privacyDescription": "Polityka prywatności Passflat: zbieranie, wykorzystanie i ochrona danych osobowych zgodnie z RODO. Procesory danych, Twoje prawa, cookies i kontakt.",
-    "pricingDescription": "Cennik Passflat — darmowe ogłoszenia, raporty kosztów i ulubione. Opcjonalne promowane ogłoszenia dla większej widoczności od 39 PLN."
+    "privacyDescription": "Polityka prywatności Passflat: zbieranie, wykorzystanie i ochrona danych osobowych zgodnie z RODO. Procesory danych, Twoje prawa, cookies i kontakt."
   },
   "common": {
     "appName": "Passflat",
@@ -115,19 +114,6 @@
     "howItWorks": {
       "title": "Jak działa Passflat",
       "subtitle": "Jak działa szukanie kogoś do wspólnego wynajmu",
-      "tabReplacement": "Cesja najmu",
-      "tabRoommate": "Współlokator",
-      "tabSublet": "Podnajem",
-      "replacement": {
-        "step1Title": "Przeglądaj oferty",
-        "step1Desc": "Szukaj mieszkań według lokalizacji, ceny i udogodnień. Wszystkie koszty od razu.",
-        "step2Title": "Skontaktuj się",
-        "step2Desc": "Napisz do obecnego najemcy. Zadaj pytania i umów się na oględziny.",
-        "step3Title": "Przejmij najem",
-        "step3Desc": "Uzgodnij warunki i podpisz cesję najmu z wynajmującym.",
-        "step4Title": "Przeprowadź się",
-        "step4Desc": "Dokończ formalności. Bez utraty kaucji, bez prowizji."
-      },
       "roommate": {
         "step1Title": "Załóż profil w bocie",
         "step1Desc": "Dzielnica, budżet na osobę, miesiąc przeprowadzki, języki. W Telegramie, po angielsku, rosyjsku lub ukraińsku.",
@@ -137,16 +123,6 @@
         "step3Desc": "Pasujące osoby, jedna po drugiej. Zaznaczasz zainteresowanie albo pomijasz; na stronie nikt nie widzi twojego profilu.",
         "step4Title": "Kontakty przy obopólnym zainteresowaniu",
         "step4Desc": "Nazwy użytkowników w Telegramie obu osób pojawiają się dopiero przy obopólnym zainteresowaniu. Nigdy nie płać za rezerwację przed obejrzeniem mieszkania i podpisaniem umowy."
-      },
-      "sublet": {
-        "step1Title": "Przeglądaj podnajmy",
-        "step1Desc": "Znajdź umeblowane mieszkania na określony czas. Zobacz cenę i co jest w cenie.",
-        "step2Title": "Skontaktuj się z najemcą",
-        "step2Desc": "Napisz do osoby podnajmującej. Uzgodnij daty, zasady i media.",
-        "step3Title": "Potwierdź daty",
-        "step3Desc": "Uzgodnij dokładny okres, cenę i szczegóły wprowadzenia.",
-        "step4Title": "Zamieszkaj tymczasowo",
-        "step4Desc": "Ciesz się gotowym do zamieszkania mieszkaniem — bez długoterminowego zobowiązania."
       }
     },
     "bentoGrid": {
@@ -1546,7 +1522,6 @@
     "title": "Jak działa Passflat",
     "subtitle": "Szukasz nowego mieszkania lub chcesz przekazać swój najem? Oto jak to działa, krok po kroku.",
     "tabSeekers": "Szukam mieszkania",
-    "tabListers": "Przekazuję najem",
     "tabCosts": "Porównuję koszty",
     "seekers": {
       "label": "Dla szukających mieszkania",
@@ -1562,21 +1537,6 @@
       "step5Title": "Przeprowadź się",
       "step5Desc": "Dokończ przekazanie — bez utraty kaucji, bez prowizji. Zacznij nowy rozdział.",
       "cta": "Przeglądaj ogłoszenia"
-    },
-    "listers": {
-      "label": "Dla obecnych najemców",
-      "title": "Przekaż najem — zachowaj kaucję",
-      "step1Title": "Utwórz ogłoszenie",
-      "step1Desc": "Dodaj mieszkanie z adresem, zdjęciami i pełnym rozbiciem kosztów. To darmowe — do 2 aktywnych ogłoszeń.",
-      "step2Title": "Pojaw się na mapie",
-      "step2Desc": "Twoje ogłoszenie pojawia się na mapie i w wynikach wyszukiwania — zobaczą je najemcy szukający mieszkania.",
-      "step3Title": "Otrzymuj zainteresowania",
-      "step3Desc": "Dostajesz powiadomienie email, gdy ktoś jest zainteresowany. Przeglądaj wiadomości na swoim koncie.",
-      "step4Title": "Wybierz zastępcę",
-      "step4Desc": "Wybierz najlepszego kandydata i skoordynuj cesję najmu z wynajmującym.",
-      "step5Title": "Przekaż klucze",
-      "step5Desc": "Dokończ przekazanie i odzyskaj kaucję. Gotowe.",
-      "cta": "Dodaj ogłoszenie"
     },
     "costs": {
       "label": "Przejrzystość kosztów",
@@ -1678,7 +1638,6 @@
       "description": "Teraz — Warszawa. Dalej planujemy Kraków, Wrocław i inne miasta."
     },
     "stats": {
-      "listings": "Aktywnych ogłoszeń",
       "costReports": "Raportów kosztów"
     },
     "ctaTitle": "Dołącz do społeczności",
@@ -1862,7 +1821,7 @@
       "q1": "Czym jest Passflat?",
       "a1": "Passflat pomaga osobom w Warszawie znaleźć kogoś do wspólnego wynajmu (profil w naszym bocie w Telegramie) i zobaczyć, ile najem kosztuje na osobę: koszty zgłoszone przez najemców według budynków i dzielnic, sprawdzanie adresu, kalkulator, poradniki i wzory dokumentów.",
       "q2": "Czy Passflat jest darmowy?",
-      "a2": "Tak. Przeglądanie ofert, raporty kosztów, dodawanie ogłoszeń i wzory dokumentów — są bezpłatne.",
+      "a2": "Tak. Wszystko w Passflat jest dziś bezpłatne: koszty zgłoszone przez najemców, sprawdzanie adresu, kalkulator, poradniki, wzory dokumentów i bot w Telegramie.",
       "q3": "W jakich miastach działa Passflat?",
       "a3": "Obecnie działamy w Warszawie. Ekspansja do Krakowa, Wrocławia i innych europejskich miast jest w naszych planach.",
       "q4": "Jakie języki obsługuje Passflat?",
@@ -1879,9 +1838,7 @@
       "q4": "Jak dodać ogłoszenie?",
       "a4": "Zaloguj się, kliknij \"Dodaj ogłoszenie\" i wypełnij adres, szczegóły mieszkania, zdjęcia i rozkład kosztów. Ogłoszenie pojawi się na mapie i w wynikach wyszukiwania po opublikowaniu.",
       "q5": "Jak długo ogłoszenie jest aktywne?",
-      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta.",
-      "q6": "Czy mogę promować moje ogłoszenie?",
-      "a6": "Tak. Promowane ogłoszenia wyświetlają się na górze wyników wyszukiwania przez 7, 14 lub 30 dni. Ceny zaczynają się od 39 PLN."
+      "a5": "Ogłoszenia są aktywne przez 60 dni. Możesz je odnowić lub zamknąć w dowolnym momencie z poziomu konta."
     },
     "costTransparency": {
       "title": "Przejrzystość Kosztów",
@@ -1909,21 +1866,6 @@
       "a1": "Wyślij e-mail na adres contact@passflat.com z tematem «Żądanie dostępu do danych». Dostarczymy kopię wszystkich danych osobowych, które przechowujemy na Twój temat, w ciągu 30 dni, w ustrukturyzowanym, nadającym się do odczytu maszynowego formacie.",
       "q2": "Jakie mam prawa RODO?",
       "a2": "Na mocy RODO masz prawo do dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych, sprzeciwu wobec przetwarzania i wycofania zgody. Szczegóły znajdziesz w naszej Polityce Prywatności. Aby skorzystać z dowolnego prawa, skontaktuj się na contact@passflat.com."
-    },
-    "payments": {
-      "title": "Płatności i zwroty",
-      "q1": "Za co mogę zapłacić na Passflat?",
-      "a1": "Publikacja ogłoszenia jest bezpłatna (do 2 aktywnych ogłoszeń). Usługi płatne to: dodatkowe ogłoszenia ponad darmowy limit, promocja zwiększająca widoczność ogłoszenia w wynikach wyszukiwania oraz czasowy dostęp do bazy danych o kosztach. Same ogłoszenia pozostają darmowe.",
-      "q2": "Kiedy zaczyna się płatna usługa i czy mogę ją jeszcze anulować?",
-      "a2": "Usługi płatne są świadczone natychmiast i w całości zaraz po dokonaniu płatności. Z tego powodu, płacąc, wyrażasz wyraźną zgodę na natychmiastowe wykonanie usługi — a po jej wykonaniu nie możesz już skorzystać ze standardowego 14-dniowego prawa do odstąpienia. Potwierdzasz to przy płatności, akceptując Regulamin.",
-      "q3": "Czy gwarantujecie, że znajdę najemcę, współlokatora lub następcę?",
-      "a3": "Nie. Płacisz za samą usługę — publikację, widoczność lub dostęp do danych — a nie za konkretny rezultat. Passflat nie gwarantuje, że znajdziesz następcę najmu, współlokatora czy nową umowę, a brak rezultatu nie jest podstawą do zwrotu.",
-      "q4": "Jak mogę poprosić o zwrot?",
-      "a4": "Zwroty rozpatrujemy indywidualnie w przypadku rzeczywistych problemów — np. podwójnego obciążenia, awarii technicznej, która uniemożliwiła wykonanie usługi, lub wadliwej usługi. Napisz na contact@passflat.com, podając adres e-mail konta i numer referencyjny płatności (znajdziesz go w historii płatności w panelu). Twoje bezwzględnie obowiązujące prawa konsumenta są zawsze zachowane.",
-      "q5": "Jakimi metodami mogę zapłacić?",
-      "a5": "Płatności są bezpiecznie obsługiwane przez Stripe. Możesz zapłacić kartą, BLIK-iem lub Przelewy24 (P24). Dostępne metody mogą się nieznacznie różnić w zależności od urządzenia i przeglądarki.",
-      "q6": "Czy otrzymam potwierdzenie lub fakturę?",
-      "a6": "Tak. Stripe automatycznie wysyła potwierdzenie płatności na adres e-mail podany przy płatności. Potwierdzenie możesz też w każdej chwili otworzyć w sekcji płatności w swoim panelu."
     },
     "searchPlaceholder": "Szukaj pytań...",
     "noResults": "Nie znaleziono pasujących pytań. Spróbuj innych słów.",

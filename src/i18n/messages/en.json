@@ -31,8 +31,7 @@
     "helpDescription": "Answers to common Passflat questions: lease takeovers, cost reports, listings, and accounts. Browse the FAQ section.",
     "blogDescription": "Guides to renting in Warsaw: hidden costs and utility top-ups, getting the deposit back, lease contracts, meters and internet, and advice for foreigners.",
     "termsDescription": "Passflat Terms of Service: rules for listings, cost reports, user rights, and how the platform works.",
-    "privacyDescription": "Passflat Privacy Policy: how we collect, use, and protect your personal data under GDPR. Processors, your rights, cookies, and contact.",
-    "pricingDescription": "Passflat pricing — free listings, cost reports, and favorites. Optional promoted listings for more visibility starting at 39 PLN."
+    "privacyDescription": "Passflat Privacy Policy: how we collect, use, and protect your personal data under GDPR. Processors, your rights, cookies, and contact."
   },
   "common": {
     "appName": "Passflat",
@@ -115,19 +114,6 @@
     "howItWorks": {
       "title": "How Passflat Works",
       "subtitle": "How finding someone to rent with works",
-      "tabReplacement": "Lease Takeover",
-      "tabRoommate": "Roommate Search",
-      "tabSublet": "Temporary Sublet",
-      "replacement": {
-        "step1Title": "Browse Listings",
-        "step1Desc": "Search apartments by location, price, and amenities. All costs upfront.",
-        "step2Title": "Connect",
-        "step2Desc": "Message the current tenant directly. Ask questions, schedule viewings.",
-        "step3Title": "Take Over Lease",
-        "step3Desc": "Agree on terms and sign a lease assignment with the landlord.",
-        "step4Title": "Move In",
-        "step4Desc": "Complete the handover. No deposit lost, no agency fees."
-      },
       "roommate": {
         "step1Title": "Create a profile in the bot",
         "step1Desc": "District, budget per person, move-in month, languages. In Telegram, in English, Russian or Ukrainian.",
@@ -137,16 +123,6 @@
         "step3Desc": "Compatible people one at a time. Interested or skip; nobody sees your profile on the web.",
         "step4Title": "Contacts open on mutual interest",
         "step4Desc": "Both Telegram usernames appear only when the interest is mutual. Never pay a reservation before a viewing and a signed contract."
-      },
-      "sublet": {
-        "step1Title": "Browse Sublets",
-        "step1Desc": "Find furnished apartments available for a fixed period. See total price and what's included.",
-        "step2Title": "Contact Tenant",
-        "step2Desc": "Reach out to the tenant who's subletting. Clarify dates, rules, and utilities.",
-        "step3Title": "Confirm Dates",
-        "step3Desc": "Agree on the exact period, price, and move-in details.",
-        "step4Title": "Move In Temporarily",
-        "step4Desc": "Enjoy a ready-to-live apartment — no long-term commitment."
       }
     },
     "bentoGrid": {
@@ -1546,7 +1522,6 @@
     "title": "How Passflat Works",
     "subtitle": "Looking for a new apartment or want to pass on your lease? Here's how it works, step by step.",
     "tabSeekers": "Looking for a flat",
-    "tabListers": "Passing on a lease",
     "tabCosts": "Comparing costs",
     "seekers": {
       "label": "For apartment seekers",
@@ -1562,21 +1537,6 @@
       "step5Title": "Move in",
       "step5Desc": "Complete the handover — no deposit lost, no agency fees. Start your new chapter.",
       "cta": "Browse Listings"
-    },
-    "listers": {
-      "label": "For current tenants",
-      "title": "Pass on your lease — keep your deposit",
-      "step1Title": "Create a listing",
-      "step1Desc": "Add your apartment with address, photos, and full cost breakdown. It's free — up to 2 active listings.",
-      "step2Title": "Appear on the map",
-      "step2Desc": "Your listing appears on the map and in search results — renters looking for a place will see it.",
-      "step3Title": "Receive interest",
-      "step3Desc": "Get email notifications when someone is interested. Review messages in your dashboard.",
-      "step4Title": "Choose a replacement",
-      "step4Desc": "Select the best candidate and coordinate the lease assignment with your landlord.",
-      "step5Title": "Hand over the keys",
-      "step5Desc": "Complete the handover and get your deposit back. Done.",
-      "cta": "Post a Listing"
     },
     "costs": {
       "label": "Cost Transparency",
@@ -1678,7 +1638,6 @@
       "description": "Right now — Warsaw. Next we're planning Kraków, Wrocław, and other cities."
     },
     "stats": {
-      "listings": "Active listings",
       "costReports": "Cost reports shared"
     },
     "ctaTitle": "Join the community",
@@ -1862,7 +1821,7 @@
       "q1": "What is Passflat?",
       "a1": "Passflat helps people in Warsaw find someone to rent with (a profile in our Telegram bot) and see what renting costs per person: costs tenants reported per building and district, an address checker, a calculator, guides and document templates.",
       "q2": "Is Passflat free?",
-      "a2": "Yes. Browsing listings, cost reports, posting listings, and document templates — all free.",
+      "a2": "Yes. Everything on Passflat is free today: the figures, the address check, the calculator, the guides, the templates and the Telegram bot.",
       "q3": "What cities does Passflat operate in?",
       "a3": "Currently we operate in Warsaw. Expansion to Kraków, Wrocław, and other European cities is on our roadmap.",
       "q4": "What languages does Passflat support?",
@@ -1879,9 +1838,7 @@
       "q4": "How do I create a listing?",
       "a4": "Log in, click \"Create Listing\" and fill in the address, apartment details, photos, and cost breakdown. Your listing will appear on the map and in search results after publishing.",
       "q5": "How long does a listing stay active?",
-      "a5": "Listings are active for 60 days. You can renew or close them at any time from your dashboard.",
-      "q6": "Can I promote my listing?",
-      "a6": "Yes. Promoted listings appear at the top of search results for 7, 14, or 30 days. Prices start at 39 PLN."
+      "a5": "Listings are active for 60 days. You can renew or close them at any time from your dashboard."
     },
     "costTransparency": {
       "title": "Cost Transparency",
@@ -1909,21 +1866,6 @@
       "a1": "Send an email to contact@passflat.com with the subject \"Data Access Request.\" We will provide a copy of all personal data we hold about you within 30 days, in a structured, machine-readable format.",
       "q2": "What are my GDPR rights?",
       "a2": "Under GDPR, you have the right to access, rectify, erase, restrict processing, port your data, object to processing, and withdraw consent. For full details, see our Privacy Policy. To exercise any right, contact contact@passflat.com."
-    },
-    "payments": {
-      "title": "Payments & Refunds",
-      "q1": "What can I pay for on Passflat?",
-      "a1": "Posting a listing is free (up to 2 active listings). Paid services are: extra listings beyond the free limit, promotion to boost a listing's visibility in search results, and time-limited access to the cost-report database. Listings themselves stay free.",
-      "q2": "When does my paid service start, and can I still cancel?",
-      "a2": "Paid services are delivered immediately and in full right after payment. Because of this, when you pay you give your express consent to immediate provision — and once the service has been provided you can no longer use the standard 14-day right of withdrawal. You confirm this at checkout when you accept the Terms.",
-      "q3": "Do you guarantee I'll find a tenant, roommate, or replacement?",
-      "a3": "No. You pay for the service itself — publication, visibility, or data access — not for a particular result. Passflat doesn't guarantee that you'll find a replacement tenant, a roommate, or a new lease, and not getting a result is not grounds for a refund.",
-      "q4": "How do I request a refund?",
-      "a4": "Refunds are handled case by case for genuine issues — for example a duplicate charge, a technical failure that stopped the service from being delivered, or a defective service. Email contact@passflat.com with your account email and the payment reference (you'll find it in your dashboard billing history). Your mandatory consumer rights are always preserved.",
-      "q5": "Which payment methods can I use?",
-      "a5": "Payments are processed securely by Stripe. You can pay by card, BLIK, or Przelewy24 (P24). Available methods may vary slightly by device and browser.",
-      "q6": "Will I get a receipt or invoice?",
-      "a6": "Yes. Stripe automatically emails a payment receipt to the email address used at checkout. You can also open the receipt anytime from the billing section of your dashboard."
     },
     "searchPlaceholder": "Search questions...",
     "noResults": "No matching questions found. Try a different search term.",

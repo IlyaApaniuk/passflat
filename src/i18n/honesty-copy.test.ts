@@ -45,8 +45,8 @@ const HOW_IT_WORKS_KEYS = [
 
 /**
  * The Help "What is Passflat?" answer and the About copy rewritten by PRD 4 FR-15
- * (spec 08). `helpCenter.general.a2` ("Is Passflat free?") is a price statement and
- * stays with FR-16 (Q-3).
+ * (spec 08). `helpCenter.general.a2` ("Is Passflat free?") is a price statement,
+ * rewritten by FR-16 (D80) and checked with the other FR-16 keys below.
  */
 const HELP_ABOUT_KEYS = [
   'helpCenter.general.a1',
@@ -154,6 +154,8 @@ const REWRITTEN_KEYS = [
   // is owned here, not by spec 09 §Honesty keys.
   ...HOW_IT_WORKS_KEYS,
   ...HELP_ABOUT_KEYS,
+  // PRD 4 FR-16 (D80, spec 08 §How it works, Help and About): "Is Passflat free?".
+  'helpCenter.general.a2',
   // PRD 4 FR-21, part 1 (spec 09 §Honesty keys under test).
   ...COST_PAGE_KEYS,
   // PRD 4 FR-21, part 2 (spec 09 §Honesty keys under test).
@@ -245,6 +247,12 @@ const HOME_FRAMING_KEYS = [
   'errors.notFound.browse',
 ];
 
+/**
+ * A price (PRD 4 FR-16): "PLN", or "zł" as a word ("Znalazłam" holds the letters, not a price).
+ * Polish letters are spelled out because `\b` does not work next to them.
+ */
+const PRICE = /PLN|(^|[^a-ząćęłńóśźż])zł(?![a-ząćęłńóśźż])/i;
+
 /** "Free" in any locale: whether snippets may say so is Q-12, held by a blocked task. */
 const FREE: RegExp = /\bfree\b|bezpłat|darmow|za darmo|бесплатн|безкоштовн|безплатн/i;
 
@@ -297,7 +305,6 @@ const ALLOWED_EN_MATCHES: Record<string, string> = {
   'costs.submit.depositFull': 'answer option of the submit form',
   'howItWorksPage.testimonials.t3Text':
     'a tenant checking reports before signing, not a verification claim',
-  'helpCenter.payments.a2': 'legal text: services provided in full',
   'termsPage.payments.immediate': 'legal text: services provided in full',
   'termsPage.payments.serviceOutcome': 'legal text: services provided in full',
   'termsPage.withdrawal.p2': 'legal text: services provided in full',
@@ -605,6 +612,60 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
       expect(valueAt(locale, 'about.values.principle1Desc') as string, locale).not.toMatch(
         /market|rynk|рын|ринк/i,
       );
+    }
+  });
+
+  it('nothing is paid today (PRD 4 FR-16, D80): no price under Help, how it works or the page meta', () => {
+    for (const locale of LOCALES) {
+      for (const namespace of ['helpCenter', 'howItWorksPage', 'landing.howItWorks', 'meta']) {
+        const found = leaves(valueAt(locale, namespace), namespace).filter(([, value]) =>
+          PRICE.test(value),
+        );
+        expect(found, `${locale}: ${namespace}`).toEqual([]);
+      }
+    }
+  });
+
+  it('the FR-16 price pattern catches a currency, not a Polish word holding "zł"', () => {
+    for (const price of ['od 39 PLN', '1 500 zł', '≈{total} zł/mies.', 'Zł', '(zł)']) {
+      expect(price).toMatch(PRICE);
+    }
+    for (const word of ['Znalazłam', 'złamanych', 'zło']) expect(word).not.toMatch(PRICE);
+  });
+
+  it('the FR-16 keys are deleted in four locales (D80)', () => {
+    const DELETED = [
+      'helpCenter.payments',
+      'helpCenter.leaseTakeovers.q6',
+      'helpCenter.leaseTakeovers.a6',
+      'landing.howItWorks.tabReplacement',
+      'landing.howItWorks.tabRoommate',
+      'landing.howItWorks.tabSublet',
+      'landing.howItWorks.replacement',
+      'landing.howItWorks.sublet',
+      'howItWorksPage.tabListers',
+      'howItWorksPage.listers',
+      'about.stats.listings',
+      'meta.pricingDescription',
+    ];
+    for (const locale of LOCALES) {
+      for (const key of DELETED) expect(valueAt(locale, key), `${locale}: ${key}`).toBeUndefined();
+      // The terms keep their payments section for the frozen flows (spec 08).
+      expect(valueAt(locale, 'termsPage.payments.title'), locale).toEqual(expect.any(String));
+    }
+  });
+
+  it('"Is Passflat free?" (D80): free today, no listing, no price, no promise', () => {
+    expect(valueAt('en', 'helpCenter.general.a2')).toBe(
+      'Yes. Everything on Passflat is free today: the figures, the address check, the calculator, the guides, the templates and the Telegram bot.',
+    );
+    for (const locale of LOCALES) {
+      const value = valueAt(locale, 'helpCenter.general.a2') as string;
+      expect(value, locale).toMatch(FREE);
+      expect(value, locale).not.toMatch(/\d|PLN|zł|€/i);
+      expect(value, locale).not.toMatch(LISTINGS[locale]);
+      expect(value, locale).not.toMatch(PROMISE[locale]);
+      expect(value, locale).not.toMatch(/forever|na zawsze|навсегда|назавжди/i);
     }
   });
 

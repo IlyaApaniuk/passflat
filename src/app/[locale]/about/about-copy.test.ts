@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickMessages } from '@/i18n/messages';
 
 // PRD 4 FR-15 (spec 08 §How it works, Help and About): the About page's first
@@ -26,7 +26,10 @@ const messages = Object.fromEntries(
 /** The namespaces of the About page's scoped provider (`about/page.tsx`). */
 const ABOUT_PROVIDER_NAMESPACES = ['about', 'common'];
 
-const state = vi.hoisted(() => ({ locale: 'en' as 'pl' | 'en' | 'ru' | 'uk' }));
+const state = vi.hoisted(() => ({
+  locale: 'en' as 'pl' | 'en' | 'ru' | 'uk',
+  showStats: false,
+}));
 
 // The real ICU translator over the provider's messages only; a missing key
 // throws instead of rendering its path.
@@ -46,7 +49,7 @@ vi.mock('next-intl', async (importOriginal) => {
   };
 });
 
-vi.mock('posthog-js/react', () => ({ useFeatureFlagEnabled: () => false }));
+vi.mock('posthog-js/react', () => ({ useFeatureFlagEnabled: () => state.showStats }));
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) =>
@@ -79,9 +82,9 @@ const about = (locale: Locale, key: string) =>
     ...messages[locale].about,
   }) as string;
 
-const render = (locale: Locale) => {
+const render = (locale: Locale, props: Parameters<typeof AboutClient>[0] = {}) => {
   state.locale = locale;
-  return renderToStaticMarkup(createElement(AboutClient, {}));
+  return renderToStaticMarkup(createElement(AboutClient, props));
 };
 
 /** The "Our Solution" section: the one that holds `solution.label`. */
@@ -150,4 +153,41 @@ describe('About page copy (PRD 4 FR-15)', () => {
       expect(about(locale, 'values.principle1Desc')).not.toMatch(LISTINGS[locale]);
     },
   );
+});
+
+// PRD 4 FR-16 (spec 08 §How it works, Help and About; D80): the "{listings}+" counter
+// leaves the stats block; the cost-reports counter stays while it is above 0.
+describe('About stats block (PRD 4 FR-16)', () => {
+  afterEach(() => {
+    state.showStats = false;
+  });
+
+  it.each(LOCALES)('%s: shows only the cost-reports counter, no listings counter', (locale) => {
+    state.showStats = true;
+    const html = render(locale, { stats: { costReports: 12 } });
+    const stats = html
+      .split('<section')
+      .map((chunk) => `<section${chunk}`)
+      .find((chunk) => text(chunk).includes(about(locale, 'stats.costReports')));
+    expect(stats, `${locale}: stats section`).toBeDefined();
+    expect(text(stats as string)).toBe(`12+ ${about(locale, 'stats.costReports')}`);
+    // One counter: the only "N+" figure on the page.
+    expect(html.match(/\d+\+/g)).toEqual(['12+']);
+    expect(text(stats as string)).not.toMatch(LISTINGS[locale]);
+  });
+
+  it.each(LOCALES)('%s: the listings label key is deleted', (locale) => {
+    expect(Object.keys(messages[locale].about.stats as object)).toEqual(['costReports']);
+  });
+
+  it('no stats block at 0 cost reports or with the flag off', () => {
+    state.showStats = true;
+    expect(text(render('en', { stats: { costReports: 0 } }))).not.toContain(
+      about('en', 'stats.costReports'),
+    );
+    state.showStats = false;
+    expect(text(render('en', { stats: { costReports: 12 } }))).not.toContain(
+      about('en', 'stats.costReports'),
+    );
+  });
 });

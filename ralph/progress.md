@@ -181,6 +181,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - grammY's `other.language_code` (`setMyName`, `setMyCommands`, ...) is the `LanguageCode` literal union: a `string` fails typecheck; carry a literal union such as `Exclude<BotProfileLanguage, 'default'>`.
 - `docs/analytics/activation-funnels.md` §9 (PRD 4 readout) is checked by the third `describe` of `src/lib/bot/roommate-readouts.test.ts`: a HogQL block reads website events (`event = 'telegram_bot_opened'` / `'cta_click'`) or `tg_` events, never both; renaming a §9 subsection, a query letter (K – N) or the "Website entry values (PRD 4)" heading fails it.
 - A heading split over two block spans (the hero H1, `title` + `titleHighlight`) needs `{' '}` between them, or its text (crawlers, Playwright `toHaveText`) runs the words together; a longer hero copy is measured for line count and fold position by a temporary e2e spec that logs `getBoundingClientRect` and writes screenshots to the scratchpad (`e2e/home.spec.ts` keeps the 320 px and 1280 × 800 checks).
+- A price check must not use a bare `/zł/i`: Polish words hold the letters ("Znalazłam", "złamanych"). Use `PRICE` from `src/i18n/honesty-copy.test.ts` (`PLN`, or `zł` with no Polish letter on either side).
+- Radix `AccordionContent` renders nothing for a closed item under `renderToStaticMarkup`: to check answers, mock `@/components/ui/accordion` with plain elements (example: `src/app/[locale]/help/help-copy.test.ts`).
 
 ## Log
 
@@ -5522,5 +5524,66 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Register to decide:** table K's RU and UK descriptions use «вы» / «ви» («Найдите соседа … и посмотрите», «Знайдіть сусіда … і подивіться»). The hero subtitle, the §8 tagline and the roommate copy use «ты» / «ти». They shipped as drafted. A «ты» version: «Найди соседа через Telegram-бот и посмотри, …», «Знайди сусіда через Telegram-бот і подивись, …».
   - **Design deviation to confirm:** the desktop H1 is one size smaller (above). Revert the class in `hero.tsx` for the bigger type; the new e2e fold check then fails, by design.
   - Typography nit: the Polish H1 leaves a one-letter "w" at a line end ("mieszkanie w / Warszawie") at 375 and 1280 px. A no-break space in the PL value would fix it.
+  - No table, migration, event name or Assumption constant.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:18 · T133 · done
+
+- Done (PRD 4 FR-16; spec 08 §How it works, Help and About; the owner's answer Q-3 (a), D80 "nothing is paid today"):
+  - Copy, four locales (`src/i18n/messages/{pl,en,ru,uk}.json`), by a scratchpad script over the parsed JSON (the files round-trip byte for byte through `JSON.stringify(…, null, 2)`, checked first):
+    - `helpCenter.general.a2` ("Is Passflat free?") rewritten; draft copy, see Owner review.
+    - Deleted: `helpCenter.payments.*` (the whole section, with the 14-day withdrawal answer); `helpCenter.leaseTakeovers.q6` / `a6` (the promotion answer, "Prices start at 39 PLN"); `landing.howItWorks.tabReplacement`, `tabRoommate`, `tabSublet`, `replacement.*`, `sublet.*`; `howItWorksPage.tabListers`, `howItWorksPage.listers.*`; `about.stats.listings`; `meta.pricingDescription`.
+    - The grep found no other reader of any deleted key. `termsPage.payments.*` stays (the terms keep it for the frozen flows, spec 08); the script refused to write if it was missing.
+  - `src/app/[locale]/help/client.tsx`: the payments section and the leaseTakeovers q6 item are gone.
+  - Home "how it works": `src/components/landing/how-it-works-tabs.tsx` is deleted, and `how-it-works.tsx` (server, `getTranslations('landing.howItWorks')`) renders the four roommate steps itself as an `<ol>` of `<li>`. With one tab left there is no tab strip, so the component became a plain list (the agent's choice the spec allows). Same icons, violet colours and layout as the old roommate tab. The now unused `.step-fade` animation is removed from `src/app/globals.css`.
+  - `/how-it-works` (`how-it-works/client.tsx`): `TABS = ['seekers', 'costs']`. The listers steps, their CTA to `/create-listing`, the `listers` colours and five icon imports are gone. The tab buttons gain `type="button"` and `aria-pressed`, as T131 did on the home page.
+  - `/about`: the stats block shows only the cost-reports counter while it is above 0, centred. `about/page.tsx` drops `prisma.listing.count`, and the cache key becomes `about-stats-v2` (new shape `{ costReports }`).
+  - Tests:
+    - New `src/components/landing/how-it-works.test.ts` (replaces the tabs test). It renders the async `HowItWorks` over `createTranslator` with `onError` throwing. Per locale it checks: the four roommate steps in order, numbered 1 – 4; no `<button>` or `aria-pressed`; `landing.howItWorks` holds only `title`, `subtitle`, `roommate`. It keeps the EN §8 and "three ways" checks.
+    - New `src/app/[locale]/help/help-copy.test.ts`. It renders `HelpCenterClient` under the page's provider namespaces, with the accordion mocked to plain elements. Per locale it checks:
+      - the section headings are general, cesja, costs, account, GDPR (no payments);
+      - the leaseTakeovers pairs are q1 – q5;
+      - the rendered "Is Passflat free?" answer is `a2`, which says "free" with no forever/later, digit, price or listing word;
+      - the page text has no PLN, zł, €, Stripe/BLIK/Przelewy24 or "14";
+      - the EN draft is verbatim.
+    - New `src/app/[locale]/how-it-works/how-it-works-copy.test.ts`: renders `HowItWorksClient` under its provider namespaces. Per locale it checks: two tabs, seekers pressed; `listers` and `tabListers` absent; the tabbed section has no `/create-listing`; no `howItWorksPage` value and no rendered text names a price.
+    - `src/app/[locale]/about/about-copy.test.ts`: the flag mock is switchable. With 12 reports the stats section reads exactly "12+ <label>" and is the only "N+" on the page. The label key set is `['costReports']`. There is no block at 0 reports or with the flag off.
+    - `src/i18n/honesty-copy.test.ts`:
+      - `helpCenter.general.a2` joins `REWRITTEN_KEYS`, and the stale `ALLOWED_EN_MATCHES` entry `helpCenter.payments.a2` is removed.
+      - New `PRICE` pattern, with a self-check (catches "39 PLN", "1 500 zł", "(zł)"; spares "Znalazłam").
+      - Three new cases:
+        - no `PRICE` under `helpCenter`, `howItWorksPage`, `landing.howItWorks` or `meta` in four locales;
+        - the twelve deleted keys are absent in four locales, and `termsPage.payments.title` stays;
+        - the `a2` EN draft verbatim, plus free / no digit / no price / no listing / no promise / no "forever" in four locales.
+    - `e2e/home.spec.ts`: the how-it-works test checks the four step headings in their `<ol>`, no `aria-pressed` button and no "Lease Takeover" / "Temporary Sublet" text (the FAQ half is unchanged).
+    - New `e2e/help-pages.spec.ts`:
+      - `/en/help` has no "Payments & Refunds" heading and no promotion question; opening "Is Passflat free?" shows the new answer; the page has no PLN or zł;
+      - `/en/how-it-works` has the tabs "Looking for a flat" and "Comparing costs" only, and switching to costs works.
+  - Docs:
+    - `docs/specs/README.md`: FR-16 → Done.
+    - `docs/ops/deploy-copy-review.md` §1: a T133 row, and a bullet on the price and frozen-listing lines left outside FR-16.
+    - Two Learnings lines (`PRICE`, the accordion mock).
+- Checks:
+  - Focused Vitest (`src/components/landing`, `src/i18n`, the help, how-it-works and about dirs, `home-thesis`): 17 files / 227 passed.
+  - `npm run verify` exit 0 (the second run). Lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 185 files / 3711 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 31 passed (29 before, plus the two new ones). The usual fake-PostHog fetch noise. `next-env.d.ts` restored.
+  - Not verified: the About counter in a browser (it needs the `SHOW_STATS` flag and a database; the render test is the proof). Nothing deployed, no migration, no event, no message sent.
+- Did not work:
+  - The first price pattern `/PLN|zł/i` flagged the Polish testimonial "Znalazłam …". It is now `PRICE` (see Learnings).
+  - The first verify failed lint (`react/display-name`) on a curried accordion stub. Fixed with plain arrow components.
+- Owner review:
+  - **Draft copy (D29), `helpCenter.general.a2`.** EN is spec 08 verbatim; PL, RU and UK are the agent's drafts. "Today" is there, and nothing about later prices or "forever".
+    - en "Yes. Everything on Passflat is free today: the figures, the address check, the calculator, the guides, the templates and the Telegram bot."
+    - pl "Tak. Wszystko w Passflat jest dziś bezpłatne: koszty zgłoszone przez najemców, sprawdzanie adresu, kalkulator, poradniki, wzory dokumentów i bot w Telegramie."
+    - ru «Да. Сегодня на Passflat всё бесплатно: расходы по отчётам жильцов, проверка адреса, калькулятор, гайды, шаблоны документов и Telegram-бот.»
+    - uk «Так. Сьогодні на Passflat усе безкоштовно: витрати за звітами мешканців, перевірка адреси, калькулятор, гайди, шаблони документів і Telegram-бот.»
+    - old en: "Yes. Browsing listings, cost reports, posting listings, and document templates — all free."
+  - **Deleted keys, four locales:** the twelve above. `landing.howItWorks.tabRoommate` is beyond the spec's list: with one tab nothing reads it any more.
+  - **Agent's choices:** the home steps are a plain list (no tabs). The About counter is centred alone. The cache key was bumped to `about-stats-v2`. `aria-pressed` was added on the /how-it-works tabs.
+  - **Left as they were, outside the spec (your call; also in deploy-copy-review §1):**
+    - `howItWorksPage.faq.a4` ("How much does Passflat cost?" → "free: listings (up to 2 active), …");
+    - `helpCenter.costTransparency.a2` ("free and forever", a statement about later prices under D80);
+    - the /how-it-works seekers tab (cesja steps, "Browse Listings" to `/warsaw/replacement`) and its bottom CTAs "Browse Listings" and "Post a Listing" (`/create-listing`);
+    - `meta.helpDescription` and `helpCenter.subtitle` still name lease takeovers and listings.
   - No table, migration, event name or Assumption constant.
 - Next: `node scripts/ralph-tasks.mjs next`.

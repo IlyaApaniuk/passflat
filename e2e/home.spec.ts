@@ -185,33 +185,31 @@ for (const [path, browserLocale, thesisStart] of [
   });
 }
 
-// PRD 4 FR-15: "how it works" opens on the roommate tab with the bot's steps
-// (the cesja and sublet tabs follow until Q-3), and the FAQ's first question is
-// the roommate one, opening onto its own answer.
+// PRD 4 FR-15 / FR-16 (D80): "how it works" shows the bot's four roommate steps and
+// no tabs (the cesja and sublet tabs are gone), and the FAQ's first question is the
+// roommate one, opening onto its own answer.
 test.describe('how it works and FAQ on /en', () => {
   test.use({ locale: 'en-US' });
 
-  test('the roommate tab is first and selected; the FAQ starts with the roommate question', async ({
+  test('the roommate steps without tabs; the FAQ starts with the roommate question', async ({
     page,
   }) => {
     await page.goto('/en');
     const main = page.locator('main');
 
-    const tabs = main.locator('button[aria-pressed]');
-    await expect(tabs).toHaveText(['Roommate Search', 'Lease Takeover', 'Temporary Sublet']);
-    await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'true');
-    await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'false');
-    const firstStep = main.getByRole('heading', { level: 3, name: 'Create a profile in the bot' });
-    await expect(firstStep).toBeVisible();
-    await expect(
-      main.getByRole('heading', { level: 3, name: 'Contacts open on mutual interest' }),
-    ).toBeVisible();
-
-    // The other tabs still switch the steps.
-    await tabs.nth(1).click();
-    await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'true');
-    await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'false');
-    await expect(firstStep).toHaveCount(0);
+    const steps = main.locator('ol').filter({
+      has: page.getByRole('heading', { level: 3, name: 'Create a profile in the bot' }),
+    });
+    await expect(steps.getByRole('heading', { level: 3 })).toHaveText([
+      'Create a profile in the bot',
+      'See who else is looking',
+      "Mark who you'd rent with",
+      'Contacts open on mutual interest',
+    ]);
+    await expect(steps.getByRole('heading', { level: 3 }).first()).toBeVisible();
+    await expect(main.locator('button[aria-pressed]')).toHaveCount(0);
+    await expect(main.getByText('Lease Takeover', { exact: true })).toHaveCount(0);
+    await expect(main.getByText('Temporary Sublet', { exact: true })).toHaveCount(0);
 
     const question = 'How do I find someone to rent with?';
     const triggers = main.locator('[data-slot="accordion-trigger"]');

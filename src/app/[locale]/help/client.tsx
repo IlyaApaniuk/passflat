@@ -45,7 +45,6 @@ export function HelpCenterClient() {
         { q: t('leaseTakeovers.q3'), a: t('leaseTakeovers.a3') },
         { q: t('leaseTakeovers.q4'), a: t('leaseTakeovers.a4') },
         { q: t('leaseTakeovers.q5'), a: t('leaseTakeovers.a5') },
-        { q: t('leaseTakeovers.q6'), a: t('leaseTakeovers.a6') },
       ],
     },
     {
@@ -72,17 +71,8 @@ export function HelpCenterClient() {
         { q: t('gdprRights.q2'), a: t('gdprRights.a2') },
       ],
     },
-    {
-      title: t('payments.title'),
-      items: [
-        { q: t('payments.q1'), a: t('payments.a1') },
-        { q: t('payments.q2'), a: t('payments.a2') },
-        { q: t('payments.q3'), a: t('payments.a3') },
-        { q: t('payments.q4'), a: t('payments.a4') },
-        { q: t('payments.q5'), a: t('payments.a5') },
-        { q: t('payments.q6'), a: t('payments.a6') },
-      ],
-    },
+    // PRD 4 FR-16 (D80): nothing is paid today, so there is no payments section and no
+    // promotion answer; the 14-day withdrawal text returns only with a real paid service.
   ];
 
   const filtered = useMemo(() => {

@@ -9,8 +9,9 @@ import { Search, EyeOff, Users, Unlock, Wallet, BarChart3, Database, Heart } fro
 
 const DEFAULT_CITY = 'warsaw';
 
+// PRD 4 FR-16 (D80): the listings counter is gone (listings are frozen, D5); the cost-reports
+// counter shows while it is above 0.
 interface AboutStats {
-  listings: number;
   costReports: number;
 }
 
@@ -104,22 +105,14 @@ export function AboutClient({ stats }: { stats?: AboutStats }) {
       </section>
 
       {/* Stats */}
-      {showStats && stats && (stats.listings > 0 || stats.costReports > 0) && (
+      {showStats && stats && stats.costReports > 0 && (
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-4">
-            <div className="mx-auto grid max-w-3xl gap-8 sm:grid-cols-2">
-              <div className="text-center">
-                <p className="text-3xl font-bold tracking-tight text-primary md:text-4xl">
-                  {stats.listings}+
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">{t('stats.listings')}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold tracking-tight text-primary md:text-4xl">
-                  {stats.costReports}+
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">{t('stats.costReports')}</p>
-              </div>
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-3xl font-bold tracking-tight text-primary md:text-4xl">
+                {stats.costReports}+
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('stats.costReports')}</p>
             </div>
           </div>
         </section>

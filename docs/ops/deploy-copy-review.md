@@ -34,6 +34,7 @@ agent's own draft. Four locales unless the row says otherwise.
 | T130 | FR-14        | `checker.costs.telegramHint` (new)                                                                                                                                                                                                                                                                                   | §8                                                            |
 | T131 | FR-15        | `landing.howItWorks.subtitle`, `landing.howItWorks.roommate.step{1,2,3,4}{Title,Desc}`, `landing.faq.q7`, `landing.faq.a7` (new)                                                                                                                                                                                     | EN §8; PL/RU/UK agent                                         |
 | T132 | FR-15        | `helpCenter.general.a1`, `about.solution.pillar{1,2,3}{Title,Desc}`, `about.team.description2`, `about.values.principle1Desc`                                                                                                                                                                                        | EN titles, `principle1Desc` §8; `a1` §8 without "free"; agent |
+| T133 | FR-16 (Q-3)  | `helpCenter.general.a2` (free today, D80); deleted `helpCenter.payments.*`, `helpCenter.leaseTakeovers.{q6,a6}`, `landing.howItWorks.{tabReplacement,tabRoommate,tabSublet,replacement,sublet}`, `howItWorksPage.{tabListers,listers}`, `about.stats.listings`, `meta.pricingDescription`                            | EN spec 08; PL/RU/UK agent                                    |
 | T134 | FR-17, FR-18 | pl `listings.roommateRoles.findFlatmate`, pl `listings.findFlatmate.languages` (the PL-only clause), ru/uk `listings.noMatch.title` («ты» / «ти»), `listings.demandCapture.searchCardTitleRoommate` (new); the posting-kit rule "Website links carry the reader's locale"                                            | §8, spec 08; the kit rule agent                               |
 | T138 | FR-21        | `costsSeo.buildingMetaTitle`, `costsSeo.buildingMetaDescription`, `costsSeo.districtMetaTitle`, `costsSeo.cityMetaTitle`, `calculator.metaTitle`, `calculator.metaDescription`, `listings.demandCapture.costCtaTitle`, `listings.detail.buildingCostHint`                                                            | tables B, C, G; `cityMetaTitle`, the last two agent           |
 | T139 | FR-21        | `rentReport.{metaTitle,metaDescription,ogTitle,lead,checkStep1,anatomyTitle,doplatyBody2}`, `meta.{aboutDescription,howItWorksDescription,blogDescription}`, `howItWorksPage.seekers.step1Desc`                                                                                                                      | table F (EN; PL title and OG title); agent                    |
@@ -59,6 +60,11 @@ Points the entries raise for a decision (not blockers; each entry has the detail
   roommate link. Set the username at this deploy (§2) or decide to hide the count line without it.
 - **The ru/uk deposit guide descriptions promise the deposit bot** (T141, table I): they go live
   only together with the bot.
+- **Price and frozen-listing lines outside FR-16** (T133, not in the spec, left as they were):
+  `howItWorksPage.faq.a4` ("Passflat is free: listings (up to 2 active), …") and
+  `helpCenter.costTransparency.a2` ("free and forever", a statement about later prices, D80);
+  the /how-it-works seekers tab (cesja steps, "Browse Listings" to `/warsaw/replacement`) and its
+  bottom CTAs "Browse Listings" and "Post a Listing" (`/create-listing`).
 - **Left as they were, for your call:** the move-out guide's "Cleaning disputes are the top
   reason …" (T141); 198 guide body lines that still match the claim words, most in another sense
   (T143); the rest of `/about` about frozen listings (T132); the ForWhom heading "Ready to find

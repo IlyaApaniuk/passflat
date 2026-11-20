@@ -352,13 +352,13 @@
       "title": "Help payments answers and 'Is Passflat free?', the cesja and sublet steps, the About listings counter (FR-16, owner question Q-3)",
       "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
       "dependsOn": ["T131", "T132"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-3: the payments answers and helpCenter.general.a2 are rewritten or deleted in four locales as answered (parity test), the tabs component keeps the answered flows, the About counter and howItWorksPage.listers.* follow the answer, meta.pricingDescription is deleted with (a), and no page names a price",
         "With answer (b) only the rewrites are made and nothing is removed"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-3 (PRD 4, decision review row 3). The Help payments answers name 39 PLN and cost-report access and helpCenter.general.a2 answers 'Is Passflat free?' while nothing is paid; the home 'how it works' keeps cesja and sublet steps; /about shows a listings counter. (a) payments and a2 → 'nothing is paid today', the promotion answer removed, the cesja and sublet tabs and howItWorksPage.listers.* removed, the counter removed, meta.pricingDescription deleted (proposal). (b) rewrite only, remove nothing. Payments copy mirrors the terms and removing steps hides frozen surfaces, so it is the owner's call.\nOwner answer: Q-3 (a), D80, 'nothing is paid today': helpCenter.general.a2 = Passflat is free today (nothing about future prices); the payments section is removed including the 14-day withdrawal text; the cesja and sublet tabs, howItWorksPage.listers.* and the About listings counter are removed; meta.pricingDescription deleted; see spec 08 section How it works, Help and About"
     },
     {
