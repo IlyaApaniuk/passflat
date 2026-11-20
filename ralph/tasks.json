@@ -4,7 +4,7 @@
     "title": "PRD 4: Site improvements — the website as an entry into roommate matching",
     "version": "0.1",
     "date": "2026-11-20",
-    "note": "Decomposed on 2026-11-20 in the night run (the owner has not answered the decision review: Q-1 - Q-5 are blocked tasks). Milestone M7 \"Owner tooling\" (T114 - T117, no PRD; D76, D77) stays first. PRD 3 tasks are archived in ralph/archive/prd-3-roommate-matching-tasks.json."
+    "note": "Decomposed on 2026-11-20 in the night run, after the architect gap review (22 gaps folded into specs 08 and 09). The owner has not answered the decision review: every owner question Q-1 - Q-13 is a blocked task (ten tasks; Q-9 - Q-12 share T137). PRD 4 tasks T118 - T157: 30 to build, 10 blocked. Milestone M7 \"Owner tooling\" (T114 - T117, no PRD; D76, D77) stays first. PRD 3 tasks are archived in ralph/archive/prd-3-roommate-matching-tasks.json."
   },
   "tasks": [
     {
@@ -75,6 +75,711 @@
       "checks": ["npm run verify"],
       "attempts": 0,
       "notes": "Blocked: owner question (D76, Open). What is the production bot's username, without the @? You create the bot in BotFather (`/newbot`); @passflatdev_bot stays the development bot. The username is needed for NEXT_PUBLIC_TELEGRAM_BOT_USERNAME in Vercel, for the posting kit's `<bot>` placeholder (`npm run bot:posts`, T116) and to know which bot `npm run bot:profile` (T115) and `npm run bot:webhook` act on. Answer with the username only; never paste the token (it goes only into Vercel)."
+    },
+    {
+      "id": "T118",
+      "milestone": "M1",
+      "title": "Roommate page opens on the flatmate block; honest line without the bot username (FR-1, FR-2)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#roommate-page-default-view",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "showsFlatmateBlock(state) is true for intent undefined and find_flatmate and false for find_room and offer_room; roommate-roles.test.ts covers all four",
+        "A pure roommatePageLayout({ listingType, citySlug, cityOfferCount, roleState, emptyKind, hasUsername }) → { showFlatmateBlock, showRoomMoney, showCountLine, showBotButton, selectorAboveTabs } in src/lib/roommate-roles.ts drives the page; tested for the default view (block shown, count line hidden at cityOfferCount 0, selector above the tabs), each intent, offers present, no username, another city",
+        "On /[city]/roommate the RoommateRoleSelector row renders above the ListingTypeTabs row; the scrolling list renders FindFlatmateBlock, then RoomMoneyBlock, then the empty states or the grid; the listings.listingsInCity count line is absent (desktop and mobile) while cityOfferCount === 0; /replacement and /sublet are unchanged",
+        "FindFlatmateBlock never returns null: without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME it renders the title, the how and languages lines and the new line listings.findFlatmate.notConnected (PRD 4 §8) with no bot button and no count line; flatmateCounts becomes optional (undefined → no count line)",
+        "pageHasFlatmateBlock(citySlug) decides the render (the checker city only) and canLoadFlatmateCounts(citySlug, botUsername) keeps the old rule and gates loading the counts on the page; both tested",
+        "roommate_intent_selected still fires once per tap and never on load (the existing tests pass)",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D5, D41, D48, D68 (placement is an Assumption). Hiding the type tabs is FR-7 (T122, blocked on Q-5). The roommate page cannot render in the e2e build (no database): the helper tests are the proof, and the progress entry says the page was not rendered."
+    },
+    {
+      "id": "T119",
+      "milestone": "M1",
+      "title": "Roommate page title, description and H1; main landmark, h-dvh and the footer (FR-3, FR-4)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#roommate-page-shell-and-metadata",
+      "dependsOn": ["T118"],
+      "status": "todo",
+      "acceptance": [
+        "listings.titleRoommate and listings.roommateMetaDescription are rewritten in four locales from appendix seo.md table A (the one source; the PL title starts with 'Szukam współlokatora'); new key listings.roommateH1 from PRD 4 §8; no value says free or bezpłatnie (Q-12) or promises a match, a date or a result; the three keys join REWRITTEN_KEYS in src/i18n/honesty-copy.test.ts and pass",
+        "generateMetadata drops the ' — {cityName}' concatenation (the layout template adds ' — Passflat') and keeps getAlternates('/${city}/roommate', locale) and getOgImage(title, description); URL, canonical and hreflang are unchanged",
+        "ListingsPageClient renders one <h1> with listings.roommateH1 as the first heading of the content column on the roommate page only; the filter sidebar heading stays h2",
+        "The content column is wrapped in <main id=\"main\"> for all three listing types; the root h-screen becomes h-dvh; <Footer /> (isomorphic, imported directly as the building client does) renders at the end of the scrolling list container",
+        "Tests: roommatePageLayout gains showH1; a static test reads listings-page-client.tsx and asserts h-dvh, <main id=\"main\" and one Footer",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D41, D48, D50. The footer keeps its useTranslations() hook (spec 08 §Current state); never switch it to getTranslations."
+    },
+    {
+      "id": "T120",
+      "milestone": "M1",
+      "title": "Header: 'Find a flatmate' first and the mobile pill to the roommate page; the footer gains costs by district and building reviews (FR-5)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#header-and-footer-entries",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "Header navLinks = Find a flatmate → /warsaw/roommate (new key common.findFlatmate), Costs → /warsaw/costs, Check an address → /warsaw/check; /warsaw/review leaves the header; the desktop nav and the mobile menu read the same array",
+        "The mobile pill links to /warsaw/roommate with common.findFlatmate and keeps cta_click {placement: 'header_mobile'}",
+        "The footer's product column gains Costs by district → /warsaw (new key landing.footer.costsByDistrict) and Building reviews → /warsaw/review (common.buildingReviews); the footer keeps its useTranslations() hook; the three frozen listings links stay (FR-7, T122)",
+        "e2e/home.spec.ts asserts a header link whose href ends with /warsaw/roommate on / and on /en",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D48. Moving building reviews to the footer is an Assumption (a demotion; the page stays reachable), listed for the owner in decision review row 12."
+    },
+    {
+      "id": "T121",
+      "milestone": "M1",
+      "title": "Home framing surfaces stop promoting frozen listings: hero chip, ForWhom, 404, dashboard button, district cards (FR-6)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#home-framing-surfaces",
+      "dependsOn": ["T120"],
+      "status": "todo",
+      "acceptance": [
+        "Hero: the three chips become one Link to /warsaw/roommate labelled listings.roommateRoles.findFlatmate (a shared namespace); the landing.hero.trust* chip keys are deleted in four locales only if nothing else uses them (the progress entry lists the grep)",
+        "ForWhom personas = rentTogether → /warsaw/roommate, findRoom → /warsaw/roommate, checkFlat → /warsaw/check with keys landing.forWhom.<key>.{title,description,cta} from PRD 4 §8; the old findHome, findRoommate and sublet keys are deleted; landing.cta.subtitle is rewritten (§8) and landing.cta.freeNote becomes 'No account needed.' with the PL, RU and UK values of spec 08 (no 'free', Q-12)",
+        "404: the second button → /warsaw/check with errors.notFound.browse rewritten to 'Check an address'; a third ghost Link → /warsaw/roommate with common.findFlatmate; status 404 and noindex are unchanged",
+        "Dashboard 'Browse listings' → /warsaw/costs with an existing costs label (named in the progress entry); the dashboard listings tab is unchanged",
+        "Home district cards (districts.tsx) link to /warsaw/<slug>, keeping DISTRICT_SLUG_OVERRIDES",
+        "src/components/landing/no-frozen-links.test.ts (static scan): no file under src/components/landing/ (footer.tsx excluded until FR-7), src/app/[locale]/page.tsx or src/app/[locale]/not-found.tsx contains /replacement, /sublet or /create-listing",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D5 (frozen, not promoted: links re-pointed, no page removed), D48. The hero H1 stays (Q-6, T125)."
+    },
+    {
+      "id": "T122",
+      "milestone": "M1",
+      "title": "Footer without the frozen listings links; roommate type tabs hidden at 0 offers (FR-7, owner question Q-5)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#footer-product-column-open",
+      "dependsOn": ["T120", "T121"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-5 with (a): the footer drops browseListings, temporarySublets and addListing and their keys in four locales; roommatePageLayout gains showTypeTabs (false on the roommate page while cityOfferCount === 0); the no-frozen-links test extends to footer.tsx; the pages stay reachable by URL",
+        "With answer (b) nothing changes and the task closes with the answer in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-5 (PRD 4, decision review row 5). Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer? (a) remove the links and hide the tabs; the pages stay reachable by URL (proposal). (b) keep both. Removing navigation to frozen pages is the owner's call (D5 says 'not promoted', not 'hidden')."
+    },
+    {
+      "id": "T123",
+      "milestone": "M2",
+      "title": "One shared FlatmateCallout, the new telegram_bot_opened sources, and the thesis section under the home hero (FR-8, FR-9)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#flatmate-callout",
+      "dependsOn": ["T118"],
+      "status": "todo",
+      "acceptance": [
+        "src/components/roommate/flatmate-callout.tsx, an async server component: FlatmateCallout({ surface, counts? }) renders a section with an h2 (listings.flatmateCallout.homeTitle for home, else listings.flatmateCallout.title), listings.findFlatmate.how, listings.findFlatmate.languages, the count line when counts.status === 'counts' (count, or first at 0), a link to /warsaw/roommate (listings.flatmateCallout.roommateLink) and, with NEXT_PUBLIC_TELEGRAM_BOT_USERNAME set, the bot button (listings.findFlatmate.button); it never returns null",
+        "The links are a small client component that reads no message namespace (the server callout passes both labels as string props): the roommate link captures cta_click {placement: 'flatmate_callout_<surface>'}; the bot button captures telegram_bot_opened with telegramBotOpenedProperties(surface) (has_building_context false) and opens a new tab",
+        "FlatmateSurface and TelegramBotSource gain home, building, district, hub, calculator, guide and report; botStartPayload: buildingId → b_<id>, roommate and the seven surfaces → mate_web_<source>, checker and empty → web_<source>; a table-driven test for every source plus a round trip through the bot's parseStartPayload → { kind: 'roommate', source: 'web', detail: <surface> }",
+        "Pure flatmateCalloutView({ surface, counts, hasUsername }) in src/lib/roommate/flatmate-callout.ts → { titleKey, countLine: 'count' | 'first' | 'none', showBotButton, payload, placement }, tested per counts state, per surface and without the username",
+        "Home: src/app/[locale]/page.tsx renders FlatmateCallout surface='home' between Hero and CheckAddress inside main; HomeContent's Promise.allSettled gains loadFlatmateBlockCounts() (a rejection → no count line); its h2 is the thesis sentence listings.flatmateCallout.homeTitle (D48)",
+        "e2e/home.spec.ts: / and /en contain a section whose heading contains 'Passflat' with a link to /warsaw/roommate; the test name says the bot button is absent because the e2e build has no bot username",
+        "New keys listings.flatmateCallout.{homeTitle,title,roommateLink} in four locales (PRD 4 §8)",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D48, D50; PRD 3 FR-2 (mate_web_<detail>). Spec 08 §Flatmate callout and §Home thesis section. A client component cannot import the async callout: client pages receive it from their server page as a ReactNode prop. The per-person line is added by T129. Do not reuse TelegramBotCta (its checker namespace stays off these routes). The callout is rendered on the home page in this task so knip finds no unused file."
+    },
+    {
+      "id": "T124",
+      "milestone": "M2",
+      "title": "Home title, description, footer tagline, costs CTA and subtitle: honest cost-first rewrite; the templates sentence (FR-10)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#home-copy",
+      "dependsOn": ["T121"],
+      "status": "todo",
+      "acceptance": [
+        "meta.homeTitle, meta.homeDescription, landing.footer.tagline, landing.hero.costsCta ('See reported costs') and landing.hero.subtitle (no 'document templates', the cost sentence kept) are rewritten in four locales from the EN drafts of spec 08 §Home copy: no 'real' family, no 'truth', no listings (D5), no new 'free' claim (Q-12), today's cost-first positioning kept (the thesis-first versions are Q-6, T125)",
+        "landing.tools.templatesDescription names the four documents of public/documents/ (lease assignment or cesja, handover protocol, sublease agreement, flatmate agreement) as Polish originals with English, Russian and Ukrainian versions, from spec 08, in four locales",
+        "meta.homeTitle, meta.homeDescription, landing.footer.tagline, landing.hero.costsCta and landing.tools.templatesDescription join REWRITTEN_KEYS and pass",
+        "A test asserts that every locale's templatesDescription names the same four languages (the language words per locale in the test) and that public/documents/ holds the four template stems with -en, -ru and -uk PDFs",
+        "The ForWhom keys are not touched (T121 owns them)",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D25, D5. Appendix seo.md table K is headed 'owner decision (positioning)': it is not shipped here (Q-6, T125)."
+    },
+    {
+      "id": "T125",
+      "milestone": "M2",
+      "title": "Positioning: the hero H1 and thesis-first home title, description and tagline (FR-10 Open part, owner question Q-6)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-held-by-blocked-tasks",
+      "dependsOn": ["T124"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-6: the answered values of the hero H1 key (the task names it), meta.homeTitle, meta.homeDescription and landing.footer.tagline are written in four locales (with (a): appendix seo.md table K and the PRD 4 §8 tagline), stay in REWRITTEN_KEYS and pass the honesty test",
+        "With answer (b) nothing changes and the task closes with the answer in the progress entry"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-6 (PRD 4, decision review row 6). The hero H1 'Don't overpay for rent in Warsaw' and the home title, description and footer tagline: (a) keep the H1 and ship table K's thesis-first title and description and the §8 tagline (proposal); (b) keep T124's honest cost-first rewrite and the H1; (c) also rewrite the H1 to 'Who to rent with in Warsaw, and what it costs per person'. Positioning copy is the owner's call (the audit appendix marks table K as his decision)."
+    },
+    {
+      "id": "T126",
+      "milestone": "M2",
+      "title": "The callout on building pages and the city hub; the building page loses its listings card (FR-11)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
+      "dependsOn": ["T123"],
+      "status": "todo",
+      "acceptance": [
+        "Building page: the bottom card (costs.building.lookingForApartment, lookingForApartmentDesc, viewListingsIn → /warsaw/replacement?district=) is replaced by FlatmateCallout surface='building' without counts, rendered by the server page and passed to the client as a ReactNode prop, outside the contribution gate; the three keys are deleted in four locales (lookingForApartmentDesc leaves REWRITTEN_KEYS)",
+        "City hub /[city]: FlatmateCallout surface='hub' with counts from loadFlatmateBlockCounts() under the buttons row; a rejection of the counts load renders the callout without a count line; the hub stays ISR",
+        "The district page's callout is not placed here (T147 places it inside its section)",
+        "Tests: a static scan that the building client contains no /replacement; flatmateCalloutView rows for building and hub",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D5, D48. No number on a building page (Assumption). City pages cannot render in the e2e build (no database)."
+    },
+    {
+      "id": "T127",
+      "milestone": "M2",
+      "title": "The callout under the calculator result (FR-12)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
+      "dependsOn": ["T123"],
+      "status": "todo",
+      "acceptance": [
+        "The server page src/app/[locale]/[city]/calculator/page.tsx renders FlatmateCallout surface='calculator' without counts and passes it to the calculator client as a ReactNode prop, placed under the result buttons; the scoped provider (calculator, common, share) is unchanged because the callout's client links take their labels as props",
+        "A test asserts the calculator page passes the callout (a static read or a render-props helper) and flatmateCalloutView's calculator row",
+        "The progress entry names the namespaces the calculator client tree receives"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D48. The calculator cannot render in the e2e build (a city page, no database)."
+    },
+    {
+      "id": "T128",
+      "milestone": "M2",
+      "title": "The callout on the blog list, every guide and the data report (FR-12)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
+      "dependsOn": ["T123"],
+      "status": "todo",
+      "acceptance": [
+        "Blog list: a second button 'Find a flatmate' → /warsaw/roommate (blog.ctaFlatmate) next to blog.ctaButton; blog.ctaText is rewritten to name both (PRD 4 §8)",
+        "Guide article: after the body and the template block, one line with listings.roommateCostsBridge and a Link to /warsaw/check (listings.roommateCostsBridgeCta), then FlatmateCallout surface='guide' without counts, rendered by the server page and passed to the client",
+        "Data report (/blog/warsaw-rent-prices): FlatmateCallout surface='report' under the city figure, without counts (T129 adds the per-person line)",
+        "Tests: flatmateCalloutView rows for guide and report; key parity",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D48. Static blog pages carry no counts (Assumption). The data report has its own surface value 'report' so the readout tells it apart from the guides (gap review)."
+    },
+    {
+      "id": "T129",
+      "milestone": "M2",
+      "title": "The per-person line on the roommate block, the home section, the hub and the data report (FR-13)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#per-person-line",
+      "dependsOn": ["T118", "T123", "T126", "T128"],
+      "status": "todo",
+      "acceptance": [
+        "src/lib/roommate/room-costs.ts gains loadWarsawPerPersonSplit(): it reads the Warsaw city row with its districts (id, slug, nameKey) by slug, returns the city entry's split from loadRoomCostAreas(city, []) and catches every error → null; no new aggregation (D71: apartments with 2+ rooms, tenant group, N ≥ 2, all-in median halved)",
+        "One key listings.flatmateCallout.perPerson with {value}, {count} and {area}: EN, RU and UK = the bot's roomSplit sentences verbatim, PL from spec 08 §Per-person line; the key joins REWRITTEN_KEYS and passes",
+        "Pure perPersonLineValues(split, areaName) in src/lib/roommate/per-person-line.ts → { value, count, area } | null; golden tests from PRD 4 §5: example 1 → { value: 2450, count: 5 }, example 2 (one qualifying report) → null, example 3 (known part only) → null; the area is the split's own area, resolved to a string on the server (no client component reads a city.* key)",
+        "FindFlatmateBlock and FlatmateCallout gain split and splitArea props and render the line through the helper, once per page; the roommate page, the home section, the hub and the data report pass loadWarsawPerPersonSplit() in their existing parallel loads; a rejection or null → no line",
+        "src/lib/roommate/per-person-consistency.test.ts feeds one fixture through perPersonSplit plus the website helper and through the bot's roomCostsReply for a profile with any district, and compares value and N",
+        "The line never shows a percentage, 'market', 'cheaper' or an asking-price figure",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D61, D71: the rule is the bot's, unchanged. The website surfaces are an Assumption under the thesis (D48: per-person figures from the figure contract), listed for the owner in decision review row 12. CLAUDE.md cost data honesty: no second aggregation."
+    },
+    {
+      "id": "T130",
+      "milestone": "M2",
+      "title": "The checker's bot handoff is a 44 px button with a line naming what the bot does (FR-14)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#checker-handoff",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "TelegramBotCta renders the anchor with buttonVariants({ variant: 'outline' }) plus h-auto min-h-11 whitespace-normal; same href, onClick, label and telegram_bot_opened properties; checker_cta_clicked {cta: 'telegram'} is unchanged",
+        "A separate TelegramBotHint (same file) renders the new key checker.costs.telegramHint (PRD 4 §8: English, Russian and Ukrainian for the bot, Russian and Ukrainian for the deposit letter, D63); check/client.tsx renders it after each onClickCapture wrapper, never inside one; a static test asserts that",
+        "Without the username both components return null; no roommate callout on the checker; src/i18n/bot-languages-copy.test.ts passes",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "PRD 1 FR-11 (payload and events as built), D63. The checker cannot render in the e2e build (a city page)."
+    },
+    {
+      "id": "T131",
+      "milestone": "M2",
+      "title": "Home 'How it works': the roommate tab first with the bot's steps; the FAQ with explicit pairs and the roommate question first (FR-15)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "HowItWorksTabs TABS = ['roommate', 'replacement', 'sublet'], roommate first and selected; landing.howItWorks.roommate.step{1..4}{Title,Desc} and landing.howItWorks.subtitle are rewritten from PRD 4 §8 in four locales; the other tabs' copy is untouched (Q-3)",
+        "The FAQ list becomes explicit pairs FAQ_ITEMS = [{ q: 'q7', a: 'a7' }, { q: 'q1', a: 'a1' }, …] in a pure module; landing.faq.q7 and a7 are added (PRD 4 §8) and rendered first; a test asserts that every pair's numbers match and every key exists in four locales",
+        "No rewritten value names a price, a listing feature, 'verified', a match guarantee or a date",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "D48, D5. The removals (the cesja and sublet steps) are FR-16, blocked on Q-3 (T133)."
+    },
+    {
+      "id": "T132",
+      "milestone": "M2",
+      "title": "Help 'What is Passflat?' and About describe the thesis and reported costs (FR-15)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "Rewritten in four locales from PRD 4 §8: helpCenter.general.a1, about.solution.pillar{1,2,3}{Title,Desc}, about.team.description2 and about.values.principle1Desc (which joins REWRITTEN_KEYS)",
+        "helpCenter.general.a2 ('Is Passflat free?') is not changed: it is a price statement and belongs to Q-3 (T133)",
+        "A test asserts these keys contain no 'PLN', no 'zł', no 'verified' and pass the FORBIDDEN regex of each locale",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D48. /help and /about give their content namespaces through scoped providers: the progress entry names them."
+    },
+    {
+      "id": "T133",
+      "milestone": "M2",
+      "title": "Help payments answers and 'Is Passflat free?', the cesja and sublet steps, the About listings counter (FR-16, owner question Q-3)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
+      "dependsOn": ["T131", "T132"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-3: the payments answers and helpCenter.general.a2 are rewritten or deleted in four locales as answered (parity test), the tabs component keeps the answered flows, the About counter and howItWorksPage.listers.* follow the answer, meta.pricingDescription is deleted with (a), and no page names a price",
+        "With answer (b) only the rewrites are made and nothing is removed"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-3 (PRD 4, decision review row 3). The Help payments answers name 39 PLN and cost-report access and helpCenter.general.a2 answers 'Is Passflat free?' while nothing is paid; the home 'how it works' keeps cesja and sublet steps; /about shows a listings counter. (a) payments and a2 → 'nothing is paid today', the promotion answer removed, the cesja and sublet tabs and howItWorksPage.listers.* removed, the counter removed, meta.pricingDescription deleted (proposal). (b) rewrite only, remove nothing. Payments copy mirrors the terms and removing steps hides frozen surfaces, so it is the owner's call."
+    },
+    {
+      "id": "T134",
+      "milestone": "M2",
+      "title": "The Polish visitor's expectation, locale-prefixed links in the posting kit, roommate page copy (FR-17, FR-18)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#polish-visitor-and-the-posting-kit",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "listings.roommateRoles.findFlatmate pl = 'Szukam kogoś do wspólnego wynajmu'; listings.findFlatmate.languages pl gains the 'no Polish version yet' clause of PRD 4 §8; en, ru and uk are unchanged; bot-languages-copy.test.ts passes",
+        "docs/marketing/roommate-posts.md 'How to use a template' says website links in posts carry the reader's locale (/ru/… or /uk/…), with no literal bare URL in the rule sentence; roommate-posting-kit.test.ts asserts every passflat.com/ URL inside the kit's template blocks (not the prose) has a /ru/, /uk/ or /en/ prefix",
+        "New key listings.demandCapture.searchCardTitleRoommate is used by ListingsEmptyState when listingType === 'roommate' (spec 08 §Roommate page copy); the other types keep searchCardTitle",
+        "listings.noMatch.title ru «Нет предложений по твоим фильтрам», uk «Немає пропозицій за твоїми фільтрами»; listings.demandCapture.consentNote is not changed (Q-9, T137)",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D50, D53, D42. Spec 08 §Roommate page copy for FR-18."
+    },
+    {
+      "id": "T135",
+      "milestone": "M2",
+      "title": "The city-notify form on the home page (FR-19, owner question Q-2)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms-open",
+      "dependsOn": [],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-2 with (a): CityNotify no longer renders on /; the API, the stored rows and the manual city-launch route (D33) are unchanged; the checker's outside-city copy is rewritten in four locales as answered",
+        "With answer (b) nothing changes and the task closes with the answer in the progress entry"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-2 (PRD 4, decision review row 2). The home 'Live in another city?' form collects e-mails for a launch that is out of focus (D6). (a) remove it from the home page and keep the API and the checker's outside-city form with 'we may e-mail you once if Passflat launches there' (proposal). (b) keep it as is. Removing a form that stores personal data is the owner's call."
+    },
+    {
+      "id": "T136",
+      "milestone": "M2",
+      "title": "The roommate e-mail card and the target of 'I have a free room' (FR-20, owner question Q-4)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms-open",
+      "dependsOn": ["T134"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-4 with (a): ListingsEmptyState does not render the capture on the roommate page (kept on /replacement and /sublet); 'I have a free room' points to the room money block's links; PRD 1 FR-15's sign-in test is retargeted; spec 05 notes for E13 that the roommate page no longer saves interest",
+        "With answer (b) nothing changes and the task closes with the answer in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-4 (PRD 4, decision review row 4). The roommate page's e-mail 'save interest' card competes with the bot and E13 counts it; 'I have a free room' leads through a login wall to a frozen listing form. (a) remove the card from the roommate page only and point the free-room role to the room money block's links (proposal). (b) keep both. Personal data and an experiment's count are the owner's call."
+    },
+    {
+      "id": "T137",
+      "milestone": "M2",
+      "title": "Copy questions: the consent note's register, 'expanding across Europe', open data against 'unlock', 'free' in new copy (owner questions Q-9 – Q-12)",
+      "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-held-by-blocked-tasks",
+      "dependsOn": ["T119", "T121"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers: Q-9 (a) listings.demandCapture.consentNote ru and uk switch to «ты» / «ти» with the meaning unchanged; Q-10 the footer line is replaced or dropped in four locales as answered; Q-11 the trust line and/or the gate copy change as answered; Q-12 (a) 'Free, no account' joins listings.roommateMetaDescription and landing.cta.freeNote in four locales; every 'leave' closes its part",
+        "The honesty test and key parity pass; the changed keys are listed for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner questions Q-9 – Q-12 (PRD 4, decision review rows 9, 10, 11 and 15), answered together. Q-9: change the roommate page's consent note from «вы»/«ви» to «ты»/«ти»? (a) yes, the address form only (proposal); (b) leave; consent text. Q-10: the footer line 'Starting in Warsaw, expanding across Europe' (D6): (a) 'Warsaw only for now.' (proposal); (b) drop it. Q-11: 'The data is open — free, no account' against the 'unlock' gates (D3): (a) 'Figures are open — free, no account; the per-utility breakdown after you add yours' (proposal); (b) leave. Q-12: may new copy say the bot and the figures are free? (a) yes, in the roommate description and the home CTA note (proposal); (b) no, 'No account needed.' stays. Consent text and statements about prices are the owner's."
+    },
+    {
+      "id": "T138",
+      "milestone": "M3",
+      "title": "Shared honesty rules with the wider forbidden lists; cost-page titles and descriptions under the test (FR-21, part 1)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#honesty-keys-under-test",
+      "dependsOn": ["T119", "T124"],
+      "status": "todo",
+      "acceptance": [
+        "src/i18n/honesty-rules.ts (exported, no test code) holds FORBIDDEN per locale and honesty-copy.test.ts imports it; the lists grow as spec 09 §Honesty keys under test gives (EN real, market, truth; PL rzeczywist, prawdziw, rynk; RU настоящ, рыночн; UK справжн, ринков), keeping the existing alternatives and lookaheads; nothing is loosened",
+        "Every existing REWRITTEN_KEYS value the wider lists flag is reworded in four locales or, when it is not a claim about figures, listed in ALLOWED_KEY_MATCHES with a one-line reason; the progress entry lists both",
+        "Rewritten in four locales and added to REWRITTEN_KEYS: costsSeo.buildingMetaTitle, buildingMetaDescription (table B: no report for this building yet, a district or Warsaw reference with its group and N), districtMetaTitle, districtMetaDescription (table C, the shorter variant), cityMetaTitle, calculator.metaTitle, calculator.metaDescription (table G), listings.demandCapture.costCtaTitle, listings.detail.buildingCostHint; none names 'market' or a percentage",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D25; spec 03 §Marketing copy; CLAUDE.md (never 'market', never 'verified', no invented statistics). Owned elsewhere: the home keys (T124), about.values.principle1Desc (T132), the roommate page keys (T119), costs.submit.meta* (T149)."
+    },
+    {
+      "id": "T139",
+      "milestone": "M3",
+      "title": "The data report, page descriptions and the remaining keys under the honesty test; 'really' in the EN whole-file scan (FR-21, part 2)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#honesty-keys-under-test",
+      "dependsOn": ["T138"],
+      "status": "todo",
+      "acceptance": [
+        "Rewritten in four locales and added to REWRITTEN_KEYS: rentReport.metaTitle, metaDescription, ogTitle, lead, checkStep1, anatomyTitle, doplatyBody2 (table F and its note), meta.aboutDescription, meta.howItWorksDescription, meta.blogDescription, howItWorksPage.seekers.step1Desc; every value passes FORBIDDEN of its locale",
+        "The EN whole-file scan regex becomes /verified|checked|actually|really|in full/i; every new match that is not a claim about figures goes into ALLOWED_EN_MATCHES with a one-line reason; the progress entry lists them",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D25."
+    },
+    {
+      "id": "T140",
+      "milestone": "M3",
+      "title": "Nominative-safe templates for district and city names (FR-22)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#nominative-safe-templates",
+      "dependsOn": ["T138"],
+      "status": "todo",
+      "acceptance": [
+        "costsSeo.districtH1, costsSeo.buildingsHeading and calculator.h1 follow the shapes of the spec 09 table in four locales (the name in the nominative after a colon or dash, or the literal 'w Warszawie' while Warsaw is the only city, D6); districtMetaTitle and calculator.metaTitle already follow them after T138 (checked)",
+        "src/i18n/nominative-templates.test.ts scans the pl and ru message files for a preposition (w, na, в, у, на) directly before {district} or {city} and fails on any match; it passes",
+        "The honesty test still passes",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Appendix seo.md tables C and G. District names are database display names in the nominative."
+    },
+    {
+      "id": "T141",
+      "milestone": "M3",
+      "title": "Guide frontmatter without percentages and the 'real' family, with a frontmatter honesty test (FR-23)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#blog-frontmatter",
+      "dependsOn": ["T138"],
+      "status": "todo",
+      "acceptance": [
+        "src/content/blog-frontmatter.test.ts (new, written first) parses every src/content/blog/*.mdx frontmatter with the parser of src/lib/blog.ts (exported if private), takes the locale from the file name, and fails when title or description matches FORBIDDEN[locale] from src/i18n/honesty-rules.ts or /\\d+\\s?%/; its allow list starts empty",
+        "Every frontmatter the test flags is rewritten (at least the files spec 09 §Blog frontmatter names, with tables E, I and J where they apply) until the test passes; guide bodies are not changed",
+        "The deposit descriptions keep the Telegram bot clause in ru and uk only; en and pl drop it (D63, D50)",
+        "Every changed title and description is listed in the progress entry for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D25 (no invented statistics). The gap review counted 22 flagged frontmatters with the old lists."
+    },
+    {
+      "id": "T142",
+      "milestone": "M3",
+      "title": "Guide bodies: reported-costs wording in every line that links to the checker, costs or a building (FR-24, part 1)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
+      "dependsOn": ["T141"],
+      "status": "todo",
+      "acceptance": [
+        "src/content/blog-bodies.test.ts (new, written first): every body line that links to /check, /costs or /building passes FORBIDDEN[locale], unless the line is in an allow list with a one-line reason",
+        "Every flagged line is reworded with the smallest change by the inflection table of spec 09 §Guide bodies (the 'reported' or 'from reports' meaning) until the test passes; the progress entry lists every changed line; a one-off node script may do the replacement and is not committed",
+        "The cesja guide's /replacement links are left as they are (Q-7, T146)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D25. The gap review counted 74 flagged link lines with the old lists."
+    },
+    {
+      "id": "T143",
+      "milestone": "M3",
+      "title": "Guide bodies: no 'verified' listings and no hard-coded statistics presented as Passflat data (FR-24, part 2)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
+      "dependsOn": ["T142"],
+      "status": "todo",
+      "acceptance": [
+        "blog-bodies.test.ts gains a scan of every body line for the verification family (verified, checked by, zweryfikow, sprawdzon, проверенн, перевірен) with its own allow list, and passes",
+        "'Verified listings' (foreigners-guide-renting-warsaw-*) becomes 'listings' with no quality claim; a number stated as Passflat data (for example 'actually pay a median of around 3 420 zł' in renting-without-agent-warsaw-en) is removed or replaced by a link to /blog/warsaw-rent-prices without a number, in every locale where it occurs; legal facts with numbers (deadlines, statutory amounts) are not touched",
+        "The progress entry lists every changed line for the owner (D29)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "CLAUDE.md cost data honesty: never 'verified', never invented statistics."
+    },
+    {
+      "id": "T144",
+      "milestone": "M3",
+      "title": "Guide links to passflat.com open in the same tab; the markdown renderer moves to a pure module (FR-24, part 3)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "markdownToHtml moves from src/app/[locale]/blog/[slug]/client.tsx to a pure module src/lib/blog-markdown.ts that the client imports; the output is unchanged except for links",
+        "An href starting with https://passflat.com/ renders as its path, without target and rel; other absolute links keep target='_blank' rel='noopener'; the affiliate rule is unchanged; a unit test with four hrefs"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Audit S-21. Guide links already carry the locale (gap review checked 328)."
+    },
+    {
+      "id": "T145",
+      "milestone": "M3",
+      "title": "Titles and descriptions of the page-1 guides with CTR below 1 % (FR-25)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#low-ctr-titles",
+      "dependsOn": ["T141"],
+      "status": "todo",
+      "acceptance": [
+        "Frontmatter title and description rewritten in four locales: przepisanie-licznikow-najem (table D), hidden-rental-costs-warsaw (table E, en included), cesja-najmu-guide (table H: no tenant-replacement promise), renting-without-agent-warsaw and najem-okazjonalny-vs-standard-warsaw (table J)",
+        "blog-frontmatter.test.ts asserts title ≤ 65 and description ≤ 160 characters for these five slugs in every locale, and its honesty check still passes",
+        "The changed titles and descriptions are listed in the progress entry for the owner"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "H11 (Parked) shipped as a small item and read in the PRD 4 readout. Keeping the cesja article at all is Q-7 (T146)."
+    },
+    {
+      "id": "T146",
+      "milestone": "M3",
+      "title": "The cesja guide: keep, or remove with a redirect (owner question Q-7)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#low-ctr-titles",
+      "dependsOn": ["T145"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-7: with (a) keep, nothing changes and the task closes with the answer in the progress entry",
+        "With (b) the four cesja-najmu-guide locale files are removed, a permanent redirect for each locale URL to the blog index of that locale is added in next.config.mjs, and the sitemap test and an e2e redirect assertion cover it"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-7 (PRD 4, decision review row 7). Keep the cesja guide, which promises frozen tenant replacement? (a) keep it: T145 already drops the promise from its description (proposal); (b) remove it with a redirect to /blog. Removing a URL needs a redirect, and URL changes are the owner's call."
+    },
+    {
+      "id": "T147",
+      "milestone": "M3",
+      "title": "District page: the roommate section with the count of profiles naming the district and the callout; counts expire on every profile write (FR-26)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#district-section",
+      "dependsOn": ["T123", "T140"],
+      "status": "todo",
+      "acceptance": [
+        "countRoommates without a viewer also returns byDistrict: Record<slug, number> (the same counting: active, not blocked, not banned, 'any' profiles in no district, nothing summed); loadFlatmateBlockCounts() carries it under the cache key roommate-website-counts-v2 with the tag roommate-counts; golden test PRD 4 §5 example 4 → total 5, byDistrict { mokotow: 2, ochota: 2, wola: 1 }, the top-5 list unchanged",
+        "revalidateRoommateCounts() in src/lib/roommate/website-counts.ts calls revalidateTag('roommate-counts', { expire: 0 }), never throws, and is called after every profile write that changes who is counted (save or edit, delete, moderation hide or restore, the daily cron's expiry and deletion; the progress entry lists the call sites); a unit test with a mocked next/cache asserts the call and a swallowed throw",
+        "District page: a section after the buttons row and before the buildings heading with the h2 costsSeo.districtRoommateHeading, the count line costsSeo.districtProfileCount ('{district}: …' with full plural forms per locale) or costsSeo.districtProfileNone at 0 or when absent, none when unavailable, then FlatmateCallout surface='district' with counts",
+        "A pure districtRoommateSection helper is tested for the three count states; no percentage, rank, 'cheapest' or 'verified'; the nominative test passes on the new keys",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D49, D51, D68 (counting rules Decided); the website count shape and the expiry are Assumptions (spec 06 §Counts, spec 09 §District section). Outside a Next request (bot:dev) revalidateTag throws: the helper swallows it."
+    },
+    {
+      "id": "T148",
+      "milestone": "M3",
+      "title": "District page: the room reference and the per-person line with its own area (FR-27)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#district-section",
+      "dependsOn": ["T147", "T129"],
+      "status": "todo",
+      "acceptance": [
+        "The page's getCity (or a second query) selects the city's districts with id, slug and nameKey; the section renders loadRoomCostAreas(city, [district])[0]: with room set, costsSeo.districtRoomLead, costsSeo.districtRoomCityFallback when room.level === 'city', and AreaReferenceGroups with both groups and N; no room or a rejection → no figure lines",
+        "The district callout receives the area's split with its own area name (the district at level district, Warsaw when the split fell back to the city), resolved on the server; the line renders once",
+        "Golden tests (PRD 4 §5 example 5): tenant 1,700 zł (2), asking 1,550 zł known part (5), per person { value: 2450, count: 5, area: 'Mokotów' }; Wesoła → the city fallback line; a district with too few 2-room flats → the split named Warsaw; a consistency test compares the page data with roomCostsReply's input for the same fixture",
+        "costsSeo.districtMetaDescription switches to the full table C variant in four locales; the honesty test passes",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "D23, D61, D71, PRD 3 FR-17. No second aggregation (CLAUDE.md)."
+    },
+    {
+      "id": "T149",
+      "milestone": "M3",
+      "title": "Sitemap priorities and lastmod, robots, and the submit page's own title and description (FR-28)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
+      "dependsOn": ["T138"],
+      "status": "todo",
+      "acceptance": [
+        "Sitemap: /[city]/roommate weekly 0.8, /replacement and /sublet 0.4, blog entries with lastModified from post.date; the listing-detail loop stays (Q-1, T150); a test with mocked data asserts them",
+        "robots: allow ['/', '/api/og']; disallow /api/, /dashboard/, /messages/, /create-listing/, /auth/ and /admin/, bare and with the /en, /ru and /uk prefixes (one helper); isIndexable false → disallow all as today; a test over the output",
+        "/[city]/costs/submit generateMetadata returns costs.submit.metaTitle and costs.submit.metaDescription (new keys created here in four locales from PRD 4 §8 and added to REWRITTEN_KEYS) plus the existing alternates",
+        "Structured data (FR-28 criterion 2) is not changed: it is Later",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Priorities are Assumptions. The Instagram handle is Q-8 (T151)."
+    },
+    {
+      "id": "T150",
+      "milestone": "M3",
+      "title": "Frozen listing pages out of the sitemap, or noindex (FR-29, owner question Q-1)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
+      "dependsOn": ["T149"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-1 with (a): /[city]/replacement, /[city]/sublet and the listing-detail loop leave the sitemap and the two list pages carry robots { index: false, follow: true }; the sitemap test asserts their absence; no URL is removed or redirected",
+        "With answer (b) nothing changes and the task closes with the answer in the progress entry"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-1 (PRD 4, decision review row 1). Drop /replacement, /sublet and the listing details from the sitemap and set noindex, follow on the two list pages? (a) yes; the pages stay reachable, no redirect (proposal). (b) keep them listed at 0.4 (T149 lowers them). Changing the discoverability of existing URLs is the owner's call."
+    },
+    {
+      "id": "T151",
+      "milestone": "M3",
+      "title": "Organization schema: the right Instagram handle (owner question Q-8)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
+      "dependsOn": [],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-8: organizationJsonLd().sameAs carries the answered Instagram URL and the footer's Instagram link matches it; a unit test asserts both"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-8 (PRD 4, decision review row 8). Which Instagram handle is right: passflatapp (the footer) or passflat.com (the Organization schema)? Proposal: passflatapp; the schema's value looks like a typo. A fact only the owner knows."
+    },
+    {
+      "id": "T152",
+      "milestone": "M4",
+      "title": "Icons without a 500: the locale guard and route handlers for /favicon.ico and /apple-touch-icon.png (FR-30)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#icons-and-the-locale-guard",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "The 500 is reproduced first with a temporary e2e probe (ralph/progress.md Learnings), which is deleted afterwards; the progress entry records the status before and after",
+        "src/app/[locale]/layout.tsx generateMetadata checks hasLocale(routing.locales, locale) and calls notFound() before getTranslations",
+        "src/lib/brand-mark.tsx holds the mark of public/icon.svg in JSX for next/og (the same colours); src/app/favicon.ico/route.tsx returns a 48 × 48 PNG and src/app/apple-touch-icon.png/route.tsx a 180 × 180 PNG with ImageResponse and Cache-Control public, max-age=86400, s-maxage=604800; metadata.icons in src/app/layout.tsx keeps icon '/icon.svg' and sets apple '/apple-touch-icon.png'; no redirect and no new dependency",
+        "e2e/icons.spec.ts (new): /favicon.ico and /apple-touch-icon.png → 200 image/png; /nonexistent.ext → 404 (an unknown path without a dot is not asserted: city pages need a database)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "The mechanism is an Assumption. A redirect would be a URL change, which PRD 4 leaves to the owner."
+    },
+    {
+      "id": "T153",
+      "milestone": "M4",
+      "title": "Link-preview cache on /api/og and three security headers (FR-31)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#http-headers",
+      "dependsOn": [],
+      "status": "todo",
+      "acceptance": [
+        "/api/og success responses carry Cache-Control: public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800; error responses carry no cache header",
+        "next.config.mjs headers() sets X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin and Permissions-Policy camera=(), microphone=(), geolocation=() on every route; no framing header (Q-13, T154) and no other Content-Security-Policy",
+        "e2e/og-image.spec.ts asserts the cache header; e2e/home.spec.ts asserts the three headers on /"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Assumption values. The site uses no camera, microphone or geolocation (checked 2026-11-20)."
+    },
+    {
+      "id": "T154",
+      "milestone": "M4",
+      "title": "The framing header (FR-31 Open part, owner question Q-13)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#http-headers",
+      "dependsOn": ["T153"],
+      "status": "blocked",
+      "acceptance": [
+        "Only after the owner answers Q-13: next.config.mjs adds the answered header on every route ((b) Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com as the only directive, or (a) X-Frame-Options: SAMEORIGIN) and e2e/home.spec.ts asserts it on /; with (c) nothing changes"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Blocked: owner question Q-13 (PRD 4, decision review row 16). A framing header stops other sites from framing Passflat, but X-Frame-Options: SAMEORIGIN also blocks PostHog's in-app heatmap and toolbar frames (gap review; not verified). (b) frame-ancestors 'self' plus the PostHog EU app host (proposal); (a) X-Frame-Options: SAMEORIGIN; (c) none for now. PostHog tooling and settings are the owner's."
+    },
+    {
+      "id": "T155",
+      "milestone": "M4",
+      "title": "Contrast of accent text, 44 px tap targets and an accessible hamburger (FR-34)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger",
+      "dependsOn": ["T120", "T121"],
+      "status": "todo",
+      "acceptance": [
+        "text-accent used as a text colour is replaced in the files of spec 09 §Current state (figures → text-foreground, badges and link texts → text-primary, icons keep text-accent); the hero source line becomes text-xs text-muted-foreground",
+        "min-h-11 (min-w-11 on square controls) on the hamburger, the mobile pill, the mobile language buttons, the cookie banner buttons, the costs list/map toggle, and the listings sort trigger and map toggle",
+        "The hamburger gets type='button', an aria-label from the new key common.menu, aria-expanded and aria-controls='mobile-menu'; the panel has id='mobile-menu'",
+        "src/components/landing/accent-text.test.ts (static) allows text-accent only on icon lines named in an allow list; a static test asserts the header's aria attributes",
+        "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Assumption classes. The site has no theme switch."
+    },
+    {
+      "id": "T156",
+      "milestone": "M5",
+      "title": "PRD 4 measurement and documentation; the owner's deploy copy-review checklist (FR-36)",
+      "spec": "docs/specs/05-measurement-docs.md#prd-4-readout-and-docs",
+      "dependsOn": [
+        "T118",
+        "T119",
+        "T120",
+        "T121",
+        "T123",
+        "T124",
+        "T126",
+        "T127",
+        "T128",
+        "T129",
+        "T130",
+        "T131",
+        "T132",
+        "T134",
+        "T138",
+        "T139",
+        "T140",
+        "T141",
+        "T142",
+        "T143",
+        "T144",
+        "T145",
+        "T147",
+        "T148",
+        "T149",
+        "T152",
+        "T153",
+        "T155"
+      ],
+      "status": "todo",
+      "acceptance": [
+        "docs/analytics/activation-funnels.md §1 lists the new telegram_bot_opened.source values (home, building, district, hub, calculator, guide, report), the cta_click.placement values and the tg_roommate_flow_started.entry_detail values with where each fires; a new section 'PRD 4 readout (E16, proposed)' as spec 05 §PRD 4: readout and docs describes it (Search Console groups, HogQL by source and by placement, flow → profile by entry_source in persons, the attribution limit, thresholds as Assumptions, no join of web and bot identities, the season note)",
+        "src/lib/bot/README.md 'Deep links' lists the mate_web_<detail> values the website sends and says profile writes call revalidateRoommateCounts()",
+        "docs/architecture.md §2, §4, §5 and §6 describe the callout, the home and district sections, the icon routes and headers, the event values and the PL-only clause",
+        "docs/ops/deploy-copy-review.md (new) is the owner's checklist of spec 05 (the live-only leftovers of S-35, the two Vercel variables, the draft copy keys by task read from the progress entries, the post-deploy curl checks, Live Events, the Search Console groups and dates)",
+        "docs/specs/README.md's PRD 4 map marks every FR Done, Blocked (with its task), Planned or Later"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Documentation from the code as it is; the loop never queries PostHog or Search Console."
+    },
+    {
+      "id": "T157",
+      "milestone": "M5",
+      "title": "PRD 4 final check and handoff (FR-37)",
+      "spec": "docs/specs/05-measurement-docs.md#prd-4-final-check",
+      "dependsOn": ["T156"],
+      "status": "todo",
+      "acceptance": [
+        "npm run verify and npm run test:e2e pass",
+        "node scripts/ralph-tasks.mjs summary shows every PRD 4 task done or blocked with its question (Q-1 – Q-13, ten blocked tasks)",
+        "The PRD 4 requirement map maps every FR-1 – FR-37 to a done or blocked task, or to Later",
+        "The progress entry is the owner's handoff as spec 05 §PRD 4 final check lists it, separating built, tested and not deployed"
+      ],
+      "checks": ["npm run verify", "npm run test:e2e"],
+      "attempts": 0,
+      "notes": "Last task of PRD 4."
     }
   ]
 }

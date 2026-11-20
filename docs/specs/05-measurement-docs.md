@@ -243,19 +243,24 @@ is after M1 – M4.
      home page), compared over 4 full weeks (Monday–Sunday) after the deploy against the 4 full
      weeks before: clicks, impressions, CTR, position; counts, not rates, while small; Google
      re-reads titles over weeks, so the first week is weak evidence.
-  2. HogQL: `telegram_bot_opened` by `source` (persons and events) in the window; persons with
-     `tg_roommate_flow_started {entry_source: 'web'}` by `entry_detail`; the flow → profile funnel
-     by `entry_source` (persons, A23). Web and bot identities are never joined: the two sides are
-     reported next to each other, never divided into one rate.
+  2. HogQL: `telegram_bot_opened` by `source` (persons and events) in the window; `cta_click` by
+     `placement` for the `flatmate_callout_<surface>` values (persons: which surface sent people to
+     the roommate page); persons with `tg_roommate_flow_started {entry_source: 'web'}` by
+     `entry_detail`; the flow → profile funnel by `entry_source` (persons, A23). The attribution
+     limit of spec 08 §Flatmate callout is stated: a callout → roommate page → bot path counts as
+     `roommate` on both sides. Web and bot identities are never joined: the two sides are reported
+     next to each other, never divided into one rate.
   3. The thresholds of PRD 4 §1 as Assumptions (roommate CTR ≥ 3 %, D41; clicks ≥ 2×; ≥ 3 of 8
      rewritten pages at CTR ≥ 2 %; total clicks not below the previous window; ≥ 5 bot opens from
      website entries; completion ≥ 50 %) and that none is a stop rule for the thesis (D52 decides
      stage 1).
   4. The season note and the EU PostHog project (D30).
 - `src/lib/bot/README.md` "Deep links": the `mate_web_<detail>` values the website sends
-  (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`).
+  (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`, `report`), and that
+  profile writes call `revalidateRoommateCounts()` (spec 09 §District section).
 - `docs/architecture.md`: §2 the callout, the home thesis section, the district section; §4 the
-  redirects and headers of `next.config.mjs` and the OG cache header; §5 the new event values and
+  icon routes (`/favicon.ico`, `/apple-touch-icon.png`), the headers of `next.config.mjs` and the
+  OG cache header; §5 the new event values and
   placements; §6 the PL-only clause as a value difference.
 - `docs/ops/deploy-copy-review.md` (new): the owner's checklist for the deploy that carries PRD 1,
   PRD 3 and PRD 4: (1) the four live-only honesty leftovers of audit S-35 to confirm gone live
@@ -263,7 +268,8 @@ is after M1 – M4.
   жильцы" on /ru, unsplit building figures); (2) `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` set in Vercel
   (D76) and `ROOMMATE_MATCHING_ENABLED=true` (D75); (3) every PRD 4 draft copy key by task, read from
   the progress entries; (4) after the deploy: `curl -I` for `/favicon.ico`, `/apple-touch-icon.png`,
-  `/api/og?title=x` (Cache-Control) and the four security headers on `/`; Live Events for
+  `/api/og?title=x` (Cache-Control) and the three security headers on `/` (the framing header
+  waits for Q-13); Live Events for
   `telegram_bot_opened` with the new sources; (5) the Search Console groups and dates to read after
   4 full weeks.
 - `docs/specs/README.md`: the PRD 4 requirement map marks each FR Done, Blocked (with the task) or
@@ -276,13 +282,14 @@ PRD 4 FR-37, **Decided**. One task at the end:
 - `npm run verify` and `npm run test:e2e` pass (the e2e suite now holds the home thesis section,
   the header link, the headers and the icons).
 - `node scripts/ralph-tasks.mjs summary` shows every PRD 4 task done or blocked with its question
-  (Q-1 – Q-5).
+  (Q-1 – Q-13: ten blocked tasks, Q-9 – Q-12 in one).
 - The requirement map in `README.md` maps every FR-1 – FR-37 to a done task or to a blocked task
   with its question.
 - The progress entry is the owner's handoff, separating built, tested and not deployed: no
-  migration, table or cron change; the redirects and headers added; every draft copy key for
-  review by task (web, four locales); the Assumption placements and values; the five blocked
-  questions; the Search Console and PostHog readings to make after 4 full weeks and where they are
+  migration, table or cron change; the icon routes and headers added (no redirect); every draft copy key for
+  review by task (web, four locales); the Assumption placements and values; the blocked
+  questions Q-1 – Q-13; the requirements moved to Later (FR-32, FR-33, FR-35, the structured data
+  of FR-28); the Search Console and PostHog readings to make after 4 full weeks and where they are
   described; what stays unverified (Core Web Vitals, Live Events, the live headers and icons after
   deploy, mobile layout by eye, the home route's script list in production).
 

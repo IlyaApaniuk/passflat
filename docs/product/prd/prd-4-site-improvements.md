@@ -1,10 +1,10 @@
 # PRD 4: Site improvements — the website as an entry into roommate matching
 
 - **Version:** 0.1, 2026-11-20
-- **Status:** Evaluated, 2026-11-20 (`prd-4-decision-review.md`: ready with assumptions, 11
-  decisions, 5 of them blocking one requirement each; written by Claude in the night run authorized
-  by the owner on the evening of 2026-11-19: audit → PRD 4 → specs and tasks; the owner has not
-  reviewed it yet)
+- **Status:** In progress, 2026-11-20: decomposed into 40 tasks (T118 – T157), 30 to build and 10
+  blocked on the owner questions Q-1 – Q-13 (`prd-4-decision-review.md`: ready with assumptions;
+  written by Claude in the night run authorized by the owner on the evening of 2026-11-19: audit →
+  PRD 4 → specs and tasks; the owner has not reviewed it yet)
 - **Serves:** H10 (the roommate page as an entry, E11, D41), H14 (stage 1 inflow: web entries into
   the bot's roommate flow, E14 `entry_source=web`) and, through a denser pool, H15 (E15); the
   thesis stage 1 inflow (`../thesis.md`, D48). H11 (sharper titles on page-1 guides) is Parked and
@@ -97,16 +97,19 @@ result is weaker evidence than one in August–September, and the readout says s
 
 Ordered by impact on stage 1 inflow. Milestones only order the work (`../../specs/README.md`).
 
-| Milestone | What                                                                                   | Requirements  | Findings                                         |
-| --------- | -------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------ |
-| M1        | Structure and navigation: the roommate page opens on the thesis; entries in the header | FR-1 – FR-7   | S-1, S-2, S-4, S-5, S-10, S-15                   |
-| M2        | Roommate entry and funnel copy: home, callouts on cost surfaces, per-person figure     | FR-8 – FR-20  | S-3, S-6, S-7, S-9, S-11, S-12, S-14, S-20, S-33 |
-| M3        | Search metadata and district pages                                                     | FR-21 – FR-29 | S-8, S-13, S-16, S-17, S-18, S-19, S-21, S-22    |
-| M4        | Performance, mobile and accessibility                                                  | FR-30 – FR-35 | S-23, S-24, S-25, S-27, S-28, S-29, S-30, S-31   |
-| M5        | Measurement and docs                                                                   | FR-36, FR-37  | S-35 and the readout                             |
+| Milestone | What                                                                                   | Requirements                           | Findings                                         |
+| --------- | -------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| M1        | Structure and navigation: the roommate page opens on the thesis; entries in the header | FR-1 – FR-7                            | S-1, S-2, S-4, S-5, S-10, S-15                   |
+| M2        | Roommate entry and funnel copy: home, callouts on cost surfaces, per-person figure     | FR-8 – FR-20                           | S-3, S-6, S-7, S-9, S-11, S-12, S-14, S-20, S-33 |
+| M3        | Search metadata and district pages                                                     | FR-21 – FR-29                          | S-8, S-13, S-16, S-17, S-18, S-19, S-21, S-22    |
+| M4        | Performance, mobile and accessibility                                                  | FR-30, FR-31, FR-34                    | S-23, S-27, S-28, S-29, S-30                     |
+| M5        | Measurement and docs                                                                   | FR-36, FR-37                           | S-35 and the readout                             |
+| Later     | Moved out after the architect gap review (size and risk)                               | FR-32, FR-33, FR-35, FR-28 criterion 2 | S-24, S-25, S-31, part of S-13 and S-21          |
 
-Everything ships in one deploy. Open requirements (FR-7, FR-16, FR-19, FR-20, FR-29) are blocked
-tasks with their question; everything else proceeds (night rule, `prd-intake` §3).
+Everything ships in one deploy. Every owner question (Q-1 – Q-13) is held by a blocked task:
+the Open requirements FR-7, FR-16, FR-19, FR-20, FR-29, the Open parts of FR-10 (Q-6), FR-25
+(Q-7), FR-28 (Q-8) and FR-31 (Q-13), and the copy questions Q-9 – Q-12 in one task; everything
+else proceeds (night rule, `prd-intake` §3).
 
 ## 3. Requirements
 
@@ -170,8 +173,8 @@ Acceptance criteria:
      gates loading the counts (no counts without a bot to join).
   5. The deploy checklist of FR-36 names NEXT_PUBLIC_TELEGRAM_BOT_USERNAME as a variable to set
      before or with the deploy (D76).
-Edge cases: the e2e server (no username) → the block renders with the honest line, which the
-  e2e smoke test of FR-37 may assert
+Edge cases: the e2e build has no username and no database, so the roommate page cannot render
+  there (gap review); the honest line is proven by the layout helper's unit tests
 Data: none · Analytics: none new
 Screen: src/components/listings/find-flatmate-block.tsx, src/lib/roommate/website-counts.ts
 Copy: agent draft, four locales (§8)
@@ -232,8 +235,9 @@ Open questions: none
 
 ```text
 FR-5. Header: find a flatmate first; building reviews in the footer
-Milestone: M1 · Priority: Must · Status: Decided (the roommate page is the entry, D48; agency and
-  building reputation are out of focus, D48); Assumption (labels, order)
+Milestone: M1 · Priority: Must · Status: Decided (the roommate page is the entry, D48); Assumption
+  (labels, order, and moving "Building reviews" from the header to the footer, where it stays
+  reachable: a demotion, not a removal)
 Findings: S-4, S-15 (the hub linked from the footer)
 Who and when: any visitor opens the header on any page, on desktop or on a phone
 Result: the first navigation item leads to the roommate page; the mobile pill leads there too;
@@ -395,30 +399,33 @@ Open questions: Q-6 (hero H1; blocks nothing)
 ```text
 FR-10. Home title, description, footer tagline, "for whom" copy and the templates sentence
 Milestone: M2 · Priority: Must · Status: Assumption (agent drafts for the owner's review; the
-  honesty rule of D25 and the test's forbidden list are Decided)
+  honesty rule of D25 and the test's forbidden list are Decided); Open (Q-6) for the thesis-first
+  positioning of the home title, description and tagline (appendix seo.md table K is headed
+  "owner decision (positioning)")
 Findings: S-3 (home title, description, tagline), S-16 (the home keys), S-33
-Who and when: Google and a visitor read the home title and description, the footer tagline, the
-  "for whom" roommate card and the tools section's templates sentence
-Result: they describe the thesis and the reported costs, name no listings and no "truth", and
-  the four locales agree on the template languages
+Who and when: Google and a visitor read the home title and description, the footer tagline and
+  the tools section's templates sentence
+Result: they name no listings, no "real" and no "truth", keep today's cost-first positioning
+  until Q-6 is answered, and the four locales agree on the templates and their languages
 Acceptance criteria:
-  1. `meta.homeTitle`, `meta.homeDescription` (appendix seo.md table K), `landing.footer.tagline`
-     (§8), `landing.forWhom.*` (FR-6 drafts), `landing.hero.costsCta` ("See reported costs") and
-     `landing.tools.templatesDescription` (one sentence in four locales: Polish originals with
-     English, Russian and Ukrainian versions; checked against the files in public/documents) are
-     rewritten in four locales.
-  2. `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`, `landing.hero.costsCta`
-     and `landing.tools.templatesDescription` are added to `REWRITTEN_KEYS`; no value matches
-     the forbidden regex of its locale; `really` is added to the EN whole-file scan (FR-21).
-  3. The templates sentence names the same four documents and the same four languages in every
-     locale (a test compares the language words per locale).
-  4. `landing.hero.subtitle` drops "document templates" and keeps its cost sentence (§8).
+  1. `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`, `landing.hero.costsCta`
+     ("See reported costs") and `landing.hero.subtitle` (no "document templates") are rewritten in
+     four locales to honest cost-first wording without listings (D5) and without a new "free"
+     claim (Q-12); EN drafts in spec 08 §Home copy.
+  2. `landing.tools.templatesDescription` names the four documents in `public/documents/` (lease
+     assignment, handover protocol, sublease agreement, flatmate agreement) as Polish originals
+     with English, Russian and Ukrainian versions, in every locale; a test checks the language
+     words per locale and the four template stems in the directory.
+  3. The five keys of criterion 1 except the subtitle, and `templatesDescription`, join
+     `REWRITTEN_KEYS`; no value matches the forbidden list of its locale.
+  4. The thesis-first versions (table K, the §8 tagline) are not shipped here: they are the
+     blocked task of Q-6, together with the hero H1.
 Edge cases: none
 Data: none · Analytics: none
 Screen: src/i18n/messages/{pl,en,ru,uk}.json
-Copy: agent draft, four locales (§8 and appendix tables)
-Depends on: D25, D48; FR-6
-Open questions: none
+Copy: agent draft, four locales (spec 08 §Home copy)
+Depends on: D25, D5; FR-6 (it owns the ForWhom keys)
+Open questions: Q-6 (owner; blocks the thesis-first values only)
 ```
 
 ```text
@@ -439,8 +446,10 @@ Acceptance criteria:
      section; until FR-26 lands, directly under the buttons row.
   3. City hub: `FlatmateCallout surface="hub"` with counts and the Warsaw split (FR-13) renders
      under the buttons row.
-  4. ISR pages (`revalidate = 3600`) show counts up to about two hours old (page cache plus the
-     one-hour counts cache); the count line never claims freshness.
+  4. The counts cache carries a tag that every profile write expires (save, edit, delete,
+     moderation, the daily cron), which also drops the ISR renders that read it; without that, an
+     on-demand ISR page could show a week-old count to the first visitor after a quiet week (gap
+     review). The count line never claims freshness.
   5. Tests: the building client no longer references /replacement; a render-props test per page
      asserts the callout's surface value.
 Edge cases: counts unavailable → no count line; the building page under the contribution gate
@@ -565,11 +574,14 @@ Acceptance criteria:
      mutual interest → the Telegram username revealed; drafts §8); `landing.howItWorks.subtitle`
      drops "three ways to find your next home" (§8). The cesja and sublet tabs stay until Q-3 is
      answered.
-  2. `helpCenter.general.a1`, `helpCenter.general.a2`, `about.solution.pillar1Title/Desc`,
+  2. `helpCenter.general.a1` (a2, "Is Passflat free?", is a price statement and joins FR-16, Q-3),
+     `about.solution.pillar1Title/Desc`,
      `pillar2Title/Desc`, `pillar3Title/Desc`, `about.team.description2` and
      `about.values.principle1Desc` ("the market") are rewritten to the thesis and to reported
      costs (drafts §8); `about.values.principle1Desc` joins `REWRITTEN_KEYS`.
-  3. `landing.faq` gains q7/a7 "How do I find someone to rent with?" (§8), placed first.
+  3. `landing.faq` gains q7/a7 "How do I find someone to rent with?" (§8), placed first; the FAQ
+     list pairs each question with its answer explicitly (today it pairs them by position, so a
+     question placed first would show `a1`).
   4. No rewritten text names a price, a listing feature, "verified", a match guarantee or a date.
 Edge cases: none
 Data: none · Analytics: none
@@ -898,8 +910,9 @@ Acceptance criteria:
      figure, from `loadRoomCostAreas(city, [])`, and the callout (FR-12 criterion 4).
   5. `costsSeo.districtMetaDescription` ends with the room and flatmate clause of table C only
      once this requirement ships (the FR-21 task uses the shorter variant; this task switches).
-Edge cases: the district has room reports but no qualifying 2+-room apartment → room lines
-  without the per-person line; the city has nothing → neither
+Edge cases: the district has fewer than 5 qualifying 2+-room flats → the split falls back to
+  Warsaw (`room-costs.ts`) and the line names Warsaw, not the district; the city has nothing
+  qualifying → no line; no room report at any level → no room lines
 Data: none · Analytics: none
 Screen: src/app/[locale]/[city]/[district]/page.tsx, src/app/[locale]/blog/warsaw-rent-prices/page.tsx
 Copy: agent draft, four locales (§8)
@@ -909,8 +922,10 @@ Open questions: none
 
 ```text
 FR-28. Sitemap, robots, structured data and the submit page's metadata
-Milestone: M3 · Priority: Should · Status: Assumption (priorities, schema choices); dropping
-  frozen URLs from the sitemap or adding noindex is FR-29 (Open, Q-1); the Instagram handle is Q-8
+Milestone: M3 (criteria 1, 3, 4, 5 for the sitemap, robots and the submit page); criterion 2
+  (structured data) moved to Later after the gap review (14 breadcrumb callers) · Priority: Should
+  · Status: Assumption (priorities, schema choices); dropping frozen URLs from the sitemap or
+  adding noindex is FR-29 (Open, Q-1); the Instagram handle is Q-8 (its own blocked task, one line)
 Findings: S-13 (the part that is not Open), S-21 (JSON-LD), S-22
 Who and when: a crawler reads /sitemap.xml, /robots.txt and the JSON-LD of pages
 Result: the roommate page outranks the frozen lists in the sitemap, blog entries carry lastmod,
@@ -965,8 +980,8 @@ Open questions: Q-1 (owner; blocks this requirement only)
 
 ```text
 FR-30. Icons and the locale guard
-Milestone: M4 · Priority: Must · Status: Assumption (the mechanism: a redirect for /favicon.ico, an
-  ImageResponse apple icon, the guard; no image dependency)
+Milestone: M4 · Priority: Must · Status: Assumption (the mechanism: route handlers that serve the
+  two icon paths with ImageResponse, the guard; no redirect, no image dependency)
 Findings: S-23
 Who and when: a browser requests /favicon.ico or /apple-touch-icon.png on its own; any request
   carries an unknown first path segment
@@ -975,15 +990,18 @@ Acceptance criteria:
   1. `src/app/[locale]/layout.tsx` `generateMetadata` checks `hasLocale(routing.locales, locale)`
      first and calls `notFound()` otherwise, so `/favicon.ico`, `/apple-touch-icon.png` and
      `/anything.ext` return 404 instead of 500 when nothing else serves them.
-  2. `next.config.mjs` redirects `/favicon.ico` to `/icon.svg` (permanent) and
-     `/apple-touch-icon.png` to `/apple-icon`; `src/app/apple-icon.tsx` renders a 180 × 180 PNG
-     with `ImageResponse` (the brand mark drawn in JSX, the logo's colours; no new dependency),
-     so `metadata.icons.apple` is generated by Next.
-  3. e2e: `GET /favicon.ico` and `GET /apple-touch-icon.png` return a status below 400 after
-     redirects, `GET /apple-icon` returns 200 `image/png`, `GET /xx-unknown` returns 404.
-Edge cases: a browser that ignores SVG favicons (older Safari) falls back to the apple icon
+  2. Route handlers `src/app/favicon.ico/route.tsx` (48 × 48) and
+     `src/app/apple-touch-icon.png/route.tsx` (180 × 180) return a PNG of the brand mark drawn in
+     JSX with `ImageResponse` (the logo's colours; no new dependency); no redirect is added (a
+     redirect is a URL change, left to the owner); `metadata.icons.apple` points at
+     `/apple-touch-icon.png`.
+  3. e2e: `GET /favicon.ico` and `GET /apple-touch-icon.png` return 200 `image/png`;
+     `GET /nonexistent.ext` returns 404 (an unknown path without a dot reaches the city segment,
+     which needs a database the e2e build does not have, so it is not asserted there).
+Edge cases: a browser that ignores SVG favicons (older Safari) uses /favicon.ico or the apple icon
 Data: none · Analytics: none
-Screen: src/app/[locale]/layout.tsx, next.config.mjs, src/app/apple-icon.tsx (new)
+Screen: src/app/[locale]/layout.tsx, src/app/favicon.ico/route.tsx (new),
+  src/app/apple-touch-icon.png/route.tsx (new), src/lib/brand-mark.tsx (new)
 Copy: none
 Depends on: none
 Open questions: none
@@ -991,30 +1009,35 @@ Open questions: none
 
 ```text
 FR-31. HTTP headers: link-preview cache and security headers
-Milestone: M4 · Priority: Should · Status: Assumption (values below; a CSP is Later)
+Milestone: M4 · Priority: Should · Status: Assumption (values below; a CSP is Later); Open for
+  the framing header (Q-13)
 Findings: S-27, S-28 (without a CSP)
 Who and when: a chat app fetches /api/og; any response leaves the server
-Result: /api/og is cached at the edge; every response carries the four security headers
+Result: /api/og is cached at the edge; every response carries three security headers; the
+  framing header waits for the owner
 Acceptance criteria:
   1. `/api/og` responses carry `Cache-Control: public, max-age=3600, s-maxage=86400,
      stale-while-revalidate=604800`; the e2e og-image test asserts the header.
   2. `next.config.mjs` `headers()` sets on every route: `X-Content-Type-Options: nosniff`,
-     `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`,
-     `Permissions-Policy: camera=(), microphone=(), geolocation=()`; the e2e home test asserts
+     `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(),
+     microphone=(), geolocation=()` (the site uses none of the three); the e2e home test asserts
      them on /.
-  3. No `Content-Security-Policy` is added (Later).
+  3. No framing header until Q-13 is answered: `X-Frame-Options: SAMEORIGIN` would also block
+     PostHog's in-app heatmap and toolbar frames (gap review); the blocked task adds the answered
+     header. No other `Content-Security-Policy` is added (Later).
 Edge cases: the OG route's error responses are not cached (no header on a 4xx/5xx)
 Data: none · Analytics: none
 Screen: src/app/api/og/route.tsx, next.config.mjs
 Copy: none
 Depends on: none
-Open questions: none
+Open questions: Q-13 (owner; blocks the framing header only)
 ```
 
 ```text
 FR-32. The roommate page does not read auth on the server
-Milestone: M4 · Priority: Should · Status: Assumption (client-side resolution through the FR-33
-  hook)
+Milestone: Later (moved out of M4 after the architect gap review: it depends on FR-33 and the
+  empty state's e-mail form also reads the login state; no task in this PRD) · Priority: Should ·
+  Status: Assumption (client-side resolution through the FR-33 hook)
 Findings: S-24 (the auth read; the URL-filter parsing is Later)
 Who and when: any request renders /[city]/roommate
 Result: the server does not call Supabase Auth; favourites resolve the session on the client
@@ -1038,7 +1061,10 @@ Open questions: none
 
 ```text
 FR-33. The Supabase client loads only when a session may exist
-Milestone: M4 · Priority: Should · Status: Assumption (the cheap signal and the lazy import)
+Milestone: Later (moved out of M4 after the architect gap review: the unread-count hook imports
+  the client too, and a server-action login would not refresh the header; no task in this PRD;
+  spec 09 §Header client bundle keeps the design) · Priority: Should · Status: Assumption (the
+  cheap signal and the lazy import)
 Findings: S-25
 Who and when: the header mounts on any page for a visitor
 Result: anonymous visitors never download the Supabase browser client; signed-in visitors see
@@ -1096,7 +1122,8 @@ Open questions: none
 
 ```text
 FR-35. Labels, the banner's privacy link, heading order and a skip link
-Milestone: M4 · Priority: Could · Status: Assumption
+Milestone: Later (moved out of M4 to keep the PRD at about 30 tasks; audit rank 3; no task in
+  this PRD) · Priority: Could · Status: Assumption
 Findings: S-31
 Who and when: a screen-reader user or keyboard user visits the checker, the home page or any page
 Result: every input has a programmatic label, the cookie banner links to the visitor's locale
@@ -1129,8 +1156,9 @@ Open questions: none
 
 ```text
 FR-36. Measurement and documentation
-Milestone: M5 · Priority: Must · Status: Decided (existing event names, new values only, CLAUDE.md;
-  the loop never queries PostHog); Assumption (the readout's shape)
+Milestone: M5 · Priority: Must · Status: Assumption (the readout's shape); the rules it follows
+  are the owner's standing instructions in CLAUDE.md §Analytics (existing event names, new values
+  only; the loop never queries PostHog)
 Findings: S-35 (the deploy checklist)
 Who and when: after M1 – M4 are built, from the code as it is
 Result: the funnels document, the bot README and the architecture file describe the new values and
@@ -1146,7 +1174,7 @@ Acceptance criteria:
   2. `src/lib/bot/README.md` "Deep links": `mate_web_<detail>` values the website sends
      (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`).
   3. `docs/architecture.md`: §2 surfaces (the callout, the home section, the district section),
-     §4 headers and redirects, §5 the new event values.
+     §4 headers and the icon routes, §5 the new event values.
   4. `docs/ops/deploy-copy-review.md` (new): the owner's checklist for the deploy that carries
      PRD 1, PRD 3 and PRD 4: the four live-only honesty leftovers of S-35 to confirm live
      ("Przeglądaj zweryfikowane oferty", "77 % zwrot", "сколько платят жильцы", unsplit building
@@ -1163,7 +1191,8 @@ Open questions: none
 
 ```text
 FR-37. Final check and handoff
-Milestone: M5 · Priority: Must · Status: Decided
+Milestone: M5 · Priority: Must · Status: Assumption (the handoff's shape); the gate is the owner's
+  standing instruction in CLAUDE.md §Verification
 Findings: none (the handoff)
 Who and when: the last task of the PRD
 Result: the gate and the e2e suite pass, the requirement map is complete, and the progress entry is
@@ -1171,10 +1200,10 @@ Result: the gate and the e2e suite pass, the requirement map is complete, and th
 Acceptance criteria:
   1. `npm run verify` and `npm run test:e2e` pass.
   2. `node scripts/ralph-tasks.mjs summary` shows every PRD 4 task done or blocked with its
-     question (Q-1 – Q-5).
+     question (Q-1 – Q-13, ten blocked tasks).
   3. The progress entry separates built, tested and not deployed: no migration, no table, no
-     cron change; the redirects and headers added; every draft copy key for review (web four
-     locales, by task); the Assumption constants and placements; the five blocked questions; the
+     cron change; the icon routes and headers added; every draft copy key for review (web four
+     locales, by task); the Assumption constants and placements; the blocked questions; the
      Search Console and PostHog readings to make after 4 full weeks; what stays unverified
      (Core Web Vitals, Live Events, the live headers and icons after deploy, mobile layout by eye).
 Edge cases: none
@@ -1242,16 +1271,21 @@ fewer than 5 room reports; Warsaw:" and the Warsaw lines.
 Existing event names only; new values are **Assumptions**. Nothing new is stored; web and bot
 identities are never joined.
 
-| Event                      | Where        | Change                                                                                                                                                          |
-| -------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `telegram_bot_opened`      | web, callout | new `source` values `home`, `building`, `district`, `hub`, `calculator`, `guide` (FR-8); `has_building_context=false`; `checker`, `empty`, `roommate` unchanged |
-| `cta_click`                | web, callout | new `placement` values `flatmate_callout_<surface>` for the six surfaces above (the roommate-page link, FR-8); `header_mobile` unchanged (FR-5)                 |
-| `roommate_intent_selected` | web          | unchanged; with FR-1 the `find_flatmate` taps fall (the block is open by default); E11's useful actions already count `telegram_bot_opened`                     |
-| `tg_bot_started`           | bot          | unchanged; `payload` now also `mate_web_home` … `mate_web_guide`                                                                                                |
-| `tg_roommate_flow_started` | bot          | unchanged; `entry_detail` now also `home`, `building`, `district`, `hub`, `calculator`, `guide` (from the payloads of FR-8)                                     |
-| `checker_cta_clicked`      | web, checker | unchanged (FR-14 keeps `cta: 'telegram'`)                                                                                                                       |
+| Event                      | Where        | Change                                                                                                                                                                                                                                                             |
+| -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `telegram_bot_opened`      | web, callout | new `source` values `home`, `building`, `district`, `hub`, `calculator`, `guide`, `report` (FR-8; `report` = the data report, added in the gap review so it is told apart from the guides); `has_building_context=false`; `checker`, `empty`, `roommate` unchanged |
+| `cta_click`                | web, callout | new `placement` values `flatmate_callout_<surface>` for the six surfaces above (the roommate-page link, FR-8); `header_mobile` unchanged (FR-5)                                                                                                                    |
+| `roommate_intent_selected` | web          | unchanged; with FR-1 the `find_flatmate` taps fall (the block is open by default); E11's useful actions already count `telegram_bot_opened`                                                                                                                        |
+| `tg_bot_started`           | bot          | unchanged; `payload` now also `mate_web_home` … `mate_web_guide`                                                                                                                                                                                                   |
+| `tg_roommate_flow_started` | bot          | unchanged; `entry_detail` now also `home`, `building`, `district`, `hub`, `calculator`, `guide` (from the payloads of FR-8)                                                                                                                                        |
+| `checker_cta_clicked`      | web, checker | unchanged (FR-14 keeps `cta: 'telegram'`)                                                                                                                                                                                                                          |
 
 No event on the ForWhom cards, the 404 buttons, the footer or the district count line.
+
+**Attribution limit** (gap review): a visitor who takes a callout's roommate-page link and then the
+roommate page's bot button is `source: roommate` on the web and `entry_detail: roommate` in the
+bot; only the earlier `cta_click.placement` tells which surface sent them. `entry_detail` names the
+surface only for a callout's own bot button. The readout says so.
 
 ## 7. Screens
 
@@ -1264,9 +1298,10 @@ No event on the ForWhom cards, the 404 buttons, the footer or the district count
 - `/[city]/check` (FR-14, FR-35)
 - `/help`, `/about`, `/how-it-works` (FR-15, FR-16)
 - 404, `/dashboard` (FR-6)
-- `/sitemap.xml`, `/robots.txt`, JSON-LD, `/favicon.ico`, `/apple-icon`, `/api/og`, HTTP headers
-  (FR-28 – FR-31)
-- No bot screen changes; no new route except `/apple-icon` (a generated icon).
+- `/sitemap.xml`, `/robots.txt`, JSON-LD, `/favicon.ico`, `/apple-touch-icon.png`, `/api/og`, HTTP
+  headers (FR-28 – FR-31)
+- No bot screen changes; no new route except the two icon routes `/favicon.ico` and
+  `/apple-touch-icon.png` (paths that return HTTP 500 today; generated icons, no redirect).
 
 ## 8. Key copy (drafts for the owner's review)
 
@@ -1274,7 +1309,9 @@ Every line is an agent draft in four locales unless marked given; the owner revi
 the deploy (D29). Longer tables are in the audit appendix (`../reviews/2026-11-19-site-audit/seo.md`
 tables A – K) and are cited by table letter; the tasks copy them into the message files.
 
-**Roommate page (FR-3)** — title: PL "Szukam współlokatora w Warszawie: koszty na osobę", EN "Find
+**Roommate page (FR-3)** — the title and description ship from appendix seo.md table A (they fit
+the snippet length and say nothing about price, Q-12); the longer descriptions below are kept as
+the source of table A's wording. Title: PL "Szukam współlokatora w Warszawie: koszty na osobę", EN "Find
 a flatmate in Warsaw — rent per person", RU «Сосед по квартире в Варшаве — цена на человека», UK
 «Сусід по квартирі у Варшаві — ціна на особу». Description (FU-2 drafts): EN "Looking for someone
 to rent a flat with in {city}? Create a short profile in the Passflat Telegram bot (district, budget
@@ -1321,7 +1358,7 @@ pay, and where rooms are listed." / "See room costs"; PL, RU, UK analogues in th
 "Checking a flat you found" / "Known costs for the building, the location and the nuisances, in one
 answer." / "Check an address"; PL, RU, UK analogues. `landing.cta.subtitle`: EN "Someone to rent
 with, a room, or a flat you already found — start with the figures.", `landing.cta.freeNote`: EN
-"Free, no account." (PL, RU, UK in the task). `landing.tools.templatesDescription` (FU-13): EN
+"No account needed." (PL, RU, UK in spec 08; "free" waits for Q-12). `landing.tools.templatesDescription` (FU-13): EN
 "Lease agreement, handover protocol, flatmate agreement and termination notice — Polish originals
 with English, Russian and Ukrainian versions."; PL "Umowa najmu, protokół zdawczo-odbiorczy, umowa
 współlokatorska i wypowiedzenie — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku.";
@@ -1344,12 +1381,14 @@ and `first` (built). Roommate link: EN "See the figures per person and the profi
 koszty na osobę i profile", RU «Смотреть цифры на человека и анкеты», UK «Дивитися цифри на людину та
 анкети». Bot button: `listings.findFlatmate.button` (built).
 
-**Per-person line (FR-13, FR-27)** — EN "A whole flat in {area}, tenant reports ({n}): about {half}
-zł each for two (half of the median flat).", PL "Całe mieszkanie — {area}, zgłoszenia najemców ({n}):
-dla dwóch osób około {half} zł na osobę (połowa mediany).", RU «Квартира целиком — {area}, отчёты
-жильцов ({n}): на двоих около {half} zł с человека (половина медианы).», UK «Квартира повністю —
-{area}, звіти мешканців ({n}): на двох близько {half} zł з людини (половина медіани).» `{area}` is
-Warsaw (the city's translated name) or the district's name.
+**Per-person line (FR-13, FR-27)** — one key, one shape, the bot's own wording (gap review):
+EN "For two people about {value} each (half of the median flat, {count} tenant reports, {area}).",
+RU «На двоих — примерно по {value} с человека (половина медианы по целым квартирам, {area}; отчёты
+жильцов: {count}).», UK «Удвох — приблизно по {value} з людини (половина медіани за цілими
+квартирами, {area}; звіти мешканців: {count}).» (`roomSplit` in `src/lib/bot/roommate-texts.ts`), PL
+"Na dwie osoby — około {value} na osobę (połowa mediany całych mieszkań, {area}; zgłoszenia
+najemców: {count})." `{area}` is the split's own area: the district, or Warsaw when the split fell
+back to the city.
 
 **Checker hint (FR-14)** — EN "This building's figures and roommate profiles in Telegram, in English,
 Russian and Ukrainian; the deposit letter in Russian and Ukrainian.", PL "Liczby dla tego budynku i
@@ -1382,11 +1421,10 @@ interest in listings", PL "Szukasz pokoju? Zapisz zainteresowanie ogłoszeniami"
 
 **District section (FR-26, FR-27)** — heading: EN "Room and shared renting: {district}", PL "Pokój i
 wspólny najem: {district}", RU «Комната и совместная аренда: {district}», UK «Кімната та спільна
-оренда: {district}». Count: EN "{n} people with a profile name {district}" (ICU plural) / zero
-"Nobody has named {district} yet — be the first."; PL "{n} osób z profilem wskazało {district}" /
-"Nikt jeszcze nie wskazał {district} — bądź pierwszy(-a)."; RU «{n} человек с анкетой указали
-{district}» / «{district} ещё никто не указал — будь первым(-ой).»; UK «{n} людей з анкетою вказали
-{district}» / «{district} ще ніхто не вказав — будь першим(-ою).» Room lead-in: EN "Rooms: tenant
+оренда: {district}». Count, the district name first so no case is needed (gap review; "wskazało {district}" would
+need Wolę): EN "{district}: {n} people with a profile name this district" (ICU plural) / zero
+"{district}: nobody has named this district yet — be the first."; PL, RU and UK in the same shape
+with full one/few/many plural forms (agent drafts in the task). Room lead-in: EN "Rooms: tenant
 reports and asking prices" and the level line "{district} has fewer than 5 room reports; Warsaw:"
 (built in the bot, reused in meaning).
 
@@ -1439,8 +1477,8 @@ and deposit for your building. Shown only as aggregates with their counts."
 
 ## 11. Owner steps
 
-1. Review this PRD and `prd-4-decision-review.md`; answer Q-1 – Q-11 when convenient (five block
-   a task each; the rest block nothing).
+1. Review this PRD and `prd-4-decision-review.md`; answer Q-1 – Q-13 when convenient (each is
+   held by a blocked task, Q-9 – Q-12 by one; nothing else waits for them).
 2. Review the draft copy by task from the progress entries and the deploy checklist
    (`docs/ops/deploy-copy-review.md`, FR-36).
 3. Deploy with PRD 3 (D67) or in the next deploy; set `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (D76);
@@ -1453,27 +1491,31 @@ and deposit for your building. Shown only as aggregates with their counts."
 
 ## 12. Open questions
 
-| ID   | Question                                                                                                                                                                                                 | Owner | Blocks                                        |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------------- |
-| Q-1  | Drop `/replacement`, `/sublet` and the listing details from the sitemap and set `noindex` on the two list pages (S-13)?                                                                                  | Owner | FR-29 only                                    |
-| Q-2  | Remove the city-notify e-mail form from the home page (S-12; it collects e-mails for a launch out of focus, D6) and reword the checker's outside-city form?                                              | Owner | FR-19 only                                    |
-| Q-3  | Help payments answers (39 PLN, cost-report access), the cesja and sublet steps of "how it works", `howItWorksPage.listers.*`, the About listings counter: rewrite to "nothing is paid" or remove (S-11)? | Owner | FR-16 only                                    |
-| Q-4  | Remove the e-mail "save interest" card from the roommate page (E13 counts it) and where "I have a free room" should lead (S-12)?                                                                         | Owner | FR-20 only                                    |
-| Q-5  | Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer (S-5, S-1)?                                             | Owner | FR-7 only                                     |
-| Q-6  | The hero H1 "Don't overpay for rent in Warsaw": keep, or rewrite to the thesis (S-3)? The section under it states the thesis either way.                                                                 | Owner | Nothing; a task is added when answered        |
-| Q-7  | Keep the cesja guide (it promises frozen tenant replacement; S-18, S-21)? Removing it is a URL removal that needs a redirect.                                                                            | Owner | Nothing; the description is honest either way |
-| Q-8  | Which Instagram handle is right: `passflatapp` (footer) or `passflat.com` (Organization schema) (S-13)?                                                                                                  | Owner | The `sameAs` line of FR-28 only               |
-| Q-9  | Change the roommate page's consent note from «вы»/«ви» to «ты»/«ти» (consent text; S-34)?                                                                                                                | Owner | Nothing                                       |
-| Q-10 | Drop or reword the footer line "Starting in Warsaw, expanding across Europe" (D6; S-34)?                                                                                                                 | Owner | Nothing                                       |
-| Q-11 | "The data is open — free, no account" against the "unlock" gates: reword the trust line, the gate copy, or neither (S-34)?                                                                               | Owner | Nothing                                       |
+| ID   | Question                                                                                                                                                                                                                                                                                    | Owner | Blocks                                                         |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
+| Q-1  | Drop `/replacement`, `/sublet` and the listing details from the sitemap and set `noindex` on the two list pages (S-13)?                                                                                                                                                                     | Owner | FR-29 only                                                     |
+| Q-2  | Remove the city-notify e-mail form from the home page (S-12; it collects e-mails for a launch out of focus, D6) and reword the checker's outside-city form?                                                                                                                                 | Owner | FR-19 only                                                     |
+| Q-3  | Help payments answers (39 PLN, cost-report access), the cesja and sublet steps of "how it works", `howItWorksPage.listers.*`, the About listings counter: rewrite to "nothing is paid" or remove (S-11)?                                                                                    | Owner | FR-16 only                                                     |
+| Q-4  | Remove the e-mail "save interest" card from the roommate page (E13 counts it) and where "I have a free room" should lead (S-12)?                                                                                                                                                            | Owner | FR-20 only                                                     |
+| Q-5  | Remove Lease Takeovers, Temporary Sublets and Post a Listing from the footer, and hide the roommate page's type tabs while the city has no offer (S-5, S-1)?                                                                                                                                | Owner | FR-7 only                                                      |
+| Q-6  | Positioning: the hero H1 "Don't overpay for rent in Warsaw", and whether the home title, description and footer tagline become thesis-first (appendix table K, the §8 tagline) instead of FR-10's honest cost-first rewrite (S-3)? The section under the hero states the thesis either way. | Owner | Its blocked task (FR-10's Open part)                           |
+| Q-7  | Keep the cesja guide (it promises frozen tenant replacement; S-18, S-21)? Removing it is a URL removal that needs a redirect.                                                                                                                                                               | Owner | Its blocked task; FR-25 ships an honest description either way |
+| Q-8  | Which Instagram handle is right: `passflatapp` (footer) or `passflat.com` (Organization schema) (S-13)?                                                                                                                                                                                     | Owner | Its blocked task (the `sameAs` line)                           |
+| Q-9  | Change the roommate page's consent note from «вы»/«ви» to «ты»/«ти» (consent text; S-34)?                                                                                                                                                                                                   | Owner | The copy-questions task (Q-9 – Q-12)                           |
+| Q-10 | Drop or reword the footer line "Starting in Warsaw, expanding across Europe" (D6; S-34)?                                                                                                                                                                                                    | Owner | The copy-questions task (Q-9 – Q-12)                           |
+| Q-11 | "The data is open — free, no account" against the "unlock" gates: reword the trust line, the gate copy, or neither (S-34)?                                                                                                                                                                  | Owner | The copy-questions task (Q-9 – Q-12)                           |
+| Q-12 | May new copy say the bot and the figures are free ("Free, no account" in the roommate snippet and the home CTA note)? A statement about prices (gap review); the drafts leave it out until answered.                                                                                        | Owner | The copy-questions task (Q-9 – Q-12)                           |
+| Q-13 | Which framing header, if any: `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy: frame-ancestors 'self'` plus the PostHog EU app, or none? `X-Frame-Options` also blocks PostHog's heatmap and toolbar frames (gap review, S-28).                                                     | Owner | Its blocked task (FR-31's framing header)                      |
 
 ## 13. Size
 
-Estimated at about 30 loop tasks: M1 5 (1 blocked), M2 11 (3 blocked), M3 8 (1 blocked), M4 5,
-M5 2 — 31 tasks, of which 5 blocked on Q-1 – Q-5; about 8 tasks of 10–30 minutes (the callout and
-its placements, the district section, the templated keys, the icons and headers, the lazy client)
-and about 18 small tasks of 2–5 minutes; roughly 3–6 hours of loop time. The decomposition is in
-`../../specs/README.md` and `ralph/tasks.json`.
+After the architect gap review: **30 tasks to build** (M1 4, M2 10, M3 11, M4 3, M5 2) and **10
+blocked tasks** holding Q-1 – Q-13 (M1 1, M2 5, M3 3, M4 1), 40 in all (T118 – T157). The review
+split the larger requirements (FR-11/12, FR-15, FR-21, FR-24, FR-28, FR-30/31) into one testable
+change each and moved FR-32, FR-33, FR-35 and FR-28's structured data to Later. About 10 tasks of
+10–30 minutes (the callout and its placements, the per-person line, the district section, the
+honesty keys, the guide bodies, the icons) and about 20 of 2–10 minutes; roughly 4–7 hours of loop
+time. The decomposition is in `../../specs/README.md` and `ralph/tasks.json`.
 
 ## Later
 
@@ -1482,7 +1524,7 @@ With the audit's finding ids, not in this PRD:
 - **S-26** translation JSON scoped per route (`costs`, `listings` out of the shared namespaces).
 - **S-32** hygiene: mono font preload off, the dead `MDXRemote` import and its dependency, the
   unreferenced PNGs in `public/`.
-- **S-34** the parts that are Open (Q-9 – Q-11) and the dead message keys
+- **S-34** the dead message keys (the Open parts, Q-9 – Q-11, are a blocked task of this PRD)
   (`landing.hero.trustVerified*`, `browseCta`, `addCta`, `footer.pricing|careers|support|cookies`,
   `districts.listings|avgRent`).
 - **S-11** the Open parts (Q-3) and a full rewrite of /how-it-works and /about.
@@ -1492,8 +1534,32 @@ With the audit's finding ids, not in this PRD:
 - **SE-10** new articles: the flatmate agreement and cost split, room prices per district, the cost
   of a flat for two as a living page, RU/UK "с кем снять квартиру", two tenants on one lease.
 - **S-24** moving the roommate page's URL-filter parsing to the client and `revalidate = 300`.
+- **S-24, S-25 (FR-32, FR-33)** the server auth read on the roommate page and the Supabase client on
+  every page: moved here by the gap review (the unread-count hook, the server-action login and the
+  empty state's e-mail form need the same change); spec 09 keeps the design with those findings.
+- **S-31 (FR-35)** input labels, the banner's privacy link per locale, heading order, the skip link;
+  spec 09 keeps the design (split it in two when taken up).
+- **S-13, S-21 (FR-28 criterion 2)** structured data: no `SearchAction`, per-locale article and
+  breadcrumb URLs and names, the article image, `dateModified`, one `Organization`; spec 09 keeps
+  the design.
 
 ## What changed
 
 - **0.1, 2026-11-20.** First draft by Claude from the site audit of 2026-11-19 (S-1 … S-35) in the
   night run the owner authorized on the evening of 2026-11-19. Not yet reviewed by the owner.
+- **0.1, 2026-11-20, later the same night (decomposition, before the owner's review).** Agent
+  clarifications, marked as such; the substance of the owner-facing requirements is unchanged:
+  - FR-30 serves `/favicon.ico` and `/apple-touch-icon.png` with route handlers instead of
+    redirects (a redirect is a URL change, which this PRD leaves to the owner).
+  - Statuses: FR-5's move of "Building reviews" to the footer is an Assumption; FR-36 and FR-37 are
+    Assumptions that follow CLAUDE.md (no D-row makes them Decided).
+  - From the architect gap review (22 gaps, `prd-4-decision-review.md` §Architect gap review): the
+    thesis-first home title, description and tagline are Open with the hero H1 (Q-6), FR-10 ships an
+    honest cost-first rewrite meanwhile; the framing header is Open (Q-13, PostHog frames); "free"
+    in new copy is Open (Q-12); every owner question has a blocked task; FR-32, FR-33, FR-35 and
+    FR-28's structured data move to Later; the per-person line uses the bot's wording and names its
+    own area (FR-13, FR-27); the counts expire on every profile write (FR-11, FR-26); the data
+    report gets its own surface value `report` and the readout states the attribution limit (§6);
+    the district count names the district first (§8); the templates sentence names the four files
+    that exist; the checker hint sits outside the click wrapper (FR-14); the FAQ pairs questions and
+    answers explicitly (FR-15); `helpCenter.general.a2` ("Is Passflat free?") joins Q-3 (FR-16).

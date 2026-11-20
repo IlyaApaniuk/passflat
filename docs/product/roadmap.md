@@ -31,12 +31,14 @@ PRD changes status or an experiment ends. The thesis and the ladder are in `thes
 - **PRD 4, site improvements** (`prd/prd-4-site-improvements.md`, version 0.1, 2026-11-20; decision
   review `prd/prd-4-decision-review.md`) is **In progress**: written from the site audit of
   2026-11-19 (`reviews/2026-11-19-site-audit.md`) in the night run the owner authorized and
-  decomposed the same night into specs 08 and 09 and 31 tasks (T118 – T148, 5 blocked on Q-1 – Q-5).
+  decomposed the same night, after an architect gap review (22 gaps folded in), into specs 08 and
+  09 and 40 tasks (T118 – T157): 30 to build and 10 blocked on the owner questions Q-1 – Q-13.
   The website becomes an entry into the bot: the roommate page opens on the flatmate block, the
   header and the home page state the thesis, one callout on every cost surface, the per-person
-  figure next to the block, honest titles under the test, district pages with room figures and
-  profile counts, icons, headers and accessibility. Ships with the PRD 3 deploy or the next one;
-  the owner answers Q-1 – Q-11 when convenient. Read after 4 full weeks (Search Console per page
+  figure next to the block, honest titles and guides under the test, district pages with room
+  figures and profile counts, icons, headers and contrast. FR-32, FR-33, FR-35 and the structured
+  data moved to the PRD's Later list. Ships with the PRD 3 deploy or the next one; the owner
+  answers Q-1 – Q-13 when convenient. Read after 4 full weeks (Search Console per page
   group, bot opens by source, profile completion from the web; proposed E16), folded into the stage
   1 readout where the dates allow.
 - **Posting from the PRD 3 deploy** (D46, D53, D67): two 30-minute slots a day, replying to

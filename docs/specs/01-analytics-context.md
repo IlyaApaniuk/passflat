@@ -197,9 +197,13 @@ passflat.com are at least 90 % of sessions with `$web_vitals` (**Assumption**).
 PRD 4 FR-8, FR-36 (**Assumption**: the value sets; existing event names only, CLAUDE.md).
 
 - `telegram_bot_opened.source` (`TelegramBotSource`, `src/lib/analytics/telegram-events.ts`) gains
-  `home`, `building`, `district`, `hub`, `calculator`, `guide`: the flatmate callout's bot button
-  on those surfaces (spec 08 §Flatmate callout), always `has_building_context: false`, payload
-  `mate_web_<source>`. `checker`, `empty` and `roommate` are unchanged.
+  `home`, `building`, `district`, `hub`, `calculator`, `guide`, `report` (the data report): the
+  flatmate callout's bot button on those surfaces (spec 08 §Flatmate callout), always
+  `has_building_context: false`, payload `mate_web_<source>`. `checker`, `empty` and `roommate`
+  are unchanged.
+- Attribution limit: a visitor sent by a callout's roommate link to the roommate page and then
+  into the bot is `source: roommate` / `mate_web_roommate`; the surface is known only from the
+  earlier `cta_click.placement` of the same web person (spec 08 §Flatmate callout).
 - `cta_click.placement` gains `flatmate_callout_<surface>` for the callout's roommate-page link;
   `header_mobile` stays and now leads to the roommate page (spec 08 §Header and footer entries).
 - On the bot side nothing changes: `tg_roommate_flow_started` records `entry_source: 'web'` and
