@@ -136,6 +136,14 @@ A test (`src/i18n/nominative-templates.test.ts`) scans the pl and ru files for `
 and fails on any match. A verb with an object case is the same trap ("wskazało {district}" needs
 Wolę): the district count lines of §District section put the name first, before a colon.
 
+A governing word is the same trap without a preposition (T158): "dla" and «по» before either
+name, and a district noun before the city ("w dzielnicach {city}", «Все районы {city}»: the
+districts _of_ the city need the genitive). A second scan in the same test catches "dla" / «по»
+before either name, any form of "dzielnic-" / «район-» before `{city}` and their plurals before
+`{district}`. A city noun in apposition keeps the name in the nominative ("w dzielnicach miasta
+{city}", «по районам города {city}», «по районах міста {city}»); a singular district noun before
+`{district}` is apposition too ("w dzielnicy {district}", «по району {district}»).
+
 ## Blog frontmatter
 
 FR-23 (**Decided**: no invented statistics, D25; **Assumption**: drafts).

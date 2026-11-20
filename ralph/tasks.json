@@ -791,13 +791,13 @@
         "Copy: every changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Found by T140: the spec's preposition scan does not catch a governing noun. Rendered today: pl 'w dzielnicach Warszawa', 'Wszystkie dzielnice Warszawa'; ru 'по районам Варшава', 'Все районы Варшава'; uk 'по районах Варшава', 'Усі райони Варшава'. en is fine.",
       "id": "T158",
       "milestone": "M3",
       "title": "Nominative-safe city and district names after a governing noun (FR-22 follow-up)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#nominative-safe-templates",
-      "status": "todo"
+      "status": "done"
     },
     {
       "dependsOn": ["T155"],

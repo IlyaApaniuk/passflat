@@ -10,6 +10,11 @@ import { FORBIDDEN } from './honesty-rules';
 // preposition directly before either placeholder: the name goes first before a colon or dash, or
 // after a noun in apposition ("w dzielnicy {district}", «в районе {district}»), or the city is the
 // literal "w Warszawie" while Warsaw is the only city (D6).
+//
+// A word that governs a case is the same trap without a preposition (T158): "dla" and «по»
+// before either name, and "dzielnice / районы {city}" ("the districts of …" needs the genitive).
+// The second scan catches those; a city noun in apposition stays ("miasta {city}", «города
+// {city}», «міста {city}»), and so does a singular district noun before `{district}`.
 
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -45,8 +50,21 @@ const valueAt = (locale: Locale, path: string) =>
  */
 const PREPOSITION_BEFORE_NAME = /(^|[^a-ząćęłńóśźżа-яёіїєґ'ʼ])(w|na|в|у|на)\s+\{(district|city)\}/i;
 
+/**
+ * A word that governs the genitive or dative directly before a name: "dla" (pl) and «по» (ru, uk)
+ * before either name; a district noun in any form before `{city}` ("dzielnicach {city}", «районы
+ * {city}»: the districts *of* the city); a district noun in the plural before `{district}`. A
+ * singular district noun before `{district}` is apposition ("w dzielnicy {district}", «по району
+ * {district}») and passes, like a city noun before `{city}` ("miasta {city}"). Same word start as
+ * above, no `g` flag.
+ */
+const GOVERNING_WORD_BEFORE_NAME =
+  /(^|[^a-ząćęłńóśźżа-яёіїєґ'ʼ])((dla|по)\s+\{(district|city)\}|(dzielnic|район)[a-ząćęłńóśźżа-яёіїєґ]*\s+\{city\}|(dzielnice|dzielnic|dzielnicom|dzielnicami|dzielnicach|районы|районов|районам|районами|районах|райони|районів)\s+\{district\})/i;
+
 /** The keys spec 09's table shapes, and the keys the scan found with a preposition on 2026-11-20. */
 const CHANGED_KEYS = [
+  'costsSeo.cityIntro',
+  'costsSeo.backToCity',
   'costsSeo.districtH1',
   'costsSeo.buildingsHeading',
   'calculator.h1',
@@ -112,6 +130,79 @@ describe('nominative-safe templates (spec 09, FR-22)', () => {
     expect(PREPOSITION_BEFORE_NAME.flags).not.toContain('g');
   });
 
+  it('no pl, ru or uk value puts a governing word directly before {district} or {city}', () => {
+    const offenders = SCANNED.flatMap((locale) =>
+      leaves(messages[locale])
+        .filter(([, value]) => GOVERNING_WORD_BEFORE_NAME.test(value))
+        .map(([path, value]) => `${locale}: ${path} → ${value}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('the governing-word scan catches the genitive and dative traps and passes apposition', () => {
+    const caught = [
+      'Mediany kosztów — w dzielnicach {city}.',
+      'Wszystkie dzielnice {city}',
+      'Średnia dla {district}',
+      'Dla {city}: koszty',
+      `Koszty dla${String.fromCharCode(0xa0)}{city}`,
+      'Budynki w dzielnicach {district}',
+      'Ranking dzielnic {city}',
+      'Медианы расходов — по районам {city}.',
+      'Все районы {city}',
+      'Среднее по {district}',
+      'По {city}: расходы',
+      'Цены в районах {district}',
+      'Медіани витрат — по районах {city}.',
+      'Усі райони {city}',
+      'Середнє по {district}',
+      'Рейтинг районів {city}',
+    ];
+    const passed = [
+      'Mediany kosztów — w dzielnicach miasta {city}.',
+      'Wszystkie dzielnice miasta {city}',
+      'Koszty najmu w dzielnicy {district} ({city})',
+      'Mediana dzielnicy {district}',
+      'Pomóż uzupełnić {district}',
+      'Średnia dla Warszawy',
+      '{district}: koszty najmu',
+      'Медианы расходов — по районам города {city}.',
+      'Все районы города {city}',
+      'Медиана района {district}',
+      '{districtCount} по району {district}',
+      'Расходы в районе {district}',
+      'Пока принимаем отзывы только по городу {city}.',
+      'Депо {city}',
+      'Медіани витрат — по районах міста {city}.',
+      'Усі райони міста {city}',
+      'У районі {district} поки немає оголошень',
+      '{districtCount} по району {district}',
+      'Середнє по Варшаві',
+      'All {city} districts',
+    ];
+    for (const text of caught) expect(text).toMatch(GOVERNING_WORD_BEFORE_NAME);
+    for (const text of passed) expect(text).not.toMatch(GOVERNING_WORD_BEFORE_NAME);
+    expect(GOVERNING_WORD_BEFORE_NAME.flags).not.toContain('g');
+  });
+
+  it('the city intro and the back link name the city after a city noun (T158)', () => {
+    expect(valueAt('pl', 'costsSeo.cityIntro')).toContain('w dzielnicach miasta {city}.');
+    expect(valueAt('ru', 'costsSeo.cityIntro')).toContain('по районам города {city}.');
+    expect(valueAt('uk', 'costsSeo.cityIntro')).toContain('по районах міста {city}.');
+    expect(valueAt('en', 'costsSeo.cityIntro')).toContain('across the districts of {city}.');
+    expect(valueAt('pl', 'costsSeo.backToCity')).toBe('Wszystkie dzielnice miasta {city}');
+    expect(valueAt('ru', 'costsSeo.backToCity')).toBe('Все районы города {city}');
+    expect(valueAt('uk', 'costsSeo.backToCity')).toBe('Усі райони міста {city}');
+    expect(valueAt('en', 'costsSeo.backToCity')).toBe('All {city} districts');
+  });
+
+  it('the unread costs.building.districtAvg is gone from every locale (T158)', () => {
+    for (const locale of LOCALES) {
+      expect(valueAt(locale, 'costs.building.districtAvg'), locale).toBeUndefined();
+      expect(valueAt(locale, 'costs.building.warsawAvg'), locale).toEqual(expect.any(String));
+    }
+  });
+
   it('the district h1 puts the name first before a colon (spec 09 table, appendix table C)', () => {
     expect(valueAt('pl', 'costsSeo.districtH1')).toBe('{district}: koszty najmu');
     expect(valueAt('en', 'costsSeo.districtH1')).toBe('{district}: rent costs');
@@ -155,7 +246,12 @@ describe('nominative-safe templates (spec 09, FR-22)', () => {
       for (const key of ['costsSeo.districtH1', 'costsSeo.buildingsHeading']) {
         expect(valueAt(locale, key), `${locale}: ${key}`).toContain('{district}');
       }
-      for (const key of ['costsSeo.cityMetaDescription', 'costsSeo.cityH1']) {
+      for (const key of [
+        'costsSeo.cityMetaDescription',
+        'costsSeo.cityH1',
+        'costsSeo.cityIntro',
+        'costsSeo.backToCity',
+      ]) {
         expect(valueAt(locale, key), `${locale}: ${key}`).toContain('{city}');
       }
       const intro = valueAt(locale, 'costsSeo.districtIntro');

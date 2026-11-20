@@ -44,10 +44,10 @@ agent's own draft. Four locales unless the row says otherwise.
 | T148 | FR-27        | `costsSeo.districtRoomLead`, `costsSeo.districtRoomCityFallback` (new), `costsSeo.districtMetaDescription` (table C, full)                                                                                                                                                                                           | §8 (EN lead), the bot's `roomFallback`, table C; agent        |
 | T149 | FR-28        | `costs.submit.metaTitle`, `costs.submit.metaDescription` (new)                                                                                                                                                                                                                                                       | §8; PL/RU/UK description agent                                |
 | T155 | FR-34        | `common.menu` (new)                                                                                                                                                                                                                                                                                                  | agent                                                         |
+| T158 | FR-22        | pl/ru/uk `costsSeo.cityIntro`, `costsSeo.backToCity` (city noun before the name); deleted `costs.building.districtAvg` (never read)                                                                                                                                                                                  | agent                                                         |
 
 No copy: T144 (own links in guides render relative), T152 (icons), T153 (headers). Still planned
-when this was written: T158 (FR-22 follow-up: city and district names after a governing noun, a
-copy change) and T159 (a colour); their entries list any copy they add.
+when this was written: T159 (a colour); its entry lists any copy it adds.
 
 Points the entries raise for a decision (not blockers; each entry has the detail):
 
