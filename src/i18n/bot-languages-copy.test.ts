@@ -129,6 +129,15 @@ describe('website copy names the bot languages (spec 04 §Website bot languages)
     }
   });
 
+  it('reads the checker hint as a general bot line with all three languages (FR-14)', () => {
+    for (const locale of LOCALES) {
+      const hint = classify(locale, messages[locale]).general.find(
+        (line) => line.path === 'checker.costs.telegramHint',
+      );
+      expect(hint?.named, locale).toEqual(['en', 'ru', 'uk']);
+    }
+  });
+
   it('the same keys are bot-language lines in all four locales', () => {
     const keys = (locale: Locale) => {
       const { general, depositOnly } = classify(locale, messages[locale]);

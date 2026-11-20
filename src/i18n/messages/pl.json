@@ -896,7 +896,8 @@
       "emptyDescription": "Podziel się swoimi opłatami i odblokuj szczegółowe rozkłady kosztów w całym mieście {city}.",
       "contribute": "Dodaj koszty i odblokuj szczegóły",
       "followHint": "Nie chcesz jeszcze udostępniać danych? Obserwuj budynek.",
-      "telegramCta": "Otwórz ten budynek w bocie Telegram"
+      "telegramCta": "Otwórz ten budynek w bocie Telegram",
+      "telegramHint": "Liczby dla tego budynku i profile współlokatorów — w Telegramie, po angielsku, rosyjsku i ukraińsku; pismo o kaucję po rosyjsku i ukraińsku."
     },
     "nuisances": {
       "title": "Na co zwrócić uwagę",

@@ -896,7 +896,8 @@
       "emptyDescription": "Share what you pay and unlock detailed cost breakdowns across {city}.",
       "contribute": "Share costs and unlock details",
       "followHint": "Not ready to share? Follow the building for updates.",
-      "telegramCta": "Open this building in the Telegram bot"
+      "telegramCta": "Open this building in the Telegram bot",
+      "telegramHint": "This building's figures and roommate profiles in Telegram, in English, Russian and Ukrainian; the deposit letter in Russian and Ukrainian."
     },
     "nuisances": {
       "title": "Worth knowing",

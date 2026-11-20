@@ -4217,3 +4217,52 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - The hub serves every city, but the split is always Warsaw's, like the callout's Warsaw copy (T126 noted the same for the callout).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:52 · T130 · done
+
+- Done (PRD 4 FR-14, spec 08 §Checker handoff):
+  - `src/components/costs/telegram-bot-cta.tsx`:
+    - `TelegramBotCta`'s anchor now uses `cn(buttonVariants({ variant: 'outline' }), 'mt-4 h-auto min-h-11 whitespace-normal')`. tailwind-merge replaces the default `h-9` and `whitespace-nowrap`, so the label can wrap on a phone.
+    - The href (`botStartUrl`), `target`/`rel`, the `onClick` (`telegram_bot_opened` + `telegramBotOpenedProperties`), the `Send` icon and the `checker.costs.telegramCta` label are unchanged.
+    - New `TelegramBotHint` in the same file: `<p className="mt-2 text-sm text-muted-foreground">{t('costs.telegramHint')}</p>` under `useTranslations('checker')`. It returns null without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, like the button.
+  - `src/app/[locale]/[city]/check/client.tsx` renders `<TelegramBotHint />` right after each of the two `<div onClickCapture={() => captureCta('telegram')}>` wrappers (data card and empty state), never inside one. The wrappers, and so `checker_cta_clicked {cta: 'telegram'}`, are unchanged. No roommate callout on the checker.
+  - New key `checker.costs.telegramHint` in four locales.
+  - `docs/specs/README.md` PRD 4 map: FR-14 → Done (T130 is its only task).
+- Tests:
+  - `src/components/costs/telegram-bot-cta.test.ts`: the `next-intl` mock is now the real `createTranslator` over the `checker` namespace only (`onError` throws), with a locale switch. The old cases are kept. New cases:
+    - the button's exact class string, and that it has `border`, `bg-background`, `min-h-11`, `h-auto` and `whitespace-normal` but not `h-9` or `whitespace-nowrap`;
+    - the label is `checker.costs.telegramCta` in four locales;
+    - the hint is null without the username;
+    - the hint is a `p` with no `onClick` and no link;
+    - the EN text equals PRD 4 §8;
+    - each locale renders its `telegramHint`.
+  - New `src/app/[locale]/[city]/check/bot-handoff-placement.test.ts`, a static scan of `client.tsx` that matches each `onClickCapture` wrapper to its closing `</div>` by depth. It checks:
+    - every `onClickCapture` is found, and two of them are `telegram`, holding `TelegramBotCta` with `source="checker"` and `source="empty"`;
+    - no wrapper holds `TelegramBotHint`;
+    - each telegram wrapper is directly followed (JSX comments allowed) by `<TelegramBotHint />`, which appears twice;
+    - the client has no flatmate callout or `mate_web_`;
+    - two self-checks: a hint inside a wrapper is caught, and one after a nested wrapper is read as its sibling.
+  - `src/i18n/bot-languages-copy.test.ts`: new case that `checker.costs.telegramHint` is a general bot line naming `en`, `ru`, `uk` in all four locales.
+- Checks:
+  - Focused Vitest (component, checker dir, `src/i18n/`, roommate namespaces): 7 files / 74 passed, then bot-languages 22 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 158 files / 3372 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored.
+  - `npm run test:e2e` not run: not in the task's checks, and the checker is a city page that cannot render in the e2e build. No page was looked at in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29):** `checker.costs.telegramHint` (new), the PRD 4 §8 text in each locale:
+    - pl "Liczby dla tego budynku i profile współlokatorów — w Telegramie, po angielsku, rosyjsku i ukraińsku; pismo o kaucję po rosyjsku i ukraińsku."
+    - en "This building's figures and roommate profiles in Telegram, in English, Russian and Ukrainian; the deposit letter in Russian and Ukrainian."
+    - ru «Цифры по этому дому и анкеты соседей — в Telegram, по-английски, по-русски и по-украински; письмо о залоге — по-русски и по-украински.»
+    - uk «Цифри по цьому будинку й анкети сусідів — у Telegram, англійською, російською та українською; лист про заставу — російською та українською.»
+    - No other key changed (`checker.costs.telegramCta` is unchanged).
+  - **Namespaces and providers:** `TelegramBotCta` and `TelegramBotHint` read `checker` (`useTranslations('checker')`). The checker page's scoped `NextIntlClientProvider` (`check/page.tsx`, `pickMessages(messages, ['checker', 'costs', 'buildingTags', 'buildingTagPicker', 'locationScore', 'map'])`) serves it, and no other page renders either component (`client-namespaces.test.ts` still keeps the CTA off the roommate tree).
+  - **Assumptions applied (spec 08, FR-14 markup and hint):** the outline button with `h-auto min-h-11 whitespace-normal`, and the hint line under each button. Both live in `telegram-bot-cta.tsx`.
+  - **Agent's choice:** the anchor keeps its old `mt-4` top margin inside its own class string, not on the wrapper. Without the username, an empty wrapper then adds no spacing; the production username is not set until T117. The button is content-width, not `w-full` like the data card's other buttons, as the spec's markup has it.
+  - With the production username unset (T117), the checker shows neither the button nor the hint in production until it is set.
+  - No new table, migration or event name; event properties are unchanged.
+- Next: `node scripts/ralph-tasks.mjs next`.

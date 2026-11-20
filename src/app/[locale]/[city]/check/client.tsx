@@ -40,7 +40,7 @@ import {
 } from '@/components/buildings/location-score-block';
 import { NuisancesCard, nuisanceItems } from '@/components/buildings/nuisances-card';
 import { FollowBuildingButton } from '@/components/costs/follow-building-button';
-import { TelegramBotCta } from '@/components/costs/telegram-bot-cta';
+import { TelegramBotCta, TelegramBotHint } from '@/components/costs/telegram-bot-cta';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -649,6 +649,8 @@ export function CheckerClient({
                   <div onClickCapture={() => captureCta('telegram')}>
                     <TelegramBotCta buildingId={result.building.id} source="checker" />
                   </div>
+                  {/* Outside the wrapper: a tap on the hint is not a CTA click. */}
+                  <TelegramBotHint />
                 </CardContent>
               </Card>
             ) : (
@@ -684,6 +686,7 @@ export function CheckerClient({
                     <div onClickCapture={() => captureCta('telegram')}>
                       <TelegramBotCta buildingId={result.building.id} source="empty" />
                     </div>
+                    <TelegramBotHint />
                   </div>
                 </CardContent>
               </Card>

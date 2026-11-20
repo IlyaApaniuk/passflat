@@ -301,7 +301,7 @@
       "title": "The checker's bot handoff is a 44 px button with a line naming what the bot does (FR-14)",
       "spec": "docs/specs/08-site-structure-and-entries.md#checker-handoff",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "TelegramBotCta renders the anchor with buttonVariants({ variant: 'outline' }) plus h-auto min-h-11 whitespace-normal; same href, onClick, label and telegram_bot_opened properties; checker_cta_clicked {cta: 'telegram'} is unchanged",
         "A separate TelegramBotHint (same file) renders the new key checker.costs.telegramHint (PRD 4 §8: English, Russian and Ukrainian for the bot, Russian and Ukrainian for the deposit letter, D63); check/client.tsx renders it after each onClickCapture wrapper, never inside one; a static test asserts that",
@@ -309,7 +309,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "PRD 1 FR-11 (payload and events as built), D63. The checker cannot render in the e2e build (a city page)."
     },
     {
