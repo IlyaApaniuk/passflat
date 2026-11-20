@@ -192,6 +192,21 @@ landing page → same identity (existing); `init` throws → pages still render.
 agent's choice. After deploy (owner): in the first full week, sessions with `$pageview` on
 passflat.com are at least 90 % of sessions with `$web_vitals` (**Assumption**).
 
+## PRD 4 values
+
+PRD 4 FR-8, FR-36 (**Assumption**: the value sets; existing event names only, CLAUDE.md).
+
+- `telegram_bot_opened.source` (`TelegramBotSource`, `src/lib/analytics/telegram-events.ts`) gains
+  `home`, `building`, `district`, `hub`, `calculator`, `guide`: the flatmate callout's bot button
+  on those surfaces (spec 08 §Flatmate callout), always `has_building_context: false`, payload
+  `mate_web_<source>`. `checker`, `empty` and `roommate` are unchanged.
+- `cta_click.placement` gains `flatmate_callout_<surface>` for the callout's roommate-page link;
+  `header_mobile` stays and now leads to the roommate page (spec 08 §Header and footer entries).
+- On the bot side nothing changes: `tg_roommate_flow_started` records `entry_source: 'web'` and
+  `entry_detail: <surface>` from the payload (spec 04 §Start payloads).
+- `docs/analytics/activation-funnels.md` §1 lists the values and §"PRD 4 readout" the queries
+  (spec 05 §PRD 4: readout and docs).
+
 ## Locale key parity
 
 Supports every copy change of PRD 1 (`CLAUDE.md`: four locale files with identical key sets; no

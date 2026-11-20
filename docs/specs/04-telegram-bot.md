@@ -421,3 +421,8 @@ Russian and Ukrainian, in all four locales. A line that speaks only of the depos
 "Russian and Ukrainian" (D63). A test searches the four message files for bot-language lines and
 fails on a general bot line without English (the task lists the keys it changed and the deposit
 lines it kept). Key parity holds.
+
+PRD 4 FR-17 (spec 08 §Polish visitor and the posting kit): the Polish value of
+`listings.findFlatmate.languages` adds that there is no Polish bot version yet (D50); it still names
+English, so the test passes. PRD 4 FR-14 adds `checker.costs.telegramHint`, which names English,
+Russian and Ukrainian for the bot and Russian and Ukrainian for the deposit letter (D63).

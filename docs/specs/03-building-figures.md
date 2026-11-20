@@ -394,6 +394,15 @@ count partial returns and current tenants as "returned"; they switch to
 "checked", "actually" and "in full" after the rewrite finds no claim about reported figures;
 the progress entry lists any match left and why.
 
+**PRD 4 FR-21 (spec 09 §Honesty keys under test):** the templated titles and descriptions outside
+the list above (`costsSeo.*MetaTitle`, `calculator.meta*`, `rentReport.metaTitle|metaDescription|ogTitle|lead|checkStep1`,
+`meta.*Description`, `landing.hero.costsCta`, `landing.footer.tagline`,
+`listings.demandCapture.costCtaTitle`, `about.values.principle1Desc`, the roommate page's keys and
+the new submit-page keys) join `REWRITTEN_KEYS` and are rewritten to reported-costs wording; the
+`FORBIDDEN` regexes move to `src/i18n/honesty-rules.ts` so the blog frontmatter and body tests
+share them; `really` joins the EN whole-file scan. The per-person line of PRD 4 FR-13 and FR-27
+reads `loadRoomCostAreas` (spec 06 §Room cost reference) and adds no loader.
+
 ## Parameters to confirm
 
 Q-3, **Decided** (D24, 2026-11-19): the owner confirmed every cautious default as built, each

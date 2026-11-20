@@ -278,6 +278,12 @@ D68). Copy: PRD 3 §8 "Website block" drafts (PL first), four locales, listed fo
   the bot (district, budget per person, move-in month; contacts only on mutual interest), the
   bot's languages (English, Russian and Ukrainian, D50), and a button to
   `https://t.me/<bot>?start=mate_web_roommate`. The list stays rendered below.
+  **PRD 4 FR-1 (spec 08 §Roommate page default view) changes the trigger:** the block shows by
+  default (no role chosen) and after `find_flatmate`, and is hidden only after `find_room` or
+  `offer_room`; the role selector moves above the type tabs; the "0 listings" line is hidden while
+  the city has no offer; without the bot username the block renders with an honest "not connected
+  yet" line instead of nothing (FR-2); the per-person line of PRD 4 FR-13 sits under the title.
+  The PL label of the third role and the PL languages clause are PRD 4 FR-17.
 - The counts come from `loadRoommateCounts()` (spec 06 §Counts) loaded on the server in
   `src/app/[locale]/[city]/roommate/page.tsx` through `unstable_cache` with `revalidate: 3600`
   (counts at most an hour old) and passed down as a prop; zero → "Be among the first" and no

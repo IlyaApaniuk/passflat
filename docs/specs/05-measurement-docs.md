@@ -228,6 +228,64 @@ A section "Roommate stage 2 (E15)" in `docs/analytics/activation-funnels.md`:
    holds, 5 pairs so far; 24 qualifying, 3 with a match → 12.5 % → stop; 22 browsing and no
    `completer` → stop. Fewer than 10 qualifying persons → counts only, "the rule cannot be read".
 
+## PRD 4: readout and docs
+
+PRD 4 FR-36, **Decided** (existing event names, new values only; the loop never queries PostHog or
+Search Console); **Assumption** (the readout's shape; the thresholds are the PRD's §1 Assumptions,
+proposed as E16 in `../product/prd/prd-4-decision-review.md` row 14). Written from the code as it
+is after M1 – M4.
+
+- `docs/analytics/activation-funnels.md` §1: `telegram_bot_opened.source` and `cta_click.placement`
+  values of spec 01 §PRD 4 values, with where each fires; `tg_roommate_flow_started.entry_detail`'s
+  new values. A new section "PRD 4 readout (E16, proposed)":
+  1. Search Console, read by the owner: the page groups (`/warsaw/roommate` in four locales,
+     building pages, district pages with the hub, guides, the calculator, the data report, the
+     home page), compared over 4 full weeks (Monday–Sunday) after the deploy against the 4 full
+     weeks before: clicks, impressions, CTR, position; counts, not rates, while small; Google
+     re-reads titles over weeks, so the first week is weak evidence.
+  2. HogQL: `telegram_bot_opened` by `source` (persons and events) in the window; persons with
+     `tg_roommate_flow_started {entry_source: 'web'}` by `entry_detail`; the flow → profile funnel
+     by `entry_source` (persons, A23). Web and bot identities are never joined: the two sides are
+     reported next to each other, never divided into one rate.
+  3. The thresholds of PRD 4 §1 as Assumptions (roommate CTR ≥ 3 %, D41; clicks ≥ 2×; ≥ 3 of 8
+     rewritten pages at CTR ≥ 2 %; total clicks not below the previous window; ≥ 5 bot opens from
+     website entries; completion ≥ 50 %) and that none is a stop rule for the thesis (D52 decides
+     stage 1).
+  4. The season note and the EU PostHog project (D30).
+- `src/lib/bot/README.md` "Deep links": the `mate_web_<detail>` values the website sends
+  (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`).
+- `docs/architecture.md`: §2 the callout, the home thesis section, the district section; §4 the
+  redirects and headers of `next.config.mjs` and the OG cache header; §5 the new event values and
+  placements; §6 the PL-only clause as a value difference.
+- `docs/ops/deploy-copy-review.md` (new): the owner's checklist for the deploy that carries PRD 1,
+  PRD 3 and PRD 4: (1) the four live-only honesty leftovers of audit S-35 to confirm gone live
+  ("Przeglądaj zweryfikowane oferty" on /how-it-works, "zwrot 77%" in the hero, "сколько платят
+  жильцы" on /ru, unsplit building figures); (2) `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` set in Vercel
+  (D76) and `ROOMMATE_MATCHING_ENABLED=true` (D75); (3) every PRD 4 draft copy key by task, read from
+  the progress entries; (4) after the deploy: `curl -I` for `/favicon.ico`, `/apple-touch-icon.png`,
+  `/api/og?title=x` (Cache-Control) and the four security headers on `/`; Live Events for
+  `telegram_bot_opened` with the new sources; (5) the Search Console groups and dates to read after
+  4 full weeks.
+- `docs/specs/README.md`: the PRD 4 requirement map marks each FR Done, Blocked (with the task) or
+  Planned.
+
+## PRD 4 final check
+
+PRD 4 FR-37, **Decided**. One task at the end:
+
+- `npm run verify` and `npm run test:e2e` pass (the e2e suite now holds the home thesis section,
+  the header link, the headers and the icons).
+- `node scripts/ralph-tasks.mjs summary` shows every PRD 4 task done or blocked with its question
+  (Q-1 – Q-5).
+- The requirement map in `README.md` maps every FR-1 – FR-37 to a done task or to a blocked task
+  with its question.
+- The progress entry is the owner's handoff, separating built, tested and not deployed: no
+  migration, table or cron change; the redirects and headers added; every draft copy key for
+  review by task (web, four locales); the Assumption placements and values; the five blocked
+  questions; the Search Console and PostHog readings to make after 4 full weeks and where they are
+  described; what stays unverified (Core Web Vitals, Live Events, the live headers and icons after
+  deploy, mobile layout by eye, the home route's script list in production).
+
 ## PRD 3 final check
 
 PRD 3 FR-44, **Decided**. One task at the end:

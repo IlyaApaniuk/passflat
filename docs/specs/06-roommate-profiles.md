@@ -468,7 +468,11 @@ gender or "live with", D51); **Assumption** (the counting rules, D68).
   percentage, rate or "verified".
 - `loadRoommateCounts()` (server) loads the active profiles' district fields in one query and
   serves both the bot (with the viewer) and the website (spec 02 §Find a flatmate, without a
-  viewer: the Warsaw total and the top 5 districts).
+  viewer: the Warsaw total and the top 5 districts). **PRD 4 FR-26 (spec 09 §District section):**
+  without a viewer the result also carries `byDistrict`, the count of counted profiles naming each
+  district (same rules: "any" profiles in no district, no combination, no sum), so the district
+  pages can say "{n} people with a profile name {district}" or "nobody yet"; the website cache key
+  becomes `roommate-website-counts-v2`.
 - Golden case (PRD 3 §5 example 1), a unit test: P1 Mokotów + Ochota, P2 Mokotów, P3 any, P4 Wola,
   P5 Mokotów hidden, P6 Mokotów expired, P7 Ochota, P9 Mokotów with a blocked chat; viewer P8
   Mokotów + Wola → Mokotów 2, Wola 1, open to any district 1, Warsaw 5 besides you; a viewer with

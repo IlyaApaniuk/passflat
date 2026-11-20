@@ -4,17 +4,22 @@ These specs describe what the loop builds. They grow with every PRD: a new PRD c
 specs and adds new ones. Loop iterations read only these specs and the code; product documents
 in `docs/product/` explain why, the specs say what.
 
-**Current PRD:** none in progress. Next in `../../ralph/tasks.json` is milestone **M7 "Owner
-tooling"** (no PRD; D76, D77, evening of 2026-11-19): the bot avatar, the `npm run bot:profile`
-script that sets the bot's name, descriptions and photo through the Bot API, one place for the
-production bot's username, and a task blocked on the owner's username choice (the map is below).
-After M7 comes PRD 4, not written yet (`../product/roadmap.md`).
+**Current PRD:** PRD 4, "Site improvements — the website as an entry into roommate matching"
+(`../product/prd/prd-4-site-improvements.md`, version 0.1, 2026-11-20; decision review
+`../product/prd/prd-4-decision-review.md`). Written from the site audit of 2026-11-19
+(`../product/reviews/2026-11-19-site-audit.md`) in the night run the owner authorized; the owner
+has not reviewed it yet, so every owner question is a blocked task (Q-1 – Q-5) and everything
+independent proceeds. Specs 08 and 09 are its new specs; 01, 02, 03, 04, 05 and 06 carry its
+sections; the requirement map is below. Its tasks (T118 – T148) follow milestone **M7 "Owner
+tooling"** (no PRD; D76, D77) in `../../ralph/tasks.json`, which keeps its `todo` and `blocked`
+tasks (the map is below).
 
 **Previous PRDs:** PRD 3, "Roommate matching — a structured waiting list, mutual matching and an
 English bot" (`../product/prd/prd-3-roommate-matching.md`, version 0.3), is Done (2026-11-19:
-built and tested on `chore/agent-harness`, not deployed; 52 tasks T062 – T113, all done; the
-matching switch is on from the deploy, D75). Specs 06 and 07 are its new specs; 02, 04 and 05
-carry its sections; its requirement map is kept below. PRD 1, "Activation measurement and the
+built and tested on `chore/agent-harness`, not deployed; 52 tasks T062 – T113, all done, archived
+in `../../ralph/archive/prd-3-roommate-matching-tasks.json` on 2026-11-20; the matching switch is
+on from the deploy, D75). Specs 06 and 07 are its new specs; 02, 04 and 05 carry its sections; its
+requirement map is kept below. PRD 1, "Activation measurement and the
 Telegram bot" (`../product/prd/prd-1-activation-and-bot.md`), is Done (2026-11-19: built and
 tested on `chore/agent-harness`, not deployed); its 60 tasks are archived in
 `../../ralph/archive/prd-1-activation-and-bot-tasks.json` and its map is kept below. Harness
@@ -77,15 +82,59 @@ Draft copy is allowed where a spec says so; list such keys in the progress entry
 
 ## Spec files
 
-| File                                                       | Area                                                                                              | PRD 1 package | PRD 3 milestones              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- |
-| [01-analytics-context.md](01-analytics-context.md)         | Page context, entry page, activation events, key parity                                           | A (M1)        | —                             |
-| [02-roommate-and-waitlist.md](02-roommate-and-waitlist.md) | Roommate roles, interest API, city-launch, empty states; PRD 3: find a flatmate, room money block | B (M2)        | M2 (FR-21, FR-22)             |
-| [03-building-figures.md](03-building-figures.md)           | Shared figure contract and every surface that shows it                                            | C (M3)        | — (read by spec 06)           |
-| [04-telegram-bot.md](04-telegram-bot.md)                   | Deep links, honest cards, promises, analytics, reminders; PRD 3: `mate` links, English locale     | D (M4)        | M1 (FR-2), M5 (FR-37 – FR-39) |
-| [05-measurement-docs.md](05-measurement-docs.md)           | Funnel doc, bot README, final check; PRD 3: docs, posting kit, readouts                           | E (M5)        | M6 (FR-40 – FR-44)            |
-| [06-roommate-profiles.md](06-roommate-profiles.md)         | Roommate data, intake, own card, expiry, daily cron, counts, room reference, opt-in, closing      | —             | M1, M2 (FR-1, FR-3 – FR-20)   |
-| [07-roommate-matching.md](07-roommate-matching.md)         | Switch, compatibility, cards, reveal, push, outcome, report, hiding, appeals, legal drafts        | —             | M3, M4 (FR-23 – FR-36)        |
+| File                                                                           | Area                                                                                                                                                                            | PRD 1 package | PRD 3 milestones              | PRD 4                       |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | --------------------------- |
+| [01-analytics-context.md](01-analytics-context.md)                             | Page context, entry page, activation events, key parity; PRD 4: new event values                                                                                                | A (M1)        | —                             | §PRD 4 values               |
+| [02-roommate-and-waitlist.md](02-roommate-and-waitlist.md)                     | Roommate roles, interest API, city-launch, empty states; PRD 3: find a flatmate, room money block                                                                               | B (M2)        | M2 (FR-21, FR-22)             | §Find a flatmate note       |
+| [03-building-figures.md](03-building-figures.md)                               | Shared figure contract and every surface that shows it                                                                                                                          | C (M3)        | — (read by spec 06)           | §Marketing copy note        |
+| [04-telegram-bot.md](04-telegram-bot.md)                                       | Deep links, honest cards, promises, analytics, reminders; PRD 3: `mate` links, English locale                                                                                   | D (M4)        | M1 (FR-2), M5 (FR-37 – FR-39) | §Website bot languages note |
+| [05-measurement-docs.md](05-measurement-docs.md)                               | Funnel doc, bot README, final check; PRD 3: docs, posting kit, readouts; PRD 4: readout and docs                                                                                | E (M5)        | M6 (FR-40 – FR-44)            | M5 (FR-36, FR-37)           |
+| [06-roommate-profiles.md](06-roommate-profiles.md)                             | Roommate data, intake, own card, expiry, daily cron, counts, room reference, opt-in, closing                                                                                    | —             | M1, M2 (FR-1, FR-3 – FR-20)   | §Counts note                |
+| [07-roommate-matching.md](07-roommate-matching.md)                             | Switch, compatibility, cards, reveal, push, outcome, report, hiding, appeals, legal drafts                                                                                      | —             | M3, M4 (FR-23 – FR-36)        | —                           |
+| [08-site-structure-and-entries.md](08-site-structure-and-entries.md)           | Roommate page default view and shell, header and footer, home framing and thesis section, flatmate callout, per-person line, checker handoff, how-it-works copy, Polish visitor | —             | —                             | M1, M2 (FR-1 – FR-20)       |
+| [09-search-metadata-and-performance.md](09-search-metadata-and-performance.md) | Honesty keys, nominative templates, blog frontmatter and bodies, low-CTR titles, district section, sitemap and robots, icons, headers, auth read, lazy client, contrast, labels | —             | —                             | M3, M4 (FR-21 – FR-35)      |
+
+## Requirement map (PRD 4, in progress)
+
+Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
+Planned (task todo). Decomposed on 2026-11-20 in the night run; the owner has not answered the
+decision review, so Q-1 – Q-5 are blocked tasks and everything else is Planned. The architect gap
+review's findings are folded into specs 08 and 09 (see `../product/prd/prd-4-decision-review.md`
+§Architect gap review).
+
+| FR           | Requirement                                                    | Spec                                                                                                                                                                             | Tasks | Status  |
+| ------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
+| FR-1, FR-2   | Flatmate block by default; the no-username line                | [08 §Roommate page default view](08-site-structure-and-entries.md#roommate-page-default-view)                                                                                    | T118  | Planned |
+| FR-3, FR-4   | Roommate page title, description, H1; main, h-dvh, footer      | [08 §Roommate page shell and metadata](08-site-structure-and-entries.md#roommate-page-shell-and-metadata)                                                                        | T119  | Planned |
+| FR-5         | Header flatmate entry; building reviews to the footer          | [08 §Header and footer entries](08-site-structure-and-entries.md#header-and-footer-entries)                                                                                      | T120  | Planned |
+| FR-6         | Home framing surfaces re-pointed                               | [08 §Home framing surfaces](08-site-structure-and-entries.md#home-framing-surfaces)                                                                                              | T121  | Planned |
+| FR-7         | Footer product column (Q-5)                                    | [08 §Footer product column (Open)](08-site-structure-and-entries.md#footer-product-column-open)                                                                                  | T122  | Blocked |
+| FR-8         | Shared flatmate callout                                        | [08 §Flatmate callout](08-site-structure-and-entries.md#flatmate-callout)                                                                                                        | T123  | Planned |
+| FR-9         | Home thesis section                                            | [08 §Home thesis section](08-site-structure-and-entries.md#home-thesis-section)                                                                                                  | T124  | Planned |
+| FR-10        | Home copy                                                      | [08 §Home copy](08-site-structure-and-entries.md#home-copy)                                                                                                                      | T125  | Planned |
+| FR-11, FR-12 | Callout placements                                             | [08 §Callout placements](08-site-structure-and-entries.md#callout-placements)                                                                                                    | T126  | Planned |
+| FR-13        | Per-person line                                                | [08 §Per-person line](08-site-structure-and-entries.md#per-person-line)                                                                                                          | T127  | Planned |
+| FR-14        | Checker handoff button                                         | [08 §Checker handoff](08-site-structure-and-entries.md#checker-handoff)                                                                                                          | T128  | Planned |
+| FR-15        | How it works, Help, About copy                                 | [08 §How it works, Help and About](08-site-structure-and-entries.md#how-it-works-help-and-about)                                                                                 | T129  | Planned |
+| FR-16        | Payments answers, cesja/sublet steps, counter (Q-3)            | same                                                                                                                                                                             | T130  | Blocked |
+| FR-17, FR-18 | Polish visitor; roommate page copy                             | [08 §Polish visitor](08-site-structure-and-entries.md#polish-visitor-and-the-posting-kit), [§Roommate page copy](08-site-structure-and-entries.md#roommate-page-copy)            | T131  | Planned |
+| FR-19        | City-notify form on the home page (Q-2)                        | [08 §Dead-end forms (Open)](08-site-structure-and-entries.md#dead-end-forms-open)                                                                                                | T132  | Blocked |
+| FR-20        | Roommate e-mail card and "I have a free room" (Q-4)            | same                                                                                                                                                                             | T133  | Blocked |
+| FR-21, FR-22 | Honesty keys under test; nominative-safe templates             | [09 §Honesty keys](09-search-metadata-and-performance.md#honesty-keys-under-test), [§Nominative-safe templates](09-search-metadata-and-performance.md#nominative-safe-templates) | T134  | Planned |
+| FR-23        | Blog frontmatter and its test                                  | [09 §Blog frontmatter](09-search-metadata-and-performance.md#blog-frontmatter)                                                                                                   | T135  | Planned |
+| FR-24        | Guide bodies and relative links                                | [09 §Guide bodies](09-search-metadata-and-performance.md#guide-bodies)                                                                                                           | T136  | Planned |
+| FR-25        | Low-CTR titles                                                 | [09 §Low-CTR titles](09-search-metadata-and-performance.md#low-ctr-titles)                                                                                                       | T137  | Planned |
+| FR-26        | District section: counts and callout                           | [09 §District section](09-search-metadata-and-performance.md#district-section)                                                                                                   | T138  | Planned |
+| FR-27        | District section: room reference, per-person line; data report | same                                                                                                                                                                             | T139  | Planned |
+| FR-28        | Sitemap, robots, structured data, submit metadata              | [09 §Sitemap, robots, structured data](09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata)                                       | T140  | Planned |
+| FR-29        | Frozen pages out of the sitemap or noindex (Q-1)               | same                                                                                                                                                                             | T141  | Blocked |
+| FR-30, FR-31 | Icons and the locale guard; HTTP headers                       | [09 §Icons and the locale guard](09-search-metadata-and-performance.md#icons-and-the-locale-guard), [§HTTP headers](09-search-metadata-and-performance.md#http-headers)          | T142  | Planned |
+| FR-33        | Header client bundle                                           | [09 §Header client bundle](09-search-metadata-and-performance.md#header-client-bundle)                                                                                           | T143  | Planned |
+| FR-32        | Roommate page server work                                      | [09 §Roommate page server work](09-search-metadata-and-performance.md#roommate-page-server-work)                                                                                 | T144  | Planned |
+| FR-34        | Contrast, tap targets, hamburger                               | [09 §Contrast, tap targets and the hamburger](09-search-metadata-and-performance.md#contrast-tap-targets-and-the-hamburger)                                                      | T145  | Planned |
+| FR-35        | Labels, banner link, heading order, skip link                  | [09 §Labels…](09-search-metadata-and-performance.md#labels-the-banners-privacy-link-heading-order-and-a-skip-link)                                                               | T146  | Planned |
+| FR-36        | Measurement and docs                                           | [05 §PRD 4: readout and docs](05-measurement-docs.md#prd-4-readout-and-docs)                                                                                                     | T147  | Planned |
+| FR-37        | Final check and handoff                                        | [05 §PRD 4 final check](05-measurement-docs.md#prd-4-final-check)                                                                                                                | T148  | Planned |
 
 ## Requirement map (PRD 3, done)
 

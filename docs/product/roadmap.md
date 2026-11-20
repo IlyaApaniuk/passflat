@@ -26,8 +26,19 @@ PRD changes status or an experiment ends. The thesis and the ladder are in `thes
 - **M7, owner tooling** (D76, D77; `../../ralph/tasks.json`, no PRD): the bot avatar from the
   logo, `npm run bot:profile` (name, descriptions and photo through the Bot API, texts in a
   TypeScript module), one place for the production bot's username with the posting kit's `<bot>`
-  placeholder, and a blocked task waiting for the owner's username choice. Built by the loop
-  before the deploy; PRD 4 comes after it.
+  placeholder, and a blocked task waiting for the owner's username choice. T114 (the avatar) is
+  blocked on the sandbox's `sips`; T115 waits for it; T117 waits for the username.
+- **PRD 4, site improvements** (`prd/prd-4-site-improvements.md`, version 0.1, 2026-11-20; decision
+  review `prd/prd-4-decision-review.md`) is **In progress**: written from the site audit of
+  2026-11-19 (`reviews/2026-11-19-site-audit.md`) in the night run the owner authorized and
+  decomposed the same night into specs 08 and 09 and 31 tasks (T118 – T148, 5 blocked on Q-1 – Q-5).
+  The website becomes an entry into the bot: the roommate page opens on the flatmate block, the
+  header and the home page state the thesis, one callout on every cost surface, the per-person
+  figure next to the block, honest titles under the test, district pages with room figures and
+  profile counts, icons, headers and accessibility. Ships with the PRD 3 deploy or the next one;
+  the owner answers Q-1 – Q-11 when convenient. Read after 4 full weeks (Search Console per page
+  group, bot opens by source, profile completion from the web; proposed E16), folded into the stage
+  1 readout where the dates allow.
 - **Posting from the PRD 3 deploy** (D46, D53, D67): two 30-minute slots a day, replying to
   people who look for a roommate, with `mate_<source>_<group>` links from the deploy day (until
   then, links to the bot's address check and deposit helper), and the posting log (PRD 3 FR-41),
@@ -52,8 +63,10 @@ PRD changes status or an experiment ends. The thesis and the ladder are in `thes
 - E15's second readout around 2027-03-31: ≥ 10 mutual pairs and ≥ 3 "renting together" or
   "talking" outcomes (D52); below 10 pairs matching stops (D60). If the owner stops matching, he
   sets the switch off and runs the closing route once (D64, D72).
-- **PRD 4**: not written yet; its focus comes from the first readouts (E5, E8, E9, E13 two weeks
-  after the PRD 1 deploy; E15 at deploy + 14 days) and the 2027-01-20 decision.
+- **PRD 5**: not written yet; its focus comes from the first readouts (E5, E8, E9, E13 two weeks
+  after the PRD 1 deploy; E15 at deploy + 14 days; the PRD 4 readout after 4 full weeks) and the
+  2027-01-20 decision. PRD 4's "Later" list (S-26, S-32, S-34, the Open parts of S-11, a CSP, new
+  articles) is its first input.
 - Stage 3, paid speed (H16, A25), designed only after stage 2 passes; never paid contact (D52).
 - A Polish bot locale, only after stage 1 passes (D50).
 - E11 readout, 8 full weeks after the roommate-page change of PRD 3 is deployed (D41).
