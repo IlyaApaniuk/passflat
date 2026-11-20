@@ -1,16 +1,20 @@
-# Activation funnels (PRD 1, PRD 3)
+# Activation funnels (PRD 1, PRD 3, PRD 4)
 
 How to read the PRD 1 activation funnels in PostHog and in the database, the events of PRD 3's
-roommate matching (§1) and the roommate stage 1 and stage 2 readouts (§7, §8). Spec:
+roommate matching (§1) and the roommate stage 1 and stage 2 readouts (§7, §8), and the PRD 4
+readout of the website's entries into the roommate flow (§9). Spec:
 `docs/specs/05-measurement-docs.md` §Activation funnels document (FR-47, FR-5). Experiments: E8
 (roommate, H2) and E9 (address, H3) in `docs/product/experiments.md`; E14 (roommate stage 1) in
-§7; E15 (roommate stage 2) in §8.
+§7; E15 (roommate stage 2) in §8; E16 (PRD 4, proposed) in §9.
 
 Written on 2026-11-19 from the code at `23e0c34`; the PRD 3 roommate events (bot, and the web
 values `intent=find_flatmate` and `telegram_bot_opened` `source=roommate`) were added on
 2026-11-19 from the code at `541ae34` (spec 05 §PRD 3: roommate docs, FR-40), and §7 on
 2026-11-19 from the code at `79a9361` (spec 05 §Stage 1 readout, FR-42), and §8 on 2026-11-19
-from the code at `c14ec61` (spec 05 §Stage 2 readout, FR-43). Every event and
+from the code at `c14ec61` (spec 05 §Stage 2 readout, FR-43). PRD 4's new values of existing
+events (`telegram_bot_opened.source`, `cta_click.placement`, `tg_roommate_flow_started.entry_detail`)
+and §9 were added on 2026-11-20 from the code at `4ec2457` (spec 05 §PRD 4: readout and docs,
+FR-36). Every event and
 property below was checked by a search of `src/` (see [How this was checked](#how-this-was-checked)), not copied from the
 specs. None of the queries has been run: loop iterations never query PostHog. HogQL and SQL were
 checked by reading only, so run each one on a short interval before you rely on it.
@@ -24,7 +28,7 @@ checked by reading only, so run each one on a short interval before you rely on 
 
 This document sets no targets. E8 and E9 thresholds are the owner's, set on 2026-11-19 (D28,
 §6 and `docs/product/experiments.md`), and so are E14's (D52, D58, D59; quoted in §7) and E15's
-(D52, D60; quoted in §8). It contains no A/B
+(D52, D60; quoted in §8); §9's thresholds are PRD 4's §1 Assumptions, proposed as E16. It contains no A/B
 tests and no revenue forecasts. Read counts, not rates, while the samples are small.
 
 ## 1. Event table
@@ -73,13 +77,61 @@ properties.
 | `address_checked`                  | same (`addressCheckedProperties` in `src/lib/analytics/checker-events.ts`)                                            | In-city success: `city`, `building_id`, `has_data`, `source` (`shared_url` \| `address_search`), `answer_level` (`building` \| `district` \| `city` \| `none`), `source_kind` (`tenant` \| `mixed` \| `asking` \| `none`), `n`, `incomplete`. Outside the city: `city`, `selected_city`, `has_data: false`, `outside_city: true` (no answer properties). |
 | `checker_check_failed`             | same                                                                                                                  | `city`, `reason` (`not_found` \| `rate_limited` \| `generic` \| `incomplete_address`), `source`                                                                                                                                                                                                                                                          |
 | `checker_cta_clicked`              | same (`captureCta`)                                                                                                   | `source: 'checker'`, `city`, `building_id`, `has_data`, `cta` (`form` \| `follow` \| `building` \| `share` \| `tell_us` \| `telegram`)                                                                                                                                                                                                                   |
-| `telegram_bot_opened`              | `src/components/costs/telegram-bot-cta.tsx` (`src/lib/analytics/telegram-events.ts`)                                  | `source` (`checker` \| `empty` \| `roommate`), `has_building_context`. `checker` and `empty`: the checker's `TelegramBotCta`, where one click also fires `checker_cta_clicked {cta: 'telegram'}`. `roommate`: the flatmate block on `/warsaw/roommate` (`find-flatmate-block.tsx`), always without a building.                                           |
+| `telegram_bot_opened`              | `telegram-bot-cta.tsx`, `find-flatmate-block.tsx`, `flatmate-callout-links.tsx` (`telegram-events.ts`)                | `source` (`TelegramBotSource`: `checker` \| `empty` \| `roommate` \| `home` \| `building` \| `district` \| `hub` \| `calculator` \| `guide` \| `report`; where each fires: [below the table](#website-entry-values-prd-4)), `has_building_context` (true only for a checker link that carries a building)                                                |
+| `cta_click`                        | `src/components/analytics/tracked-link.tsx` (`TrackedLink`), `landing/header.tsx` (`trackCta`)                        | `placement` (where each fires: [below the table](#website-entry-values-prd-4)); a `TrackedLink` caller may add properties: `district` on `district_card`, `building_id` and `city` on `building_tags_*`                                                                                                                                                  |
 | `building_detail_viewed`           | `src/app/[locale]/[city]/building/[slug]/client.tsx` (`src/lib/analytics/building-events.ts`)                         | `building_id`, `building_slug`, `city`, `report_count`, `user_count`, `import_count`, `scraped_count`, `answer_level`, `source_kind`, `n`, `incomplete`. Effect on `[building.id]`.                                                                                                                                                                      |
 | `location_score_viewed`            | `src/components/buildings/location-score-block.tsx`                                                                   | `surface` (`building` \| `checker` \| `listing`), `city`, `building_id`, `score`, `has_map`, `neighbour_count`                                                                                                                                                                                                                                           |
 | `cost_form_started`                | `src/app/[locale]/[city]/costs/submit/client.tsx`                                                                     | `city`, `source` (`checker` \| `review` \| `building` \| `tgbot` \| `direct`; `SUBMIT_SOURCES` in `src/lib/cost-submit-params.ts`), `building_id` and `place_id` with a prefill. New reports only.                                                                                                                                                       |
 | `cost_form_address_selected`       | same                                                                                                                  | `city`, `method` (`prefill` \| `autocomplete` \| `draft`), `source`; `building_id`, `place_id` with `prefill`                                                                                                                                                                                                                                            |
 | `cost_form_submit_attempt`         | same                                                                                                                  | `city`, `edit`. Fires on every attempt.                                                                                                                                                                                                                                                                                                                  |
 | `cost_form_submit_success`         | same                                                                                                                  | `city`, `was_flagged`, `edit`                                                                                                                                                                                                                                                                                                                            |
+
+#### Website entry values (PRD 4)
+
+PRD 4 added values, not events (spec 01 §PRD 4 values). The seven callout surfaces are
+`FLATMATE_SURFACES` in `src/lib/analytics/telegram-events.ts`; the shared flatmate callout
+(`src/components/roommate/flatmate-callout.tsx`) renders the bot button only when
+`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` is set, and the roommate-page link always.
+
+`telegram_bot_opened.source`, one value per place that links to the bot (start payload in
+brackets, `botStartPayload`):
+
+| `source`     | Fires on                                                                                                                           | Payload                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `checker`    | the checker's bot button (`TelegramBotCta`, `/[city]/check`), together with `checker_cta_clicked {cta: 'telegram'}`                | `b_<id>` (`web_checker` without a building) |
+| `empty`      | the same button in the checker's no-data state                                                                                     | `b_<id>` (`web_empty` without a building)   |
+| `roommate`   | the "Looking for someone to rent with" block on `/warsaw/roommate` (`find-flatmate-block.tsx`)                                     | `mate_web_roommate`                         |
+| `home`       | the thesis section under the hero on `/` (`src/app/[locale]/page.tsx`)                                                             | `mate_web_home`                             |
+| `building`   | the callout at the end of a building page with its own reports (`building/[slug]/client.tsx`; a building without reports has none) | `mate_web_building`                         |
+| `district`   | the callout inside the district page's roommate section (`[city]/[district]/page.tsx`)                                             | `mate_web_district`                         |
+| `hub`        | the callout under the buttons of the city hub `/[city]` (`[city]/page.tsx`)                                                        | `mate_web_hub`                              |
+| `calculator` | the callout under the calculator's sources note (`calculator/client.tsx`)                                                          | `mate_web_calculator`                       |
+| `guide`      | the callout at the end of every guide `/blog/[slug]` (`blog/[slug]/client.tsx`)                                                    | `mate_web_guide`                            |
+| `report`     | the callout under the city figure of the data report `/blog/warsaw-rent-prices`                                                    | `mate_web_report`                           |
+
+`checker` and `empty` send `has_building_context: true` when the link carries a building; every
+other source always sends `false`.
+
+`cta_click.placement` (each one a link, not a bot click):
+
+| `placement`                  | Fires on                                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| `flatmate_callout_<surface>` | the callout's roommate-page link (→ `/warsaw/roommate`) on each of the seven surfaces above (PRD 4) |
+| `header_mobile`              | the header's mobile pill; since PRD 4 FR-5 it leads to `/warsaw/roommate` (before: to the costs)    |
+| `district_card`              | a home district card; since PRD 4 FR-6 it leads to the district page (before: the costs map filter) |
+| `landing_check_band`         | the home check-address band                                                                         |
+| `landing_cost_card_*`        | the home cost card's links: `landing_cost_card_submit`, `_submit_secondary`, `_all`                 |
+| `building_tags_*`            | the building page's links to the building review: `building_tags_add`, `building_tags_empty`        |
+
+`header_mobile` and `district_card` changed their target with PRD 4: compare them with earlier
+numbers only knowing that. The desktop header link, the hero chip, the footer link, the blog
+list's "Find a flatmate" button and the guide's address-check line also lead to the roommate page
+or the checker, but they capture nothing.
+
+`tg_roommate_flow_started.entry_detail` from the website is the surface of the payload
+(`mate_web_<detail>` → `entry_source: 'web'`, `entry_detail: <detail>`, spec 04 §Start payloads):
+`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide` or `report`. A bare
+`mate_web` link has no detail. The bot side needs no code change for the new values.
 
 ### Website, server (no page context)
 
@@ -118,8 +170,8 @@ that landed, so a double tap or a doubled cron run counts once; `tg_roommate_car
 per "Show people" tap. No property holds a username, the short text, gender, "live with", a
 district slug, a profile or match id or a chat id. The stage 2 events (from
 `tg_roommate_cards_viewed` down) need a card or a match first, so they appear only after the
-switch goes on (`ROOMMATE_MATCHING_ENABLED=true`; unset at the deploy, D49; the owner records the
-moment, spec 07 §Switch). Next steps, push opt-outs, outcome answers, reports and hides keep
+switch goes on (`ROOMMATE_MATCHING_ENABLED=true`, set at the deploy by D75, which superseded D49's
+later switch; the owner records the moment, spec 07 §Switch). Next steps, push opt-outs, outcome answers, reports and hides keep
 coming after it goes off again. Values and the full rules: `src/lib/bot/README.md` ("Roommate
 events").
 
@@ -151,7 +203,10 @@ The website's way into the roommate flow is three separate counts, never one ide
 `source = 'roommate'` (visitor id, the block on `/warsaw/roommate`), then `tg_bot_started` with
 `payload = 'mate_web_roommate'` and `tg_roommate_flow_started` with `entry_source = 'web'` and
 `entry_detail = 'roommate'` (`tg_<chatId>`). A chat that already has a profile or a draft sends no
-new `tg_roommate_flow_started`.
+new `tg_roommate_flow_started`. Since PRD 4 the flatmate callout adds the same three steps per
+surface: `cta_click {placement: 'flatmate_callout_<surface>'}` or `telegram_bot_opened {source:
+<surface>}` on the website, `mate_web_<surface>` and `entry_detail = <surface>` in the bot
+([Website entry values](#website-entry-values-prd-4); the attribution limit is in §9.4).
 
 ## 2. Funnels
 
@@ -1400,6 +1455,214 @@ the earlier E15 rule's rate is 8 ÷ 30 = 26.7 %, between 15 % and 30 %, where no
 - **Season.** The 14-day readout falls in January, before the February summer-semester wave
   (§7.6); a null result then is weak evidence and the readout says so.
 
+## 9. PRD 4 readout (E16, proposed)
+
+The readout of PRD 4 (FR-36, spec 05 §PRD 4: readout and docs): do the website's new entries
+(the flatmate callout, the header, the home thesis section) bring people into the roommate flow,
+and do the rewritten titles earn clicks? E16 is a proposal (`docs/product/prd/prd-4-decision-review.md`
+row 14); it is registered in `docs/product/experiments.md` only when the owner accepts it. The
+thresholds are PRD 4's §1 **Assumptions**, quoted here, not set here; the query shapes are this
+document's (**Assumption**). Nothing here has been run: loop iterations never query PostHog or
+Search Console.
+
+Dates:
+
+- **Day 0:** the deploy that carries PRD 4 (with PRD 3 about 2026-12-01, D67, or the next deploy).
+  The owner records it in the posting log and as a PostHog annotation.
+- **Window:** 4 full weeks (Monday 00:00 to Sunday 24:00, Europe/Warsaw) after day 0, against the 4
+  full weeks before it. For a deploy on Tuesday 2026-12-01 the window is 2026-12-07 – 2027-01-03 and
+  the window before it 2026-11-02 – 2026-11-29.
+- **Readout:** after the window (about 2027-01-04 for that deploy), folded into the stage 1 readout
+  of 2027-01-18 (§7) where the dates allow.
+- **The bot username:** every bot button on the website (the callout's, the roommate block's, the
+  checker's) renders only with `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` set (D76, T117). Until it is set
+  in Vercel, `telegram_bot_opened` and the website's `mate_web_*` entries are 0 by construction:
+  start the PostHog window at the first full week with the username set, and say so in the readout.
+
+### 9.1 Search Console (read by the owner)
+
+No code reads Search Console; it keeps 16 months, so the "before" window needs no export. Compare
+each page group, window after against window before: clicks, impressions, CTR and average
+position. Read counts, not rates, while the numbers are small (a group with 3 clicks has no CTR
+worth comparing). Google re-reads titles and descriptions over weeks, so the first week after
+the deploy is weak evidence.
+
+| Group                      | Pages (Search Console page filter)                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Roommate page              | `/warsaw/roommate`, `/en/warsaw/roommate`, `/ru/warsaw/roommate`, `/uk/warsaw/roommate`                |
+| Building pages             | URLs containing `/building/`                                                                           |
+| District pages and the hub | `/warsaw/<district>` and `/warsaw` in four locales (not `/warsaw/costs`, `/check`, `/calculator`, ...) |
+| Guides                     | URLs containing `/blog/`, except `/blog/warsaw-rent-prices`                                            |
+| The calculator             | URLs containing `/warsaw/calculator`                                                                   |
+| The data report            | URLs containing `/blog/warsaw-rent-prices`                                                             |
+| The home page              | `/`, `/en`, `/ru`, `/uk`                                                                               |
+
+The 8 rewritten page-1 pages of FR-25 (the H11 item; each in the locale Google showed in the
+audit): the meters guide (`przepisanie-licznikow-najem`), the English hidden-costs guide
+(`hidden-rental-costs-warsaw`), the data report, the calculator, the cesja guide
+(`cesja-najmu-guide`), the English deposit guide (`rental-deposit-kaucja-warsaw`), the English
+no-agent guide (`renting-without-agent-warsaw`) and the English occasional-lease guide
+(`najem-okazjonalny-vs-standard-warsaw`). Read each one's CTR on its own row.
+
+### 9.2 HogQL
+
+Replace both dates as in §7.1: the first with the window's first Monday, the second with the
+Monday after its last Sunday (Europe/Warsaw, the end exclusive). Each query groups by person first
+and returns counts only, never a `distinct_id`. Queries K and L read website events (the visitor
+id); queries M and N read bot events (`tg_<chatId>`). No query joins the two.
+
+```sql
+-- HogQL. Query K, E16 (2): website bot clicks by `source` in the window. A person who clicked
+-- two sources counts in both rows. Counts only.
+SELECT
+    source,
+    sum(clicks) AS events,
+    count() AS persons
+FROM (
+    SELECT
+        distinct_id,
+        coalesce(toString(properties.source), '') AS source,
+        count() AS clicks
+    FROM events
+    WHERE event = 'telegram_bot_opened'
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id, source
+)
+GROUP BY source
+ORDER BY source
+```
+
+```sql
+-- HogQL. Query L, E16 (2): which surface sent people to the roommate page: `cta_click` by
+-- `placement` for the callout's links and the header pill. Counts only.
+SELECT
+    placement,
+    sum(clicks) AS events,
+    count() AS persons
+FROM (
+    SELECT
+        distinct_id,
+        coalesce(toString(properties.placement), '') AS placement,
+        count() AS clicks
+    FROM events
+    WHERE event = 'cta_click'
+        AND (startsWith(coalesce(toString(properties.placement), ''), 'flatmate_callout_')
+            OR coalesce(toString(properties.placement), '') = 'header_mobile')
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id, placement
+)
+GROUP BY placement
+ORDER BY placement
+```
+
+```sql
+-- HogQL. Query M, E16 (2) and (3): bot persons who came from the website, by the surface of
+-- their first `tg_roommate_flow_started` with `entry_source = 'web'`, and how many of them saved
+-- a profile from the website. The column sums equal the `web` row of query N. Counts only.
+SELECT
+    entry_detail,
+    count() AS persons_flow_started,
+    countIf(created) AS persons_started_and_created
+FROM (
+    SELECT
+        distinct_id,
+        countIf(event = 'tg_roommate_flow_started') > 0 AS started,
+        argMinIf(coalesce(toString(properties.entry_detail), ''), timestamp,
+            event = 'tg_roommate_flow_started') AS entry_detail,
+        countIf(event = 'tg_roommate_profile_created') > 0 AS created
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND event IN ('tg_roommate_flow_started', 'tg_roommate_profile_created')
+        AND coalesce(toString(properties.entry_source), '') = 'web'
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id
+)
+WHERE started
+GROUP BY entry_detail
+ORDER BY entry_detail
+```
+
+```sql
+-- HogQL. Query N, E16 (3) and A23: flow → profile by `entry_source`, every source next to `web`.
+-- A person counts once per source; a profile counts for the source it was saved with. Counts only.
+SELECT
+    entry_source,
+    countIf(started) AS persons_flow_started,
+    countIf(started AND created) AS persons_started_and_created
+FROM (
+    SELECT
+        distinct_id,
+        coalesce(toString(properties.entry_source), '') AS entry_source,
+        countIf(event = 'tg_roommate_flow_started') > 0 AS started,
+        countIf(event = 'tg_roommate_profile_created') > 0 AS created
+    FROM events
+    WHERE startsWith(distinct_id, 'tg_')
+        AND event IN ('tg_roommate_flow_started', 'tg_roommate_profile_created')
+        AND timestamp >= toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+        AND timestamp < toDateTime('YYYY-MM-DD 00:00:00', 'Europe/Warsaw')
+    GROUP BY distinct_id, entry_source
+)
+GROUP BY entry_source
+ORDER BY entry_source
+```
+
+Read them with these facts:
+
+- **Website persons are visitor ids.** Without consent posthog-js runs in memory mode, so a full
+  page load starts a new person (§1): query K and L's `persons` overcount people; `events` is the
+  safer number for the threshold below.
+- **Website entries** in query K are every row except `checker` and `empty`: `roommate` and the
+  seven callout surfaces. Sum their `events` for the web → bot threshold.
+- **Completion** is `persons_started_and_created` ÷ `persons_flow_started` on the `web` row of
+  query N, read next to the `tg`, `fb`, `ig`, `threads` and `direct` rows. A draft lives 7 days
+  after its last answer (`DRAFT_LIFE_DAYS`), so the last days of the window undercount.
+- **Profiles saved from a callout** keep the draft's `entry_source` (`web`) but not its detail:
+  `tg_roommate_profile_created` carries no `entry_detail`, so query M's completion per surface
+  assumes that a person's web profile came from their first web flow start.
+- **No data, not 0.** With the username unset, or before any `telegram_bot_opened` arrives, every
+  number here is "no data". Look for `telegram_bot_opened` with a new `source` in Live Events
+  first.
+
+### 9.3 Thresholds (Assumptions)
+
+PRD 4 §1, proposed as E16; the owner may change them. None is a stop rule: stage 1 of the thesis is
+decided by D52 on 2027-01-18 (§7.3) and D43 on 2027-01-20. A reading below a threshold goes into
+the next PRD as an item, not as a stop.
+
+| Reading                 | Threshold                                                                                                    | From    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | ------- |
+| Roommate page           | CTR ≥ 3 % on `/warsaw/roommate` (**Decided**, D41, E11) and clicks ≥ 2× the previous 4 full weeks            | §9.1    |
+| Rewritten page-1 pages  | CTR ≥ 2 % on at least 3 of the 8 pages of §9.1                                                               | §9.1    |
+| Total Google clicks     | not below the previous 4 full weeks; building, district, home and calculator groups without a threshold      | §9.1    |
+| Web → bot               | ≥ 5 `telegram_bot_opened` from the website's roommate entries (`source` not `checker` or `empty`), by source | query K |
+| Completion from the web | at least half of the web persons who start the flow save a profile (A23's estimate)                          | query N |
+
+Below the completion threshold, the roommate page's copy and the bot intake are the first
+suspects.
+
+### 9.4 The attribution limit and the two identities
+
+- **Attribution limit** (spec 08 §Flatmate callout): a visitor who takes a callout's roommate link
+  and then the roommate page's bot button is recorded as `telegram_bot_opened {source: 'roommate'}`
+  and arrives as `mate_web_roommate` (`entry_detail = 'roommate'`). Only query L's
+  `flatmate_callout_<surface>` tells which surface sent them to the roommate page; `entry_detail`
+  names a callout surface only for the callout's own bot button. The same holds for the header
+  pill (`header_mobile`).
+- **Two identities, never joined.** Queries K and L count visitor ids, queries M and N count
+  `tg_<chatId>`. Report the two sides next to each other ("12 bot clicks from guides; 4 bot persons
+  with `entry_detail = 'guide'`"), never divided into one rate: the bot never learns the visitor id
+  and the website never learns the chat (CLAUDE.md §Analytics).
+
+### 9.5 The PostHog project and the season
+
+- **PostHog project.** The EU Cloud project (D30), as in §7.6.
+- **Season.** December is the low season (Otodom: December 2025 demand 23 % below November). A
+  window over December and the New Year is weaker evidence than one in August – September, and
+  the readout says so.
+
 ## How this was checked
 
 Searches over `src/` (non-test files) on 2026-11-19:
@@ -1434,6 +1697,12 @@ Searches over `src/` (non-test files) on 2026-11-19:
   `src/lib/roommate/store.ts`, `OUTCOMES`, `OUTCOME_QUESTION_DAYS` and `profileCreatedProperties`
   (`has_username`) in `src/lib/roommate/rules.ts`, and the `RoommateReaction` and `RoommateProfile`
   models; the same test checks §8's queries;
+- for PRD 4 (2026-11-20): `FLATMATE_SURFACES`, `botStartPayload` and `telegramBotOpenedProperties`
+  in `src/lib/analytics/telegram-events.ts`, `flatmateCalloutView` (`placement`) in
+  `src/lib/roommate/flatmate-callout.ts`, `src/components/roommate/flatmate-callout{,-links}.tsx`,
+  every `<FlatmateCallout surface=…>` (home, hub, district, building, calculator, guide and report
+  pages), every `TrackedLink placement=` and the header's `trackCta`; the same test checks §9's
+  queries;
 - posthog-js 1.374 (`node_modules/posthog-js/lib/src/utils/event-utils.js`, `session-props.js`,
   `posthog-core.js`) for the automatic properties and `register_once`;
 - the tables in `prisma/schema.prisma` and their migrations.

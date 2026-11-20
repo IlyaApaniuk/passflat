@@ -3,7 +3,14 @@ import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  botStartPayload,
+  FLATMATE_SURFACES,
+  type TelegramBotSource,
+  telegramBotOpenedProperties,
+} from '@/lib/analytics/telegram-events';
 import { activeProfilesWhere } from '@/lib/roommate/counts';
+import { flatmateCalloutView } from '@/lib/roommate/flatmate-callout';
 import {
   BUDGET_BANDS,
   DRAFT_LIFE_DAYS,
@@ -24,7 +31,8 @@ vi.mock('@/lib/prisma', () => ({ prisma: {} }));
  * names is sent by a `track` call, every property it reads is sent by one of the query's events,
  * every table and column of the read-only SQL is in `prisma/schema.prisma`, the stage 1 SQL's
  * "active" is the counts' rule, the stage 2 numbers follow spec 05's definitions, and no query
- * returns personal data. Nothing here runs a query.
+ * returns personal data. The PRD 4 readout (§9, spec 05 §PRD 4: readout and docs, FR-36) is held
+ * to the website's value sets and never joins web and bot events. Nothing here runs a query.
  */
 
 const ROOT = process.cwd();
@@ -33,6 +41,11 @@ const SCHEMA = readFileSync(join(ROOT, 'prisma/schema.prisma'), 'utf8');
 const POSTING_LOG = readFileSync(join(ROOT, 'docs/marketing/roommate-posting-log.md'), 'utf8');
 const MATCHING_SOURCE = readFileSync(join(ROOT, 'src/lib/bot/roommate-matching.ts'), 'utf8');
 const STORE_SOURCE = readFileSync(join(ROOT, 'src/lib/roommate/store.ts'), 'utf8');
+const TRACKED_LINK_SOURCE = readFileSync(
+  join(ROOT, 'src/components/analytics/tracked-link.tsx'),
+  'utf8',
+);
+const HEADER_SOURCE = readFileSync(join(ROOT, 'src/components/landing/header.tsx'), 'utf8');
 
 /** The text of the `## <n>. <title>` section, up to the next `## ` heading. */
 function docSection(doc: string, title: string): string {
@@ -612,6 +625,154 @@ describe('the roommate stage 2 readout (activation-funnels.md)', () => {
     expect(text).toContain('the match rate is 8 ÷ 24 = 33 % and the 14-day rule holds');
     expect(text).toContain("the earlier E15 rule's rate is 8 ÷ 30 = 26.7 %, between 15 % and 30 %");
     expect(((8 / 30) * 100).toFixed(1)).toBe('26.7');
+  });
+});
+
+const PRD_4 = docSection(DOC, 'PRD 4 readout (E16, proposed)');
+const PRD_4_BLOCKS = sqlBlocks(PRD_4);
+
+/** Event names a website query reads (`event = '…'`), not the bot's `tg_` names. */
+function webEventNames(code: string): string[] {
+  return [...new Set([...code.matchAll(/event = '([a-z_]+)'/g)].map((m) => m[1]))].filter(
+    (name) => !name.startsWith('tg_'),
+  );
+}
+
+/** The website entry sources: everything that links to the bot except the checker's two. */
+const WEBSITE_ENTRY_SOURCES: TelegramBotSource[] = ['roommate', ...FLATMATE_SURFACES];
+
+describe('the PRD 4 readout (activation-funnels.md §9)', () => {
+  it('has the parts of spec 05 §PRD 4: readout and docs', () => {
+    for (const part of [
+      '### 9.1 Search Console (read by the owner)',
+      '### 9.2 HogQL',
+      '### 9.3 Thresholds (Assumptions)',
+      '### 9.4 The attribution limit and the two identities',
+      '### 9.5 The PostHog project and the season',
+    ]) {
+      expect(PRD_4).toContain(part);
+    }
+    const text = PRD_4.replace(/\s+/g, ' ');
+    for (const phrase of [
+      '4 full weeks (Monday 00:00 to Sunday 24:00, Europe/Warsaw)',
+      'CTR ≥ 3 % on `/warsaw/roommate` (**Decided**, D41, E11)',
+      'CTR ≥ 2 % on at least 3 of the 8 pages',
+      '≥ 5 `telegram_bot_opened`',
+      'at least half of the web persons',
+      'None is a stop rule',
+      'never divided into one rate',
+      'The EU Cloud project (D30)',
+      'December is the low season',
+      '**No data, not 0.**',
+      '`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`',
+    ]) {
+      expect(text).toContain(phrase);
+    }
+  });
+
+  it('dates the example window in full Monday – Sunday weeks around a Tuesday deploy', () => {
+    const day = (date: string) => new Date(`${date}T12:00:00Z`).getUTCDay();
+    expect(day('2026-12-01')).toBe(2);
+    expect([day('2026-12-07'), day('2026-11-02')]).toEqual([1, 1]);
+    expect([day('2027-01-03'), day('2026-11-29')]).toEqual([0, 0]);
+    const weeks = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / DAY_MS;
+    expect(weeks('2026-12-07', '2027-01-04')).toBe(28);
+    expect(weeks('2026-11-02', '2026-11-30')).toBe(28);
+    expect(PRD_4).toContain('2026-12-07 – 2027-01-03');
+    expect(PRD_4).toContain('2026-11-02 – 2026-11-29');
+  });
+
+  it('marks every query as HogQL, four of them, and never reads web and bot events together', () => {
+    expect(PRD_4_BLOCKS.map((block) => block.kind)).toEqual(['hogql', 'hogql', 'hogql', 'hogql']);
+    for (const block of PRD_4_BLOCKS) {
+      const code = withoutComments(block.code);
+      const web = webEventNames(code);
+      const bot = quotedEventNames(code);
+      expect(web.length === 0 || bot.length === 0, block.code.split('\n')[0]).toBe(true);
+      expect(code).toContain("'YYYY-MM-DD 00:00:00', 'Europe/Warsaw'");
+    }
+  });
+
+  it('reads the website events with the properties the code sends (queries K and L)', () => {
+    const k = queryBlock(PRD_4_BLOCKS, 'K');
+    expect(webEventNames(k)).toEqual(['telegram_bot_opened']);
+    expect([...new Set([...k.matchAll(/properties\.(\w+)/g)].map((m) => m[1]))]).toEqual([
+      'source',
+    ]);
+    expect(Object.keys(telegramBotOpenedProperties('home'))).toContain('source');
+
+    const l = queryBlock(PRD_4_BLOCKS, 'L');
+    expect(webEventNames(l)).toEqual(['cta_click']);
+    expect([...new Set([...l.matchAll(/properties\.(\w+)/g)].map((m) => m[1]))]).toEqual([
+      'placement',
+    ]);
+    expect(TRACKED_LINK_SOURCE).toContain("capture('cta_click', { placement");
+    expect(l).toContain("'flatmate_callout_'");
+    for (const surface of FLATMATE_SURFACES) {
+      expect(flatmateCalloutView({ surface, hasUsername: true }).placement).toBe(
+        `flatmate_callout_${surface}`,
+      );
+    }
+    expect(l).toContain("'header_mobile'");
+    expect(HEADER_SOURCE).toContain("trackCta('header_mobile')");
+
+    for (const block of [k, l]) {
+      const inner = block.indexOf('FROM (');
+      expect(inner).toBeGreaterThan(-1);
+      expect(block.slice(0, inner)).not.toContain('distinct_id');
+    }
+  });
+
+  it('reads the bot events with the properties they carry (queries M and N)', () => {
+    for (const letter of ['M', 'N']) {
+      const block = queryBlock(PRD_4_BLOCKS, letter);
+      expect(hogqlProblems(block, SENT)).toEqual([]);
+      expect(quotedEventNames(block)).toEqual([
+        'tg_roommate_flow_started',
+        'tg_roommate_profile_created',
+      ]);
+    }
+    expect(queryBlock(PRD_4_BLOCKS, 'M')).toContain(
+      "coalesce(toString(properties.entry_source), '') = 'web'",
+    );
+    expect(SENT.get('tg_roommate_profile_created')).toContain('entry_source');
+    expect(SENT.get('tg_roommate_profile_created')).not.toContain('entry_detail');
+  });
+
+  it('names only roommate events the code sends', () => {
+    expect(roommateEventNames(PRD_4).filter((event) => !SENT.has(event))).toEqual([]);
+  });
+
+  it('lists every website bot source in §1 with the payload the code sends', () => {
+    const values = DOC.slice(
+      DOC.indexOf('#### Website entry values (PRD 4)'),
+      DOC.indexOf('### Website, server'),
+    );
+    expect(values.length).toBeGreaterThan(100);
+    for (const source of WEBSITE_ENTRY_SOURCES) {
+      const row = values.split('\n').find((line) => line.startsWith(`| \`${source}\``)) ?? '';
+      expect(row, source).toContain(`\`${botStartPayload(source)}\``);
+      expect(values).toContain(`\`${source}\``);
+    }
+    for (const source of ['checker', 'empty'] as const) {
+      const row = values.split('\n').find((line) => line.startsWith(`| \`${source}\``)) ?? '';
+      expect(row, source).toContain(`\`${botStartPayload(source)}\``);
+      expect(row, source).toContain('`b_<id>`');
+    }
+    expect(values).toContain('`flatmate_callout_<surface>`');
+    expect(values.replace(/\s+/g, ' ')).toContain(
+      '`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide` or `report`',
+    );
+    expect(WEBSITE_ENTRY_SOURCES).toEqual([
+      'roommate',
+      'home',
+      'building',
+      'district',
+      'hub',
+      'calculator',
+      'guide',
+      'report',
+    ]);
   });
 });
 

@@ -711,6 +711,28 @@ starts with `mate` opens the roommate flow (`openRoommate`) with a source from
 | any other payload starting `mate` (`mate_xyz`, `mate_tg_Bad`, `matey`) | `other`, no detail, no error                                  |
 | no payload: `/mate`, the `rm:start` button                             | `bot_menu`                                                    |
 
+The website sends `mate_web_<detail>` with one of eight details:
+`roommate` (the roommate page's block), `home`, `building`, `district`, `hub`,
+`calculator`, `guide` and `report` (the flatmate callout's bot button on each
+surface, PRD 4). The bot reads them without a code change: `entry_source: 'web'`
+and `entry_detail: <detail>`. A visitor who follows a callout's link to the
+roommate page and opens the bot there arrives as `mate_web_roommate`; the
+surface is known only from the website's `cta_click.placement`
+(`docs/analytics/activation-funnels.md` §9.4).
+
+The website reads the profile counts the bot writes (the roommate page's block,
+the flatmate callout, the district page's line; `src/lib/roommate/website-counts.ts`,
+cached for an hour under the tag `roommate-counts`). Every profile write that
+changes who is counted calls `revalidateRoommateCounts()`, which expires that
+tag at once (spec 09 §District section): in `src/lib/roommate/store.ts`
+`saveProfile`, `saveEdit`, `setDistrictPick` at an `edit_` step, `renewProfile`,
+`deleteProfile`, `hideAfterReport` and `liftHide`; the cron's housekeeping
+(`roommate-daily.ts`, once per run when it expired or deleted a profile) and
+the closing route (`roommate-close.ts`, once when it deleted one). Drafts,
+the opt-in, push, outcome and username writes and the blocked-chat marker do
+not call it (nobody's count changes, or the hourly cache catches up). Outside
+a Next request (`bot:dev`, a script, a test) it does nothing.
+
 The owner's posting kit (`docs/marketing/roommate-posts.md`, spec 05 §Posting
 kit) holds the reply templates and the group-key table;
 `roommate-posting-kit.test.ts` parses every link there and every filled key with

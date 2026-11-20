@@ -752,7 +752,7 @@
         "T153",
         "T155"
       ],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "docs/analytics/activation-funnels.md §1 lists the new telegram_bot_opened.source values (home, building, district, hub, calculator, guide, report), the cta_click.placement values and the tg_roommate_flow_started.entry_detail values with where each fires; a new section 'PRD 4 readout (E16, proposed)' as spec 05 §PRD 4: readout and docs describes it (Search Console groups, HogQL by source and by placement, flow → profile by entry_source in persons, the attribution limit, thresholds as Assumptions, no join of web and bot identities, the season note)",
         "src/lib/bot/README.md 'Deep links' lists the mate_web_<detail> values the website sends and says profile writes call revalidateRoommateCounts()",
@@ -761,7 +761,7 @@
         "docs/specs/README.md's PRD 4 map marks every FR Done, Blocked (with its task), Planned or Later"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Documentation from the code as it is; the loop never queries PostHog or Search Console."
     },
     {
