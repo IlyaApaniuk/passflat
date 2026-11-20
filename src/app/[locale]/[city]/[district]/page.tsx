@@ -21,8 +21,10 @@ import {
 import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
 import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { AreaReferenceGroups } from '@/components/buildings/figure-group-block';
 import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { districtRoommateSection } from '@/lib/roommate/district-section';
+import { loadRoomCostAreas } from '@/lib/roommate/room-costs';
 import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { ArrowLeft, ArrowRight, Building2, Calculator, Plus } from 'lucide-react';
 
@@ -40,7 +42,8 @@ const getCity = cache((slug: string) =>
       id: true,
       slug: true,
       nameKey: true,
-      districts: { select: { slug: true, nameKey: true } },
+      // `id` too: the roommate section's room cost reference (`loadRoomCostAreas`) reads it.
+      districts: { select: { id: true, slug: true, nameKey: true } },
     },
   }),
 );
@@ -141,15 +144,31 @@ export default async function DistrictCostsPage({ params }: PageProps) {
   // not listed.
   // The roommate section's profile counts (spec 09 §District section, PRD 4 FR-26), cached for
   // an hour and expired on every profile write; a rejected load renders the section without a
-  // count line.
-  const [buildingsData, districtFigures, flatmateCounts] = await Promise.all([
+  // count line. Its room cost reference and per-person split (FR-27) are the bot's loader for a
+  // profile naming this district (`loadRoomCostAreas`, no second aggregation); a rejected load
+  // renders the section without figure lines and without the split.
+  const [buildingsData, districtFigures, flatmateCounts, roomArea] = await Promise.all([
     getBuildingsData(cityRec.id, district, null),
     loadDistrictFigures(cityRec.id),
     loadFlatmateBlockCounts().catch(() => undefined),
+    loadRoomCostAreas(cityRec, [district])
+      .then(([area]) => area)
+      .catch((error: unknown) => {
+        console.error(
+          '[district] room costs failed',
+          error instanceof Error ? error.message : 'unknown error',
+        );
+        return undefined;
+      }),
   ]);
   const buildings = buildingsForRentalType(buildingsData, 'all');
   const figure = districtFigures.find((d) => d.slug === district)?.figures.all ?? null;
-  const roommate = districtRoommateSection({ slug: district, counts: flatmateCounts });
+  const roommate = districtRoommateSection({
+    slug: district,
+    counts: flatmateCounts,
+    area: roomArea,
+    translate: t,
+  });
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -214,7 +233,33 @@ export default async function DistrictCostsPage({ params }: PageProps) {
                     : t(roommate.countLine.key, { district: districtRec.nameKey })}
                 </p>
               )}
-              <FlatmateCallout surface="district" counts={flatmateCounts} />
+              {roommate.room && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{t('costsSeo.districtRoomLead')}</p>
+                  {roommate.room.cityFallback && (
+                    <p className="text-sm text-muted-foreground">
+                      {t('costsSeo.districtRoomCityFallback', {
+                        district: districtRec.nameKey,
+                        ...roommate.room.cityFallback,
+                      })}
+                    </p>
+                  )}
+                  <AreaReferenceGroups
+                    reference={roommate.room.reference}
+                    area={roommate.room.areaName}
+                    oneObservationLabel={t(
+                      roommate.room.oneObservation.key,
+                      roommate.room.oneObservation.values,
+                    )}
+                  />
+                </div>
+              )}
+              <FlatmateCallout
+                surface="district"
+                counts={flatmateCounts}
+                split={roommate.split}
+                splitArea={roommate.splitArea}
+              />
             </section>
 
             <h2 className="mt-10 text-xl font-semibold">

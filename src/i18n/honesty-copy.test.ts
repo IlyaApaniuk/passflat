@@ -402,8 +402,9 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
         expect(value, `${locale}: ${key}`).not.toContain('{');
         expect(value, `${locale}: ${key}`).toMatch(/Warsz|Warsaw|Варшав/);
       }
-      // The shorter table C variant until the district section ships (spec 09 §District section).
-      expect(valueAt(locale, 'costsSeo.districtMetaDescription') as string, locale).not.toMatch(
+      // The full table C variant now that the district section shows room figures and the
+      // profile count (spec 09 §District section, PRD 4 FR-27 criterion 5).
+      expect(valueAt(locale, 'costsSeo.districtMetaDescription') as string, locale).toMatch(
         ROOMS_OR_FLATMATES[locale],
       );
       expect(valueAt(locale, 'listings.detail.buildingCostHint') as string, locale).not.toContain(
@@ -442,7 +443,10 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
       '{district}, {city} — rent costs and room prices',
     );
     expect(valueAt('en', 'costsSeo.districtMetaDescription')).toBe(
-      'Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building.',
+      'Rent costs in {district}, {city} as reported: rent, utilities and deposits building by building, room figures, and how many people look for a flatmate here.',
+    );
+    expect(valueAt('pl', 'costsSeo.districtMetaDescription')).toBe(
+      'Koszty najmu w dzielnicy {district} ({city}) wg zgłoszeń: czynsz, opłaty, budynek po budynku, cena pokoju i ile osób szuka tu współlokatora.',
     );
     expect(valueAt('pl', 'costsSeo.districtMetaTitle')).toBe(
       '{district}, {city} — koszty najmu i pokoju',

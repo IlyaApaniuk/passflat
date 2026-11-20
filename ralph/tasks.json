@@ -593,7 +593,7 @@
       "title": "District page: the room reference and the per-person line with its own area (FR-27)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#district-section",
       "dependsOn": ["T147", "T129"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The page's getCity (or a second query) selects the city's districts with id, slug and nameKey; the section renders loadRoomCostAreas(city, [district])[0]: with room set, costsSeo.districtRoomLead, costsSeo.districtRoomCityFallback when room.level === 'city', and AreaReferenceGroups with both groups and N; no room or a rejection → no figure lines",
         "The district callout receives the area's split with its own area name (the district at level district, Warsaw when the split fell back to the city), resolved on the server; the line renders once",
@@ -602,7 +602,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D23, D61, D71, PRD 3 FR-17. No second aggregation (CLAUDE.md)."
     },
     {

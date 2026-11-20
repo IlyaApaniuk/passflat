@@ -39,7 +39,7 @@ function countLine(
   counts: FlatmateBlockCounts | undefined,
 ): string | null {
   const t = translator(locale);
-  const { countLine: line } = districtRoommateSection({ slug, counts });
+  const { countLine: line } = districtRoommateSection({ slug, counts, translate: t });
   if (!line) return null;
   return line.key === 'costsSeo.districtProfileCount'
     ? t(line.key, { district, n: line.n })
@@ -73,41 +73,43 @@ describe('districtRoommateSection: the three count states', () => {
     byDistrict: { mokotow: 3 },
   };
 
+  /** The count line alone, without a room area (the FR-26 part of the section). */
+  const countOf = (slug: string, counts: FlatmateBlockCounts | undefined) =>
+    districtRoommateSection({ slug, counts, translate: translator('en') }).countLine;
+
   it('n > 0: the count line with the district own count (not the Warsaw total)', () => {
-    expect(districtRoommateSection({ slug: 'mokotow', counts: COUNTS })).toEqual({
-      countLine: { key: 'costsSeo.districtProfileCount', n: 3 },
-    });
+    expect(countOf('mokotow', COUNTS)).toEqual({ key: 'costsSeo.districtProfileCount', n: 3 });
   });
 
   it('zero or the slug absent: "nobody has named this district yet"', () => {
-    expect(districtRoommateSection({ slug: 'wawer', counts: COUNTS })).toEqual({
-      countLine: { key: 'costsSeo.districtProfileNone' },
+    expect(countOf('wawer', COUNTS)).toEqual({ key: 'costsSeo.districtProfileNone' });
+    expect(countOf('wawer', { ...COUNTS, byDistrict: { wawer: 0 } })).toEqual({
+      key: 'costsSeo.districtProfileNone',
     });
-    expect(
-      districtRoommateSection({ slug: 'wawer', counts: { ...COUNTS, byDistrict: { wawer: 0 } } }),
-    ).toEqual({ countLine: { key: 'costsSeo.districtProfileNone' } });
-    expect(
-      districtRoommateSection({
-        slug: 'wola',
-        counts: { status: 'counts', total: 0, top: [], byDistrict: {} },
-      }),
-    ).toEqual({ countLine: { key: 'costsSeo.districtProfileNone' } });
+    expect(countOf('wola', { status: 'counts', total: 0, top: [], byDistrict: {} })).toEqual({
+      key: 'costsSeo.districtProfileNone',
+    });
   });
 
   it('unavailable, a rejected load (absent) or an old cached shape without byDistrict: no line', () => {
-    expect(districtRoommateSection({ slug: 'mokotow', counts: { status: 'unavailable' } })).toEqual(
-      { countLine: null },
-    );
-    expect(districtRoommateSection({ slug: 'mokotow', counts: undefined })).toEqual({
-      countLine: null,
-    });
+    expect(countOf('mokotow', { status: 'unavailable' })).toBeNull();
+    expect(countOf('mokotow', undefined)).toBeNull();
     const v1 = { status: 'counts', total: 4, top: [] } as unknown as FlatmateBlockCounts;
-    expect(districtRoommateSection({ slug: 'mokotow', counts: v1 })).toEqual({ countLine: null });
+    expect(countOf('mokotow', v1)).toBeNull();
   });
 
   it('reads own properties only: a slug named like an Object.prototype member counts 0', () => {
-    expect(districtRoommateSection({ slug: 'constructor', counts: COUNTS })).toEqual({
-      countLine: { key: 'costsSeo.districtProfileNone' },
+    expect(countOf('constructor', COUNTS)).toEqual({ key: 'costsSeo.districtProfileNone' });
+  });
+
+  it('without a room area: no figure lines and no split', () => {
+    expect(
+      districtRoommateSection({ slug: 'mokotow', counts: COUNTS, translate: translator('en') }),
+    ).toEqual({
+      countLine: { key: 'costsSeo.districtProfileCount', n: 3 },
+      room: null,
+      split: null,
+      splitArea: undefined,
     });
   });
 });

@@ -30,8 +30,8 @@ vi.mock('@/lib/prisma', () => ({
         slug: 'warsaw',
         nameKey: 'city.warsaw',
         districts: [
-          { slug: 'mokotow', nameKey: 'Mokotów' },
-          { slug: 'wawer', nameKey: 'Wawer' },
+          { id: 'd-mok', slug: 'mokotow', nameKey: 'Mokotów' },
+          { id: 'd-waw', slug: 'wawer', nameKey: 'Wawer' },
         ],
       }),
     },
@@ -40,6 +40,8 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('@/lib/cost-aggregates', () => ({ getBuildingsData: async () => [] }));
 vi.mock('@/lib/cost-figures-query', () => ({ loadDistrictFigures: async () => [] }));
 vi.mock('@/lib/roommate/website-counts', () => ({ loadFlatmateBlockCounts }));
+// The room lines and the split (FR-27) are `room-reference.test.ts`; here no room figures.
+vi.mock('@/lib/roommate/room-costs', () => ({ loadRoomCostAreas: async () => [] }));
 vi.mock('next-intl/server', async () => {
   const { createTranslator } = await import('next-intl');
   return {
@@ -148,7 +150,7 @@ describe('district page roommate section (FR-26)', () => {
     // Heading, then the count line, then the callout with the same counts.
     const callouts = inside.filter((element) => element.type === FlatmateCallout);
     expect(callouts).toHaveLength(1);
-    expect(callouts[0].props).toEqual({ surface: 'district', counts: EXAMPLE_4 });
+    expect(callouts[0].props).toEqual({ surface: 'district', counts: EXAMPLE_4, split: null });
     const order = inside.map((element) => element.type);
     expect(order.indexOf('h2')).toBeLessThan(order.indexOf('p'));
     expect(order.indexOf('p')).toBeLessThan(order.indexOf(FlatmateCallout));
@@ -177,7 +179,11 @@ describe('district page roommate section (FR-26)', () => {
     const callout = elements(section.props.children).find(
       (element) => element.type === FlatmateCallout,
     );
-    expect(callout?.props).toEqual({ surface: 'district', counts: { status: 'unavailable' } });
+    expect(callout?.props).toEqual({
+      surface: 'district',
+      counts: { status: 'unavailable' },
+      split: null,
+    });
   });
 
   it('a rejected counts load: the page renders, the section has no count line, the callout no counts', async () => {
@@ -187,7 +193,7 @@ describe('district page roommate section (FR-26)', () => {
     const callout = elements(section.props.children).find(
       (element) => element.type === FlatmateCallout,
     ) as ReactElement<Parameters<typeof FlatmateCallout>[0]>;
-    expect(callout.props).toEqual({ surface: 'district', counts: undefined });
+    expect(callout.props).toEqual({ surface: 'district', counts: undefined, split: null });
 
     const html = renderToStaticMarkup(await FlatmateCallout(callout.props));
     expect(html).toMatch(/^<section aria-labelledby="flatmate-callout-district-title"/);

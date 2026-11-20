@@ -30,10 +30,11 @@ export function perPersonLineValues(
 /**
  * The split's own area as a display string, resolved on the server: a district's `nameKey` is
  * its display name as is, the city's `nameKey` is a message key (the `city` namespace never
- * reaches a client component).
+ * reaches a client component). An area reference (`AreaReference`) has the same level and name
+ * source, so the district page names its room figures with it too.
  */
 export function perPersonSplitArea(
-  split: PerPersonSplit,
+  split: Pick<PerPersonSplit, 'level' | 'name'>,
   translate: (key: string) => string,
 ): string {
   return split.level === 'district' ? split.name : translate(split.name);
