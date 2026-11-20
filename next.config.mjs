@@ -4,13 +4,18 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /**
  * Sent on every route (spec 09 §HTTP headers, FR-31, Assumption values). The site uses no
- * camera, microphone or geolocation (checked 2026-11-20). No framing header (Q-13, T154) and no
- * Content-Security-Policy.
+ * camera, microphone or geolocation (checked 2026-11-20).
+ *
+ * Framing (D90, Q-13 (b)): only this site and the PostHog EU app host may frame a page, so
+ * PostHog's heatmap and toolbar views keep working. `frame-ancestors` is the only directive (a
+ * full policy is Later, PRD 4 S-28), and there is no `X-Frame-Options`: SAMEORIGIN would also
+ * block PostHog. If the toolbar is blocked after a deploy, change the host list here.
  */
 const SECURITY_HEADERS = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://eu.posthog.com" },
 ];
 
 /** @type {import('next').NextConfig} */

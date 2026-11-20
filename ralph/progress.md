@@ -5705,3 +5705,16 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: after deploy, the Organization JSON-LD in the layout and on `/about` names `instagram.com/passflatapp`; Google's Rich Results Test can confirm it. No copy, table, migration, event or Assumption.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:55 · T154 · done
+
+- Done (PRD 4 FR-31 Open part, spec 09 §HTTP headers; the owner's answer Q-13 (b), D90). The acceptance's (b) line applies.
+  - `next.config.mjs`: `SECURITY_HEADERS` (the existing `source: '/(.*)'` entry) adds `Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com`, the only directive; no `X-Frame-Options`. The comment names D90, says why there is no X-Frame-Options and where to change the host list.
+  - `src/next-config-headers.test.ts`: the exact-rules case now holds four headers; a new case asserts exactly one CSP header whose directives are exactly `[frame-ancestors 'self' https://eu.posthog.com]`; the "no X-Frame-Options" case stays (the old "no CSP" assertion is gone).
+  - `e2e/home.spec.ts`: the `/` (pl-PL) test asserts the exact `content-security-policy` value next to T153's three headers, and that `x-frame-options` is absent.
+  - Docs: `docs/specs/README.md` FR-31 (Q-13) row → Done; `docs/architecture.md` (response headers, local-setup line) names the header; `docs/ops/deploy-copy-review.md` §4 adds the expected `content-security-policy` line to the `curl -sI /` block, and a new check: PostHog's toolbar and a heatmap open over a passflat.com page from `eu.posthog.com`.
+  - Checked: no Telegram Mini App or other framing use in `src/` (a grep for `telegram-web-app`, `Telegram.WebApp`, `web_app` found nothing), so `frame-ancestors` blocks no surface of our own.
+- Checks: `npx vitest run src/next-config-headers.test.ts` 3 passed. `npm run verify` exit 0: lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 187 files / 3732 tests; build OK (185 pages). `npm run test:e2e` exit 0: 32 passed (the security-headers test included), with the usual DB-less and fake-PostHog noise. `next-env.d.ts` restored. Nothing deployed, no migration, no event.
+- Did not work: nothing.
+- Owner review: after deploy, `curl -sI https://passflat.com/` shows `content-security-policy: frame-ancestors 'self' https://eu.posthog.com`; then open the PostHog toolbar and a heatmap over a site page from the EU app. Not verified on the branch: whether PostHog frames from `eu.posthog.com` alone (spec 09 says so); if the frame is blocked, add the host PostHog uses to `SECURITY_HEADERS` in `next.config.mjs`. No copy, table, migration, event or Assumption.
+- Next: `node scripts/ralph-tasks.mjs next`.

@@ -15,12 +15,13 @@ test('home page (default locale) loads', async ({ page }) => {
   await expect(page.locator('body')).toBeVisible();
 });
 
-// PRD 4 FR-31 (spec 09 §HTTP headers): three security headers on every route, no framing
-// header (Q-13, T154) and no Content-Security-Policy. A Polish browser stays on `/`.
+// PRD 4 FR-31 (spec 09 §HTTP headers): three security headers on every route, plus the framing
+// header (D90, Q-13 (b), T154): a Content-Security-Policy whose only directive is
+// `frame-ancestors`, and no X-Frame-Options. A Polish browser stays on `/`.
 test.describe('security headers on /', () => {
   test.use({ locale: 'pl-PL' });
 
-  test('/ carries the three security headers and no framing header or CSP', async ({ page }) => {
+  test('/ carries the three security headers and the framing policy', async ({ page }) => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
     expect(new URL(page.url()).pathname).toBe('/');
@@ -28,8 +29,10 @@ test.describe('security headers on /', () => {
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(headers['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
+    expect(headers['content-security-policy']).toBe(
+      "frame-ancestors 'self' https://eu.posthog.com",
+    );
     expect(headers['x-frame-options']).toBeUndefined();
-    expect(headers['content-security-policy']).toBeUndefined();
   });
 });
 

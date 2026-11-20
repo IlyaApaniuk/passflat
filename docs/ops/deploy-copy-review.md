@@ -125,13 +125,17 @@ curl -sI https://passflat.com/
 # x-content-type-options: nosniff
 # referrer-policy: strict-origin-when-cross-origin
 # permissions-policy: camera=(), microphone=(), geolocation=()
+# content-security-policy: frame-ancestors 'self' https://eu.posthog.com
 curl -sI https://passflat.com/nonexistent.ext
 # 404, at once
 ```
 
 - [ ] The five answers match the comments. Vercel may add headers of its own; no
-      `x-frame-options` or `content-security-policy` is expected (the framing header waits for
-      Q-13, blocked T154).
+      `x-frame-options` is expected, and `content-security-policy` holds only the
+      `frame-ancestors` directive (D90, T154).
+- [ ] PostHog's toolbar and a heatmap open over a passflat.com page from the EU app
+      (`eu.posthog.com`). If the frame is blocked, the host list in `next.config.mjs`
+      (`SECURITY_HEADERS`) is the place to change (spec 09 §HTTP headers).
 - [ ] PostHog Live Events (EU project, D30), from a test click (say in the readout which events
       were your own):
   - the callout's bot button on `/` → `telegram_bot_opened {source: 'home', has_building_context: false}`;

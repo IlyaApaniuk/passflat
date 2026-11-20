@@ -691,12 +691,12 @@
       "title": "The framing header (FR-31 Open part, owner question Q-13)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#http-headers",
       "dependsOn": ["T153"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-13: next.config.mjs adds the answered header on every route ((b) Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com as the only directive, or (a) X-Frame-Options: SAMEORIGIN) and e2e/home.spec.ts asserts it on /; with (c) nothing changes"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-13 (PRD 4, decision review row 16). A framing header stops other sites from framing Passflat, but X-Frame-Options: SAMEORIGIN also blocks PostHog's in-app heatmap and toolbar frames (gap review; not verified). (b) frame-ancestors 'self' plus the PostHog EU app host (proposal); (a) X-Frame-Options: SAMEORIGIN; (c) none for now. PostHog tooling and settings are the owner's.\nOwner answer: Q-13 (b), D90: Content-Security-Policy: frame-ancestors 'self' https://eu.posthog.com as the only directive on every route in next.config.mjs, no X-Frame-Options, with an e2e assertion on /; see spec 09 section HTTP headers"
     },
     {
