@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -47,4 +49,20 @@ describe('ListingsNoMatch', () => {
     button?.props.onClick?.();
     expect(onClearFilters).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ['pl', 'Żadna oferta nie pasuje do Twoich filtrów'],
+    ['en', 'No offers match your filters'],
+    ['ru', 'Нет предложений по твоим фильтрам'],
+    ['uk', 'Немає пропозицій за твоїми фільтрами'],
+  ])(
+    'the %s title addresses the reader as the roommate page does (PRD 4 FR-18, D42)',
+    (locale, title) => {
+      const messages = JSON.parse(
+        readFileSync(join(process.cwd(), 'src/i18n/messages', `${locale}.json`), 'utf8'),
+      ) as { listings: { noMatch: { title: string } } };
+      expect(messages.listings.noMatch.title).toBe(title);
+      expect(messages.listings.noMatch.title).not.toMatch(/(^|[^а-яіїєґё])ваш/i);
+    },
+  );
 });

@@ -52,6 +52,12 @@ What every reply keeps, also when you reword it (spec 05 §Posting kit):
   below, and change the source when you use the template on another platform. The bot records the source and the key as `entry_source` and `entry_detail` of
   `tg_roommate_flow_started` (spec 04 §Start payloads); a key outside the table's shape lands as
   `other` and is lost for the readout.
+- **Website links carry the reader's locale.** When a post links to the website, the link's path
+  always starts with the reader's language: `/ru/…` for a reply in Russian, `/uk/…` for one in
+  Ukrainian (`/en/…` for English). The site keeps no locale cookie, so a link without that prefix
+  opens in whatever language the reader's browser asks for, which may be Polish or English. The
+  templates hold no website link today; `roommate-posting-kit.test.ts` fails on one without the
+  prefix.
 - **Delete the "not open yet" sentence before the first slot.** The templates were written for
   a launch with the matching switch off. Since D75 the switch is on from the deploy, so the
   sentence «Подбор пока не открыт.» / «Підбір поки що не відкрито.» / "Matching isn't open yet."

@@ -181,6 +181,26 @@ describe('ListingsEmptyState interest events', () => {
     },
   );
 
+  it.each([
+    ['roommate', 'listings.demandCapture.searchCardTitleRoommate'],
+    ['replacement', 'listings.demandCapture.searchCardTitle'],
+    ['sublet', 'listings.demandCapture.searchCardTitle'],
+  ] as const)('titles the search card for %s with %s (PRD 4 FR-18)', (listingType, key) => {
+    const other =
+      key === 'listings.demandCapture.searchCardTitle'
+        ? 'listings.demandCapture.searchCardTitleRoommate'
+        : 'listings.demandCapture.searchCardTitle';
+    for (const isLoggedIn of [true, false]) {
+      const tree = ListingsEmptyState({ ...baseProps, listingType, isLoggedIn });
+      const title = findElement(
+        tree,
+        (el) => el.type === 'p' && collectText(el.props.children).includes(key),
+      );
+      expect(title, `${listingType} ${isLoggedIn}`).not.toBeNull();
+      expect(collectText(tree)).not.toContain(other);
+    }
+  });
+
   it.each(['roommate', 'sublet', 'replacement'] as const)(
     'shows its own interest-saved message, not the city-launch one (%s)',
     (listingType) => {
@@ -280,6 +300,36 @@ describe('honest interest copy in the locale files (spec 02 §Honest interest co
     expect(en.interestSaved).toBe(
       "Your interest is saved. We don't send automatic notifications about new offers yet.",
     );
+  });
+
+  it.each([
+    ['pl', 'Szukasz pokoju? Zapisz zainteresowanie ogłoszeniami', 'Szukasz mieszkania?'],
+    ['en', 'Looking for a room? Save interest in listings', 'Looking for a place?'],
+    ['ru', 'Ищешь комнату? Сохрани интерес к объявлениям', 'Ищешь жильё?'],
+    ['uk', 'Шукаєш кімнату? Збережи інтерес до оголошень', 'Шукаєш житло?'],
+  ])(
+    'uses the PRD 4 §8 roommate card title and keeps the other one (%s, FR-18)',
+    (locale, roommate, others) => {
+      const demand = load(locale).listings.demandCapture;
+      expect(demand.searchCardTitleRoommate).toBe(roommate);
+      expect(demand.searchCardTitle).toBe(others);
+    },
+  );
+
+  it('keeps the consent note unchanged (FR-18; the register is Q-9, T137)', () => {
+    expect(
+      Object.fromEntries(
+        ['pl', 'en', 'ru', 'uk'].map((locale) => [
+          locale,
+          load(locale).listings.demandCapture.consentNote,
+        ]),
+      ),
+    ).toEqual({
+      pl: 'Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.',
+      en: 'By tapping you agree to data processing — <privacyLink>privacy policy</privacyLink>.',
+      ru: 'Нажимая, вы соглашаетесь на обработку данных — <privacyLink>политика конфиденциальности</privacyLink>.',
+      uk: 'Натискаючи, ви погоджуєтесь на обробку даних — <privacyLink>політика конфіденційності</privacyLink>.',
+    });
   });
 
   it.each(['pl', 'en', 'ru', 'uk'])(

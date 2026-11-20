@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ReactElement, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -130,5 +132,18 @@ describe('RoommateRoleSelector', () => {
     chips[0].props.onClick?.();
     expect(onStateChange).toHaveBeenCalledWith({ intent: 'find_room', collapsed: false });
     expect(capture).not.toHaveBeenCalled();
+  });
+
+  // The choice and its chip read the same key, and so does the home hero chip.
+  it.each([
+    ['pl', 'Szukam kogoś do wspólnego wynajmu'],
+    ['en', 'Looking for someone to rent with'],
+    ['ru', 'Ищу, с кем снять квартиру'],
+    ['uk', 'Шукаю, з ким зняти квартиру'],
+  ])('labels the third role as the seeker side in %s (PRD 4 FR-17)', (locale, label) => {
+    const messages = JSON.parse(
+      readFileSync(join(process.cwd(), 'src/i18n/messages', `${locale}.json`), 'utf8'),
+    ) as { listings: { roommateRoles: { findFlatmate: string } } };
+    expect(messages.listings.roommateRoles.findFlatmate).toBe(label);
   });
 });

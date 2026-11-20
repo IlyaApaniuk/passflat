@@ -389,7 +389,7 @@
       "offer": "Mam wolny pokój",
       "findChosen": "Szukam pokoju",
       "change": "zmień",
-      "findFlatmate": "Szukam współlokatora do wynajmu"
+      "findFlatmate": "Szukam kogoś do wspólnego wynajmu"
     },
     "findFlatmate": {
       "title": "Szukasz kogoś do wspólnego wynajmu?",
@@ -398,7 +398,7 @@
       "topLabel": "Najczęściej wybierane dzielnice:",
       "topItem": "{name}: {count, plural, one {# profil} few {# profile} many {# profili} other {# profilu}}",
       "how": "Załóż profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu.",
-      "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku.",
+      "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku — polskiej wersji jeszcze nie ma, po angielsku poradzisz sobie w minutę.",
       "notConnected": "Bot Telegram nie jest jeszcze podłączony.",
       "button": "Otwórz bota w Telegramie"
     },
@@ -768,6 +768,7 @@
       "postOwnTitle": "Masz coś do dodania tutaj?",
       "postOwnButton": "Dodaj ogłoszenie",
       "searchCardTitle": "Szukasz mieszkania?",
+      "searchCardTitleRoommate": "Szukasz pokoju? Zapisz zainteresowanie ogłoszeniami",
       "supplyCardTitle": "Wynajmujesz lub przekazujesz?",
       "supplyCardBody": "Dodaj za darmo — cesja, współlokator lub podnajem.",
       "consentNote": "Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.",

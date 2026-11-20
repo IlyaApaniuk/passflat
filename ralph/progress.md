@@ -4430,3 +4430,56 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The nine keys also pass T138's wider forbidden lists (market, real, truth; rzeczywist, prawdziw, rynk; настоящ, рыночн; справжн, ринков).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 09:25 · T134 · done
+
+- Done (PRD 4 FR-17, FR-18; spec 08 §Polish visitor and the posting kit, §Roommate page copy):
+  - Copy in four locales (scratchpad script, exact-once replacement per file):
+    - `listings.roommateRoles.findFlatmate` pl changed;
+    - `listings.findFlatmate.languages` pl changed (en, ru, uk untouched);
+    - `listings.noMatch.title` ru and uk changed;
+    - new `listings.demandCapture.searchCardTitleRoommate` in all four.
+    - `listings.demandCapture.consentNote` and `searchCardTitle` are unchanged.
+  - `src/components/listings/listings-empty-state.tsx`: the search card's title reads `searchCardTitleRoommate` when `listingType === 'roommate'`, else `searchCardTitle` (`/replacement`, `/sublet` unchanged).
+  - `docs/marketing/roommate-posts.md` "How to use a template": new bullet "Website links carry the reader's locale" (`/ru/…`, `/uk/…`, `/en/…`; no locale cookie, so a path without the prefix opens in the browser's language). The bullet holds no literal URL.
+  - `docs/specs/README.md` PRD 4 map: FR-17, FR-18 → Done (T134 is the row's only task).
+- Tests:
+  - `src/lib/bot/roommate-posting-kit.test.ts`: new helpers `siteLinks` / `linksWithoutLocale` (`LOCALE_PREFIX` = `/ru`, `/uk` or `/en` followed by `/`, `?`, `#` or the end). New describe:
+    - every `passflat.com` URL (also `www.`, also the bare domain) in every ```text block (templates and "Without a link", ≥ 21 blocks; today none holds a website link) carries a locale prefix;
+    - "How to use a template" states the rule (`/ru/…`, `/uk/…`, "no locale cookie") and holds no website link without a prefix;
+    - a self-check: six bad links (no prefix, `/pl/`, bare domain, `/russia`) are caught, five good ones (incl. `/ru` home and a `t.me` link) pass.
+  - `listings-empty-state.test.ts`: the card's `p` title is the roommate key for `roommate` and `searchCardTitle` for `replacement` / `sublet`, never the other, logged in and out; the four §8 values of `searchCardTitleRoommate` and the unchanged `searchCardTitle`; the four `consentNote` values pinned (Q-9).
+  - `listings-no-match.test.ts`: the four `noMatch.title` values, and no «ваш» in any.
+  - `roommate-role-selector.test.ts`: the four `roommateRoles.findFlatmate` values (pl new, en/ru/uk unchanged).
+  - `find-flatmate-block.test.ts`: the PL languages expectation is the new sentence.
+  - `bot-languages-copy.test.ts` passes unchanged ("polskiej" is not a bot language; the PL line still names all three).
+- Checks:
+  - Focused Vitest (`src/components/listings/`, posting kit, `src/i18n/`, hero, roommate dirs): 16 files / 297 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 161 files / 3444 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks). No page looked at in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29).** FR-17 PL values and FR-18 values are PRD 4 §8 / spec 08 verbatim; the RU/UK `noMatch.title` are FR-18's text.
+    - `listings.roommateRoles.findFlatmate`:
+      - pl "Szukam kogoś do wspólnego wynajmu" (old "Szukam współlokatora do wynajmu"); en, ru, uk unchanged. The home hero chip reads the same key.
+    - `listings.findFlatmate.languages`:
+      - pl "Bot mówi po angielsku, rosyjsku i ukraińsku — polskiej wersji jeszcze nie ma, po angielsku poradzisz sobie w minutę." (old: the first clause only); en, ru, uk unchanged.
+    - `listings.noMatch.title`:
+      - ru «Нет предложений по твоим фильтрам» (old «вашим»)
+      - uk «Немає пропозицій за твоїми фільтрами» (old «вашими»)
+      - pl, en unchanged (pl still says "Twoich", the polite-capital informal form).
+    - `listings.demandCapture.searchCardTitleRoommate` (new):
+      - pl "Szukasz pokoju? Zapisz zainteresowanie ogłoszeniami"
+      - en "Looking for a room? Save interest in listings"
+      - ru «Ищешь комнату? Сохрани интерес к объявлениям»
+      - uk «Шукаєш кімнату? Збережи інтерес до оголошень»
+    - Not changed: `listings.demandCapture.consentNote` (still «вы» / «ви» in ru/uk; Q-9, T137) and `searchCardTitle` (the `/replacement`, `/sublet` card).
+  - **Posting kit rule (Assumption, spec 08):** the new "Website links carry the reader's locale" bullet in `docs/marketing/roommate-posts.md` is agent prose for you to read; the test accepts `/en/…` too and the locale home without a trailing slash (`/ru`).
+  - **Assumption applied:** the roommate title is a separate key switched in `listings-empty-state.tsx` (spec 08 §Roommate page copy), not a type-switched value.
+  - **Namespaces and providers:** `ListingsEmptyState` (client) reads `listings.demandCapture.*` through `useTranslations()`; `listings` is in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider, and the roommate, replacement and sublet pages (`ListingsPageClient`) have no scoped provider. `RoommateRoleSelector`, `FindFlatmateBlock` and `ListingsNoMatch` read the changed keys through the same `listings` namespace (the async server `FlatmateCallout` reads `findFlatmate.languages` server-side); `client-namespaces.test.ts` passes. No wiring changed.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.

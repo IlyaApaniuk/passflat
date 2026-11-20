@@ -367,7 +367,7 @@
       "title": "The Polish visitor's expectation, locale-prefixed links in the posting kit, roommate page copy (FR-17, FR-18)",
       "spec": "docs/specs/08-site-structure-and-entries.md#polish-visitor-and-the-posting-kit",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "listings.roommateRoles.findFlatmate pl = 'Szukam kogoś do wspólnego wynajmu'; listings.findFlatmate.languages pl gains the 'no Polish version yet' clause of PRD 4 §8; en, ru and uk are unchanged; bot-languages-copy.test.ts passes",
         "docs/marketing/roommate-posts.md 'How to use a template' says website links in posts carry the reader's locale (/ru/… or /uk/…), with no literal bare URL in the rule sentence; roommate-posting-kit.test.ts asserts every passflat.com/ URL inside the kit's template blocks (not the prose) has a /ru/, /uk/ or /en/ prefix",
@@ -376,7 +376,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D50, D53, D42. Spec 08 §Roommate page copy for FR-18."
     },
     {

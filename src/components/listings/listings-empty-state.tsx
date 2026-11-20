@@ -154,7 +154,13 @@ export function ListingsEmptyState({
       <div className="space-y-3 text-left">
         {/* Demand — looking for a place */}
         <div className="rounded-xl border bg-card p-4">
-          <p className="font-semibold">{t('listings.demandCapture.searchCardTitle')}</p>
+          <p className="font-semibold">
+            {t(
+              listingType === 'roommate'
+                ? 'listings.demandCapture.searchCardTitleRoommate'
+                : 'listings.demandCapture.searchCardTitle',
+            )}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
               isLoggedIn

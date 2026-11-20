@@ -53,6 +53,27 @@ function startPayloads(text: string): string[] {
   return [...text.matchAll(/t\.me\/[^\s?]+\?start=([^\s)`'"]+)/g)].map((match) => match[1]);
 }
 
+/** Every passflat.com URL in a text, with its path ('' for the bare domain). */
+function siteLinks(text: string): { url: string; path: string }[] {
+  return [...text.matchAll(/(?:https?:\/\/)?(?:www\.)?passflat\.com(\/[^\s)`'"]*)?/gi)].map(
+    (match) => ({ url: match[0], path: match[1] ?? '' }),
+  );
+}
+
+/**
+ * Website links in posts carry the reader's locale (PRD 4 FR-17, spec 08 §Polish visitor and
+ * the posting kit): the site keeps no locale cookie, so a path without `/ru/`, `/uk/` or `/en/`
+ * opens in the browser's language. The locale home (`/ru`) counts as carrying it.
+ */
+const LOCALE_PREFIX = /^\/(?:ru|uk|en)(?:[/?#]|$)/;
+
+/** The website links of a text that carry no reader locale. */
+function linksWithoutLocale(text: string): string[] {
+  return siteLinks(text)
+    .filter(({ path }) => !LOCALE_PREFIX.test(path))
+    .map(({ url }) => url);
+}
+
 /** The body rows of the first Markdown table in `body`, cells trimmed. */
 function tableRows(body: string): { header: string[]; rows: string[][] } {
   const lines = body.split('\n').filter((line) => line.startsWith('|'));
@@ -166,6 +187,47 @@ describe('roommate posting kit: links', () => {
       expect(parsed.kind !== 'roommate' || parsed.source === ROOMMATE_ENTRY_SOURCE.other).toBe(
         true,
       );
+    }
+  });
+});
+
+describe('roommate posting kit: website links carry the reader locale (PRD 4 FR-17)', () => {
+  it('every passflat.com link in a template has a /ru/, /uk/ or /en/ prefix', () => {
+    // Every copied text: the templates and the version without a link (today they hold no
+    // website link, and the check still runs over all of them).
+    const blocks = textBlocks(POSTS);
+    expect(blocks.length).toBeGreaterThanOrEqual(6 * 3 + 3);
+    for (const block of blocks) expect(linksWithoutLocale(block), block).toEqual([]);
+  });
+
+  it('"How to use a template" states the rule without a bare website link', () => {
+    const howTo = section(POSTS, 'How to use a template');
+    expect(howTo).toMatch(/Website links carry the reader's locale/);
+    expect(howTo).toContain('`/ru/…`');
+    expect(howTo).toContain('`/uk/…`');
+    expect(howTo).toMatch(/no locale cookie/);
+    expect(linksWithoutLocale(howTo)).toEqual([]);
+  });
+
+  it('the locale check catches a link without the reader locale', () => {
+    for (const bad of [
+      'https://passflat.com/warsaw/roommate',
+      'Смотри passflat.com/warsaw/costs',
+      'https://www.passflat.com/pl/warsaw/check',
+      'https://passflat.com/',
+      'passflat.com',
+      'https://passflat.com/russia',
+    ]) {
+      expect(linksWithoutLocale(bad), bad).toHaveLength(1);
+    }
+    for (const good of [
+      'https://passflat.com/ru/warsaw/roommate?utm_source=tg',
+      'Дивись www.passflat.com/uk/warsaw/costs.',
+      'passflat.com/en/warsaw/check',
+      'https://passflat.com/ru',
+      'Бот: https://t.me/<bot>?start=mate_tg_group',
+    ]) {
+      expect(linksWithoutLocale(good), good).toEqual([]);
     }
   });
 });

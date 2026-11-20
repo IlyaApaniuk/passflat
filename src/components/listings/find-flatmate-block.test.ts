@@ -143,7 +143,11 @@ describe('FindFlatmateBlock', () => {
   });
 
   it.each<[Locale, string]>([
-    ['pl', 'Bot mówi po angielsku, rosyjsku i ukraińsku.'],
+    // PRD 4 FR-17: the Polish line says there is no Polish bot version yet (D50).
+    [
+      'pl',
+      'Bot mówi po angielsku, rosyjsku i ukraińsku — polskiej wersji jeszcze nie ma, po angielsku poradzisz sobie w minutę.',
+    ],
     ['en', 'The bot speaks English, Russian and Ukrainian.'],
     ['ru', 'Бот говорит по-английски, по-русски и по-украински.'],
     ['uk', 'Бот говорить англійською, російською та українською.'],
