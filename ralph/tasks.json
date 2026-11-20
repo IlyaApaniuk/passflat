@@ -513,14 +513,14 @@
       "title": "Guide bodies: no 'verified' listings and no hard-coded statistics presented as Passflat data (FR-24, part 2)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
       "dependsOn": ["T142"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "blog-bodies.test.ts gains a scan of every body line for the verification family (verified, checked by, zweryfikow, sprawdzon, проверенн, перевірен) with its own allow list, and passes",
         "'Verified listings' (foreigners-guide-renting-warsaw-*) becomes 'listings' with no quality claim; a number stated as Passflat data (for example 'actually pay a median of around 3 420 zł' in renting-without-agent-warsaw-en) is removed or replaced by a link to /blog/warsaw-rent-prices without a number, in every locale where it occurs; legal facts with numbers (deadlines, statutory amounts) are not touched",
         "The progress entry lists every changed line for the owner (D29)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "CLAUDE.md cost data honesty: never 'verified', never invented statistics."
     },
     {
