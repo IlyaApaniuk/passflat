@@ -214,13 +214,13 @@
       "title": "Positioning: the hero H1 and thesis-first home title, description and tagline (FR-10 Open part, owner question Q-6)",
       "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-answered-2026-11-20",
       "dependsOn": ["T124"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-6: the answered values of the hero H1 key (the task names it), meta.homeTitle, meta.homeDescription and landing.footer.tagline are written in four locales (with (a): appendix seo.md table K and the PRD 4 §8 tagline), stay in REWRITTEN_KEYS and pass the honesty test",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-6 (PRD 4, decision review row 6). The hero H1 'Don't overpay for rent in Warsaw' and the home title, description and footer tagline: (a) keep the H1 and ship table K's thesis-first title and description and the §8 tagline (proposal); (b) keep T124's honest cost-first rewrite and the H1; (c) also rewrite the H1 to 'Who to rent with in Warsaw, and what it costs per person'. Positioning copy is the owner's call (the audit appendix marks table K as his decision).\nOwner answer: Q-6 (c), D83: the hero H1 becomes 'Who to rent with in Warsaw, and what it costs per person' (RU draft in the spec), plus table K's thesis-first home title and description and the PRD 4 section 8 footer tagline, four locales, drafts for the owner's review; see spec 08 section Owner questions (answered 2026-11-20)"
     },
     {

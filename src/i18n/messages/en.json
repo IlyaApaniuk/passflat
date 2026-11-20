@@ -23,8 +23,8 @@
     "learnMore": "Learn more"
   },
   "meta": {
-    "homeTitle": "Passflat — Warsaw rentals: reported costs, guides, documents",
-    "homeDescription": "Rental costs in Warsaw as tenants reported them, by building and district, each with its number of reports; an address check, a calculator, guides and document templates.",
+    "homeTitle": "Passflat — who to rent with in Warsaw, and what it costs",
+    "homeDescription": "Find a flatmate through our Telegram bot and see what tenants reported for rent in Warsaw: rent and utilities by building and district, calculator, guides.",
     "aboutDescription": "About Passflat: we help people in Warsaw find someone to rent with in our Telegram bot and see what renting costs, from the costs tenants reported by building and district.",
     "howItWorksDescription": "How Passflat works: the costs tenants reported by building and district in Warsaw, how to add yours anonymously, and how lease takeovers and sublets work. Step by step.",
     "contactDescription": "Get in touch with the Passflat team — a question, an issue, a partnership idea, or feedback about our transparent rental-cost service.",
@@ -86,8 +86,8 @@
   "landing": {
     "hero": {
       "badge": "Now live in Warsaw",
-      "title": "Don't overpay for rent",
-      "titleHighlight": "in Warsaw.",
+      "title": "Who to rent with in Warsaw,",
+      "titleHighlight": "and what it costs per person",
       "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal.",
       "browseCta": "Browse Listings",
       "addCta": "Post a Listing",
@@ -294,7 +294,7 @@
       "freeNote": "No account needed."
     },
     "footer": {
-      "tagline": "Rental costs in Warsaw as tenants reported them, with their counts; guides and document templates.",
+      "tagline": "Find someone to rent with in Warsaw and see what it costs per person — figures reported by tenants, with their counts.",
       "expanding": "Starting in Warsaw, expanding across Europe.",
       "product": "Product",
       "roommateSearch": "Roommate Search",

@@ -180,6 +180,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A static test that pulls a JSX opening tag out of source must let `=>` through (`onClick={() => …}`): `<Name\b(?:=>|[^>])*>`, not `<Name[^>]*>` (example: `tags()` in `src/components/tap-targets.test.ts`).
 - grammY's `other.language_code` (`setMyName`, `setMyCommands`, ...) is the `LanguageCode` literal union: a `string` fails typecheck; carry a literal union such as `Exclude<BotProfileLanguage, 'default'>`.
 - `docs/analytics/activation-funnels.md` §9 (PRD 4 readout) is checked by the third `describe` of `src/lib/bot/roommate-readouts.test.ts`: a HogQL block reads website events (`event = 'telegram_bot_opened'` / `'cta_click'`) or `tg_` events, never both; renaming a §9 subsection, a query letter (K – N) or the "Website entry values (PRD 4)" heading fails it.
+- A heading split over two block spans (the hero H1, `title` + `titleHighlight`) needs `{' '}` between them, or its text (crawlers, Playwright `toHaveText`) runs the words together; a longer hero copy is measured for line count and fold position by a temporary e2e spec that logs `getBoundingClientRect` and writes screenshots to the scratchpad (`e2e/home.spec.ts` keeps the 320 px and 1280 × 800 checks).
 
 ## Log
 
@@ -5473,5 +5474,53 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Owner review:
   - No new copy. Three footer keys were deleted in four locales (see above).
   - Behaviour to see after deploy: the roommate page in Warsaw shows no type tabs while the city has no roommate offer. The tabs come back with the first active offer. `/warsaw/replacement`, `/warsaw/sublet` and `/create-listing` still open by URL and keep their own tabs. Nothing is removed or redirected.
+  - No table, migration, event name or Assumption constant.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:10 · T125 · done
+
+- Done (PRD 4 FR-10's Open part, spec 08 §Owner questions; the owner's answer Q-6 (c), D83):
+  - Copy, four locales (`src/i18n/messages/{pl,en,ru,uk}.json`), drafts for the owner's review (D29):
+    - Hero H1 = `landing.hero.title` + `landing.hero.titleHighlight` (the split is the agent's, D83: place and the "who" first, the per-person half as the gradient highlight; no line break, no closing full stop):
+      - EN "Who to rent with in Warsaw," + "and what it costs per person" (spec 08).
+      - RU «С кем снимать в Варшаве» + «и сколько это на человека» (the owner's draft).
+      - PL "Z kim wynająć mieszkanie w Warszawie" + "i ile to kosztuje na osobę" (agent).
+      - UK «З ким знімати у Варшаві» + «і скільки це на людину» (agent).
+      - Old: "Don't overpay for rent" / "in Warsaw." (PL "Nie przepłacaj\nza wynajem" / "w Warszawie.", RU «Не переплачивай\nза аренду» / «в Варшаве.», UK «Не переплачуй\nза оренду» / «у Варшаві.»).
+    - `meta.homeTitle` and `meta.homeDescription`: appendix seo.md table K, verbatim in all four locales. Title lengths 54 – 56, description lengths 141 – 155 (EN exactly 155), so nothing was shortened.
+    - `landing.footer.tagline`: the PRD 4 §8 tagline, verbatim in all four locales.
+    - T124's interim cost-first values of these three keys are replaced (they are in the T124 entry).
+  - `src/components/landing/hero.tsx`:
+    - `{' '}` between the two block spans of the H1, so its text reads "…Warsaw, and what…" for crawlers, screen readers and `toHaveText`; nothing renders between block boxes.
+    - **Desktop H1 one size smaller:** `md:text-7xl lg:text-8xl` → `md:text-6xl lg:text-7xl`. A temporary e2e probe measured the new sentence at the old sizes on 1280 × 900: EN and RU 4 lines, UK 3, PL 5 (521 px tall). It pushed the subtitle and both hero CTAs below the fold (screenshot read back). At the new sizes: 1 – 3 lines at 768 – 1536 px, and the primary CTA ends at 652 – 704 px in every locale. Phones are unchanged (`text-4xl`, 4 – 5 lines at 375 px, CTA at 631 – 665 px).
+    - The stale "loss-aversion framing" comment now names the thesis headline.
+  - Tests:
+    - `src/i18n/honesty-copy.test.ts`: `landing.hero.title` and `titleHighlight` join `REWRITTEN_KEYS` (FORBIDDEN) and `HOME_COPY_KEYS` (no real/truth, listings, "free", promise or placeholder). The three other keys were already in both. The cost-first test became "the home copy is thesis-first (D83)". It checks:
+      - the EN H1, the owner's RU H1, the EN title, description and tagline;
+      - the four table K titles;
+      - title ≤ 60 and description ≤ 155 characters;
+      - Warsaw named in each value;
+      - no "overpay" family in any H1, and no line break or closing full stop in either H1 key.
+        The pattern test gained the four old H1s.
+    - `src/components/landing/hero.test.ts`: the rendered `<h1>` text equals `title + ' ' + titleHighlight` in four locales, and the EN and RU sentences exactly.
+    - `e2e/home.spec.ts`:
+      - On `/` (pl-PL) and `/en`: the H1 text, `<title>`, meta description and footer tagline.
+      - On `/`, `/en`, `/ru`, `/uk`: the H1 has no horizontal overflow at 320 px.
+      - At 1280 × 800 both hero CTAs (`/warsaw/costs`, `/warsaw/check`) end inside the first screen.
+      - The probe spec was deleted.
+  - Docs:
+    - `docs/specs/README.md`: FR-10 (Q-6) row → Done.
+    - `docs/ops/deploy-copy-review.md` §1: a T125 row, and a decision bullet (the RU/UK register of table K, the H1 size).
+- Checks:
+  - `npx vitest run` over honesty-copy, hero, messages, nominative-templates, the landing tests, home-thesis and locale-guard: 13 files, 145 passed.
+  - `npm run verify` exit 0 before the size change and again after it. Lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 183 files / 3669 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 29 passed, 20 of them in `home.spec.ts` (10 new). `next-env.d.ts` restored.
+  - Not verified: real Google snippets and the OG card text. The layout's `getOgImage(homeTitle, homeDescription)` now carries the new title; the card was not rendered. Nothing deployed, no migration, no event.
+- Did not work: nothing failed. The first version kept the old font size and buried the desktop CTAs, which the probe caught (see above).
+- Owner review:
+  - **Draft copy (D29):** the five keys above. EN is from spec 08, the RU H1 is yours, the PL and UK H1 are the agent's, and the title, description and tagline are table K and §8 verbatim.
+  - **Register to decide:** table K's RU and UK descriptions use «вы» / «ви» («Найдите соседа … и посмотрите», «Знайдіть сусіда … і подивіться»). The hero subtitle, the §8 tagline and the roommate copy use «ты» / «ти». They shipped as drafted. A «ты» version: «Найди соседа через Telegram-бот и посмотри, …», «Знайди сусіда через Telegram-бот і подивись, …».
+  - **Design deviation to confirm:** the desktop H1 is one size smaller (above). Revert the class in `hero.tsx` for the bigger type; the new e2e fold check then fails, by design.
+  - Typography nit: the Polish H1 leaves a one-letter "w" at a line end ("mieszkanie w / Warszawie") at 375 and 1280 px. A no-break space in the PL value would fix it.
   - No table, migration, event name or Assumption constant.
 - Next: `node scripts/ralph-tasks.mjs next`.

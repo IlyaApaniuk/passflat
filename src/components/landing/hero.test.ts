@@ -136,6 +136,29 @@ describe('Hero roommate chip (PRD 4 FR-6)', () => {
   });
 });
 
+describe('Hero H1 (PRD 4 Q-6, D83)', () => {
+  beforeEach(() => {
+    state.locale = 'en';
+  });
+
+  // The h1's text as a crawler or a screen reader gets it: tags removed, nothing added.
+  const h1 = () => {
+    const match = renderToStaticMarkup(createElement(Hero, {})).match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
+    return (match?.[1] ?? '').replace(/<[^>]+>/g, '').replace(/&#x27;/g, "'");
+  };
+
+  it('reads the thesis as one sentence, the two keys joined by a space, in every locale', () => {
+    expect(h1()).toBe('Who to rent with in Warsaw, and what it costs per person');
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const hero = (messages[locale].landing as { hero: Record<string, string> }).hero;
+      expect(h1(), locale).toBe(`${hero.title} ${hero.titleHighlight}`);
+    }
+    state.locale = 'ru';
+    expect(h1()).toBe('С кем снимать в Варшаве и сколько это на человека');
+  });
+});
+
 describe('Hero deposit stat', () => {
   beforeEach(() => {
     state.locale = 'en';

@@ -143,6 +143,9 @@ const REWRITTEN_KEYS = [
   'landing.footer.tagline',
   'landing.hero.costsCta',
   'landing.tools.templatesDescription',
+  // PRD 4 FR-10, Q-6 (D83, spec 08 §Owner questions): the hero H1, thesis-first.
+  'landing.hero.title',
+  'landing.hero.titleHighlight',
   // PRD 4 FR-12 (spec 08 §Callout placements).
   'blog.ctaText',
   // PRD 4 FR-13 (spec 08 §Per-person line): the bot's roomSplit wording.
@@ -168,7 +171,10 @@ const REWRITTEN_KEYS = [
  */
 const ALLOWED_KEY_MATCHES: Record<string, string> = {};
 
-/** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
+/**
+ * The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy); the title, description, tagline
+ * and the hero H1 turned thesis-first with Q-6 (D83, spec 08 §Owner questions).
+ */
 const HOME_COPY_KEYS = [
   'meta.homeTitle',
   'meta.homeDescription',
@@ -176,7 +182,16 @@ const HOME_COPY_KEYS = [
   'landing.hero.costsCta',
   'landing.hero.subtitle',
   'landing.tools.templatesDescription',
+  'landing.hero.title',
+  'landing.hero.titleHighlight',
 ];
+
+/** The hero H1 as one sentence: `landing.hero.title` and `titleHighlight` joined by a space. */
+const heroH1 = (locale: Locale) =>
+  `${valueAt(locale, 'landing.hero.title') as string} ${valueAt(locale, 'landing.hero.titleHighlight') as string}`;
+
+/** The old loss-aversion H1 ("Don't overpay for rent in Warsaw"), replaced by D83. */
+const OVERPAY: RegExp = /overpay|przepłac|переплач/i;
 
 /**
  * The "real" family and "the full truth" (D25), per locale. "Truth" needs a word
@@ -593,23 +608,44 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     }
   });
 
-  it('the home copy keeps the cost-first positioning and the EN drafts of spec 08', () => {
+  it('the home copy is thesis-first (D83): the hero H1, table K and the §8 tagline', () => {
+    expect(heroH1('en')).toBe('Who to rent with in Warsaw, and what it costs per person');
+    // The owner's own RU draft of the H1 (spec 08 §Owner questions).
+    expect(heroH1('ru')).toBe('С кем снимать в Варшаве и сколько это на человека');
     expect(valueAt('en', 'meta.homeTitle')).toBe(
-      'Passflat — Warsaw rentals: reported costs, guides, documents',
+      'Passflat — who to rent with in Warsaw, and what it costs',
     );
     expect(valueAt('en', 'meta.homeDescription')).toBe(
-      'Rental costs in Warsaw as tenants reported them, by building and district, each with its number of reports; an address check, a calculator, guides and document templates.',
+      'Find a flatmate through our Telegram bot and see what tenants reported for rent in Warsaw: rent and utilities by building and district, calculator, guides.',
     );
     expect(valueAt('en', 'landing.footer.tagline')).toBe(
-      'Rental costs in Warsaw as tenants reported them, with their counts; guides and document templates.',
+      'Find someone to rent with in Warsaw and see what it costs per person — figures reported by tenants, with their counts.',
     );
+    // Table K's PL, RU and UK titles, copied as drafted.
+    expect(LOCALES.map((locale) => valueAt(locale, 'meta.homeTitle'))).toEqual([
+      'Passflat — z kim i za ile wynająć mieszkanie w Warszawie',
+      'Passflat — who to rent with in Warsaw, and what it costs',
+      'Passflat — с кем и за сколько снять квартиру в Варшаве',
+      'Passflat — з ким і за скільки зняти квартиру у Варшаві',
+    ]);
     expect(valueAt('en', 'landing.hero.costsCta')).toBe('See reported costs');
     for (const locale of LOCALES) {
       const title = valueAt(locale, 'meta.homeTitle') as string;
-      // The thesis-first title is Q-6 (T125): the cost site stays first.
       expect(title, locale).toMatch(/^Passflat — /);
+      // Snippet lengths (spec 08 §Owner questions): title under about 60, description 155.
+      expect([...title].length, locale).toBeLessThanOrEqual(60);
+      expect(
+        [...(valueAt(locale, 'meta.homeDescription') as string)].length,
+        locale,
+      ).toBeLessThanOrEqual(155);
       for (const key of ['meta.homeTitle', 'meta.homeDescription', 'landing.footer.tagline']) {
         expect(valueAt(locale, key) as string, `${locale}: ${key}`).toMatch(/Warsz|Warsaw|Варшав/);
+      }
+      expect(heroH1(locale), locale).toMatch(/Warsz|Warsaw|Варшав/);
+      expect(heroH1(locale), locale).not.toMatch(OVERPAY);
+      // The H1 sentence reads whole: neither key carries a line break or a closing full stop.
+      for (const key of ['landing.hero.title', 'landing.hero.titleHighlight']) {
+        expect(valueAt(locale, key) as string, `${locale}: ${key}`).not.toMatch(/\n|\.$/);
       }
       const subtitle = valueAt(locale, 'landing.hero.subtitle') as string;
       expect(subtitle, locale).toContain(SUBTITLE_COST_SENTENCE[locale]);
@@ -634,6 +670,10 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     expect('koszty, ogłoszenia, dokumenty').toMatch(LISTINGS.pl);
     expect('расходы, объявления, документы').toMatch(LISTINGS.ru);
     expect('витрати, оголошення, документи').toMatch(LISTINGS.uk);
+    expect("Don't overpay for rent").toMatch(OVERPAY);
+    expect('Nie przepłacaj za wynajem').toMatch(OVERPAY);
+    expect('Не переплачивай за аренду').toMatch(OVERPAY);
+    expect('Не переплачуй за оренду').toMatch(OVERPAY);
     expect('free document templates').toMatch(FREE);
     expect('ready-made document templates').toMatch(TEMPLATES.en);
     expect('na gotowych wzorach dokumentów').toMatch(TEMPLATES.pl);

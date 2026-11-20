@@ -39,7 +39,8 @@ export function Hero({ stats: liveStats }: HeroProps) {
   // Top-of-funnel instrumentation: which hero CTA gets clicked. (The hero headline
   // A/B is parked — the `hero-variant-b` flag stays declared but dormant until
   // there's enough traffic to reach significance; wire variant rendering back in
-  // then. The current headline is the loss-aversion framing.)
+  // then. The current headline is the thesis: who to rent with and what it costs
+  // per person, D83.)
   const onCtaClick = (cta: 'view_costs' | 'check_address') =>
     posthog?.capture('hero_cta_clicked', { cta });
 
@@ -127,8 +128,14 @@ export function Hero({ stats: liveStats }: HeroProps) {
             <span>{t('badge')}</span>
           </div>
 
-          <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-7xl lg:text-8xl">
-            <span className="block whitespace-pre-line">{t('title')}</span>
+          {/* The thesis H1 (D83) is a sentence, not a three-word punchline: at md:text-7xl /
+              lg:text-8xl it took four to five lines on a 1280 px desktop and pushed the CTAs
+              below the fold, so the desktop steps are one size smaller. */}
+          <h1 className="mb-6 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            {/* The H1 is one sentence over two keys (D83): the space keeps the heading's text
+                ("…Warsaw, and what…") whole for crawlers and screen readers; between two
+                block spans it renders nothing. */}
+            <span className="block whitespace-pre-line">{t('title')}</span>{' '}
             {/* pb keeps descenders (y, g) from being clipped: -webkit-background-clip:text
                 paints the gradient only inside the box, so the box must extend below the
                 baseline for the tight leading-[1.05] line. */}

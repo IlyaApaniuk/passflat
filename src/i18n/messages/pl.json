@@ -23,8 +23,8 @@
     "learnMore": "Dowiedz się więcej"
   },
   "meta": {
-    "homeTitle": "Passflat — wynajem w Warszawie: zgłoszone koszty, poradniki, dokumenty",
-    "homeDescription": "Koszty wynajmu w Warszawie zgłoszone przez najemców, według budynków i dzielnic, zawsze z liczbą zgłoszeń; sprawdzenie adresu, kalkulator, poradniki i wzory dokumentów.",
+    "homeTitle": "Passflat — z kim i za ile wynająć mieszkanie w Warszawie",
+    "homeDescription": "Znajdź współlokatora przez bota Telegram i zobacz, ile zgłoszono za najem w Warszawie: czynsz i opłaty wg budynków i dzielnic, kalkulator, poradniki.",
     "aboutDescription": "O Passflat: pomagamy osobom w Warszawie znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile kosztuje najem, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic.",
     "howItWorksDescription": "Jak działa Passflat: koszty zgłoszone przez najemców według budynków i dzielnic Warszawy, jak anonimowo dodać swoje oraz jak wygląda cesja najmu i podnajem. Krok po kroku.",
     "contactDescription": "Skontaktuj się z zespołem Passflat — pytanie, problem, pomysł na współpracę lub opinia o serwisie przejrzystych kosztów najmu.",
@@ -86,8 +86,8 @@
   "landing": {
     "hero": {
       "badge": "Już dostępne w Warszawie",
-      "title": "Nie przepłacaj\nza wynajem",
-      "titleHighlight": "w Warszawie.",
+      "title": "Z kim wynająć mieszkanie w Warszawie",
+      "titleHighlight": "i ile to kosztuje na osobę",
       "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją.",
       "browseCta": "Przeglądaj oferty",
       "addCta": "Dodaj ogłoszenie",
@@ -294,7 +294,7 @@
       "freeNote": "Bez zakładania konta."
     },
     "footer": {
-      "tagline": "Koszty wynajmu w Warszawie zgłoszone przez najemców, z liczbą zgłoszeń; poradniki i wzory dokumentów.",
+      "tagline": "Znajdź kogoś do wspólnego wynajmu w Warszawie i zobacz, ile to kosztuje na osobę — kwoty zgłoszone przez najemców, z liczbą zgłoszeń.",
       "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
       "product": "Produkt",
       "roommateSearch": "Współlokatorzy",

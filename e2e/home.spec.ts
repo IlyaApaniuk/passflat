@@ -63,6 +63,91 @@ test.describe('home framing on /en', () => {
   });
 });
 
+// PRD 4 Q-6 (D83): the home page leads with the thesis in its H1, <title>, meta
+// description and footer tagline (drafts of spec 08 §Owner questions).
+for (const [path, browserLocale, h1, title, description, tagline] of [
+  [
+    '/',
+    'pl-PL',
+    'Z kim wynająć mieszkanie w Warszawie i ile to kosztuje na osobę',
+    'Passflat — z kim i za ile wynająć mieszkanie w Warszawie',
+    'Znajdź współlokatora przez bota Telegram i zobacz, ile zgłoszono za najem w Warszawie: czynsz i opłaty wg budynków i dzielnic, kalkulator, poradniki.',
+    'Znajdź kogoś do wspólnego wynajmu w Warszawie i zobacz, ile to kosztuje na osobę — kwoty zgłoszone przez najemców, z liczbą zgłoszeń.',
+  ],
+  [
+    '/en',
+    'en-US',
+    'Who to rent with in Warsaw, and what it costs per person',
+    'Passflat — who to rent with in Warsaw, and what it costs',
+    'Find a flatmate through our Telegram bot and see what tenants reported for rent in Warsaw: rent and utilities by building and district, calculator, guides.',
+    'Find someone to rent with in Warsaw and see what it costs per person — figures reported by tenants, with their counts.',
+  ],
+] as const) {
+  test.describe(`thesis-first home copy on ${path}`, () => {
+    test.use({ locale: browserLocale });
+
+    test(`H1, title, description and footer tagline on ${path} state the thesis`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      expect(new URL(page.url()).pathname).toBe(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(h1);
+      await expect(page).toHaveTitle(title);
+      await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+        'content',
+        description,
+      );
+      await expect(page.locator('footer')).toContainText(tagline);
+    });
+  });
+}
+
+// The thesis H1 is longer than the old one: on the narrowest phone no word overflows it.
+for (const [path, browserLocale] of [
+  ['/', 'pl-PL'],
+  ['/en', 'en-US'],
+  ['/ru', 'en-US'],
+  ['/uk', 'en-US'],
+] as const) {
+  test.describe(`hero H1 at 320 px on ${path}`, () => {
+    test.use({ locale: browserLocale, viewport: { width: 320, height: 700 } });
+
+    test(`the H1 on ${path} fits the viewport without horizontal overflow`, async ({ page }) => {
+      await page.goto(path);
+      expect(new URL(page.url()).pathname).toBe(path);
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1).toBeVisible();
+      const fit = await h1.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        right: element.getBoundingClientRect().right,
+        viewport: window.innerWidth,
+      }));
+      expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth);
+      expect(fit.right).toBeLessThanOrEqual(fit.viewport);
+    });
+  });
+
+  // At the old lg:text-8xl the H1 took four to five lines and pushed the hero CTAs below the
+  // fold of a 1280 px desktop (T125 measured it); the CTAs stay in the first screen.
+  test.describe(`hero CTAs at 1280 x 800 on ${path}`, () => {
+    test.use({ locale: browserLocale, viewport: { width: 1280, height: 800 } });
+
+    test(`the hero CTAs on ${path} stay in the first screen`, async ({ page }) => {
+      await page.goto(path);
+      expect(new URL(page.url()).pathname).toBe(path);
+      const main = page.locator('main');
+      for (const href of ['/warsaw/costs', '/warsaw/check']) {
+        const bottom = await main
+          .locator(`a[href$="${href}"]`)
+          .first()
+          .evaluate((element) => element.getBoundingClientRect().bottom);
+        expect(bottom, href).toBeLessThanOrEqual(800);
+      }
+    });
+  });
+}
+
 // PRD 4 FR-9: right under the hero, a section headed by the thesis sentence
 // ("Passflat helps people in Warsaw find someone to rent with ...") links to
 // the roommate page. The e2e build sets no NEXT_PUBLIC_TELEGRAM_BOT_USERNAME, so

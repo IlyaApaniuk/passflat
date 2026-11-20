@@ -26,6 +26,7 @@ agent's own draft. Four locales unless the row says otherwise.
 | T122 | FR-7         | no new key; deleted `landing.footer.browseListings`, `landing.footer.temporarySublets`, `landing.footer.addListing` (the footer's three frozen links, D82)                                                                                                                                                           | —                                                             |
 | T123 | FR-8, FR-9   | `listings.flatmateCallout.homeTitle` (the thesis), `listings.flatmateCallout.title`, `listings.flatmateCallout.roommateLink` (new)                                                                                                                                                                                   | §8                                                            |
 | T124 | FR-10        | `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`, `landing.hero.costsCta`, `landing.hero.subtitle`, `landing.tools.templatesDescription`                                                                                                                                                           | EN spec 08; PL/RU/UK agent; `templatesDescription` spec 08    |
+| T125 | FR-10 (Q-6)  | thesis-first (D83): `landing.hero.title` + `landing.hero.titleHighlight` (the H1), `meta.homeTitle`, `meta.homeDescription`, `landing.footer.tagline`; replaces T124's values of the last three                                                                                                                      | H1 EN spec 08, RU owner, PL/UK agent; table K; §8             |
 | T126 | FR-11        | no new key; deleted `costs.building.lookingForApartment`, `lookingForApartmentDesc`, `viewListingsIn`                                                                                                                                                                                                                | —                                                             |
 | T127 | FR-12        | none (the calculator reuses T123's keys)                                                                                                                                                                                                                                                                             | —                                                             |
 | T128 | FR-12        | `blog.ctaText`, `blog.ctaFlatmate` (new, equals `common.findFlatmate`)                                                                                                                                                                                                                                               | EN §8; PL/RU/UK `ctaText` agent                               |
@@ -62,6 +63,12 @@ Points the entries raise for a decision (not blockers; each entry has the detail
   reason …" (T141); 198 guide body lines that still match the claim words, most in another sense
   (T143); the rest of `/about` about frozen listings (T132); the ForWhom heading "Ready to find
   your next home?" (T121).
+- **The thesis-first home copy** (T125): table K's RU and UK descriptions address the reader
+  as «вы» / «ви» («Найдите … посмотрите»), while the hero, the tagline and the roommate copy use
+  «ты» / «ти»; they shipped as drafted. The H1 is a sentence now: at the old `md:text-7xl
+lg:text-8xl` it took four (EN, RU) to five (PL) lines on a 1280 px desktop and pushed the hero
+  CTAs below the fold, so the desktop sizes are one step smaller (`md:text-6xl lg:text-7xl`, two
+  to three lines; phones unchanged). Revert the class in `hero.tsx` if you prefer the bigger type.
 - **Event targets changed:** `cta_click {placement: 'header_mobile'}` now counts taps to the
   roommate page and `district_card` taps to the district pages (T120, T121).
 
