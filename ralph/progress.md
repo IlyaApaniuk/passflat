@@ -5668,3 +5668,17 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Outside Q-10, left as it is:** the `/api/og` default subtitle "European rental marketplace with transparent costs" (`src/app/api/og/route.tsx`).
   - No table, migration, event name or Assumption constant.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:38 · T146 · done
+
+- Done (PRD 4 FR-25, spec 09 §Low-CTR titles; the owner's answer Q-7 (a), D84: keep the cesja guide at its URL). The acceptance's (a) line applies: no code change, the task closes with the answer here.
+  - **The answer:** `cesja-najmu-guide` stays in four locales at its URL. No file is removed, no redirect is added to `next.config.mjs`, and the body's `/replacement` links stay (spec 09 §Guide bodies). The only change Q-7 asked for is the description without the tenant-replacement promise, already built in T145 (table H).
+  - Checked in the tree: the four `src/content/blog/cesja-najmu-guide-{en,pl,ru,uk}.mdx` files exist with T145's titles and descriptions; `next.config.mjs` has no cesja redirect; `src/content/blog-frontmatter.test.ts` still asserts that the cesja title and description do not name Passflat (table H) and still holds the length limits for the slug.
+  - `docs/specs/README.md`: FR-25 (Q-7) row → Done. No code, copy, test or other doc changed.
+- Checks:
+  - `npm run verify` exit 0: lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 186 files / 3726 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 32 passed, with the usual DB-less and fake-PostHog noise. `next-env.d.ts` restored.
+  - Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review: nothing (the answer is yours, D84; no draft copy, table, migration or Assumption).
+- Next: `node scripts/ralph-tasks.mjs next`.

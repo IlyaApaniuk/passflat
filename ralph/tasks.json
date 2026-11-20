@@ -560,13 +560,13 @@
       "title": "The cesja guide: keep, or remove with a redirect (owner question Q-7)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#low-ctr-titles",
       "dependsOn": ["T145"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-7: with (a) keep, nothing changes and the task closes with the answer in the progress entry",
         "With (b) the four cesja-najmu-guide locale files are removed, a permanent redirect for each locale URL to the blog index of that locale is added in next.config.mjs, and the sitemap test and an e2e redirect assertion cover it"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-7 (PRD 4, decision review row 7). Keep the cesja guide, which promises frozen tenant replacement? (a) keep it: T145 already drops the promise from its description (proposal); (b) remove it with a redirect to /blog. Removing a URL needs a redirect, and URL changes are the owner's call.\nOwner answer: Q-7 (a), D84: keep the cesja guide at its URL; T145 already dropped the tenant-replacement promise from its description; no file removal, no redirect: close with the answer in the progress entry"
     },
     {
