@@ -169,6 +169,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The per-person line is `loadWarsawPerPersonSplit` (`room-costs.ts`) + `perPersonLineValues` / `perPersonSplitArea` / `perPersonAmount` (`per-person-line.ts`); `FlatmateCallout` calls `getLocale()` only when it has a split, so a test that passes one mocks `getLocale` in `next-intl/server`, and `FindFlatmateBlock` tests mock `useLocale`.
 - A test helper with default parameters turns an explicit `undefined` argument into the default: when a test checks an absent prop, the helper takes every argument without defaults.
 - `src/i18n/nominative-templates.test.ts` fails on any pl, ru or uk value with "w / na / в / у / на" directly before `{district}` or `{city}` (both nominative): write "{district}: …", "w dzielnicy {district}", «в районе {district}», "w mieście {city}", or the literal "w Warszawie" (D6).
+- `src/content/blog-frontmatter.test.ts` fails on any guide `title` / `description` matching `FORBIDDEN[locale]` or a percentage (locale from the file name, `parseFrontMatter` exported from `src/lib/blog.ts`); a frontmatter value is one line in double quotes, so a rewrite must not hold `"`; a legitimate match goes into its `ALLOWED_FRONTMATTER_MATCHES` with a reason.
 
 ## Log
 
@@ -4739,3 +4740,65 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Namespaces and providers:** `CalculatorClient` (client) reads `calculator.h1` through `useTranslations()` from the calculator page's scoped `NextIntlClientProvider` (`pickMessages(messages, ['calculator', 'common', 'share'])`). The `costsSeo.*` keys are read server-side (`getTranslations()` in the city and district pages and their `generateMetadata`). The e-mail keys are read server-side by `sendEmail` (`getTranslations({ locale, namespace })`). No wiring changed.
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`. T158 (the genitive traps above) runs before the PRD 4 final check.
+
+### 2026-11-20 09:55 · T141 · done
+
+- Done (PRD 4 FR-23; spec 09 §Blog frontmatter):
+  - New `src/content/blog-frontmatter.test.ts`, written first: reads every `src/content/blog/*.mdx` with `parseFrontMatter` (now exported from `src/lib/blog.ts`, no other change), takes the locale from the file name and fails when `title` or `description` matches `FORBIDDEN[locale]` (`src/i18n/honesty-rules.ts`) or `/\d+\s?%/`. `ALLOWED_FRONTMATTER_MATCHES` (`<file>:<field>` → reason) is empty. Also checks: every slug in four locales with matching frontmatter `locale` / `slug`; each allowed entry still matches; a self-check of the claim and percentage patterns; the deposit descriptions name Telegram in ru and uk and no bot in en and pl (D63, D50).
+  - Before the rewrite the test flagged **30 fields in 29 files** (wider lists than the gap review's 22). All rewritten by a one-off scratchpad script (exact field line, old value checked; not committed). Only frontmatter lines 2–3 changed; no guide body changed.
+- Changed titles and descriptions (for the owner, D29; "old" is the flagged part, see `git show` for the full old line):
+  - `bank-account-rent-poland` description (dropped "actually / naprawdę / реально"):
+    - en "The kaucja and first rent are due before most newcomers have a Polish account. Who Wise works for, how to open an mBank or Millennium account without a PESEL, and how to hand over the deposit safely." (old "Who Wise actually works for")
+    - pl "Kaucja i pierwszy czynsz są wymagane, zanim zdążysz założyć polskie konto. Komu zadziała Wise, jak otworzyć konto w mBanku lub Millennium bez PESEL i jak bezpiecznie przekazać kaucję." (old "Komu naprawdę zadziała Wise")
+    - ru «Залог и первая аренда нужны раньше, чем польский счёт. Кому подходит Wise, как открыть счёт в mBank или Millennium без PESEL и как безопасно передать залог.» (old «Кому реально подходит Wise»)
+    - uk «Кауція та перша оренда потрібні раніше, ніж польський рахунок. Кому підходить Wise, як відкрити рахунок у mBank чи Millennium без PESEL і як безпечно передати кауцію.» (old «Кому реально підходить Wise»)
+  - `doplaty-rozliczenie-warsaw` en description: "Rent is only the first number. How czynsz, media advances and the surprise dopłata settlement work in Warsaw — and how to compare yours with reported costs." (old "… how to check yours against real data.")
+  - `foreigners-guide-renting-warsaw` description (ru and uk were not flagged):
+    - en "Everything a foreigner needs to know about renting an apartment in Warsaw — where to search, documents needed, common scams, and how renting in Poland works." (old "… how to navigate the Polish rental market.")
+    - pl "Wszystko co obcokrajowiec musi wiedzieć o wynajmie mieszkania w Warszawie — gdzie szukać, jakie dokumenty, częste oszustwa i jak działa najem w Polsce." (old "… jak poruszać się po polskim rynku najmu.")
+  - `hidden-rental-costs-warsaw` description, table E verbatim (titles stay for T145):
+    - en "What a Warsaw listing leaves out: czynsz administracyjny, utilities and dopłaty, deposit, agent fees — and how to check an address before signing." (old "Everything you need to know about real rental costs in Warsaw — …")
+    - pl "Czego nie ma w ogłoszeniu: czynsz administracyjny, media i dopłaty, kaucja, prowizja — i jak sprawdzić adres przed podpisaniem umowy." (old "Wszystko o rzeczywistych kosztach wynajmu …")
+    - ru «Чего нет в объявлении: czynsz administracyjny, коммуналка и доплаты, депозит, комиссия — и как проверить адрес до подписания договора.» (old «Всё, что нужно знать о реальной стоимости аренды …»)
+    - uk «Чого немає в оголошенні: czynsz administracyjny, комуналка й доплати, застава, комісія — і як перевірити адресу до підписання договору.» (old «Усе, що потрібно знати про реальну вартість оренди …»)
+  - `move-out-cleaning-warsaw` (pl and uk were not flagged):
+    - en title "Move-Out Cleaning in a Warsaw Rental: What Landlords Check (and What Cleaners Cost)" (old "… What Landlords Actually Check …")
+    - en description "Cleaning disputes are the top reason Warsaw tenants lose deposit money. What landlords check at move-out, wear vs dirt, and what cleaners charge in 2026." (old "… and real 2026 cleaner prices.")
+    - ru description «Споры об уборке — причина №1 удержаний из залога в Варшаве. Что владелец проверяет при выезде, нормальный износ vs грязь и цены клинеров в 2026.» (old «… и реальные цены клинеров в 2026.»)
+  - `protokol-zdawczo-odbiorczy-warsaw` description (lead with the checklist, no percentage; agent drafts after table I's pattern):
+    - en "A 20-point checklist for the handover protocol: what to record at move-in and at move-out. The protocol is the document that decides a deposit dispute." (old "Only 77% of Warsaw tenants got their deposit back in full. …")
+    - pl "Checklista 20 punktów do protokołu zdawczo-odbiorczego: co zapisać przy wprowadzce i przy wyprowadzce. Protokół to dokument, który rozstrzyga spór o kaucję." (old "Tylko 77% … w całości. …")
+    - ru «Чек-лист из 20 пунктов для протокола приёма-передачи: что записать при въезде и при выезде. Протокол — документ, который решает спор о залоге.» (old «Только 77% … полностью. …»)
+    - uk «Чек-лист із 20 пунктів для протоколу прийому-передачі: що записати при заїзді та при виїзді. Протокол — документ, який вирішує спір про кауцію.» (old «Лише 77% … повністю. …»)
+  - `rental-contract-checklist-warsaw` description (only the "real monthly cost" phrase changed):
+    - en "… wypowiedzenie, the all-in monthly cost, and owner documents …" (old "the real all-in monthly cost")
+    - pl "… wypowiedzenie, łączny koszt miesięczny i dokumenty właściciela …" (old "realny koszt miesięczny")
+    - ru «… wypowiedzenie, итоговая стоимость в месяц и документы собственника …» (old «реальная стоимость в месяц»)
+    - uk «… wypowiedzenie, підсумкова вартість на місяць і документи власника …» (old «реальна вартість на місяць»)
+  - `rental-deposit-kaucja-warsaw` title and description, table I (bot clause in ru and uk only):
+    - en title "Getting your deposit (kaucja) back in Warsaw: the rules" (old "How to Get Your Rental Deposit (Kaucja) Back in Warsaw"); description "What the kaucja is, when it must be returned, what may be deducted, and why the handover protocol matters." (old "77% of Warsaw tenants got their deposit back in full — …")
+    - pl title "Zwrot kaucji za mieszkanie w Warszawie: zasady i termin" (old "Jak odzyskać kaucję przy wyprowadzce w Warszawie"); description "Czym jest kaucja, w jakim terminie musi wrócić, co właściciel może potrącić i dlaczego liczy się protokół." (old "77% najemców … w całości — …")
+    - ru title «Возврат залога за квартиру в Варшаве: правила и сроки» (old «Как вернуть залог (kaucja) при съезде в Польше»); description «Что такое kaucja, в какой срок её должны вернуть, что может удержать владелец, зачем нужен протокол и бот в Telegram, который составит письмо о возврате.» (old «77% арендаторов … полностью — …»)
+    - uk title «Повернення застави за квартиру у Варшаві: правила і строк» (old «Як повернути заставу (kaucja) при виїзді з квартири в Польщі»); description «Що таке kaucja, у який строк її мають повернути, що може утримати власник, навіщо протокол і бот у Telegram, який складе лист про повернення.» (old «77% орендарів … повністю — …»)
+  - `renting-without-agent-warsaw` description, table J verbatim (titles stay for T145):
+    - en "Where to find od właściciela listings in Warsaw, how to spot an agent posing as the owner, and how to check ownership in the księga wieczysta." (old "… verify the real owner … the real risk … the district's true price.")
+    - pl "Gdzie znaleźć ogłoszenia od właściciela w Warszawie, jak rozpoznać pośrednika udającego właściciela i jak sprawdzić właściciela w księdze wieczystej." (old "… zweryfikować realnego właściciela … prawdziwym ryzykiem … realnej ceny dzielnicy.")
+    - ru «Где искать объявления от владельца в Варшаве, как отличить посредника, выдающего себя за владельца, и как проверить собственника по księga wieczysta.» (old «… реального хозяина … реальной цены района.»)
+    - uk «Де шукати оголошення від власника у Варшаві, як відрізнити посередника, що видає себе за власника, і як перевірити власника за księga wieczysta.» (old «… реального господаря … справжньої ціни району.»)
+  - `docs/specs/README.md`: the FR-23 row is Done.
+- Checks:
+  - `npx vitest run src/content/blog-frontmatter.test.ts`: 2 failed before the rewrite (30 flagged fields; the deposit bot clause), 5 passed after.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 163 files / 3465 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks). No page looked at in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing (the first test run was denied for a `;`-chained command; reran as one plain command).
+- Owner review:
+  - **Draft copy (agent copy, D29):** every title and description above. Tables E (descriptions), I (four titles, ru/uk descriptions verbatim, en/pl descriptions with the bot clause cut) and J (descriptions) are the appendix drafts (`docs/product/reviews/2026-11-19-site-audit/seo.md`); the rest are the agent's smallest-change rewrites.
+  - **The deposit titles changed** (table I) on a guide that ranks on page 1 (EN position 6.6 in the audit); the spec puts the deposit guide in this task.
+  - **The ru and uk deposit descriptions promise the deposit bot** («бот в Telegram, который составит письмо о возврате»): table I says "the bot clause only after the bot deploy", so these two descriptions should go live with the bot deploy, not before.
+  - **Not changed, for your decision:** the `move-out-cleaning-warsaw` descriptions in all four locales keep "Cleaning disputes are the top reason …" / "najczęstszy powód" / «причина №1» / «причина №1». The body attributes that ranking to Passflat tenant reports (line 10, next to "77% … in full"), so it is a hard-coded statistic outside the frontmatter test's patterns (no claim word, no "%"). T143 (body claims) will rewrite line 10; the frontmatter ranking stays unless you want it softened (for example "a common reason").
+  - No new table, migration, event name or i18n key.
+- Next: `node scripts/ralph-tasks.mjs next`. T145 rewrites the titles of `hidden-rental-costs-warsaw` (table E) and `renting-without-agent-warsaw` (table J); their table descriptions are already in place, so T145 only adds the titles, the other three slugs and the length asserts in `blog-frontmatter.test.ts`.

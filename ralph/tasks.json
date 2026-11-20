@@ -480,7 +480,7 @@
       "title": "Guide frontmatter without percentages and the 'real' family, with a frontmatter honesty test (FR-23)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#blog-frontmatter",
       "dependsOn": ["T138"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/content/blog-frontmatter.test.ts (new, written first) parses every src/content/blog/*.mdx frontmatter with the parser of src/lib/blog.ts (exported if private), takes the locale from the file name, and fails when title or description matches FORBIDDEN[locale] from src/i18n/honesty-rules.ts or /\\d+\\s?%/; its allow list starts empty",
         "Every frontmatter the test flags is rewritten (at least the files spec 09 §Blog frontmatter names, with tables E, I and J where they apply) until the test passes; guide bodies are not changed",
@@ -488,7 +488,7 @@
         "Every changed title and description is listed in the progress entry for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D25 (no invented statistics). The gap review counted 22 flagged frontmatters with the old lists."
     },
     {
