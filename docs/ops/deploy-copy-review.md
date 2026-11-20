@@ -37,6 +37,7 @@ agent's own draft. Four locales unless the row says otherwise.
 | T133 | FR-16 (Q-3)  | `helpCenter.general.a2` (free today, D80); deleted `helpCenter.payments.*`, `helpCenter.leaseTakeovers.{q6,a6}`, `landing.howItWorks.{tabReplacement,tabRoommate,tabSublet,replacement,sublet}`, `howItWorksPage.{tabListers,listers}`, `about.stats.listings`, `meta.pricingDescription`                            | EN spec 08; PL/RU/UK agent                                    |
 | T134 | FR-17, FR-18 | pl `listings.roommateRoles.findFlatmate`, pl `listings.findFlatmate.languages` (the PL-only clause), ru/uk `listings.noMatch.title` («ты» / «ти»), `listings.demandCapture.searchCardTitleRoommate` (new); the posting-kit rule "Website links carry the reader's locale"                                            | §8, spec 08; the kit rule agent                               |
 | T135 | FR-19 (Q-2)  | `landing.cityNotify.{badge,title,subtitle,success}` (D79: the home form stays; the badge is the D87 line); deleted `landing.cityNotify.currentCity`                                                                                                                                                                  | title, subtitle RU owner, EN spec 08; badge D87; rest agent   |
+| T137 | Q-9 – Q-12   | ru/uk `listings.demandCapture.consentNote` («ты» / «ти», D86); `landing.footer.expanding` ("Warsaw only for now.", D87); `landing.hero.trustLine` (D88); `landing.cta.freeNote`, the end of `listings.roommateMetaDescription` ("Free, no account.", D89; the description drops "Room costs: reports and listings")  | D86, D87, D89 spec 08; trust line EN spec 08, PL/RU/UK agent  |
 | T138 | FR-21        | `costsSeo.buildingMetaTitle`, `costsSeo.buildingMetaDescription`, `costsSeo.districtMetaTitle`, `costsSeo.cityMetaTitle`, `calculator.metaTitle`, `calculator.metaDescription`, `listings.demandCapture.costCtaTitle`, `listings.detail.buildingCostHint`                                                            | tables B, C, G; `cityMetaTitle`, the last two agent           |
 | T139 | FR-21        | `rentReport.{metaTitle,metaDescription,ogTitle,lead,checkStep1,anatomyTitle,doplatyBody2}`, `meta.{aboutDescription,howItWorksDescription,blogDescription}`, `howItWorksPage.seekers.step1Desc`                                                                                                                      | table F (EN; PL title and OG title); agent                    |
 | T140 | FR-22        | `costsSeo.districtH1`, `costsSeo.buildingsHeading`, `calculator.h1`; pl/ru/uk `costsSeo.cityMetaDescription`, `cityH1`, `districtIntro`; pl `emails.cityNotifyConfirmation.{subject,body}`, `emails.cityLaunch.{subject,heading}`                                                                                    | spec 09 table, tables C, G; agent                             |
@@ -81,6 +82,12 @@ lg:text-8xl` it took four (EN, RU) to five (PL) lines on a 1280 px desktop and p
   line) with a pin icon instead of the globe, and `currentCity` ("Currently live in Warsaw") is
   gone: the subtitle already says it. The confirmation e-mail on sign-up is unchanged, so a
   subscriber gets it now and the launch e-mail later.
+- **The Q-9 – Q-12 copy** (T137, D86 – D89): to fit "Free, no account." under about 160
+  characters, the roommate description says "room costs" without "reports and listings" (the
+  page shows both groups with their N); RU is exactly 160, UK 159. The trust line's PL, RU and UK
+  are drafts ("Liczby są otwarte …", «Цифры открыты …», «Цифри відкриті …»). Still saying
+  "European": the default subtitle of `/api/og` ("European rental marketplace with transparent
+  costs", `src/app/api/og/route.tsx`), outside Q-10.
 - **Event targets changed:** `cta_click {placement: 'header_mobile'}` now counts taps to the
   roommate page and `district_card` taps to the district pages (T120, T121).
 

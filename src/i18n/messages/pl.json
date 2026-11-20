@@ -96,7 +96,7 @@
       "trustVerified": "Oferty od społeczności",
       "trustVerifiedDesc": "Oferty i opinie o budynkach od społeczności, z jawnymi cenami",
       "costsCta": "Zobacz zgłoszone koszty",
-      "trustLine": "Dane są otwarte — za darmo i bez konta",
+      "trustLine": "Liczby są otwarte — za darmo i bez konta; rozbicie opłat po dodaniu Twoich kosztów",
       "calculatorCta": "Kalkulator",
       "templatesCta": "Wzory dokumentów",
       "statsListings": "Oferty",
@@ -266,11 +266,11 @@
       "subtitle": "Wynająć z kimś, znaleźć pokój albo sprawdzić znalezione mieszkanie — zacznij od liczb.",
       "browseCta": "Przeglądaj oferty",
       "listCta": "Dodaj ogłoszenie",
-      "freeNote": "Bez zakładania konta."
+      "freeNote": "Bezpłatnie, bez konta."
     },
     "footer": {
       "tagline": "Znajdź kogoś do wspólnego wynajmu w Warszawie i zobacz, ile to kosztuje na osobę — kwoty zgłoszone przez najemców, z liczbą zgłoszeń.",
-      "expanding": "Zaczynamy w Warszawie, rozszerzamy się na Europę.",
+      "expanding": "Na razie tylko Warszawa.",
       "product": "Produkt",
       "roommateSearch": "Współlokatorzy",
       "costReports": "Raporty kosztów",
@@ -353,7 +353,7 @@
     "title": "Cesje najmu",
     "titleReplacement": "Cesje najmu",
     "titleRoommate": "Szukam współlokatora w Warszawie: koszty na osobę",
-    "roommateMetaDescription": "Znajdź współlokatora do wynajmu w Warszawie: profil w bocie Telegram (EN/RU/UK), dzielnica, budżet na osobę. Koszty pokoju: zgłoszenia i ogłoszenia.",
+    "roommateMetaDescription": "Znajdź współlokatora do wynajmu w Warszawie: profil w bocie Telegram (EN/RU/UK), dzielnica, budżet na osobę, koszty pokoju. Bezpłatnie, bez konta.",
     "roommateH1": "Szukam współlokatora w Warszawie",
     "roommateCostsBridge": "Masz ofertę na oku?",
     "roommateCostsBridgeCta": "Sprawdź adres i znane koszty",

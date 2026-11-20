@@ -415,13 +415,13 @@
       "title": "Copy questions: the consent note's register, 'expanding across Europe', open data against 'unlock', 'free' in new copy (owner questions Q-9 – Q-12)",
       "spec": "docs/specs/08-site-structure-and-entries.md#owner-questions-answered-2026-11-20",
       "dependsOn": ["T119", "T121"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers: Q-9 (a) listings.demandCapture.consentNote ru and uk switch to «ты» / «ти» with the meaning unchanged; Q-10 the footer line is replaced or dropped in four locales as answered; Q-11 the trust line and/or the gate copy change as answered; Q-12 (a) 'Free, no account' joins listings.roommateMetaDescription and landing.cta.freeNote in four locales; every 'leave' closes its part",
         "The honesty test and key parity pass; the changed keys are listed for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner questions Q-9 – Q-12 (PRD 4, decision review rows 9, 10, 11 and 15), answered together. Q-9: change the roommate page's consent note from «вы»/«ви» to «ты»/«ти»? (a) yes, the address form only (proposal); (b) leave; consent text. Q-10: the footer line 'Starting in Warsaw, expanding across Europe' (D6): (a) 'Warsaw only for now.' (proposal); (b) drop it. Q-11: 'The data is open — free, no account' against the 'unlock' gates (D3): (a) 'Figures are open — free, no account; the per-utility breakdown after you add yours' (proposal); (b) leave. Q-12: may new copy say the bot and the figures are free? (a) yes, in the roommate description and the home CTA note (proposal); (b) no, 'No account needed.' stays. Consent text and statements about prices are the owner's.\nOwner answer: Q-9 (a) D86: consentNote ru/uk switch to ty/ti, address form only; Q-10 (a) D87: landing.footer.expanding = 'Warsaw only for now.' in four locales; Q-11 (a) D88: landing.hero.trustLine = 'Figures are open - free, no account; the per-utility breakdown after you add yours'; Q-12 (a) D89: 'Free, no account' in listings.roommateMetaDescription and landing.cta.freeNote; see spec 08 section Owner questions (answered 2026-11-20)"
     },
     {

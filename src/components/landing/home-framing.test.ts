@@ -103,7 +103,7 @@ describe('ForWhom (PRD 4 FR-6)', () => {
       'What a room costs in Warsaw from tenant reports and asking prices',
       'Checking a flat you found',
       'Known costs for the building, the location and the nuisances, in one answer.',
-      'No account needed.',
+      'Free, no account.',
     ].map((part) => page.indexOf(part));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -150,12 +150,12 @@ describe('ForWhom (PRD 4 FR-6)', () => {
     }
   });
 
-  it('the note says no account is needed, with the spec 08 values', () => {
+  it('the note says free, no account, with the spec 08 values (Q-12, D89)', () => {
     expect(LOCALES.map((locale) => at(locale, 'landing.cta.freeNote'))).toEqual([
-      'Bez zakładania konta.',
-      'No account needed.',
-      'Без регистрации.',
-      'Без реєстрації.',
+      'Bezpłatnie, bez konta.',
+      'Free, no account.',
+      'Бесплатно, без аккаунта.',
+      'Безкоштовно, без акаунта.',
     ]);
   });
 });

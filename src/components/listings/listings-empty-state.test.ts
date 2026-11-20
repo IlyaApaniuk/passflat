@@ -316,7 +316,7 @@ describe('honest interest copy in the locale files (spec 02 §Honest interest co
     },
   );
 
-  it('keeps the consent note unchanged (FR-18; the register is Q-9, T137)', () => {
+  it('addresses the reader as «ты» / «ти» in the consent note, meaning and link unchanged (Q-9, D86)', () => {
     expect(
       Object.fromEntries(
         ['pl', 'en', 'ru', 'uk'].map((locale) => [
@@ -327,9 +327,16 @@ describe('honest interest copy in the locale files (spec 02 §Honest interest co
     ).toEqual({
       pl: 'Klikając, zgadzasz się na przetwarzanie danych — <privacyLink>polityka prywatności</privacyLink>.',
       en: 'By tapping you agree to data processing — <privacyLink>privacy policy</privacyLink>.',
-      ru: 'Нажимая, вы соглашаетесь на обработку данных — <privacyLink>политика конфиденциальности</privacyLink>.',
-      uk: 'Натискаючи, ви погоджуєтесь на обробку даних — <privacyLink>політика конфіденційності</privacyLink>.',
+      ru: 'Нажимая, ты соглашаешься на обработку данных — <privacyLink>политика конфиденциальности</privacyLink>.',
+      uk: 'Натискаючи, ти погоджуєшся на обробку даних — <privacyLink>політика конфіденційності</privacyLink>.',
     });
+    // No formal address is left in the RU and UK notes.
+    expect(load('ru').listings.demandCapture.consentNote).not.toMatch(
+      /(^|[^а-яё])вы([^а-яё]|$)|ваш/i,
+    );
+    expect(load('uk').listings.demandCapture.consentNote).not.toMatch(
+      /(^|[^а-яіїєґ])ви([^а-яіїєґ]|$)|ваш/i,
+    );
   });
 
   it.each(['pl', 'en', 'ru', 'uk'])(

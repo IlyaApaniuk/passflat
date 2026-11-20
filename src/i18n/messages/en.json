@@ -96,7 +96,7 @@
       "trustVerified": "Community listings",
       "trustVerifiedDesc": "Listings and building reviews from the community, with prices shown openly",
       "costsCta": "See reported costs",
-      "trustLine": "The data is open — free, no account",
+      "trustLine": "Figures are open — free, no account; the per-utility breakdown after you add yours",
       "calculatorCta": "Calculator",
       "templatesCta": "Document templates",
       "statsListings": "Listings",
@@ -266,11 +266,11 @@
       "subtitle": "Someone to rent with, a room, or a flat you already found — start with the figures.",
       "browseCta": "Browse Listings",
       "listCta": "Post a Listing",
-      "freeNote": "No account needed."
+      "freeNote": "Free, no account."
     },
     "footer": {
       "tagline": "Find someone to rent with in Warsaw and see what it costs per person — figures reported by tenants, with their counts.",
-      "expanding": "Starting in Warsaw, expanding across Europe.",
+      "expanding": "Warsaw only for now.",
       "product": "Product",
       "roommateSearch": "Roommate Search",
       "costReports": "Cost Reports",
@@ -353,7 +353,7 @@
     "title": "Lease Takeovers",
     "titleReplacement": "Lease Takeovers",
     "titleRoommate": "Find a flatmate in Warsaw — rent per person",
-    "roommateMetaDescription": "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest. Room costs: reports and listings.",
+    "roommateMetaDescription": "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest, room costs. Free, no account.",
     "roommateH1": "Find a flatmate in Warsaw",
     "roommateCostsBridge": "Found a place?",
     "roommateCostsBridgeCta": "Check the address and known costs",

@@ -5631,3 +5631,40 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: nothing (the answer is yours, D81; no draft copy, table, migration or Assumption).
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:50 · T137 · done
+
+- Done (PRD 4, the owner's answers Q-9 – Q-12, all (a): D86 – D89; spec 08 §Owner questions). Copy only, no component change.
+  - Copy, four locales (`src/i18n/messages/{pl,en,ru,uk}.json`), by a scratchpad script over the parsed JSON (byte round-trip checked first; it refused to write a missing key):
+    - Q-9 (D86): ru/uk `listings.demandCapture.consentNote` → «Нажимая, ты соглашаешься …» / «Натискаючи, ти погоджуєшся …»; the link and the rest unchanged; en and pl untouched.
+    - Q-10 (D87): `landing.footer.expanding` → the four given values ("Warsaw only for now.", "Na razie tylko Warszawa.", «Пока только Варшава.», «Поки лише Варшава.»).
+    - Q-11 (D88): `landing.hero.trustLine` → EN spec 08 verbatim; PL, RU and UK agent drafts. The gate copy (D3) is unchanged.
+    - Q-12 (D89): `landing.cta.freeNote` → the four given values; `listings.roommateMetaDescription` ends with the same sentence. To stay at or under 160 characters, "Room costs: reports and listings." became ", room costs" in every locale (EN 149, PL 146, RU 160, UK 159).
+  - Tests:
+    - `src/i18n/honesty-copy.test.ts`:
+      - `listings.demandCapture.consentNote`, `landing.footer.expanding`, `landing.hero.trustLine` and `landing.cta.freeNote` join `REWRITTEN_KEYS`.
+      - New `FREE_NO_ACCOUNT_KEYS` / `FREE_NO_ACCOUNT`, `LATER_PRICE` and `EXPANDING`. The FR-3 shell test and the FR-6 framing test keep "no free" for every key except those two.
+      - A new case checks the D87 values, the EN trust line, the EN description, and, per locale: the footer names Warsaw with no expansion word; the trust line says free and has two parts; the note equals the D89 sentence; the description ends with it and is ≤ 160 characters; the three "free" keys have no later-price word, price or digit.
+      - A pattern self-check catches the four old footer lines and "free forever" in four locales.
+    - `src/components/landing/home-framing.test.ts`: the note values and the EN order check follow D89.
+    - `src/components/listings/listings-empty-state.test.ts`: the consent note test pins the D86 values and checks that no «вы» / «ви» / «ваш» is left.
+  - Docs: `docs/specs/README.md` (Q-9 – Q-12) row → Done. `docs/ops/deploy-copy-review.md` §1 gets a T137 row and a bullet.
+- Checks:
+  - Focused Vitest (`src/i18n`, `src/components/landing`, `listings-empty-state`, the roommate route, `home-thesis`): 18 files / 240 passed. The six new or changed cases were also run by name.
+  - `npm run verify` exit 0: lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 186 files / 3726 tests; build OK (185 pages). `next-env.d.ts` restored.
+  - Not run: e2e (no e2e test reads these strings; a grep over `e2e/` found none). Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Changed keys:**
+    - ru/uk `listings.demandCapture.consentNote`;
+    - `landing.footer.expanding`, `landing.hero.trustLine`, `landing.cta.freeNote` and `listings.roommateMetaDescription` in four locales.
+  - **Draft copy (D29), the trust line:**
+    - en "Figures are open — free, no account; the per-utility breakdown after you add yours" (spec 08)
+    - pl "Liczby są otwarte — za darmo i bez konta; rozbicie opłat po dodaniu Twoich kosztów"
+    - ru «Цифры открыты — бесплатно и без аккаунта; разбивка по коммуналке — когда добавишь свои расходы»
+    - uk «Цифри відкриті — безкоштовно і без акаунта; розбивка комуналки — коли додаси свої витрати»
+    - "Figures" replaces "data" as in the EN answer. The terms follow the gate copy (`rozbicie opłat`, «разбивка по коммуналке», «розбивка комуналки»).
+  - **Agent's choice, the roommate description:** EN "Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest, room costs. Free, no account." The source labels ("reports and listings") are dropped to fit; PL keeps "(EN/RU/UK)".
+  - **Outside Q-10, left as it is:** the `/api/og` default subtitle "European rental marketplace with transparent costs" (`src/app/api/og/route.tsx`).
+  - No table, migration, event name or Assumption constant.
+- Next: `node scripts/ralph-tasks.mjs next`.

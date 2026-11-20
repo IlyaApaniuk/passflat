@@ -168,6 +168,12 @@ const REWRITTEN_KEYS = [
   'landing.cityNotify.title',
   'landing.cityNotify.subtitle',
   'landing.cityNotify.success',
+  // PRD 4 Q-9 – Q-12 (D86 – D89, spec 08 §Owner questions); listings.roommateMetaDescription
+  // is above.
+  'listings.demandCapture.consentNote',
+  'landing.footer.expanding',
+  'landing.hero.trustLine',
+  'landing.cta.freeNote',
 ];
 
 /**
@@ -258,8 +264,30 @@ const HOME_FRAMING_KEYS = [
  */
 const PRICE = /PLN|(^|[^a-ząćęłńóśźż])zł(?![a-ząćęłńóśźż])/i;
 
-/** "Free" in any locale: whether snippets may say so is Q-12, held by a blocked task. */
+/**
+ * "Free" in any locale. D89 (Q-12) lets only the keys in FREE_NO_ACCOUNT_KEYS and the hero trust
+ * line say so; every other key checked against it stays without "free".
+ */
 const FREE: RegExp = /\bfree\b|bezpłat|darmow|za darmo|бесплатн|безкоштовн|безплатн/i;
+
+/** The keys that carry "Free, no account" (D89): the roommate page's description and the CTA note. */
+const FREE_NO_ACCOUNT_KEYS = ['listings.roommateMetaDescription', 'landing.cta.freeNote'];
+
+/** The D89 sentence per locale (spec 08 §Owner questions). */
+const FREE_NO_ACCOUNT: Record<Locale, string> = {
+  en: 'Free, no account.',
+  pl: 'Bezpłatnie, bez konta.',
+  ru: 'Бесплатно, без аккаунта.',
+  uk: 'Безкоштовно, без акаунта.',
+};
+
+/** A statement about later prices, which D89 and D80 rule out next to "free". */
+const LATER_PRICE: RegExp =
+  /forever|always|later|na zawsze|zawsze|później|навсегда|всегда|потом|назавжди|завжди|пізніше/i;
+
+/** Expansion beyond Warsaw (D6, D87): the old footer line said "expanding across Europe". */
+const EXPANDING: RegExp =
+  /expand|europ|soon|rozszerz|wkrótce|расшир|европ|скоро|розшир|європ|незабаром/i;
 
 /** A promised match, date or result (EN wording; the other locales are the same drafts). */
 const PROMISE: Record<Locale, RegExp> = {
@@ -509,11 +537,13 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     }
   });
 
-  it('the roommate page title, description and h1 (PRD 4 FR-3): no "free", no promise, Warsaw named', () => {
+  it('the roommate page title, description and h1 (PRD 4 FR-3): no promise, Warsaw named, "free" only in the description (D89)', () => {
     for (const locale of LOCALES) {
       for (const key of ROOMMATE_SHELL_KEYS) {
         const value = valueAt(locale, key) as string;
-        expect(value, `${locale}: ${key}`).not.toMatch(FREE);
+        if (!FREE_NO_ACCOUNT_KEYS.includes(key)) {
+          expect(value, `${locale}: ${key}`).not.toMatch(FREE);
+        }
         expect(value, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
         // The city is literal ("w Warszawie"), never a nominative {city} placeholder (spec 09).
         expect(value, `${locale}: ${key}`).not.toContain('{');
@@ -524,12 +554,14 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     expect(valueAt('pl', 'listings.titleRoommate')).toMatch(/^Szukam współlokatora/);
   });
 
-  it('the home framing keys (PRD 4 FR-6): no "free", no promise, no placeholder', () => {
+  it('the home framing keys (PRD 4 FR-6): no promise, no placeholder, "free" only in the CTA note (D89)', () => {
     for (const locale of LOCALES) {
       for (const key of HOME_FRAMING_KEYS) {
         const value = valueAt(locale, key);
         expect(typeof value, `${locale}: ${key}`).toBe('string');
-        expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        if (!FREE_NO_ACCOUNT_KEYS.includes(key)) {
+          expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        }
         expect(value as string, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
         expect(value as string, `${locale}: ${key}`).not.toContain('{');
       }
@@ -671,6 +703,65 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
       expect(value, locale).not.toMatch(LISTINGS[locale]);
       expect(value, locale).not.toMatch(PROMISE[locale]);
       expect(value, locale).not.toMatch(/forever|na zawsze|навсегда|назавжди/i);
+    }
+  });
+
+  it('the owner answers Q-10 – Q-12 (D87 – D89): the footer line, the trust line, "Free, no account"', () => {
+    // Q-10 (D87): the footer line, the four given values.
+    expect(LOCALES.map((locale) => valueAt(locale, 'landing.footer.expanding'))).toEqual([
+      'Na razie tylko Warszawa.',
+      'Warsaw only for now.',
+      'Пока только Варшава.',
+      'Поки лише Варшава.',
+    ]);
+    // Q-11 (D88): the EN trust line verbatim; PL, RU and UK are drafts in the same sense.
+    expect(valueAt('en', 'landing.hero.trustLine')).toBe(
+      'Figures are open — free, no account; the per-utility breakdown after you add yours',
+    );
+    // Q-12 (D89): "Free, no account" closes the roommate description and is the CTA note.
+    expect(valueAt('en', 'listings.roommateMetaDescription')).toBe(
+      'Find someone to rent with in Warsaw: a Telegram bot profile (district, budget per person), contacts on mutual interest, room costs. Free, no account.',
+    );
+    for (const locale of LOCALES) {
+      const footer = valueAt(locale, 'landing.footer.expanding') as string;
+      expect(footer, locale).toMatch(/Warsz|Warsaw|Варшав/);
+      expect(footer, locale).not.toMatch(EXPANDING);
+      const trustLine = valueAt(locale, 'landing.hero.trustLine') as string;
+      expect(trustLine, locale).toMatch(FREE);
+      // The per-utility gate stays (D3): the line names it after the semicolon.
+      expect(trustLine.split('; '), locale).toHaveLength(2);
+      expect(valueAt(locale, 'landing.cta.freeNote'), locale).toBe(FREE_NO_ACCOUNT[locale]);
+      const description = valueAt(locale, 'listings.roommateMetaDescription') as string;
+      expect(description.endsWith(` ${FREE_NO_ACCOUNT[locale]}`), locale).toBe(true);
+      // Under about 160 characters (spec 08 §Owner questions).
+      expect([...description].length, locale).toBeLessThanOrEqual(160);
+      for (const key of [...FREE_NO_ACCOUNT_KEYS, 'landing.hero.trustLine']) {
+        const value = valueAt(locale, key) as string;
+        expect(value, `${locale}: ${key}`).toMatch(FREE);
+        // Nothing about later prices (D80) and no price at all.
+        expect(value, `${locale}: ${key}`).not.toMatch(LATER_PRICE);
+        expect(value, `${locale}: ${key}`).not.toMatch(PRICE);
+        expect(value, `${locale}: ${key}`).not.toMatch(/\d/);
+      }
+    }
+  });
+
+  it('the Q-10 – Q-12 patterns catch the old footer line and a later-price statement', () => {
+    for (const old of [
+      'Starting in Warsaw, expanding across Europe.',
+      'Zaczynamy w Warszawie, rozszerzamy się na Europę.',
+      'Начинаем в Варшаве, расширяемся по Европе.',
+      'Починаємо у Варшаві, розширюємось по Європі.',
+    ]) {
+      expect(old).toMatch(EXPANDING);
+    }
+    for (const later of [
+      'Free forever',
+      'Bezpłatnie na zawsze',
+      'Бесплатно навсегда',
+      'Безкоштовно назавжди',
+    ]) {
+      expect(later).toMatch(LATER_PRICE);
     }
   });
 
