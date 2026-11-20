@@ -20,6 +20,21 @@ const FIELDS = ['title', 'description'] as const;
  */
 const ALLOWED_FRONTMATTER_MATCHES: Record<string, string> = {};
 
+/**
+ * Spec 09 §Low-CTR titles (PRD 4 FR-25): the page-1 guides with a CTR below 1 % get titles and
+ * descriptions that fit the snippet. Lengths in characters (code points).
+ */
+const LOW_CTR_SLUGS = [
+  'przepisanie-licznikow-najem',
+  'hidden-rental-costs-warsaw',
+  'cesja-najmu-guide',
+  'renting-without-agent-warsaw',
+  'najem-okazjonalny-vs-standard-warsaw',
+] as const;
+const MAX_TITLE_LENGTH = 65;
+const MAX_DESCRIPTION_LENGTH = 160;
+const LOCALES: readonly HonestyLocale[] = ['en', 'pl', 'ru', 'uk'];
+
 interface Guide {
   file: string;
   slug: string;
@@ -110,6 +125,29 @@ describe('blog frontmatter (spec 09 §Blog frontmatter)', () => {
     expect(claims('uk', 'справжньої ціни району')).not.toEqual([]);
     expect(claims('en', 'Getting your deposit (kaucja) back in Warsaw: the rules')).toEqual([]);
     expect(claims('pl', 'Zwrot kaucji: zasady i termin')).toEqual([]);
+  });
+
+  it('the low-CTR guides fit the snippet: title ≤ 65, description ≤ 160 characters (FR-25)', () => {
+    const tooLong: string[] = [];
+    for (const slug of LOW_CTR_SLUGS) {
+      for (const locale of LOCALES) {
+        const { title, description } = guide(slug, locale).data;
+        const titleLength = [...title].length;
+        const descriptionLength = [...description].length;
+        if (titleLength > MAX_TITLE_LENGTH) tooLong.push(`${slug}-${locale} title: ${titleLength}`);
+        if (descriptionLength > MAX_DESCRIPTION_LENGTH) {
+          tooLong.push(`${slug}-${locale} description: ${descriptionLength}`);
+        }
+      }
+    }
+    expect(tooLong).toEqual([]);
+  });
+
+  it('the cesja guide no longer promises that Passflat finds the new tenant (table H)', () => {
+    for (const locale of LOCALES) {
+      const { title, description } = guide('cesja-najmu-guide', locale).data;
+      expect(`${title} ${description}`, locale).not.toMatch(/passflat/i);
+    }
   });
 
   it('the deposit descriptions name the Telegram bot in ru and uk only (D63, D50)', () => {

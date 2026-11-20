@@ -544,14 +544,14 @@
       "title": "Titles and descriptions of the page-1 guides with CTR below 1 % (FR-25)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#low-ctr-titles",
       "dependsOn": ["T141"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Frontmatter title and description rewritten in four locales: przepisanie-licznikow-najem (table D), hidden-rental-costs-warsaw (table E, en included), cesja-najmu-guide (table H: no tenant-replacement promise), renting-without-agent-warsaw and najem-okazjonalny-vs-standard-warsaw (table J)",
         "blog-frontmatter.test.ts asserts title ≤ 65 and description ≤ 160 characters for these five slugs in every locale, and its honesty check still passes",
         "The changed titles and descriptions are listed in the progress entry for the owner"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "H11 (Parked) shipped as a small item and read in the PRD 4 readout. Keeping the cesja article at all is Q-7 (T146)."
     },
     {

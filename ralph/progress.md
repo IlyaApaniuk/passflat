@@ -5041,3 +5041,47 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: **Assumption (spec 09, link rendering):** the own-origin prefix is the constant `OWN_ORIGIN = 'https://passflat.com'` in `src/lib/blog-markdown.ts`; only the exact prefix `https://passflat.com/` counts (no `www.`, no `http://`; no guide uses either). No new table, migration, event name or i18n key.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 10:20 · T145 · done
+
+- Done (PRD 4 FR-25; spec 09 §Low-CTR titles):
+  - `src/content/blog-frontmatter.test.ts`, extended first (2 new tests failed before the rewrite: 10 fields too long, the cesja "Passflat helps you find a match"): for `LOW_CTR_SLUGS` (the five slugs) × four locales, `title` ≤ `MAX_TITLE_LENGTH` 65 and `description` ≤ `MAX_DESCRIPTION_LENGTH` 160 characters (code points, `[...s].length`); the cesja title and description no longer name Passflat (table H: no tenant-replacement promise). The honesty check over every guide still passes.
+  - 32 frontmatter lines in 20 files rewritten from audit appendix `docs/product/reviews/2026-11-19-site-audit/seo.md` tables D, E, H, J (one-off scratchpad script, exact line replacement, not committed). 8 descriptions already equalled their table after T141 (hidden-costs × 4, no-agent × 4) and are unchanged. No body line changed (the cesja `/replacement` links and body headings stay, Q-7 / T146).
+  - `docs/specs/README.md`: FR-25 row → Done (the Q-7 row stays Blocked, T146).
+- Changed titles and descriptions (new value, length; old value in `git show HEAD:src/content/blog/<file>`):
+  - `przepisanie-licznikow-najem` (table D):
+    - en title "Utility meters in your name when renting in Poland?" (51; was 94); description "Put electricity and gas in your name when renting in Poland? What transfers, what stays with the landlord, the PGE/Tauron/Orlen steps and old meter debts." (154)
+    - pl title "Przepisanie liczników na najemcę: prąd i gaz krok po kroku" (58; was 68); description "Czy przepisać prąd i gaz na siebie przy wynajmie? Co da się przepisać, co zostaje na właścicielu, cesja w PGE, Tauron i Orlen krok po kroku, dług poprzednika." (158)
+    - ru title «Переоформлять ли свет и газ на себя при аренде в Польше?» (56; was 81); description «Что можно перевести на арендатора, что остаётся на владельце, как проходит переоформление в PGE, Tauron и Orlen и что делать с долгом прошлого жильца.» (150)
+    - uk title «Чи переоформлювати світло і газ на себе при оренді в Польщі?» (60; was 84); description «Що можна перевести на орендаря, що лишається на власнику, як проходить переоформлення в PGE, Tauron і Orlen і що робити з боргом попереднього мешканця.» (151)
+  - `hidden-rental-costs-warsaw` (table E; descriptions already the table's since T141):
+    - en title "Hidden rental costs in Warsaw: czynsz, utilities, deposit" (57; was "… The Complete Guide")
+    - pl title "Ukryte koszty wynajmu w Warszawie: czynsz, media, kaucja" (56)
+    - ru title «Скрытые расходы аренды в Варшаве: чинш, коммуналка, депозит» (59)
+    - uk title «Приховані витрати оренди у Варшаві: чинш, комуналка, застава» (60)
+  - `cesja-najmu-guide` (table H):
+    - en title "Lease assignment (cesja najmu) in Poland: step by step" (54); description "What cesja najmu is, whether the landlord's consent is needed, which documents to sign and how to settle the deposit between the old and the new tenant." (152; was "… and how Passflat helps you find a match")
+    - pl title "Cesja najmu: jak przekazać umowę nowemu najemcy" (47); description "Czym jest cesja najmu, czy potrzebna jest zgoda właściciela, jakie dokumenty podpisać i jak rozliczyć kaucję między starym a nowym najemcą — krok po kroku." (155)
+    - ru title «Cesja najmu: как передать договор аренды в Польше» (49); description «Что такое cesja najmu, нужно ли согласие владельца, какие документы подписать и как рассчитаться по залогу между старым и новым арендатором.» (140)
+    - uk title «Cesja najmu: як передати договір оренди в Польщі» (48); description «Що таке cesja najmu, чи потрібна згода власника, які документи підписати і як розрахуватися за заставу між старим і новим орендарем.» (132)
+  - `renting-without-agent-warsaw` (table J; descriptions already the table's since T141):
+    - en title "Renting in Warsaw without an agent: where to look" (49; was 72)
+    - pl title "Wynajem w Warszawie bez pośrednika: gdzie szukać" (48; was 80)
+    - ru title «Аренда в Варшаве без посредника: где искать» (43)
+    - uk title «Оренда у Варшаві без посередника: де шукати» (43)
+  - `najem-okazjonalny-vs-standard-warsaw` (table J):
+    - en title "Najem okazjonalny: what it means for the tenant" (47); description "Najem okazjonalny vs a standard umowa najmu in Poland: the notary statement, the eviction address, which protects you more and what to check first." (147)
+    - pl title "Najem okazjonalny a zwykła umowa: co to znaczy dla najemcy" (58); description "Czym najem okazjonalny różni się od zwykłej umowy najmu: oświadczenie u notariusza, wskazanie lokalu, która umowa lepiej chroni najemcę i na co uważać." (151)
+    - ru title «Najem okazjonalny или обычный договор: что это для жильца» (57; was 66); description «Чем najem okazjonalny отличается от обычного договора аренды: заявление у нотариуса, адрес на случай выселения, что лучше защищает жильца и что проверить.» (154; was 165)
+    - uk title «Najem okazjonalny чи звичайний договір: що це для орендаря» (58; was 67); description «Чим najem okazjonalny відрізняється від звичайного договору оренди: заява в нотаріуса, адреса на випадок виселення, що краще захищає орендаря і що перевірити.» (158; was 161)
+- Checks:
+  - `npx vitest run src/content/blog-frontmatter.test.ts`: 2 failed / 5 passed before the rewrite; `src/content/` 2 files / 18 passed after.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 165 files / 3486 tests; build OK (183 pages). `next-env.d.ts` restored.
+  - Not run: `npm run test:e2e` (not in the task's checks); no guide opened in a browser; no CTR measured (search results change only after a deploy and a recrawl). Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29, spec 09 Assumption):** the 32 values above, the audit's drafts as written except three small edits: the ru and uk meters titles end in "?" (both are «ли» / «Чи» questions); the ru cesja description says «рассчитаться по залогу» instead of the table's «рассчитать депозит» (the ru guide says «залог» throughout, and «рассчитать» reads as "calculate"); the uk cesja description says «розрахуватися за заставу» instead of «розрахувати заставу» for the same reason.
+  - The ru/uk hidden-costs titles use «чинш» (the table's transliteration of czynsz, as in the calculator drafts of table G); the descriptions keep "czynsz administracyjny".
+  - Keeping the cesja article at all stays Q-7 (T146); this task only removed the tenant-replacement promise from its frontmatter.
+  - No new table, migration, event name or i18n key.
+- Next: `node scripts/ralph-tasks.mjs next`.
