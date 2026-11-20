@@ -157,6 +157,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Node's `--env-file` / `--env-file-if-exists` never overrides a variable already set in the environment: a value on the command line wins over `.env.local` (proven in T116 for `npm run bot:posts`).
 - Tailwind's `sm:not-sr-only` resets padding and margin to 0 at that breakpoint: put the spacing of a `sr-only sm:not-sr-only` heading on a wrapper (example: the roommate h1 in `listings-page-client.tsx`). `ListingsPageClient` render tests mock `Footer` to a `data-shell` marker (`room-money-placement.test.ts`).
 - **2026-11-19, evening (D75 – D77), a note on the T105 handoff below; the entry itself is not rewritten.** Deploy step 3 is superseded: `ROOMMATE_MATCHING_ENABLED=true` is set in Vercel **at the PRD 3 deploy** (D75), so stage 2 is live from day 0 and the daily go check from 2027-01-04 is not run; the stage 1 readout of 2027-01-18 still decides whether the test continues. The "approve before the switch" copy of the handoff (terms, safety lines, statement of reasons, report and appeal texts, the rest of stage 2) is therefore approved before the deploy, with the privacy section. Deploy step 5 uses a **separate production bot** (D76): `@passflatdev_bot` stays the dev bot with its token only in `.env.local`; the production token goes only into Vercel; its username is Open (task T117) and until then `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` stays unset. Deploy step 6 (BotFather by hand) is replaced by `npm run bot:profile` (D77, task T115), which also sets the name and the photo (`public/bot-avatar.png`, task T114). Step 7's `<bot>` placeholder is handled by task T116. The posting kit's "matching isn't open yet" sentence is deleted before the first slot, not on a switch day.
+- e2e runs Desktop Chrome with an `en-US` browser locale, and next-intl's locale detection sends `/` to `/en`: a test of the Polish `/` needs `test.use({ locale: 'pl-PL' })` (example: the header tests in `e2e/home.spec.ts`). Phone layouts can be measured in a temporary spec with `page.setViewportSize` and `getBoundingClientRect` / `scrollWidth` in `page.evaluate`.
 
 ## Log
 
@@ -3731,3 +3732,41 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - On mobile with the map toggled on, the list container is hidden, and so is the footer (it scrolls with the list, as the spec says).
   - No new table, migration or event.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 07:52 · T120 · done
+
+- Done (PRD 4 FR-5, spec 08 §Header and footer entries):
+  - `src/components/landing/header.tsx`:
+    - `navLinks` = Find a flatmate → `/warsaw/roommate` (`common.findFlatmate`), Costs → `/warsaw/costs` (`costs.title`), Check an address → `/warsaw/check` (`common.checkAddress`). `/warsaw/review` left the header. The desktop nav and the mobile menu still map this one array.
+    - The mobile pill → `/warsaw/roommate` with `common.findFlatmate`, same `trackCta('header_mobile')` (`cta_click {placement: 'header_mobile'}`).
+    - The wordmark span ("Passflat") gets `max-[410px]:sr-only` (see "Did not work" and Owner review).
+  - `src/components/landing/footer.tsx`: the product column gains Costs by district → `/warsaw` (`landing.footer.costsByDistrict`) and Building reviews → `/warsaw/review` (`common.buildingReviews`), after Cost Reports and before Post a Listing. The three frozen listings links stay (FR-7, T122). The `useTranslations()` hook, no `'use client'`, unchanged.
+  - Copy: new `common.findFlatmate` and `landing.footer.costsByDistrict` in four locales; `common.costsShort` deleted in four locales (its only reader was the old pill; grep found no other use).
+  - `e2e/home.spec.ts`: on `/` (browser locale `pl-PL`, URL stays `/`) and `/en` (`en-US`), the first header link whose href ends with `/warsaw/roommate` is visible and reads "Szukam współlokatora" / "Find a flatmate"; no header link ends with `/warsaw/review`.
+  - Docs: `docs/architecture.md` cost-transparency row ("header nav after "Find a flatmate"", within the column width, no re-pad); `docs/specs/README.md` PRD 4 map FR-5 → Done.
+- Tests:
+  - New `src/components/landing/header.test.ts` (8 tests; `react`'s `useState(false)` mocked to open the mobile menu, `Link` recorded): the desktop nav's three `[href, label]` pairs in EN; the mobile menu equals the desktop nav in four locales; no `/warsaw/review` and no "Building reviews" with the menu closed or open; the pill is the only clickable link with the menu closed, goes to `/warsaw/roommate` and reads `common.findFlatmate` in four locales; its click captures exactly `cta_click {placement: 'header_mobile'}`; the menu links capture nothing; the wordmark keeps its text with `max-[410px]:sr-only`; `costsShort` is gone from the header and the four files.
+  - New `src/components/landing/footer.test.ts` (5 tests): the EN product column in order (templates flag off); the two new labels equal their keys in four locales; the three frozen links stay in four locales; the templates link stays behind its flag; a static read that `footer.tsx` has no `'use client'` directive, no `getTranslations`, and keeps `useTranslations()`.
+  - Both use `createTranslator` with `onError` that throws, so a missing key fails.
+- Checks:
+  - `npx vitest run` header, footer, `messages.test.ts`, `honesty-copy.test.ts`: passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 145 files / 3127 tests; build OK (183 pages).
+  - `npm run test:e2e` exit 0: 10 passed (the two new header tests included).
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no event added, no message sent.
+- Did not work:
+  - The first e2e run failed on `/`: Desktop Chrome sends `en-US`, so locale detection served English there. Each case now pins the browser locale (Learnings).
+  - A temporary Playwright spec (deleted) measured the mobile bar at 320, 360, 375, 390, 412 and 1023 px in four locales. With the wordmark, the PL pill (173 px) and the UK pill (171 px) pushed the hamburger out of the rounded bar: 56 / 55 px at 320, 16 / 15 px at 360, 1 px (PL) at 375, and 0 px gap to the wordmark at 390; EN overflowed 5 px at 320. With the wordmark visually hidden below 410 px: no overflow at any width in any locale, and at 412 px the wordmark is back with a 20 px gap before the PL pill.
+  - First test drafts: `costs.title` in EN is "Cost Transparency", not "Costs"; the footer's comment names 'use client', so the static check matches a directive line only; a `children: unknown` type failed typecheck.
+- Owner review:
+  - **Draft copy (agent copy, D29), PRD 4 §8 as given:**
+    - `common.findFlatmate`: pl "Szukam współlokatora", en "Find a flatmate", ru «Найти соседа», uk «Знайти співмешканця».
+    - `landing.footer.costsByDistrict`: pl "Koszty według dzielnic", en "Costs by district", ru «Расходы по районам», uk «Витрати за районами».
+    - Deleted: `common.costsShort` (pl "Koszty", en "Costs", ru «Расходы», uk «Витрати»).
+    - The PL nav item and pill read "Szukam współlokatora" (first person, "I'm looking for a flatmate") while EN/RU/UK read "Find a flatmate"; that is §8's text.
+  - Namespaces and providers: the header (client) reads `common.*` and `costs.title`; the footer reads `landing.footer.*` and `common.*`. `common`, `costs` and `landing` are in `SHARED_CLIENT_NAMESPACES` (the locale layout's provider), and the footer is isomorphic.
+  - **Assumptions applied (spec 08 FR-5, labels and order):** the order is the `navLinks` array in `header.tsx`; the footer position (after Cost Reports) is the agent's choice. Building reviews moved to the footer is the decision review row 12 Assumption (a demotion; the page stays reachable).
+  - **Agent's choice, not in the spec:** below 410 px the "Passflat" wordmark next to the header icon is visually hidden (still read by screen readers) on every locale, so the longer pill fits. Common phones at 360, 375 and 390 px now show the icon only; 412 px and up show the wordmark. Alternatives if unwanted: a shorter pill-only key, or a smaller pill.
+  - The mobile pill keeps the accent (green) style; `cta_click {placement: 'header_mobile'}` now counts taps to the roommate page, not to costs: compare it with pre-deploy numbers only knowing that.
+  - The footer keeps "Roommate Search" → `/warsaw/roommate` as before, so the roommate page is linked from both the header and the footer.
+  - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next` (T121, home framing surfaces).

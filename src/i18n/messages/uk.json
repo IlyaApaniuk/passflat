@@ -36,7 +36,6 @@
   },
   "common": {
     "appName": "Passflat",
-    "costsShort": "Витрати",
     "login": "Увійти",
     "register": "Реєстрація",
     "logout": "Вийти",
@@ -73,7 +72,8 @@
     "copyFailed": "Не вдалося скопіювати посилання",
     "error": "Щось пішло не так",
     "checkAddress": "Перевірити адресу",
-    "buildingReviews": "Відгуки про будинки"
+    "buildingReviews": "Відгуки про будинки",
+    "findFlatmate": "Знайти співмешканця"
   },
   "upload": {
     "progress": "Завантаження фото {done}/{total}…",
@@ -301,6 +301,7 @@
       "roommateSearch": "Пошук співмешканця",
       "temporarySublets": "Суборенда",
       "costReports": "Звіти про витрати",
+      "costsByDistrict": "Витрати за районами",
       "addListing": "Розмістити оголошення",
       "pricing": "Ціни",
       "resources": "Шаблони документів",

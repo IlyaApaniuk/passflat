@@ -36,7 +36,6 @@
   },
   "common": {
     "appName": "Passflat",
-    "costsShort": "Koszty",
     "login": "Zaloguj się",
     "register": "Zarejestruj się",
     "logout": "Wyloguj",
@@ -73,7 +72,8 @@
     "copyFailed": "Nie udało się skopiować linku",
     "error": "Coś poszło nie tak",
     "checkAddress": "Sprawdź adres",
-    "buildingReviews": "Opinie o budynkach"
+    "buildingReviews": "Opinie o budynkach",
+    "findFlatmate": "Szukam współlokatora"
   },
   "upload": {
     "progress": "Przesyłanie zdjęć {done}/{total}…",
@@ -301,6 +301,7 @@
       "roommateSearch": "Współlokatorzy",
       "temporarySublets": "Podnajem",
       "costReports": "Raporty kosztów",
+      "costsByDistrict": "Koszty według dzielnic",
       "addListing": "Dodaj ogłoszenie",
       "pricing": "Cennik",
       "resources": "Wzory dokumentów",

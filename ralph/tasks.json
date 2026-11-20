@@ -121,7 +121,7 @@
       "title": "Header: 'Find a flatmate' first and the mobile pill to the roommate page; the footer gains costs by district and building reviews (FR-5)",
       "spec": "docs/specs/08-site-structure-and-entries.md#header-and-footer-entries",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Header navLinks = Find a flatmate → /warsaw/roommate (new key common.findFlatmate), Costs → /warsaw/costs, Check an address → /warsaw/check; /warsaw/review leaves the header; the desktop nav and the mobile menu read the same array",
         "The mobile pill links to /warsaw/roommate with common.findFlatmate and keeps cta_click {placement: 'header_mobile'}",
@@ -130,7 +130,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48. Moving building reviews to the footer is an Assumption (a demotion; the page stays reachable), listed for the owner in decision review row 12."
     },
     {

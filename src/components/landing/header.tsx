@@ -97,15 +97,16 @@ export function Header({ initialUser }: HeaderProps = {}) {
   const { unreadCount } = useUnreadCount(user?.id ?? null);
   const userInitial = user?.email?.[0]?.toUpperCase() ?? 'U';
 
-  // Listings are strategically frozen (pivot 2026-06-20): costs lead the nav,
-  // listing pages stay reachable by direct link only. The nav carries nouns —
-  // people browsing, not acting; the hero carries the verbs.
+  // The roommate page is the entry (D48, PRD 4 FR-5): finding a flatmate leads
+  // the nav, then costs and the checker. Listings stay frozen (D5) and building
+  // reviews live in the footer. The desktop nav and the mobile menu both read
+  // this one array.
+  // `common`, not `checker` or `listings`: the header ships on every page, and
+  // the checker namespace is deliberately kept out of the shared client bundle.
   const navLinks = [
+    { href: `/${DEFAULT_CITY}/roommate` as const, label: t('common.findFlatmate') },
     { href: `/${DEFAULT_CITY}/costs` as const, label: t('costs.title') },
-    // `common`, not `checker`: the checker namespace is deliberately kept out of
-    // the shared client bundle, and the header ships on every page.
     { href: `/${DEFAULT_CITY}/check` as const, label: t('common.checkAddress') },
-    { href: `/${DEFAULT_CITY}/review` as const, label: t('common.buildingReviews') },
   ];
 
   return (
@@ -118,7 +119,12 @@ export function Header({ initialUser }: HeaderProps = {}) {
               <Home className="h-4 w-4 text-primary-foreground" />
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">{t('common.appName')}</span>
+            {/* Below 410px the "Find a flatmate" pill (PL and UK about 170px)
+                does not fit beside the wordmark with a gap: the bar keeps the
+                icon and the link keeps its name for screen readers. */}
+            <span className="text-xl font-semibold tracking-tight max-[410px]:sr-only">
+              {t('common.appName')}
+            </span>
           </Link>
 
           {/* Desktop Nav — absolutely centered so it stays in the middle
@@ -230,16 +236,15 @@ export function Header({ initialUser }: HeaderProps = {}) {
 
           <div className="flex items-center gap-2 lg:hidden">
             {/* The main route, one tap from every page — on mobile the nav
-                hides in the hamburger, so without this pill /costs is a level
-                deeper for exactly the social traffic the site is built for.
-                It leads to the data, not the form: the contribution ask lives
-                on /costs where the visitor can see what they'd be adding to. */}
-            <Link href={`/${DEFAULT_CITY}/costs`} onClick={trackCta('header_mobile')}>
+                hides in the hamburger, so without this pill the roommate page
+                (the entry, D48) is a level deeper for exactly the social
+                traffic the site is built for. Same `header_mobile` event. */}
+            <Link href={`/${DEFAULT_CITY}/roommate`} onClick={trackCta('header_mobile')}>
               <Button
                 size="sm"
                 className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                {t('common.costsShort')}
+                {t('common.findFlatmate')}
               </Button>
             </Link>
 

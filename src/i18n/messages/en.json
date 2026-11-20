@@ -36,7 +36,6 @@
   },
   "common": {
     "appName": "Passflat",
-    "costsShort": "Costs",
     "login": "Log in",
     "register": "Sign up",
     "logout": "Log out",
@@ -73,7 +72,8 @@
     "copyFailed": "Failed to copy link",
     "error": "Something went wrong",
     "checkAddress": "Check an address",
-    "buildingReviews": "Building reviews"
+    "buildingReviews": "Building reviews",
+    "findFlatmate": "Find a flatmate"
   },
   "upload": {
     "progress": "Uploading photos {done}/{total}…",
@@ -301,6 +301,7 @@
       "roommateSearch": "Roommate Search",
       "temporarySublets": "Temporary Sublets",
       "costReports": "Cost Reports",
+      "costsByDistrict": "Costs by district",
       "addListing": "Post a Listing",
       "pricing": "Pricing",
       "resources": "Document Templates",
