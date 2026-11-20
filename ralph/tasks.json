@@ -29,7 +29,7 @@
       "title": "Bot profile script: name, descriptions and photo through the Bot API, `npm run bot:profile -- [--dry-run]` (D77)",
       "spec": "src/lib/bot/README.md#going-live",
       "dependsOn": ["T114"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/lib/bot/profile-texts.ts holds the texts as the source of truth: BOT_PROFILE with, for the default (RU) and for language codes uk, en and pl (pl = the EN texts, D68), the name (agent draft, e.g. 'Passflat'; listed for review), the description and the short description moved verbatim from docs/marketing/bot-profile.md ('About' = short description); BOT_PROFILE_LIMITS = { name: 64, description: 512, shortDescription: 120 } (the Bot API limits), typed so every language has all three texts",
         "src/lib/bot/profile.ts exports applyBotProfile(api, { dryRun, photoPath }) that calls api.setMyName, api.setMyDescription and api.setMyShortDescription for the default (no language_code) and for uk, en and pl, then api.setMyProfilePhoto({ photo: { type: 'static', photo: new InputFile(photoPath) } }) with public/bot-avatar.png (T114); it validates every text against BOT_PROFILE_LIMITS before the first call and throws naming the key and language on a breach; with dryRun it prints each call (method, language_code, text length or file) and makes no request; it returns the list of calls for the tests",
@@ -40,7 +40,7 @@
         "The name, descriptions and short descriptions in every language are listed in the progress entry as draft copy for the owner's review"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D77 (evening of 2026-11-19); D68 for pl = EN; D63 for the EN deposit line. The installed grammY 1.46 (@grammyjs/types 5.0.0) declares setMyName, setMyDescription, setMyShortDescription and setMyProfilePhoto (InputProfilePhoto). A client language without a text falls back to the default text in Telegram, which is RU, as normalizeLocale does in the bot. Checks never call Telegram; the script is an owner command with an external effect (docs/development-workflow.md)."
     },
     {

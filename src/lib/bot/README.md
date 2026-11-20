@@ -521,8 +521,9 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
 
 ## Going live
 
-1. **BotFather** — `/newbot`, then keep the token. Set the description and
-   about text (drafts in RU, UK and EN: `docs/marketing/bot-profile.md`); the
+1. **BotFather** — `/newbot`, then keep the token. Nothing else is set by
+   hand in BotFather: the name, descriptions, short descriptions and photo are
+   set by `npm run bot:profile` (step 5, D77), and the
    command menu is published by the webhook script
    (`COMMAND_MENUS` in `texts.ts`: RU by default, UK for `language_code: 'uk'`,
    EN for `en` and `pl`). A menu change takes effect only after
@@ -553,6 +554,20 @@ https://passflat.com/api/cron/roommate-close`. Without the secret → 401,
    bot's username; the script exits with a message when the variable is missing
    or is not a bot username). The kit in the repository keeps `<bot>`; nothing
    else stores the username.
+   Then set the production bot's profile (owner only, with its token in the
+   environment): `npm run bot:profile -- --dry-run` prints every call and sends
+   nothing (it needs no token), then `npm run bot:profile` (`scripts/tg-profile.ts`)
+   prints the bot's username and sets, through the Bot API, the name,
+   description and short description for the default language (RU, no
+   `language_code`) and for `uk`, `en` and `pl` (`pl` = the EN texts, D68), then
+   the photo `public/bot-avatar.png`. The texts are `profile-texts.ts` (the
+   source of truth; `docs/marketing/bot-profile.md` is the copy, and a test keeps
+   the two equal); every text is checked against the Bot API limits before the
+   first call. The token is read from the environment only: a value set in the
+   shell wins over `.env.local`, which holds the dev bot's token, so a plain
+   `npm run bot:profile` tries it on the dev bot `@passflatdev_bot` first. Every
+   call is idempotent: after an error (Telegram rate-limits `setMyName`) wait and
+   run it again.
 
 The production database needs five migrations, none applied to prod (the
 first four as of 2026-10-05) — run them deliberately: `20260831120000_add_telegram_bot`

@@ -154,10 +154,12 @@ PRD 3 FR-41; **Decided** (the rules, D53; manual minutes include the owner's rev
   readout. It holds no user names, chat ids or message texts.
 - Test: every `t.me/…?start=` link in `roommate-posts.md` parses with `parseStartPayload` to
   `{ kind: 'roommate' }` with a source other than `other`.
-- `docs/marketing/bot-profile.md`: drafts of the BotFather description and "about" text in RU, UK
-  and EN that name what the bot does now (address and district costs, the deposit helper, roommate
-  matching), with no promise of a match, a date or a result; the owner sets them in BotFather
-  after the deploy (nobody else owns them).
+- `docs/marketing/bot-profile.md`: drafts of the bot's name, description and "about" (short
+  description) text in RU, UK and EN that name what the bot does now (address and district
+  costs, the deposit helper, roommate matching), with no promise of a match, a date or a result.
+  Since D77 the texts live in `src/lib/bot/profile-texts.ts` and the Markdown is their copy (a
+  test keeps the two equal); the owner sets them and the photo with `npm run bot:profile` (after
+  `--dry-run`), not in BotFather (T115).
 
 ## Stage 1 readout
 

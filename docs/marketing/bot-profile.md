@@ -1,23 +1,47 @@
-# Bot profile texts (BotFather)
+# Bot profile texts
 
-**Draft for the owner.** Agent drafts (PRD 3 FR-41, spec 05 §Posting kit). You set them in
-BotFather after the deploy; nobody else owns them, and no code or check sets them.
+**Draft for the owner.** Agent drafts (PRD 3 FR-41, spec 05 §Posting kit, D77). The source of
+truth is `src/lib/bot/profile-texts.ts`; this file is the human-readable copy. You set the texts
+and the photo with `npm run bot:profile` (after `npm run bot:profile -- --dry-run`) instead of in
+BotFather; a change goes into the module and here together.
 
-- **Description** (`/setdescription`): shown in an empty chat before the person presses Start.
+- **Name** (`setMyName`): shown in the chat list and on the profile. At most 64 characters.
+- **Description** (`setMyDescription`): shown in an empty chat before the person presses Start.
   At most 512 characters.
-- **About** (`/setabouttext`): shown on the bot's profile page and with a shared link to the bot.
-  At most 120 characters.
-- **Languages.** BotFather sets one default text. The bot answers a client language it does not
-  know in Russian (`normalizeLocale` in `src/lib/bot/texts.ts`), so RU fits as the default. The
-  UK and EN texts can be set per client language through the Bot API (`setMyDescription` and
-  `setMyShortDescription` with `language_code` `uk`, `en`, and `pl`, which the bot answers in
-  English, D68). That is an owner action; the code does not call these methods.
+- **About** (`setMyShortDescription`): shown on the bot's profile page and with a shared link to
+  the bot. At most 120 characters.
+- **Photo** (`setMyProfilePhoto`): `public/bot-avatar.png` (512 × 512, from the logo).
+- **Languages.** RU is the default text (sent without a `language_code`): Telegram shows it to a
+  client language without its own text, and the bot answers such a language in Russian
+  (`normalizeLocale` in `src/lib/bot/texts.ts`). UK goes to `language_code` `uk`, EN to `en` and
+  to `pl`, which the bot answers in English (D68).
 - Each text names what the bot does now: costs by address and district, the deposit helper and
   roommate matching. None promises a match, a date or a result, names a figure or says
   "verified". The roommate line holds with the matching switch off and on, so the texts need no
   change on the day of the switch. The deposit helper speaks Russian and Ukrainian only (D63), and
   the EN text says so.
-- `src/lib/bot/roommate-posting-kit.test.ts` checks the character limits.
+- `src/lib/bot/profile-texts.test.ts` checks the limits, the honesty rules and that the blocks
+  below equal the module's texts.
+
+## Name
+
+RU
+
+```text
+Passflat
+```
+
+UK
+
+```text
+Passflat
+```
+
+EN
+
+```text
+Passflat
+```
 
 ## Description
 

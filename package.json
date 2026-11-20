@@ -38,6 +38,7 @@
     "bot:dev": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-dev.ts",
     "bot:webhook": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-webhook.ts",
     "bot:posts": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-posts.ts",
+    "bot:profile": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/tg-profile.ts",
     "prepare": "husky"
   },
   "dependencies": {
