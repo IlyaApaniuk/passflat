@@ -44,6 +44,7 @@ vi.mock('@/i18n/navigation', () => ({
     createElement('a', { href }, children),
 }));
 
+import { organizationJsonLd } from '@/lib/json-ld';
 import { Footer } from './footer';
 
 const text = (html: string) =>
@@ -123,6 +124,34 @@ describe('Footer product column (PRD 4 FR-5, FR-7)', () => {
   it('keeps the document templates link behind its flag', () => {
     vi.stubEnv('NEXT_PUBLIC_FEATURE_DOCUMENT_TEMPLATES', 'true');
     expect(productColumn('en')?.at(-1)).toEqual(['/resources', 'Document Templates']);
+  });
+});
+
+// D85 (owner question Q-8): the Instagram handle is passflatapp; the
+// Organization schema's sameAs and the footer's link name the same account.
+describe('Instagram handle (D85, Q-8)', () => {
+  const INSTAGRAM_URL = 'https://instagram.com/passflatapp';
+
+  const footerInstagramHrefs = () => {
+    state.locale = 'en';
+    const html = renderToStaticMarkup(createElement(Footer));
+    return [...html.matchAll(/<a href="([^"]*)"[^>]*aria-label="Instagram"/g)].map(
+      ([, href]) => href,
+    );
+  };
+  const schemaInstagramUrls = () =>
+    organizationJsonLd().sameAs.filter((url) => /instagram\.com/i.test(url));
+
+  it('the footer links to the passflatapp account', () => {
+    expect(footerInstagramHrefs()).toEqual([INSTAGRAM_URL]);
+  });
+
+  it('organizationJsonLd().sameAs carries the passflatapp account and no other Instagram URL', () => {
+    expect(schemaInstagramUrls()).toEqual([INSTAGRAM_URL]);
+  });
+
+  it("the schema's Instagram URL equals the footer's", () => {
+    expect(schemaInstagramUrls()).toEqual(footerInstagramHrefs());
   });
 });
 

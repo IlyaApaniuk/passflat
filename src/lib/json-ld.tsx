@@ -13,7 +13,8 @@ export function organizationJsonLd() {
       contactType: 'customer service',
       availableLanguage: ['Polish', 'English', 'Russian', 'Ukrainian'],
     },
-    sameAs: ['https://linkedin.com/company/passflat', 'https://instagram.com/passflat.com'],
+    // The Instagram handle is passflatapp, the footer's link (D85, Q-8).
+    sameAs: ['https://linkedin.com/company/passflat', 'https://instagram.com/passflatapp'],
   };
 }
 

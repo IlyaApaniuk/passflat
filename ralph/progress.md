@@ -5694,3 +5694,14 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Did not work: nothing.
 - Owner review: after deploy, the next Search Console sitemap read drops the two lists and the listing details; while `NEXT_PUBLIC_SITE_INDEXABLE` is not `true`, the page-level `robots` replaces the layout's `noindex, nofollow` on the two lists with `noindex, follow` (same as `/costs/share`). No copy, table, migration, event or Assumption.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:47 · T151 · done
+
+- Done (PRD 4 FR-28, spec 09 §Sitemap, robots, structured data; the owner's answer Q-8, D85: the handle is `passflatapp`).
+  - `src/lib/json-ld.tsx`: `organizationJsonLd().sameAs` Instagram `https://instagram.com/passflat.com` → `https://instagram.com/passflatapp` (the footer's URL), with a one-line comment naming D85. LinkedIn unchanged; the footer unchanged.
+  - `src/components/landing/footer.test.ts`: new `describe('Instagram handle (D85, Q-8)')` with three cases: the rendered footer's `aria-label="Instagram"` link is exactly `https://instagram.com/passflatapp`; `organizationJsonLd().sameAs` holds exactly that one Instagram URL; the schema's Instagram URLs equal the footer's.
+  - Docs: `docs/specs/README.md` FR-28 (Q-8) row → Done.
+- Checks: `npx vitest run src/components/landing/footer.test.ts` 9 passed. `npm run verify` exit 0: lint; typecheck; knip 26 unused exports / 17 types, as before; Vitest 187 files / 3731 tests; build OK (185 pages). `next-env.d.ts` restored. Not run: e2e (no e2e test reads the schema or the footer's social links). Nothing deployed, no migration, no event.
+- Did not work: nothing.
+- Owner review: after deploy, the Organization JSON-LD in the layout and on `/about` names `instagram.com/passflatapp`; Google's Rich Results Test can confirm it. No copy, table, migration, event or Assumption.
+- Next: `node scripts/ralph-tasks.mjs next`.

@@ -644,12 +644,12 @@
       "title": "Organization schema: the right Instagram handle (owner question Q-8)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-8: organizationJsonLd().sameAs carries the answered Instagram URL and the footer's Instagram link matches it; a unit test asserts both"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-8 (PRD 4, decision review row 8). Which Instagram handle is right: passflatapp (the footer) or passflat.com (the Organization schema)? Proposal: passflatapp; the schema's value looks like a typo. A fact only the owner knows.\nOwner answer: Q-8, D85: the Instagram handle is passflatapp; organizationJsonLd().sameAs becomes the footer's URL https://instagram.com/passflatapp, with a unit test that the schema and the footer agree"
     },
     {
