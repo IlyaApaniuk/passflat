@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   icons: {
     icon: { url: '/icon.svg', type: 'image/svg+xml' },
-    apple: '/icon.svg',
+    // A PNG from `app/apple-touch-icon.png/route.tsx` (iOS ignores SVG touch icons).
+    apple: '/apple-touch-icon.png',
   },
   robots: robotsMeta,
   // MyLead affiliate-network site-ownership verification. Harmless to keep

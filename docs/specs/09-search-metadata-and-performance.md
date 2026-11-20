@@ -315,6 +315,10 @@ s-maxage=604800`. `metadata.icons` in `src/app/layout.tsx` keeps `icon: '/icon.s
   → 200 `image/png`; `GET /nonexistent.ext` → 404 (the guard). An unknown path without a dot
   (`/xx-unknown`) reaches the `[city]` segment, which returns 500 in the e2e build because it has
   no database (`ralph/progress.md` Learnings): it is not asserted in e2e.
+- Built (T152): the guard alone did not answer `/nonexistent.ext` (on `next start` the request
+  hung: the on-demand render of the static `/[locale]` home still read next-intl's request
+  header). `src/app/[locale]/page.tsx` also exports `dynamicParams = false`, so a locale outside
+  `generateStaticParams` gets the router's 404 without a render. The guard stays for deeper routes.
 
 ## HTTP headers
 

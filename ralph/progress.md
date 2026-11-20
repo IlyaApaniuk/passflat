@@ -173,6 +173,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `src/content/blog-bodies.test.ts` fails on a cost link line matching `FORBIDDEN`, on any body line with the verification family (phrase-based `ALLOWED_VERIFICATION_MATCHES`) and on any sentence with an amount (`%`, `zł`, `PLN`) next to a median / average word or Passflat / the tenant reports: a guide links to `/blog/warsaw-rent-prices` instead of copying its numbers.
 - A test that runs the real room/flat figure loaders (district page, bot room reference) can reuse spec 06's golden reports and the `findMany` / `findUnique` answers in `src/lib/roommate/room-costs-fixture.test-support.ts` (type the hoisted `reports` as `FixtureReport[]`); example: `src/app/[locale]/[city]/[district]/room-reference.test.ts`.
 - `src/content/blog-bodies.test.ts` fails on any guide line with a Markdown link to `/check`, `/costs` or `/building` that matches `FORBIDDEN[locale]`; its `ALLOWED_LINK_LINE_MATCHES` exempts a `{ file, phrase }` (only that phrase, the rest of the line is still checked). Guide lines are rewritten best by a scratchpad script of exact `[file, line, [old, new]]` replacements (example: T142); a line starting with "- " hides from `grep -c "^-[^-]"` over a diff.
+- A dotted single-segment path (`/x.ext`) skips the middleware and reaches `/[locale]` as a "locale"; the home page's `dynamicParams = false` 404s it without a render (before it, `next start` hung on such a request). Next's build table hides `/favicon.ico`: look in `.next/app-path-routes-manifest.json`.
+- `next/og` `ImageResponse` renders a real PNG in Vitest (node) and under `npx tsx`: read the body and check the size from the IHDR bytes (example: `src/app/icon-routes.test.ts`).
 
 ## Log
 
@@ -5155,4 +5157,28 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - `costs.submit.metaDescription`: en "Two minutes: rent, czynsz, utilities and deposit for your building. Shown only as aggregates with their counts." (PRD 4 §8 as written); pl "Dwie minuty: czynsz najmu, czynsz administracyjny, media i kaucja w Twoim budynku. Pokazujemy je tylko zbiorczo, z liczbą raportów."; ru «Две минуты: аренда, чинш, коммуналка и залог по вашему дому. Показываем только сводные данные с числом отчётов.»; uk «Дві хвилини: оренда, чинш, комуналка і застава у вашому будинку. Показуємо лише зведені дані з кількістю звітів.» (pl/ru/uk agent drafts: pl uses the form's own labels "czynsz najmu" / "czynsz administracyjny"; ru/uk «чинш» and «коммуналка» / «комуналка» as the T145 guide titles; the website's formal «вы» / «ви», as the form).
   - **Assumptions applied** (spec 09, FR-28): the priorities 0.8 / 0.4 / 0.4 and the weekly frequency, inline in `sitemap.ts` next to the other priorities; the blog lastmod = the newest date among a slug's locales; `/api/og` allowed under the disallowed `/api/` (crawlers take the longest match).
   - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 11:10 · T152 · done
+
+- Done (PRD 4 FR-30; spec 09 §Icons and the locale guard):
+  - **Reproduced first** with a temporary probe `e2e/icons-probe.spec.ts` (deleted afterwards), on the `next start` e2e build. **Before:** `/favicon.ico` → 500 `text/plain`, `/apple-touch-icon.png` → 500 `text/plain` (server log: "Page changed from static to dynamic at runtime /favicon.ico, reason: headers", i.e. the `[locale]` layout's metadata read next-intl's request header), `/nonexistent.ext` → no answer at all (the same error logged, the request hung past a 150 s timeout). **After:** `/favicon.ico` → 200 `image/png`, `/apple-touch-icon.png` → 200 `image/png`, `/nonexistent.ext` → 404 `text/html` (40 ms), `/icon.svg` → 200 `image/svg+xml` (public file, unchanged).
+  - `src/app/[locale]/layout.tsx` `generateMetadata({ params })`: `if (!hasLocale(routing.locales, locale)) notFound();` before `getTranslations('meta')`.
+  - **Deviation from the spec's mechanism (an Assumption):** the guard alone did not answer `/nonexistent.ext` (still hung: the on-demand render of the static `/[locale]` home kept reading the header). `src/app/[locale]/page.tsx` now exports `dynamicParams = false`, so a locale outside the layout's `generateStaticParams` gets the router's 404 without a render (Next's `NOT_FOUND` fallback). Only the home route is affected (`/[locale]` has exactly the four prerendered locales; non-dotted unknown paths are rewritten by the middleware to `/pl/…` and reach `[city]` as before). Noted in spec 09 §Icons.
+  - New `src/lib/brand-mark.tsx`: `BrandMark({ size })`, the `public/icon.svg` mark in JSX (same gradient `#4F46E5` → `#22C55E`, `rx` 37, house path, window), and `BRAND_ICON_HEADERS`.
+  - New `src/app/favicon.ico/route.tsx` (48 × 48) and `src/app/apple-touch-icon.png/route.tsx` (180 × 180): `GET` returns `new ImageResponse(<BrandMark size />, { width, height, headers: BRAND_ICON_HEADERS })`. Both are dynamic (ƒ) route handlers; Next's build table hides `/favicon.ico`, the manifest has it. No redirect, no dependency.
+  - `src/app/layout.tsx` `metadata.icons`: `icon` stays `{ url: '/icon.svg', type: 'image/svg+xml' }`, `apple` is `/apple-touch-icon.png` (was `/icon.svg`).
+  - Tests: new `e2e/icons.spec.ts` (both icons 200 `image/png`, the cache header, 48 / 180 px from the PNG header; `/nonexistent.ext` 404); new `src/app/icon-routes.test.ts` (only `GET`, 200, `image/png`, the cache header, no `location`, a real PNG of the right size); new `src/lib/brand-mark.test.ts` (the rendered SVG's elements and attributes equal `public/icon.svg`'s, the colours, the size, the header constant); new `src/app/[locale]/locale-guard.test.ts` (dotted and unknown locales → `notFound()` and no `getTranslations`; the four locales read `meta`; the home page's `dynamicParams = false`; the root icons).
+  - Docs: `docs/specs/README.md` FR-30 row → Done; spec 09 §Icons gets a "Built (T152)" note.
+- Checks:
+  - `npx vitest run` over the three new unit files: 3 files / 21 passed.
+  - `npm run test:e2e` exit 0: 18 passed with the probe (the earlier run without `dynamicParams` failed the 404 test, see below); after deleting the probe, re-run: exit 0, 17 passed (the three `icons.spec.ts` tests among them).
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 176 files / 3607 tests; build OK (185 pages). `next-env.d.ts` restored.
+  - Rendered both PNGs to the scratchpad with `npx tsx` and looked at them: the mark matches `public/icon.svg`.
+  - Not verified: the production site (Vercel, CDN honouring `s-maxage`) and real browsers / iOS fetching the icons. Nothing deployed, no migration, no event, no message sent.
+- Did not work: the first e2e run after the guard still failed `/nonexistent.ext → 404` (the request hung for 30 s); fixed with `dynamicParams = false` on the home page.
+- Owner review:
+  - **Assumptions applied** (spec 09 FR-30): the mechanism (two static route handlers drawing the mark with `next/og`) and `Cache-Control: public, max-age=86400, s-maxage=604800` (`BRAND_ICON_HEADERS` in `src/lib/brand-mark.tsx`); plus the home page's `dynamicParams = false` (above), which the spec did not name.
+  - The 180 px touch icon keeps the rounded corners and transparent edges of `public/icon.svg` (iOS masks its own corners; the transparent corners lie outside that mask). A full-bleed square would be a design change, not made.
+  - No copy, no new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.

@@ -29,6 +29,12 @@ import {
 
 const DEFAULT_CITY = 'warsaw';
 
+// Only the four locales of the layout's `generateStaticParams` exist at `/[locale]`. A dotted
+// path such as `/nonexistent.ext` skips the middleware and arrives here as a "locale"; it now gets
+// the router's 404 instead of an on-demand render, which read next-intl's request header in a
+// static route and never answered (FR-30).
+export const dynamicParams = false;
+
 async function getStats() {
   const [listings, costReports, districts, buildings, users, buildingsWithCosts, cityFigure] =
     await Promise.all([

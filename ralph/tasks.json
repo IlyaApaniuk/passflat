@@ -658,7 +658,7 @@
       "title": "Icons without a 500: the locale guard and route handlers for /favicon.ico and /apple-touch-icon.png (FR-30)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#icons-and-the-locale-guard",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The 500 is reproduced first with a temporary e2e probe (ralph/progress.md Learnings), which is deleted afterwards; the progress entry records the status before and after",
         "src/app/[locale]/layout.tsx generateMetadata checks hasLocale(routing.locales, locale) and calls notFound() before getTranslations",
@@ -666,7 +666,7 @@
         "e2e/icons.spec.ts (new): /favicon.ico and /apple-touch-icon.png → 200 image/png; /nonexistent.ext → 404 (an unknown path without a dot is not asserted: city pages need a database)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "The mechanism is an Assumption. A redirect would be a URL change, which PRD 4 leaves to the owner."
     },
     {
