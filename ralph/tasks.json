@@ -463,7 +463,7 @@
       "title": "Nominative-safe templates for district and city names (FR-22)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#nominative-safe-templates",
       "dependsOn": ["T138"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "costsSeo.districtH1, costsSeo.buildingsHeading and calculator.h1 follow the shapes of the spec 09 table in four locales (the name in the nominative after a colon or dash, or the literal 'w Warszawie' while Warsaw is the only city, D6); districtMetaTitle and calculator.metaTitle already follow them after T138 (checked)",
         "src/i18n/nominative-templates.test.ts scans the pl and ru message files for a preposition (w, na, в, у, на) directly before {district} or {city} and fails on any match; it passes",
@@ -471,7 +471,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Appendix seo.md tables C and G. District names are database display names in the nominative."
     },
     {
@@ -769,7 +769,7 @@
       "milestone": "M5",
       "title": "PRD 4 final check and handoff (FR-37)",
       "spec": "docs/specs/05-measurement-docs.md#prd-4-final-check",
-      "dependsOn": ["T156"],
+      "dependsOn": ["T156", "T158"],
       "status": "todo",
       "acceptance": [
         "npm run verify and npm run test:e2e pass",
@@ -780,6 +780,24 @@
       "checks": ["npm run verify", "npm run test:e2e"],
       "attempts": 0,
       "notes": "Last task of PRD 4."
+    },
+    {
+      "dependsOn": ["T140"],
+      "acceptance": [
+        "costsSeo.cityIntro and costsSeo.backToCity keep {city} in the nominative in pl, ru and uk: the name first before a colon or dash, or after a noun in apposition ('miasta {city}', 'города {city}', 'міста {city}'); never after a noun or preposition that needs the genitive or dative ('dzielnicach {city}', 'dzielnice {city}', 'районам {city}', 'районы {city}', 'районах {city}', 'райони {city}')",
+        "The unused costs.*.districtAvg ('dla {district}', 'по {district}') is either rewritten the same way or deleted from all four files after checking that no code reads it",
+        "src/i18n/nominative-templates.test.ts gains a second scan over pl, ru and uk for dzielnic*, dla, район*, по directly before {district} or {city} (with a self-check of caught and passed phrases) and passes",
+        "The honesty test still passes",
+        "Copy: every changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review"
+      ],
+      "checks": ["npm run verify"],
+      "attempts": 0,
+      "notes": "Found by T140: the spec's preposition scan does not catch a governing noun. Rendered today: pl 'w dzielnicach Warszawa', 'Wszystkie dzielnice Warszawa'; ru 'по районам Варшава', 'Все районы Варшава'; uk 'по районах Варшава', 'Усі райони Варшава'. en is fine.",
+      "id": "T158",
+      "milestone": "M3",
+      "title": "Nominative-safe city and district names after a governing noun (FR-22 follow-up)",
+      "spec": "docs/specs/09-search-metadata-and-performance.md#nominative-safe-templates",
+      "status": "todo"
     }
   ]
 }

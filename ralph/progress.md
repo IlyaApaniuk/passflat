@@ -168,6 +168,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - The real `BuildingCostsClient` renders in Vitest (state `building` from `summarizeFigures` over two `user` reports) with `next-intl` (`useTranslations`, `useLocale`), `posthog-js/react`, `@/i18n/navigation`, `Footer`, `ShareButton`, `FollowBuildingButton`, `LocationScore` and `TenantTags` mocked (example: `building/[slug]/flatmate-callout-placement.test.ts`).
 - The per-person line is `loadWarsawPerPersonSplit` (`room-costs.ts`) + `perPersonLineValues` / `perPersonSplitArea` / `perPersonAmount` (`per-person-line.ts`); `FlatmateCallout` calls `getLocale()` only when it has a split, so a test that passes one mocks `getLocale` in `next-intl/server`, and `FindFlatmateBlock` tests mock `useLocale`.
 - A test helper with default parameters turns an explicit `undefined` argument into the default: when a test checks an absent prop, the helper takes every argument without defaults.
+- `src/i18n/nominative-templates.test.ts` fails on any pl, ru or uk value with "w / na / в / у / на" directly before `{district}` or `{city}` (both nominative): write "{district}: …", "w dzielnicy {district}", «в районе {district}», "w mieście {city}", or the literal "w Warszawie" (D6).
 
 ## Log
 
@@ -4672,3 +4673,69 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Namespaces and providers:** every changed key is read server-side except `howItWorksPage.seekers.step1Desc`: the data report (`blog/warsaw-rent-prices/page.tsx`, `getTranslations()` in the page and in `generateMetadata`; the blog list's `blog/page.tsx` reads `rentReport.metaDescription` the same way), `meta.*Description` in `generateMetadata` of the about, how-it-works and blog pages. `HowItWorksClient` (client) reads `howItWorksPage` through `useTranslations('howItWorksPage')` with `t.rich`, from the page's scoped `NextIntlClientProvider` (`how-it-works/page.tsx`, `pickMessages(messages, ['howItWorksPage', 'documents', 'common'])`); the page also reads it server-side for the HowTo JSON-LD (`plain('seekers.step1Desc', ['browseLink'])`). No wiring changed.
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 09:45 · T140 · done
+
+- Done (PRD 4 FR-22; spec 09 §Nominative-safe templates):
+  - Copy (scratchpad script, exact-once replacement per file; key sets unchanged):
+    - the three table keys in four locales: `costsSeo.districtH1`, `costsSeo.buildingsHeading`, `calculator.h1`;
+    - every other value the new scan flagged: `costsSeo.cityMetaDescription`, `cityH1`, `districtIntro` (pl, ru, uk; en unchanged) and four pl e-mail keys (`emails.cityNotifyConfirmation.subject`, `.body`, `emails.cityLaunch.subject`, `.heading`; ru, uk already say «в городе» / «у місті»).
+  - `districtMetaTitle` and `calculator.metaTitle` already had the table shapes after T138 (checked by the new test).
+  - No code changed: the calculator client still passes `{ city }`, which the literal-Warsaw `h1` ignores.
+  - New `src/i18n/nominative-templates.test.ts`.
+  - New task **T158** (FR-22 follow-up, added to T157's `dependsOn`): the spec's preposition scan misses a governing noun. Today's pages render pl "w dzielnicach Warszawa" (`cityIntro`) and "Wszystkie dzielnice Warszawa" (`backToCity`), and ru/uk «по районам Варшава», «Все районы Варшава». `docs/specs/README.md`: the FR-22 row now names T140 and T158 and stays Planned.
+- Tests (`nominative-templates.test.ts`):
+  - the scan: `(^|[^a-ząćęłńóśźżа-яёіїєґ'ʼ])(w|na|в|у|на)\s+\{(district|city)\}` (`i`, no `g`) over every leaf of **pl, ru and uk**. The spec names pl and ru; uk has the same locative and passes too;
+  - a self-check: 12 caught phrases, including a no-break space and a capital "W" at the start; 13 passed phrases, including "Budynków {district}", "w dzielnicy {district}", «в районе {district}», "Rent in {district}";
+  - the table values verbatim in four locales (`districtH1`, `buildingsHeading`) and the pl `calculator.h1`;
+  - `districtMetaTitle` starts with `{district}, {city}` or `{district} ({city})`;
+  - `calculator.metaTitle` and `h1` hold no placeholder and name Warsaw in the right case (pl "w Warszawie", ru «в Варшаве», uk «у Варшаві», en "Warsaw");
+  - every changed key keeps its placeholders and does not match `FORBIDDEN`.
+- Checks:
+  - Focused Vitest (`src/i18n/`, `src/lib/email/`, `src/app/api/city-notify/`, `src/app/[locale]/[city]/`, area-figures consistency, single-number metadata): 19 files / 259 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 162 files / 3460 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks; every changed page is a `/[city]/…` page or an e-mail). No page looked at in a browser. Nothing deployed, no migration, no event, no e-mail or message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29).** `districtH1` and `buildingsHeading` are the spec 09 table / appendix table C verbatim. The pl `calculator.h1` is the appendix table G note verbatim; en, ru and uk are the agent's analogues. Everything else is the agent's draft, with the placeholder moved and the wording kept.
+    - `costsSeo.districtH1`:
+      - pl "{district}: koszty najmu" (old "Wynajem w {district}")
+      - en "{district}: rent costs" (old "Rent in {district}")
+      - ru «{district}: расходы на аренду» (old «Аренда в {district}»)
+      - uk «{district}: витрати на оренду» (old «Оренда в {district}»)
+    - `costsSeo.buildingsHeading`:
+      - pl "Budynki — {district}" (old "Budynki w {district}")
+      - en "Buildings — {district}" (old "Buildings in {district}")
+      - ru «Дома — {district}» (old «Дома в {district}»)
+      - uk «Будинки — {district}» (old «Будинки в {district}»)
+    - `calculator.h1` (Warsaw literal, D6):
+      - pl "Koszt najmu w Warszawie ze wszystkimi opłatami" (old "Ile kosztuje wynajem w {city} z wszystkimi opłatami")
+      - en "The cost of renting in Warsaw with all payments included" (old "What renting in {city} costs with all payments included")
+      - ru «Стоимость аренды в Варшаве со всеми платежами» (old «Во сколько обходится аренда в {city} с учётом всех платежей»)
+      - uk «Вартість оренди у Варшаві з усіма платежами» (old «У скільки обходиться оренда у {city} з урахуванням усіх платежів»)
+    - `costsSeo.cityMetaDescription` (en unchanged, "Reported rental costs in {city} — …"):
+      - pl "{city}: zgłoszone koszty wynajmu — czynsz, opłaty i kaucje, według dzielnic. Otwarte dane od społeczności."
+      - ru «{city}: расходы на аренду по отчётам — аренда, коммуналка и депозиты по районам. Открытые данные сообщества.»
+      - uk «{city}: витрати на оренду за звітами — оренда, комуналка та застави за районами. Відкриті дані спільноти.»
+      - old: "Zgłoszone koszty wynajmu w {city} — …", «Расходы на аренду в {city} по отчётам — …», «Витрати на оренду в {city} за звітами — …»
+    - `costsSeo.cityH1` (en unchanged, "What renting in {city} costs: reported figures by district"):
+      - pl "{city}: ile kosztuje wynajem — zgłoszone dane według dzielnic" (old "Ile kosztuje wynajem w {city}: zgłoszone dane według dzielnic")
+      - ru «{city}: сколько стоит аренда — данные отчётов по районам» (old «Сколько стоит аренда в {city}: данные отчётов по районам»)
+      - uk «{city}: скільки коштує оренда — дані звітів за районами» (old «Скільки коштує оренда в {city}: дані звітів за районами»)
+    - `costsSeo.districtIntro` (en unchanged, "Reported rental costs in {district}, {city} — …"; same apposition as `districtMetaDescription`):
+      - pl "Zgłoszone koszty wynajmu w dzielnicy {district} ({city}) — czynsz, opłaty i kaucje, budynek po budynku." (old "… w {district}, {city} — …")
+      - ru «Расходы на аренду в районе {district} ({city}) по отчётам — аренда, коммуналка и депозиты по домам.» (old «… в {district}, {city} по отчётам — …»)
+      - uk «Витрати на оренду в районі {district} ({city}) за звітами — оренда, комуналка та застави по будинках.» (old «… в {district}, {city} за звітами — …»)
+    - pl e-mails only ("w mieście {city}", as the pl `intro` keys already say; en, ru, uk unchanged):
+      - `emails.cityNotifyConfirmation.subject` "Jesteś na liście — Passflat w mieście {city}" (old "… Passflat w {city}")
+      - `emails.cityNotifyConfirmation.body` "Damy Ci znać e-mailem, gdy tylko uruchomimy Passflat w mieście {city}. Tymczasem nic nie musisz robić." (old "… Passflat w {city}. …")
+      - `emails.cityLaunch.subject` "Wystartowaliśmy w mieście {city} — Passflat" (old "Wystartowaliśmy w {city} — Passflat")
+      - `emails.cityLaunch.heading` "Passflat jest już w mieście {city}!" (old "Passflat jest już w {city}!")
+  - **Assumption applied (spec 09, shapes):** the name goes first before a colon or dash, or after a noun in apposition ("w dzielnicy", «в районе», "w mieście"). The scan also covers uk, which the spec does not name.
+  - **Namespaces and providers:** `CalculatorClient` (client) reads `calculator.h1` through `useTranslations()` from the calculator page's scoped `NextIntlClientProvider` (`pickMessages(messages, ['calculator', 'common', 'share'])`). The `costsSeo.*` keys are read server-side (`getTranslations()` in the city and district pages and their `generateMetadata`). The e-mail keys are read server-side by `sendEmail` (`getTranslations({ locale, namespace })`). No wiring changed.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`. T158 (the genitive traps above) runs before the PRD 4 final check.
