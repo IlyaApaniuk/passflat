@@ -346,7 +346,8 @@ Acceptance criteria:
      zero → "Be among the first"; absent when `counts` is missing or unavailable), an optional
      per-person line (FR-13; absent when `split` is missing), a link to /warsaw/roommate and,
      when NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is set, a bot button.
-  2. `surface` is one of `home | building | district | hub | calculator | guide`; the bot button's
+  2. `surface` is one of `home | building | district | hub | calculator | guide | report` (`report`
+     = the data report, kept apart from the guides, §6); the bot button's
      payload is `mate_web_<surface>` through `botStartPayload`, which gains these sources
      (`TelegramBotSource` union), and its click captures `telegram_bot_opened {source: <surface>,
      has_building_context: false}`.
@@ -504,15 +505,16 @@ Milestone: M2 · Priority: Must · Status: Decided (the figure rule: tenant grou
 Findings: S-7
 Who and when: a visitor reads the flatmate block on /warsaw/roommate, the home section (FR-9) or
   the hub callout (FR-11)
-Result: one line "A whole flat in Warsaw, tenant reports ({n}): about {half} zł each for two
-  (half of the median flat)" from the same loader the bot uses; absent when the rule has no figure
+Result: one line in the bot's wording, "For two people about {value} each (half of the median
+  flat, {count} tenant reports, {area})" (§8), from the same loader the bot uses; absent when the
+  rule has no figure
 Acceptance criteria:
   1. The roommate page server loads `loadRoomCostAreas(city, [])` (the shared loader of
      src/lib/roommate/room-costs.ts, D71: `rentalType: 'apartment'`, `minRooms: 2`, tenant group,
      N ≥ 2, all-in total only) and passes `split` (`PerPersonSplit | null`) to the flatmate block;
      the home page and the hub pass the same to the callout.
-  2. Given the Warsaw tenant apartment reports of §5 example 1, then the line reads "A whole flat
-     in Warsaw, tenant reports (5): about 2,450 zł each for two (half of the median flat)" in the
+  2. Given the Warsaw tenant apartment reports of §5 example 1, then the line reads "For two
+     people about 2,450 zł each (half of the median flat, 5 tenant reports, Warsaw)." in the
      locale; given example 2 (one qualifying report) or example 3 (known part only), no line.
   3. The line never shows a percentage, "cheaper", "market" or an asking-price figure; the number
      is the loader's `value`, the N its `n`; the area name is Warsaw (level `city`).
@@ -865,9 +867,9 @@ Acceptance criteria:
   1. `countRoommates` without a viewer also returns `byDistrict: Record<slug, number>` for every
      district named by at least one counted profile; `loadFlatmateBlockCounts()` carries it in
      its cached result (`status: 'counts'`), same one-hour cache, same error fallback.
-  2. Given §5 example 2, the Mokotów page shows "2 people with a profile name Mokotów", Ochota
-     2, Wola 1, Wawer "Nobody has named Wawer yet — be the first"; "any district" profiles
-     count in no district; nothing is summed.
+  2. Given §5 example 4, the Mokotów page shows "Mokotów: 2 people with a profile name this
+     district", Ochota 2, Wola 1, Wawer "Wawer: nobody has named this district yet — be the
+     first." (the §8 shape); "any district" profiles count in no district; nothing is summed.
   3. The section renders after the buttons row and before the buildings heading, as an `h2`
      "Room and shared renting: {district}" (nominative-safe, FR-22), then the count line, then
      FR-27's figure lines, then `FlatmateCallout surface="district"` (FR-11).
@@ -1172,7 +1174,7 @@ Acceptance criteria:
      completion funnel by `entry_source`, the thresholds of §1 as Assumptions, the season note,
      and that web and bot identities are never joined.
   2. `src/lib/bot/README.md` "Deep links": `mate_web_<detail>` values the website sends
-     (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`).
+     (`roommate`, `home`, `building`, `district`, `hub`, `calculator`, `guide`, `report`).
   3. `docs/architecture.md`: §2 surfaces (the callout, the home section, the district section),
      §4 headers and the icon routes, §5 the new event values.
   4. `docs/ops/deploy-copy-review.md` (new): the owner's checklist for the deploy that carries
@@ -1243,7 +1245,7 @@ These are golden tests.
 | R8     | `scraped` | 4,400      | 2     | no (asking price)                   |
 
 Median of 4,100 / 4,600 / 4,900 / 5,300 / 5,800 = 4,900 zł, N = 5 → 4,900 ÷ 2 = 2,450 →
-"A whole flat in Warsaw, tenant reports (5): about 2,450 zł each for two (half of the median flat)".
+"For two people about 2,450 zł each (half of the median flat, 5 tenant reports, Warsaw)."
 Level `city` (Warsaw is the area). The asking price R8 never enters; no percentage.
 
 **Example 2 — one qualifying report.** Only R2 qualifies → N = 1 < 2 → no line. **Example 3 —
@@ -1253,8 +1255,8 @@ line (the rule applies only to all-in totals).
 **Example 4 — district counts on the website (FR-26).** Active profiles P1 (Mokotów, Ochota), P2
 (Mokotów), P3 (any district), P4 (Wola), P7 (Ochota); P5 hidden, P6 expired, P9 with a blocked chat.
 No viewer. `total` = 5; `byDistrict` = { mokotow: 2, ochota: 2, wola: 1 }; P3 counts in no
-district. The Mokotów page: "2 people with a profile name Mokotów"; Wawer: "Nobody has named
-Wawer yet — be the first". The top-5 list of the roommate block is unchanged (Mokotów 2, Ochota 2,
+district. The Mokotów page: "Mokotów: 2 people with a profile name this district"; Wawer:
+"Wawer: nobody has named this district yet — be the first." The top-5 list of the roommate block is unchanged (Mokotów 2, Ochota 2,
 Wola 1, ties alphabetical).
 
 **Example 5 — the district room reference and split (FR-27).** Spec 06 §Room cost reference's
@@ -1274,7 +1276,7 @@ identities are never joined.
 | Event                      | Where        | Change                                                                                                                                                                                                                                                             |
 | -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `telegram_bot_opened`      | web, callout | new `source` values `home`, `building`, `district`, `hub`, `calculator`, `guide`, `report` (FR-8; `report` = the data report, added in the gap review so it is told apart from the guides); `has_building_context=false`; `checker`, `empty`, `roommate` unchanged |
-| `cta_click`                | web, callout | new `placement` values `flatmate_callout_<surface>` for the six surfaces above (the roommate-page link, FR-8); `header_mobile` unchanged (FR-5)                                                                                                                    |
+| `cta_click`                | web, callout | new `placement` values `flatmate_callout_<surface>` for the seven surfaces above (the roommate-page link, FR-8); `header_mobile` unchanged (FR-5)                                                                                                                  |
 | `roommate_intent_selected` | web          | unchanged; with FR-1 the `find_flatmate` taps fall (the block is open by default); E11's useful actions already count `telegram_bot_opened`                                                                                                                        |
 | `tg_bot_started`           | bot          | unchanged; `payload` now also `mate_web_home` … `mate_web_guide`                                                                                                                                                                                                   |
 | `tg_roommate_flow_started` | bot          | unchanged; `entry_detail` now also `home`, `building`, `district`, `hub`, `calculator`, `guide` (from the payloads of FR-8)                                                                                                                                        |
@@ -1358,13 +1360,15 @@ pay, and where rooms are listed." / "See room costs"; PL, RU, UK analogues in th
 "Checking a flat you found" / "Known costs for the building, the location and the nuisances, in one
 answer." / "Check an address"; PL, RU, UK analogues. `landing.cta.subtitle`: EN "Someone to rent
 with, a room, or a flat you already found — start with the figures.", `landing.cta.freeNote`: EN
-"No account needed." (PL, RU, UK in spec 08; "free" waits for Q-12). `landing.tools.templatesDescription` (FU-13): EN
-"Lease agreement, handover protocol, flatmate agreement and termination notice — Polish originals
-with English, Russian and Ukrainian versions."; PL "Umowa najmu, protokół zdawczo-odbiorczy, umowa
-współlokatorska i wypowiedzenie — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku.";
-RU «Договор аренды, протокол приёма-передачи, соглашение соседей и расторжение — польские оригиналы
-с версиями на английском, русском и украинском.»; UK «Договір оренди, акт приймання-передачі, угода
-співмешканців і розірвання — польські оригінали з версіями англійською, російською та українською.»
+"No account needed." (PL, RU, UK in spec 08; "free" waits for Q-12). `landing.tools.templatesDescription` (FU-13;
+the four files of `public/documents/`, gap review): EN "Lease assignment (cesja), handover
+protocol, sublease agreement and flatmate agreement — Polish originals with English, Russian and
+Ukrainian versions."; PL "Cesja umowy najmu, protokół zdawczo-odbiorczy, umowa podnajmu i umowa
+współlokatorska — polskie oryginały z wersjami po angielsku, rosyjsku i ukraińsku."; RU «Цессия
+договора аренды, протокол приёма-передачи, договор субаренды и соглашение соседей — польские
+оригиналы с версиями на английском, русском и украинском.»; UK «Цесія договору оренди, акт
+приймання-передачі, договір суборенди та угода співмешканців — польські оригінали з версіями
+англійською, російською та українською.»
 404 second button `errors.notFound.browse`: EN "Check an address" (PL "Sprawdź adres", RU «Проверить
 адрес», UK «Перевірити адресу»).
 
@@ -1563,3 +1567,9 @@ With the audit's finding ids, not in this PRD:
     the district count names the district first (§8); the templates sentence names the four files
     that exist; the checker hint sits outside the click wrapper (FR-14); the FAQ pairs questions and
     answers explicitly (FR-15); `helpCenter.general.a2` ("Is Passflat free?") joins Q-3 (FR-16).
+- **0.1, 2026-11-20, consistency pass (night run, before the owner's review).** Agent
+  clarifications that bring the requirement text in line with the gap-review changes already in
+  §6, §8, the specs and the tasks; nothing new: FR-8 and FR-36 list the `report` surface; FR-13 and
+  §5 example 1 quote the bot's per-person wording with its area; FR-26 and §5 example 4 quote the
+  district-first count shape and cite example 4; §6 counts seven callout placements; the §8
+  templates sentence names the four files of `public/documents/` (as FR-10 and spec 08 do).

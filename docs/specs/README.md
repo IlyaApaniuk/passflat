@@ -34,7 +34,7 @@ acceptance criteria, since no spec file exists for owner tooling. Checks never c
 
 | Work                                                             | Reference                                                                                                  | Task | Status  |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- | ------- |
-| Bot avatar `public/bot-avatar.png`, 512 × 512 from the logo      | D77                                                                                                        | T114 | Planned |
+| Bot avatar `public/bot-avatar.png`, 512 × 512 from the logo      | D77                                                                                                        | T114 | Blocked |
 | Bot profile texts module and `npm run bot:profile` (`--dry-run`) | D77; `src/lib/bot/README.md` "Going live"; `../development-workflow.md` "Commands with additional effects" | T115 | Planned |
 | One place for the production bot's username; `<bot>` placeholder | D76; `../marketing/roommate-posts.md` "How to use a template"                                              | T116 | Done    |
 | Set the production bot username (owner question)                 | D76 (Open)                                                                                                 | T117 | Blocked |
@@ -149,7 +149,7 @@ wider Q-6); see `../product/prd/prd-4-decision-review.md` §Architect gap review
 Status: Done (every task of the row done), Blocked (an owner question; the task holds it),
 Planned (task todo). PRD 3 is Done on 2026-11-19: every row below is Done, built and tested on
 `chore/agent-harness`, not deployed; the matching switch goes on at the deploy (D75). The
-tasks stay in `../../ralph/tasks.json` next to M7. Decomposed on 2026-11-19 after the owner's answers (D54 – D70). The
+tasks are archived in `../../ralph/archive/prd-3-roommate-matching-tasks.json` (2026-11-20). Decomposed on 2026-11-19 after the owner's answers (D54 – D70). The
 architect gap review found 26 gaps: 22 are folded into the specs and tasks (one new task, T106),
 and 4 need the owner (Q-15 – Q-18 in `../product/prd/prd-3-decision-review.md`), held by the
 blocked tasks T107 – T110 at the end of the table; the rest of each requirement is built as
