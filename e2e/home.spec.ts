@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+// A 44 px tap target (WCAG 2.5.5) measures as 43.99998 px in some layouts: sub-pixel rounding of
+// the bounding box, not a smaller target. The tolerance keeps the check from failing on that.
+const TAP_TARGET_PX = 43.9;
+
 // Default locale is `pl` with `localePrefix: 'as-needed'`, so the Polish home
 // page lives at `/` (no prefix) and the English one at `/en`.
 test('home page (default locale) loads', async ({ page }) => {
@@ -151,10 +155,10 @@ test.describe('mobile header on /en', () => {
     await expect(page.locator('#mobile-menu')).toHaveCount(0);
 
     const box = await menu.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeGreaterThanOrEqual(TAP_TARGET_PX);
+    expect(box?.height).toBeGreaterThanOrEqual(TAP_TARGET_PX);
     const pill = await header.locator('a[href$="/warsaw/roommate"] button').boundingBox();
-    expect(pill?.height).toBeGreaterThanOrEqual(44);
+    expect(pill?.height).toBeGreaterThanOrEqual(TAP_TARGET_PX);
     const bar = await header.locator(':scope > div > div').first().boundingBox();
     expect(Math.round(bar?.height ?? 0)).toBe(58);
 
@@ -165,7 +169,7 @@ test.describe('mobile header on /en', () => {
     await expect(panel.getByRole('link', { name: 'Find a flatmate' })).toBeVisible();
     for (const code of ['PL', 'EN', 'RU', 'UK']) {
       const language = await panel.getByRole('button', { name: code, exact: true }).boundingBox();
-      expect(language?.height, code).toBeGreaterThanOrEqual(44);
+      expect(language?.height, code).toBeGreaterThanOrEqual(TAP_TARGET_PX);
     }
 
     await menu.click();
