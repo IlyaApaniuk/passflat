@@ -152,6 +152,7 @@ async function loadBuildingPage() {
     figures: summarizeFigures([], { level: 'building', rentalType: 'all' }),
     areaReference: null,
     nuisancesCard: null,
+    flatmateCallout: null,
     tenantDetails: null,
     lastUpdated: null,
     citySlug: 'warsaw',

@@ -57,6 +57,34 @@ describe('flatmateCalloutView', () => {
     });
   });
 
+  describe('the placements of PRD 4 FR-11 (spec 08 §Callout placements)', () => {
+    it('building: no counts are passed → the question, no count line, mate_web_building', () => {
+      expect(flatmateCalloutView({ surface: 'building', hasUsername: true })).toEqual({
+        titleKey: 'flatmateCallout.title',
+        countLine: 'none',
+        total: 0,
+        showBotButton: true,
+        payload: 'mate_web_building',
+        placement: 'flatmate_callout_building',
+      });
+    });
+
+    it('hub: the loaded counts → the question, the count line, mate_web_hub', () => {
+      expect(flatmateCalloutView({ surface: 'hub', counts: COUNTS, hasUsername: true })).toEqual({
+        titleKey: 'flatmateCallout.title',
+        countLine: 'count',
+        total: 7,
+        showBotButton: true,
+        payload: 'mate_web_hub',
+        placement: 'flatmate_callout_hub',
+      });
+    });
+
+    it('hub: a rejected load (counts undefined) → no count line', () => {
+      expect(flatmateCalloutView({ surface: 'hub', hasUsername: true }).countLine).toBe('none');
+    });
+  });
+
   it('without the username: no bot button, the rest unchanged', () => {
     const withBot = flatmateCalloutView({
       surface: 'calculator',

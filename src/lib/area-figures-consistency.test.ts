@@ -218,6 +218,12 @@ vi.mock('@/components/costs/share-button', () => ({ ShareButton: () => null }));
 vi.mock('@/app/[locale]/[city]/building/[slug]/client', () => ({
   BuildingCostsClient: () => null,
 }));
+// The hub's flatmate callout is an async server component (renderToStaticMarkup cannot run it)
+// and is tested in `src/app/[locale]/[city]/hub-callout.test.ts`.
+vi.mock('@/components/roommate/flatmate-callout', () => ({ FlatmateCallout: () => null }));
+vi.mock('@/lib/roommate/website-counts', () => ({
+  loadFlatmateBlockCounts: async () => ({ status: 'unavailable' }),
+}));
 
 import { createTranslator } from 'next-intl';
 

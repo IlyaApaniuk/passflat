@@ -18,6 +18,7 @@ import {
   NuisancesCard,
   nuisanceItems,
 } from '@/components/buildings/nuisances-card';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import type { Metadata } from 'next';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -330,6 +331,9 @@ export default async function BuildingCostsPage({ params }: PageProps) {
             : null
         }
         nuisancesCard={nuisancesCard}
+        // PRD 4 FR-11: no profile count on a building page (Assumption, spec 08 §Callout
+        // placements), so no `counts`.
+        flatmateCallout={<FlatmateCallout surface="building" />}
         tenantDetails={tenantDetails}
         lastUpdated={lastUpdated}
         citySlug={citySlug}

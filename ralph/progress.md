@@ -162,6 +162,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - A nested async server component (the home page's `HomeContent`) is tested without RSC: `await` the page, call the Suspense child's `type()`, walk the element tree by component identity; `vi.doMock` in a top-level loop before the dynamic `import('./page')` stubs many sections at once (example: `src/app/[locale]/home-thesis.test.ts`).
 - In e2e, a section with `aria-labelledby` is a `region` named by its heading: `getByRole('region', { name })` finds it, while `locator('section').filter({ has: heading })` also matches sections that merely contain such a heading.
 - A copy pattern for Polish "prawd-" (truth) also matches "sprawdz-" (check): anchor it at a word start with a Polish letter class (`(^|[^a-ząćęłńóśźż])prawd`, `REAL_OR_TRUTH` in `honesty-copy.test.ts`); `\b` does not work next to non-ASCII letters.
+- A page that renders the async `FlatmateCallout` cannot go through `renderToStaticMarkup` whole: mock `@/components/roommate/flatmate-callout` (as `area-figures-consistency.test.ts` does for the hub), or find the element and render `await FlatmateCallout(element.props)` (example: `src/app/[locale]/[city]/hub-callout.test.ts`).
+- The real `BuildingCostsClient` renders in Vitest (state `building` from `summarizeFigures` over two `user` reports) with `next-intl` (`useTranslations`, `useLocale`), `posthog-js/react`, `@/i18n/navigation`, `Footer`, `ShareButton`, `FollowBuildingButton`, `LocationScore` and `TenantTags` mocked (example: `building/[slug]/flatmate-callout-placement.test.ts`).
 
 ## Log
 
@@ -3997,4 +3999,63 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The home title, description and tagline change in search results and link previews after deploy; the thesis-first versions are Q-6 (T125).
   - Unchanged and still saying "real" / listings / "free" beside the new copy (not FR-10's keys): `meta.aboutDescription`, `meta.howItWorksDescription`, `meta.blogDescription`, `landing.hero.trustLine` (Q-11), `landing.footer.expanding` (Q-10). Spec 09 §Honesty keys (T138, T139) owns the honesty sweep.
   - No assumption value beyond the drafts; no new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:21 · T126 · done
+
+- Done (PRD 4 FR-11, spec 08 §Callout placements):
+  - `src/app/[locale]/[city]/building/[slug]/client.tsx`: the bottom card is gone. It had `costs.building.lookingForApartment`, `lookingForApartmentDesc`, and `viewListingsIn` → `/${citySlug}/replacement?district=`. In its place (the same `motion.div custom={6}`, after the comparison, outside every `GatedSection`), the client renders the new `flatmateCallout: ReactNode` prop. The client no longer names `/replacement`.
+  - `building/[slug]/page.tsx` passes `flatmateCallout={<FlatmateCallout surface="building" />}`, with no `counts` and no counts load.
+  - `src/app/[locale]/[city]/page.tsx` (hub):
+    - `Promise.all([loadDistrictFigures(id), loadFlatmateBlockCounts().catch(() => undefined)])`. A rejected counts load → `counts: undefined` → no count line. A district-figures failure still fails the page, as before.
+    - `<FlatmateCallout surface="hub" counts={…} />` sits in a `mt-8` wrapper under the buttons row, above the districts heading.
+    - `revalidate = 3600` is unchanged.
+  - Copy: the three keys are deleted in four locales (a scratchpad script removed exactly 3 lines per file). `lookingForApartmentDesc` leaves `REWRITTEN_KEYS` (`honesty-copy.test.ts`, with a comment). No key is new or changed.
+  - `docs/specs/README.md` PRD 4 map: FR-11 → Done.
+  - The district page's callout is not placed here (T147).
+- Tests:
+  - New `src/app/[locale]/[city]/building/[slug]/flatmate-callout-placement.test.ts`:
+    - Static scan of `client.tsx`: no `/replacement`, no deleted key, and no import of the async server callout. The scan pattern catches the old link form. `{flatmateCallout}` appears once, with as many `<GatedSection` as `</GatedSection>` before it (outside the gate).
+    - The three keys are absent in four locales.
+    - The server page, over a Prisma mock, passes a `FlatmateCallout` element with props exactly `{ surface: 'building' }`, and `loadFlatmateBlockCounts` is never called.
+    - Rendered, that element shows the question h2 (`flatmate-callout-building-title`), no count line, `/warsaw/roommate`, and `t.me/<bot>?start=mate_web_building`.
+    - The real `BuildingCostsClient` is rendered (two `user` reports → state `building`). The marker prop appears once, after the comparison title, with no `/replacement` and no old copy.
+  - New `src/app/[locale]/[city]/hub-callout.test.ts`:
+    - There is exactly one callout, with props `{ surface: 'hub', counts }`, placed after `ShareButton` and before the districts h2.
+    - Resolved counts → the question, "7 people in Warsaw already have a profile.", the roommate link, and the `mate_web_hub` bot link.
+    - A rejected load → `counts: undefined`, no count line, the page still renders.
+    - `unavailable` → no count line.
+    - ISR: `revalidate` is 3600 and the source has no `next/headers`, `cookies(`, `headers(` or `force-dynamic`.
+  - `src/lib/roommate/flatmate-callout.test.ts`: exact `flatmateCalloutView` rows for `building` (no counts → `none`, `mate_web_building`, `flatmate_callout_building`) and `hub` (counts → `count` 7, `mate_web_hub`), plus hub undefined → `none`.
+  - `src/lib/area-figures-consistency.test.ts` mocks `@/components/roommate/flatmate-callout` and `@/lib/roommate/website-counts`, because `renderToStaticMarkup` cannot run the async callout inside the hub. `posthog-provider.test.ts` passes `flatmateCallout: null`.
+- Checks:
+  - Focused Vitest (the new and changed files plus `src/i18n/`): 8 files / 101 passed, then the callout view test 30 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 153 files / 3268 tests;
+    - build OK (183 pages).
+  - In the build table, `/[locale]/[city]` is `ƒ`, like every `[city]` route, including the untouched district page. `/[locale]`, which already calls `loadFlatmateBlockCounts`, stays `● 5m`, so the loader does not make a route dynamic.
+  - `next-env.d.ts` restored.
+  - `npm run test:e2e` was not run: it is not in the task's checks, and city pages cannot render in the e2e build (no database). Neither page was looked at in a browser; the render tests are the proof.
+  - Nothing deployed, no migration, no event name added, no message sent.
+- Did not work: the first fixture used the city key `cities.warsaw`; the key is `city.warsaw` (the `onError` throw caught it).
+- Owner review:
+  - **Copy:** no new or changed key. Deleted in four locales:
+    - `costs.building.lookingForApartment`: en "Looking for an apartment in this building?" · pl "Szukasz mieszkania w tym budynku?" · ru «Ищете квартиру в этом здании?» · uk «Шукаєте квартиру в цьому будинку?»
+    - `lookingForApartmentDesc`: en "Browse available listings with their stated costs" · pl "Zobacz dostępne oferty z podanymi kosztami" · ru «Смотрите доступные объявления с указанными расходами» · uk «Перегляньте доступні оголошення із зазначеними витратами»
+    - `viewListingsIn`: en "View Listings in {district}" · pl "Zobacz oferty w {district}" · ru «Смотреть объявления в {district}» · uk «Переглянути оголошення в {district}»
+    - The callout reuses T123's keys unchanged (`listings.flatmateCallout.title`, `roommateLink`; `listings.findFlatmate.how`, `languages`, `count`, `first`, `button`).
+  - Namespaces and providers:
+    - `FlatmateCallout` is a server component and reads `listings` via `getTranslations('listings')`, on both pages.
+    - On the building page it is rendered by the server `page.tsx` and reaches `BuildingCostsClient` as a ReactNode, so the client needs no new namespace. `FlatmateCalloutLinks` (client) reads none: it gets string props.
+    - The hub is a server page.
+  - **Assumptions applied:**
+    - No number on a building page: there are no `counts` in `building/[slug]/page.tsx`.
+    - The hub placement is a `mt-8` wrapper under the buttons row in `[city]/page.tsx`.
+  - **Agent's choice, strict replacement:** like the card it replaces, the building callout shows only on a building with its own reports (`fallback.state === 'building'`). A building without any report shows no callout. To show it there too, add `{flatmateCallout}` at the end of the other branch of `client.tsx`.
+  - **The hub serves every city in the database.** The callout's copy names Warsaw and links `/warsaw/roommate`, so a non-Warsaw hub would show a Warsaw callout. The spec does not restrict it.
+  - As T123 noted for home, the hub's count line does not depend on the bot username. In production (no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` until T117), the hub shows the count line with only the roommate link.
+  - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_building' | 'flatmate_callout_hub'}` and `telegram_bot_opened {source: 'building' | 'hub'}` (bot payloads `mate_web_building` / `mate_web_hub`).
+  - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.

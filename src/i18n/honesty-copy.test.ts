@@ -60,7 +60,7 @@ const REWRITTEN_KEYS = [
   'costsSeo.buildingMetaDescriptionWithData',
   'costs.subtitle',
   'costs.overview.title',
-  'costs.building.lookingForApartmentDesc',
+  // costs.building.lookingForApartmentDesc was deleted by PRD 4 FR-11 (spec 08 §Callout placements).
   'howItWorksPage.seekers.step1Title',
   'blog.topic4Desc',
   'helpCenter.costTransparency.a1',

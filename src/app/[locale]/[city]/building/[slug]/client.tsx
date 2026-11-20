@@ -404,6 +404,11 @@ interface BuildingCostsClientProps {
   areaReference: (Pick<AreaReference, 'level' | 'summary'> & { areaName: string }) | null;
   /** The nuisances block, rendered on the server; only for a building without reports. */
   nuisancesCard: ReactNode;
+  /**
+   * `FlatmateCallout surface="building"` (spec 08 §Callout placements), rendered on the server:
+   * an async server component cannot be imported here.
+   */
+  flatmateCallout: ReactNode;
   /** The items the page keeps computing, over the tenant group only; null without one. */
   tenantDetails: TenantDetails | null;
   lastUpdated: string | null;
@@ -430,6 +435,7 @@ export function BuildingCostsClient({
   figures,
   areaReference,
   nuisancesCard,
+  flatmateCallout,
   tenantDetails,
   lastUpdated,
   citySlug,
@@ -1212,26 +1218,10 @@ export function BuildingCostsClient({
                 </motion.div>
               )}
 
+              {/* The flatmate callout (PRD 4 FR-11), outside the contribution gate:
+                  rendered by the server page, without counts on a building. */}
               <motion.div custom={6} initial="hidden" animate="visible" variants={fadeUp}>
-                <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                  <CardContent className="flex flex-col items-center py-8 text-center">
-                    <h3 className="text-lg font-semibold">
-                      {t('costs.building.lookingForApartment')}
-                    </h3>
-                    <p className="mt-2 text-muted-foreground">
-                      {t('costs.building.lookingForApartmentDesc')}
-                    </p>
-                    {building.districtSlug && (
-                      <Button className="mt-4 transition-transform hover:scale-[1.02]" asChild>
-                        <Link href={`/${citySlug}/replacement?district=${building.districtSlug}`}>
-                          {t('costs.building.viewListingsIn', {
-                            district: building.district,
-                          })}
-                        </Link>
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                {flatmateCallout}
               </motion.div>
             </div>
           )}

@@ -229,7 +229,7 @@
       "title": "The callout on building pages and the city hub; the building page loses its listings card (FR-11)",
       "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
       "dependsOn": ["T123"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Building page: the bottom card (costs.building.lookingForApartment, lookingForApartmentDesc, viewListingsIn → /warsaw/replacement?district=) is replaced by FlatmateCallout surface='building' without counts, rendered by the server page and passed to the client as a ReactNode prop, outside the contribution gate; the three keys are deleted in four locales (lookingForApartmentDesc leaves REWRITTEN_KEYS)",
         "City hub /[city]: FlatmateCallout surface='hub' with counts from loadFlatmateBlockCounts() under the buttons row; a rejection of the counts load renders the callout without a count line; the hub stays ISR",
@@ -238,7 +238,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D5, D48. No number on a building page (Assumption). City pages cannot render in the e2e build (no database)."
     },
     {

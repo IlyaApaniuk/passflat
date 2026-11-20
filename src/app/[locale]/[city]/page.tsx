@@ -14,6 +14,8 @@ import { areasWithFigure } from '@/lib/single-number-view';
 import { figureOgCard } from '@/lib/single-number-metadata';
 import { ShareButton } from '@/components/costs/share-button';
 import { BuildingFigureSummary } from '@/components/costs/building-figure-summary';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { ArrowRight, MapPin, Building2, Calculator, Plus } from 'lucide-react';
 
 // ISR: no auth/cookies on this page (cost data is open), so it can be cached and
@@ -71,7 +73,13 @@ export default async function CityCostsHub({ params }: PageProps) {
   // One number per district by D23 (spec 03 §Single-number surfaces): the district's
   // tenant group, else its asking prices, over the district's reports, labelled with
   // the group and N, the value `loadAreaReference` gives the district.
-  const districts = areasWithFigure(await loadDistrictFigures(cityRec.id));
+  // The flatmate callout's profile count (PRD 4 FR-11), cached for an hour like the page; a
+  // rejected load renders the callout without a count line.
+  const [districtFigures, flatmateCounts] = await Promise.all([
+    loadDistrictFigures(cityRec.id),
+    loadFlatmateBlockCounts().catch(() => undefined),
+  ]);
+  const districts = areasWithFigure(districtFigures);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -104,6 +112,10 @@ export default async function CityCostsHub({ params }: PageProps) {
                 </Link>
               </Button>
               <ShareButton path={`/${city}`} source="city" size="default" />
+            </div>
+
+            <div className="mt-8">
+              <FlatmateCallout surface="hub" counts={flatmateCounts} />
             </div>
 
             <h2 className="mt-10 text-xl font-semibold">{t('costsSeo.districtsHeading')}</h2>
