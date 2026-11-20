@@ -30,6 +30,16 @@ const valueAt = (locale: Locale, path: string) =>
     ...messages[locale],
   });
 
+/** The home "how it works" and FAQ keys rewritten or added by PRD 4 FR-15 (spec 08). */
+const HOW_IT_WORKS_KEYS = [
+  'landing.howItWorks.subtitle',
+  ...[1, 2, 3, 4].flatMap((n) =>
+    ['Title', 'Desc'].map((field) => `landing.howItWorks.roommate.step${n}${field}`),
+  ),
+  'landing.faq.q7',
+  'landing.faq.a7',
+];
+
 /** The spec's list as found on 2026-11-19, plus the keys the en.json search found with it. */
 const REWRITTEN_KEYS = [
   'landing.hero.subtitle',
@@ -78,6 +88,8 @@ const REWRITTEN_KEYS = [
   'blog.ctaText',
   // PRD 4 FR-13 (spec 08 §Per-person line): the bot's roomSplit wording.
   'listings.flatmateCallout.perPerson',
+  // PRD 4 FR-15 (spec 08 §How it works, Help and About).
+  ...HOW_IT_WORKS_KEYS,
 ];
 
 /** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
@@ -248,6 +260,40 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
         expect(value as string, `${locale}: ${key}`).not.toContain('{');
       }
     }
+  });
+
+  it('the how-it-works and FAQ keys (PRD 4 FR-15): no price, date, listing, claim, promise or "free"', () => {
+    expect(HOW_IT_WORKS_KEYS).toHaveLength(11);
+    for (const locale of LOCALES) {
+      for (const key of HOW_IT_WORKS_KEYS) {
+        const value = valueAt(locale, key);
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        // A price or a date needs a digit or a currency; none of these keys has one.
+        expect(value as string, `${locale}: ${key}`).not.toMatch(/\d|PLN|zł|€/i);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(LISTINGS[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FORBIDDEN[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(REAL_OR_TRUTH[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value as string, `${locale}: ${key}`).not.toContain('{');
+      }
+    }
+  });
+
+  it('the how-it-works check catches a price, a date, a listing and a promised match', () => {
+    const caught = (value: string, locale: Locale) =>
+      [/\d|PLN|zł|€/i, LISTINGS[locale], FORBIDDEN[locale], PROMISE[locale]].some((pattern) =>
+        pattern.test(value),
+      );
+    expect(caught('Profiles from 39 PLN', 'en')).toBe(true);
+    expect(caught('Open from 1 December', 'en')).toBe(true);
+    expect(caught('Browse room listings', 'en')).toBe(true);
+    expect(caught('Verified flatmates', 'en')).toBe(true);
+    expect(caught('We guarantee a match', 'en')).toBe(true);
+    expect(caught('Znajdziesz współlokatora', 'pl')).toBe(true);
+    expect(caught('Подберём соседа', 'ru')).toBe(true);
+    expect(caught('Знайдемо сусіда', 'uk')).toBe(true);
+    expect(caught('Contacts open on mutual interest', 'en')).toBe(false);
   });
 
   it('the home copy keeps the cost-first positioning and the EN drafts of spec 08', () => {

@@ -318,7 +318,7 @@
       "title": "Home 'How it works': the roommate tab first with the bot's steps; the FAQ with explicit pairs and the roommate question first (FR-15)",
       "spec": "docs/specs/08-site-structure-and-entries.md#how-it-works-help-and-about",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "HowItWorksTabs TABS = ['roommate', 'replacement', 'sublet'], roommate first and selected; landing.howItWorks.roommate.step{1..4}{Title,Desc} and landing.howItWorks.subtitle are rewritten from PRD 4 §8 in four locales; the other tabs' copy is untouched (Q-3)",
         "The FAQ list becomes explicit pairs FAQ_ITEMS = [{ q: 'q7', a: 'a7' }, { q: 'q1', a: 'a1' }, …] in a pure module; landing.faq.q7 and a7 are added (PRD 4 §8) and rendered first; a test asserts that every pair's numbers match and every key exists in four locales",
@@ -326,7 +326,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48, D5. The removals (the cesja and sublet steps) are FR-16, blocked on Q-3 (T133)."
     },
     {

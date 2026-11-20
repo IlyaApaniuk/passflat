@@ -113,7 +113,7 @@
     },
     "howItWorks": {
       "title": "Jak działa Passflat",
-      "subtitle": "Trzy sposoby na znalezienie nowego mieszkania w Warszawie",
+      "subtitle": "Jak działa szukanie kogoś do wspólnego wynajmu",
       "tabReplacement": "Cesja najmu",
       "tabRoommate": "Współlokator",
       "tabSublet": "Podnajem",
@@ -128,14 +128,14 @@
         "step4Desc": "Dokończ formalności. Bez utraty kaucji, bez prowizji."
       },
       "roommate": {
-        "step1Title": "Znajdź pokój",
-        "step1Desc": "Przeglądaj dostępne pokoje — prywatne lub dzielone. Zobacz cenę za osobę i kto już mieszka.",
-        "step2Title": "Poznaj współlokatorów",
-        "step2Desc": "Napisz do obecnych mieszkańców. Poznaj ich styl życia i nawyki.",
-        "step3Title": "Uzgodnij warunki",
-        "step3Desc": "Ustal podział czynszu, kaucję i zasady domowe.",
-        "step4Title": "Wprowadź się",
-        "step4Desc": "Dołącz do mieszkania i zacznij nowy rozdział."
+        "step1Title": "Załóż profil w bocie",
+        "step1Desc": "Dzielnica, budżet na osobę, miesiąc przeprowadzki, języki. W Telegramie, po angielsku, rosyjsku lub ukraińsku.",
+        "step2Title": "Zobacz, kto jeszcze szuka",
+        "step2Desc": "Uczciwa liczba profili w każdej dzielnicy i to, ile mieszkanie kosztuje na osobę, według zgłoszeń najemców.",
+        "step3Title": "Zaznacz, z kim chcesz wynająć",
+        "step3Desc": "Pasujące osoby, jedna po drugiej. Zaznaczasz zainteresowanie albo pomijasz; na stronie nikt nie widzi twojego profilu.",
+        "step4Title": "Kontakty przy obopólnym zainteresowaniu",
+        "step4Desc": "Nazwy użytkowników w Telegramie obu osób pojawiają się dopiero przy obopólnym zainteresowaniu. Nigdy nie płać za rezerwację przed obejrzeniem mieszkania i podpisaniem umowy."
       },
       "sublet": {
         "step1Title": "Przeglądaj podnajmy",
@@ -243,7 +243,9 @@
       "q5": "Jak działa przejrzystość kosztów?",
       "a5": "Najemcy anonimowo udostępniają swoje miesięczne koszty — czynsz, media, opłaty administracyjne. Dane są agregowane per budynek, więc przed podpisaniem umowy widzisz koszty zgłoszone przez najemców.",
       "q6": "Czy moje dane są bezpieczne?",
-      "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO."
+      "a6": "Stosujemy szyfrowanie wszystkich danych. Raporty kosztów są zanonimizowane i prezentowane wyłącznie w formie zbiorczej. Działamy zgodnie z RODO.",
+      "q7": "Jak znaleźć kogoś do wspólnego wynajmu?",
+      "a7": "Otwórz bota Passflat w Telegramie i załóż krótki profil: dzielnica, budżet na osobę, miesiąc przeprowadzki. Bot pokazuje uczciwą liczbę osób, które też szukają, i to, ile mieszkanie kosztuje na osobę; kontakty widać dopiero przy obopólnym zainteresowaniu."
     },
     "forWhom": {
       "title": "Passflat jest dla",

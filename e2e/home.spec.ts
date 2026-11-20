@@ -78,6 +78,44 @@ for (const [path, browserLocale, thesisStart] of [
   });
 }
 
+// PRD 4 FR-15: "how it works" opens on the roommate tab with the bot's steps
+// (the cesja and sublet tabs follow until Q-3), and the FAQ's first question is
+// the roommate one, opening onto its own answer.
+test.describe('how it works and FAQ on /en', () => {
+  test.use({ locale: 'en-US' });
+
+  test('the roommate tab is first and selected; the FAQ starts with the roommate question', async ({
+    page,
+  }) => {
+    await page.goto('/en');
+    const main = page.locator('main');
+
+    const tabs = main.locator('button[aria-pressed]');
+    await expect(tabs).toHaveText(['Roommate Search', 'Lease Takeover', 'Temporary Sublet']);
+    await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'true');
+    await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'false');
+    const firstStep = main.getByRole('heading', { level: 3, name: 'Create a profile in the bot' });
+    await expect(firstStep).toBeVisible();
+    await expect(
+      main.getByRole('heading', { level: 3, name: 'Contacts open on mutual interest' }),
+    ).toBeVisible();
+
+    // The other tabs still switch the steps.
+    await tabs.nth(1).click();
+    await expect(tabs.nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await expect(tabs.nth(0)).toHaveAttribute('aria-pressed', 'false');
+    await expect(firstStep).toHaveCount(0);
+
+    const question = 'How do I find someone to rent with?';
+    const triggers = main.locator('[data-slot="accordion-trigger"]');
+    await expect(triggers.first()).toHaveText(question);
+    await triggers.first().click();
+    await expect(main.getByRole('region', { name: question })).toContainText(
+      'Open the Passflat bot in Telegram and create a short profile',
+    );
+  });
+});
+
 // PRD 4 FR-5: "Find a flatmate" leads the header nav (desktop viewport, so the
 // first match is the nav link, not the mobile pill); building reviews left it.
 // Locale detection follows Accept-Language, so each case pins the browser

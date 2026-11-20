@@ -61,11 +61,13 @@ const STEP_NUMBER_BG: Record<ListingType, string> = {
   sublet: 'bg-amber-500',
 };
 
-const TABS: ListingType[] = ['replacement', 'roommate', 'sublet'];
+// PRD 4 FR-15: the roommate tab (the bot's steps) comes first and is selected by
+// default; the cesja and sublet tabs stay until Q-3 (FR-16).
+const TABS: ListingType[] = ['roommate', 'replacement', 'sublet'];
 
 export function HowItWorksTabs() {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<ListingType>('replacement');
+  const [activeTab, setActiveTab] = useState<ListingType>(TABS[0]);
 
   const tabLabel = (type: ListingType) => {
     const key = `landing.howItWorks.tab${type.charAt(0).toUpperCase() + type.slice(1)}` as const;
@@ -81,6 +83,8 @@ export function HowItWorksTabs() {
         {TABS.map((type) => (
           <button
             key={type}
+            type="button"
+            aria-pressed={activeTab === type}
             onClick={() => setActiveTab(type)}
             className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
               activeTab === type

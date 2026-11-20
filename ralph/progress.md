@@ -4266,3 +4266,94 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - With the production username unset (T117), the checker shows neither the button nor the hint in production until it is set.
   - No new table, migration or event name; event properties are unchanged.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 09:20 · T131 · done
+
+- Done (PRD 4 FR-15, part 1 of 2; spec 08 §How it works, Help and About):
+  - `src/components/landing/how-it-works-tabs.tsx`:
+    - `TABS = ['roommate', 'replacement', 'sublet']`, and the default state is `TABS[0]`.
+    - Each tab button gains `type="button"` and `aria-pressed={activeTab === type}`, so the selected tab can be read by tests and screen readers.
+    - Nothing else changed: icons, colours and the steps' markup are as before.
+  - New pure `src/components/landing/faq-items.ts`: `FAQ_ITEMS = [{ q: 'q7', a: 'a7' }, { q: 'q1', a: 'a1' }, … { q: 'q6', a: 'a6' }] as const`.
+  - `src/components/landing/faq.tsx` maps the pairs (`t(q)` / `t(a)`, item `value` = `q`). Before, the answer was paired by position (`` `a${i + 1}` ``).
+  - Copy in four locales (scratchpad script, limited to the `landing.howItWorks.roommate` block because "Move In" also titles another tab):
+    - `landing.howItWorks.subtitle` and `landing.howItWorks.roommate.step{1..4}{Title,Desc}` rewritten;
+    - `landing.faq.q7` / `a7` added.
+    - The cesja and sublet tabs and `tabRoommate` are untouched, checked in the diff (Q-3).
+- Tests:
+  - New `src/components/landing/how-it-works-tabs.test.ts`. It renders the real component with `renderToStaticMarkup`, `next-intl` mocked to `createTranslator` over the `landing` namespace only (`onError` throws). Per locale it checks:
+    - the tab order roommate → lease takeover → sublet;
+    - only the roommate tab is `aria-pressed`, in the violet colour;
+    - the default steps are the roommate steps 1 – 4, in order;
+    - the EN steps and subtitle equal PRD 4 §8;
+    - no subtitle says "three ways";
+    - every tab still has four steps.
+  - New `src/components/landing/faq.test.ts`:
+    - `FAQ_ITEMS` starts with q7, every pair's numbers match, and the questions are unique;
+    - every pair exists under `landing.faq` in four locales, and no `q*`/`a*` key there is left out;
+    - EN q7/a7 equal §8;
+    - walking the `FAQ()` element tree by component identity, each `AccordionItem` holds its own question over its own answer, q7 first, in four locales.
+  - `src/i18n/honesty-copy.test.ts`:
+    - the 11 keys (`HOW_IT_WORKS_KEYS`) join `REWRITTEN_KEYS`.
+    - A new case checks them in four locales: no digit, `PLN`, `zł` or `€` (so no price or date), no listings word, claim word, "real"/"truth", promise, "free" or placeholder.
+    - A self-check proves the patterns catch a price, a date, a listing, "verified" and a promised match.
+    - `bot-languages-copy.test.ts` reads `step1Desc` as a general bot line naming EN/RU/UK in all four locales (it passes unchanged).
+  - `e2e/home.spec.ts`, new test on `/en`:
+    - the `aria-pressed` tabs read "Roommate Search", "Lease Takeover", "Temporary Sublet", with the first one pressed;
+    - "Create a profile in the bot" and "Contacts open on mutual interest" are visible;
+    - clicking "Lease Takeover" switches the steps;
+    - the first accordion trigger is the q7 text, and opening it shows the a7 answer in its region.
+- Checks:
+  - Focused Vitest (`src/components/landing/`, `src/i18n/`, `home-thesis.test.ts`): 12 files / 125 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 160 files / 3406 tests;
+    - build OK.
+  - `npm run test:e2e` exit 0: 14 passed, including the new one. The usual e2e server noise (no database, the fake PostHog host) is unchanged.
+  - `next-env.d.ts` restored. Nothing deployed, no migration, no event, no message sent.
+- Did not work: the first copy script replaced `"step4Title": "Move In"` by value and found it twice (another tab uses it). It stopped before writing anything; it now edits only inside the roommate block.
+- Owner review:
+  - **Draft copy (agent copy, D29).** EN is PRD 4 §8 verbatim; **PL, RU and UK are the agent's drafts** («ты» / «ти», the bot's words «анкета», «Интересно» / «Цікаво», «Пропустить» / «Пропустити», «бронь»).
+    - `landing.howItWorks.subtitle`:
+      - pl "Jak działa szukanie kogoś do wspólnego wynajmu"
+      - en "How finding someone to rent with works"
+      - ru «Как работает поиск соседа для совместной аренды»
+      - uk «Як працює пошук сусіда для спільної оренди»
+      - old: en "Three ways to find your next home in Warsaw"
+    - `landing.howItWorks.roommate.step1Title` / `step1Desc`:
+      - pl "Załóż profil w bocie" / "Dzielnica, budżet na osobę, miesiąc przeprowadzki, języki. W Telegramie, po angielsku, rosyjsku lub ukraińsku."
+      - en "Create a profile in the bot" / "District, budget per person, move-in month, languages. In Telegram, in English, Russian or Ukrainian."
+      - ru «Создай анкету в боте» / «Район, бюджет на человека, месяц заезда, языки. В Telegram, по-английски, по-русски или по-украински.»
+      - uk «Створи анкету в боті» / «Район, бюджет на людину, місяць заїзду, мови. У Telegram, англійською, російською чи українською.»
+    - `step2Title` / `step2Desc`:
+      - pl "Zobacz, kto jeszcze szuka" / "Uczciwa liczba profili w każdej dzielnicy i to, ile mieszkanie kosztuje na osobę, według zgłoszeń najemców."
+      - en "See who else is looking" / "Honest counts per district and what a flat costs per person, from tenant reports."
+      - ru «Посмотри, кто ещё ищет» / «Честное число анкет по районам и сколько квартира стоит на человека — по отчётам жильцов.»
+      - uk «Подивись, хто ще шукає» / «Чесна кількість анкет по районах і скільки квартира коштує на людину — за звітами мешканців.»
+    - `step3Title` / `step3Desc`:
+      - pl "Zaznacz, z kim chcesz wynająć" / "Pasujące osoby, jedna po drugiej. Zaznaczasz zainteresowanie albo pomijasz; na stronie nikt nie widzi twojego profilu."
+      - en "Mark who you'd rent with" / "Compatible people one at a time. Interested or skip; nobody sees your profile on the web."
+      - ru «Отметь, с кем хочешь снять квартиру» / «Подходящие люди — по одному. «Интересно» или «Пропустить»; на сайте твою анкету никто не видит.»
+      - uk «Познач, з ким хочеш зняти квартиру» / «Люди, які тобі підходять, — по одному. «Цікаво» або «Пропустити»; на сайті твою анкету ніхто не бачить.»
+    - `step4Title` / `step4Desc`:
+      - pl "Kontakty przy obopólnym zainteresowaniu" / "Nazwy użytkowników w Telegramie obu osób pojawiają się dopiero przy obopólnym zainteresowaniu. Nigdy nie płać za rezerwację przed obejrzeniem mieszkania i podpisaniem umowy."
+      - en "Contacts open on mutual interest" / "Both Telegram usernames appear only when the interest is mutual. Never pay a reservation before a viewing and a signed contract."
+      - ru «Контакты — при взаимном интересе» / «Оба username в Telegram появляются, только когда интерес взаимный. Никогда не плати «бронь» до просмотра квартиры и подписанного договора.»
+      - uk «Контакти — за взаємного інтересу» / «Обидва username у Telegram з'являються, лише коли інтерес взаємний. Ніколи не плати «бронь» до перегляду квартири й підписаного договору.»
+      - old roommate steps (en): "Find a Room", "Meet Roommates", "Agree on Terms", "Move In" (browse rooms, message the tenants).
+    - `landing.faq.q7` / `a7` (new):
+      - pl "Jak znaleźć kogoś do wspólnego wynajmu?" / "Otwórz bota Passflat w Telegramie i załóż krótki profil: dzielnica, budżet na osobę, miesiąc przeprowadzki. Bot pokazuje uczciwą liczbę osób, które też szukają, i to, ile mieszkanie kosztuje na osobę; kontakty widać dopiero przy obopólnym zainteresowaniu."
+      - en "How do I find someone to rent with?" / "Open the Passflat bot in Telegram and create a short profile: district, budget per person, move-in month. You see honest counts of who else is looking and what a flat costs per person; contacts appear only when the interest is mutual."
+      - ru «Как найти, с кем снять квартиру?» / «Открой бота Passflat в Telegram и создай короткую анкету: район, бюджет на человека, месяц заезда. В боте видно честное число тех, кто тоже ищет, и сколько квартира стоит на человека; контакты появляются, только когда интерес взаимный.»
+      - uk «Як знайти, з ким зняти квартиру?» / «Відкрий бота Passflat у Telegram і створи коротку анкету: район, бюджет на людину, місяць заїзду. У боті видно чесну кількість тих, хто теж шукає, і скільки квартира коштує на людину; контакти з'являються, лише коли інтерес взаємний.»
+    - Not changed: `tabRoommate` ("Roommate Search"), the old FAQ q1 – q6 (q1 – q4 are about cesja; q3 names listings and "free", a price statement for Q-3 / FR-16).
+  - **Namespaces and providers:**
+    - `HowItWorksTabs` (client, home page) reads `landing.howItWorks.*` through `useTranslations()`. `landing` is in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider, and the home page has no scoped provider. The render test serves only `landing`.
+    - `FAQ` is a server component (`getTranslations('landing.faq')`).
+  - **Assumptions applied (spec 08, FR-15 drafts):**
+    - the pair list lives in `faq-items.ts`;
+    - the tab order lives in `TABS` (`how-it-works-tabs.tsx`).
+  - **Agent's choice:** `aria-pressed` and `type="button"` on the tab buttons. They were not asked for, but make "selected" observable; there is no visual change.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T132 rewrites the Help and About copy, the second FR-15 task; FR-15 stays Planned in the `docs/specs/README.md` map until it is done).

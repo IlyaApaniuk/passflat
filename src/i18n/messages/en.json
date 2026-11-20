@@ -113,7 +113,7 @@
     },
     "howItWorks": {
       "title": "How Passflat Works",
-      "subtitle": "Three ways to find your next home in Warsaw",
+      "subtitle": "How finding someone to rent with works",
       "tabReplacement": "Lease Takeover",
       "tabRoommate": "Roommate Search",
       "tabSublet": "Temporary Sublet",
@@ -128,14 +128,14 @@
         "step4Desc": "Complete the handover. No deposit lost, no agency fees."
       },
       "roommate": {
-        "step1Title": "Find a Room",
-        "step1Desc": "Browse available rooms — private or shared. See price per person and who already lives there.",
-        "step2Title": "Meet Roommates",
-        "step2Desc": "Message the current tenants. Get to know their lifestyle and habits.",
-        "step3Title": "Agree on Terms",
-        "step3Desc": "Settle on rent split, deposit, and house rules.",
-        "step4Title": "Move In",
-        "step4Desc": "Join the household and start your new chapter."
+        "step1Title": "Create a profile in the bot",
+        "step1Desc": "District, budget per person, move-in month, languages. In Telegram, in English, Russian or Ukrainian.",
+        "step2Title": "See who else is looking",
+        "step2Desc": "Honest counts per district and what a flat costs per person, from tenant reports.",
+        "step3Title": "Mark who you'd rent with",
+        "step3Desc": "Compatible people one at a time. Interested or skip; nobody sees your profile on the web.",
+        "step4Title": "Contacts open on mutual interest",
+        "step4Desc": "Both Telegram usernames appear only when the interest is mutual. Never pay a reservation before a viewing and a signed contract."
       },
       "sublet": {
         "step1Title": "Browse Sublets",
@@ -243,7 +243,9 @@
       "q5": "How does cost transparency work?",
       "a5": "Tenants anonymously share their monthly costs — rent, utilities, admin fees. Data is aggregated per building so you can see the costs tenants reported before signing a lease.",
       "q6": "Is my data safe?",
-      "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR."
+      "a6": "We use encryption for all data in transit and at rest. Cost reports are anonymized and shown only in aggregated form. We follow a privacy-first approach in compliance with GDPR.",
+      "q7": "How do I find someone to rent with?",
+      "a7": "Open the Passflat bot in Telegram and create a short profile: district, budget per person, move-in month. You see honest counts of who else is looking and what a flat costs per person; contacts appear only when the interest is mutual."
     },
     "forWhom": {
       "title": "Passflat is for",
