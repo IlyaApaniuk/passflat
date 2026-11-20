@@ -117,6 +117,7 @@ FR-1. The flatmate block opens the roommate page
 Milestone: M1 · Priority: Must · Status: Decided (the roommate page is an entry into the bot,
   D48, D41; listings stay frozen and are not promoted, D5); Assumption (placement and order, as
   spec 02 §Find a flatmate marks them, D68)
+Findings: S-1
 Who and when: a visitor lands on /[city]/roommate without choosing a role
 Result: the "Looking for someone to rent with?" block (PRD 3 FR-21) is the first content of the
   page, the role selector stands above the frozen type tabs, and the "0 listings" line is not
@@ -153,6 +154,7 @@ Open questions: Q-5 (type tabs; blocks nothing here)
 FR-2. The roommate page without the bot username
 Milestone: M1 · Priority: Must · Status: Assumption (the honest line; the agent's cautious option
   of audit S-10)
+Findings: S-10
 Who and when: a build or deploy where NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is unset (production
   today, every preview build, the e2e server) renders /warsaw/roommate
 Result: the flatmate block still explains the profile and says the bot is not connected yet;
@@ -182,6 +184,7 @@ FR-3. Roommate page title, description and H1
 Milestone: M1 · Priority: Must · Status: Decided (the page stays at its URL with canonical and
   hreflang, PRD 1 §2, spec 02); Assumption (the wording: agent drafts for the owner's review; the
   snippet is read in §1)
+Findings: S-2 (metadata and H1)
 Who and when: Google and a visitor read the roommate page's title, description and first heading
 Result: they describe the thesis (a profile in the Telegram bot, district, budget per person,
   move-in month; what a room or a shared flat costs from reports), not room listings
@@ -207,6 +210,7 @@ Open questions: none
 ```text
 FR-4. Roommate page landmarks and mobile height
 Milestone: M1 · Priority: Must · Status: Assumption (agent's choice of markup, audit S-2)
+Findings: S-2 (landmarks, `h-dvh`, footer)
 Who and when: a visitor, a screen reader or a crawler reads /[city]/roommate
 Result: the page has a `main` landmark, a footer and a height that mobile browsers do not clip
 Acceptance criteria:
@@ -230,6 +234,7 @@ Open questions: none
 FR-5. Header: find a flatmate first; building reviews in the footer
 Milestone: M1 · Priority: Must · Status: Decided (the roommate page is the entry, D48; agency and
   building reputation are out of focus, D48); Assumption (labels, order)
+Findings: S-4, S-15 (the hub linked from the footer)
 Who and when: any visitor opens the header on any page, on desktop or on a phone
 Result: the first navigation item leads to the roommate page; the mobile pill leads there too;
   "Building reviews" moves from the header to the footer and stays reachable
@@ -258,6 +263,7 @@ FR-6. Home framing surfaces stop promoting frozen listings
 Milestone: M1 · Priority: Must · Status: Decided (frozen, not promoted, D5; the roommate page, the
   costs and the checker are the entries, D48); Assumption (targets and labels; the ForWhom
   segments)
+Findings: S-5, S-3 (the ForWhom card), S-15 (the home district cards)
 Who and when: a visitor reads the hero chips, the "for whom" cards, the 404 page, the dashboard's
   "Browse listings" button or the home district cards
 Result: every one of them leads to the roommate page, the costs, the checker or the district
@@ -296,6 +302,7 @@ Open questions: Q-6 (the hero H1; blocks nothing: the H1 is not changed here)
 FR-7. Footer product column without the frozen listings links
 Milestone: M1 · Priority: Should · Status: Open (Q-5: removing navigation to /replacement, /sublet
   and /create-listing is a surface decision of the owner, although D5 says "not promoted")
+Findings: S-5 (the footer links), S-1 (the type tabs)
 Who and when: a visitor reads the footer on any page
 Result (proposal): the product column lists Find a flatmate, Costs by building (/warsaw/costs),
   Costs by district (/warsaw), Check an address, Calculator, Guides, Building reviews, Templates;
@@ -322,6 +329,7 @@ FR-8. One shared flatmate callout
 Milestone: M2 · Priority: Must · Status: Decided (the cost site, building pages, checker, guides
   and the roommate page are entries into the bot, D48; bot languages EN/RU/UK, D50); Assumption
   (the component, its copy and which surfaces show counts or the figure)
+Findings: S-6, S-3 (the bot entry)
 Who and when: a server component renders the callout on a cost or content surface (FR-9, FR-11,
   FR-12, FR-26)
 Result: one component `FlatmateCallout` says what Passflat does and offers two links: the roommate
@@ -360,6 +368,7 @@ Open questions: none
 FR-9. The home page states the thesis under the hero
 Milestone: M2 · Priority: Must · Status: Decided (the thesis sentence, D48); Assumption (placement
   under the hero, before CheckAddress; the hero H1 itself stays, Q-6)
+Findings: S-3
 Who and when: a visitor opens / in any locale
 Result: directly under the hero one section says "Passflat helps people in Warsaw find someone to
   rent with and see what it costs per person", explains the profile and leads to the roommate page
@@ -387,6 +396,7 @@ Open questions: Q-6 (hero H1; blocks nothing)
 FR-10. Home title, description, footer tagline, "for whom" copy and the templates sentence
 Milestone: M2 · Priority: Must · Status: Assumption (agent drafts for the owner's review; the
   honesty rule of D25 and the test's forbidden list are Decided)
+Findings: S-3 (home title, description, tagline), S-16 (the home keys), S-33
 Who and when: Google and a visitor read the home title and description, the footer tagline, the
   "for whom" roommate card and the tools section's templates sentence
 Result: they describe the thesis and the reported costs, name no listings and no "truth", and
@@ -415,6 +425,7 @@ Open questions: none
 FR-11. The callout on building pages, district pages and the city hub
 Milestone: M2 · Priority: Must · Status: Decided (entries, D48; not promoted, D5); Assumption
   (placement; no number on a building)
+Findings: S-6, S-5 (the building page's listings card)
 Who and when: a visitor reads /[city]/building/[slug], /[city]/[district] or /[city]
 Result: each page offers the roommate entry; the building page's frozen "View listings in
   {district}" card is replaced by the callout; no building shows a per-person number
@@ -448,6 +459,7 @@ Open questions: none (removing the /replacement link from the building page foll
 FR-12. The callout on the calculator result, the guides list and every guide
 Milestone: M2 · Priority: Should · Status: Decided (guides and the calculator are entries, D48);
   Assumption (placement, no counts on static pages)
+Findings: S-6 (calculator, blog list), S-20
 Who and when: a visitor reads a calculator result, /blog or /blog/[slug]
 Result: each offers the roommate entry; guides get an end-of-article block with two links (check
   the address; find someone to rent with)
@@ -480,6 +492,7 @@ Milestone: M2 · Priority: Must · Status: Decided (the figure rule: tenant grou
   apartments with 2 or more rooms, halved, rounded half up to 10 zł, with N, labelled "half of the
   median flat", never from asking prices or a known part, no line below N 2; D61, D71); Assumption
   (where it shows: the roommate block, the home section, the hub)
+Findings: S-7
 Who and when: a visitor reads the flatmate block on /warsaw/roommate, the home section (FR-9) or
   the hub callout (FR-11)
 Result: one line "A whole flat in Warsaw, tenant reports ({n}): about {half} zł each for two
@@ -512,6 +525,7 @@ Open questions: none
 FR-14. The checker's bot handoff is a button that names what the bot does
 Milestone: M2 · Priority: Should · Status: Assumption (markup and the hint line; payload and
   events are Decided as built, PRD 1 FR-11)
+Findings: S-9
 Who and when: a visitor sees a checker result (with or without building data)
 Result: the Telegram link is an outline button at least 44 px high with one line under it naming
   the bot's jobs and languages; payload and events unchanged
@@ -540,6 +554,7 @@ FR-15. "How it works", Help and About describe the thesis
 Milestone: M2 · Priority: Should · Status: Assumption (agent drafts for the owner's review); the
   removal of the cesja and sublet steps, the payments answers and the listings counter are FR-16
   (Open, Q-3)
+Findings: S-11 (the part that is not Open)
 Who and when: a visitor reads the home "how it works" section, /help "What is Passflat?" or
   /about
 Result: the roommate tab describes the bot's steps and comes first; the general answers say what
@@ -570,6 +585,7 @@ FR-16. Help payments answers, cesja and sublet steps, the listings counter
 Milestone: M2 · Priority: Could · Status: Open (Q-3: the payments answers mirror the terms and
   name 39 PLN; removing the cesja and sublet steps and the About listings counter hides frozen
   surfaces)
+Findings: S-11 (the Open part)
 Who and when: a visitor reads /help payments and lease-takeover answers, the home "how it works"
   cesja and sublet tabs, `howItWorksPage.listers.*` and the About "{listings}+" counter
 Result (proposal): the payments section says nothing is paid today and the promotion answer is
@@ -591,6 +607,7 @@ Open questions: Q-3 (owner; blocks this requirement only)
 FR-17. The Polish visitor's expectation and the posting kit's locale links
 Milestone: M2 · Priority: Should · Status: Decided (no Polish bot locale now, D50; prefer Telegram
   and vary the wording, D53); Assumption (the clause, the rule for links)
+Findings: S-14
 Who and when: a Polish-locale visitor reads the roommate roles and the flatmate block; the owner
   copies a website link into a chat post
 Result: the Polish third role reads as the seeker side; the Polish block says there is no Polish
@@ -617,6 +634,7 @@ Open questions: none
 FR-18. Roommate page copy consistency
 Milestone: M2 · Priority: Could · Status: Assumption (agent drafts); the consent note is FR-20's
   question (Q-9)
+Findings: S-12 (the card's title only), S-34 (the «ты» filter title)
 Who and when: a visitor reads the empty roommate list
 Result: the e-mail card addresses room seekers, not flat-sharers; the filter title uses «ты»
 Acceptance criteria:
@@ -638,6 +656,7 @@ Open questions: Q-9 (consent note; blocks nothing here)
 FR-19. The city-notify form on the home page
 Milestone: M2 · Priority: Could · Status: Open (Q-2: the form collects e-mails for a launch that is
   out of focus, D6; removing it is a surface and personal-data decision)
+Findings: S-12 (the city-notify form)
 Who and when: a visitor reads the home page's "Live in another city?" section
 Result (proposal): the section is removed from the home page; the API and the checker's
   outside-city form stay; the checker's wording becomes "we may e-mail you once if Passflat
@@ -657,6 +676,7 @@ Open questions: Q-2 (owner; blocks this requirement only)
 FR-20. The roommate e-mail card and "I have a free room"
 Milestone: M2 · Priority: Could · Status: Open (Q-4: the e-mail card collects personal data and is
   counted by E13; the free-room role leads to a frozen listing form)
+Findings: S-12 (the e-mail card and the free-room role)
 Who and when: a visitor on the empty roommate list
 Result (proposal): the e-mail card is removed from the roommate page only (kept on /replacement
   and /sublet); "I have a free room" points to the room money block's links to OLX, Otodom and
@@ -681,6 +701,7 @@ FR-21. Templated titles and CTAs under the honesty test
 Milestone: M3 · Priority: Must · Status: Decided (reported-costs wording, D25; the test's forbidden
   list, spec 03 §Marketing copy); Assumption (the exact drafts; shipping the snippet changes with
   this deploy)
+Findings: S-16
 Who and when: Google and a visitor read the building, district, city, calculator, data-report and
   home titles and descriptions, and the costs CTAs
 Result: none says "real", "really", "naprawdę", "realne", "реальные", "реальні", "the truth" or
@@ -712,6 +733,7 @@ Open questions: none
 FR-22. Nominative-safe templates for district and city names
 Milestone: M3 · Priority: Should · Status: Assumption (template shapes; the district names stay the
   database `nameKey` display names)
+Findings: S-19
 Who and when: a Polish or Russian reader sees a title or heading with a district or city name
 Result: the name stands in the nominative in every template ("Mokotów: koszty najmu", not
   "Wynajem w Mokotów")
@@ -736,6 +758,7 @@ Open questions: none
 FR-23. Guide frontmatter without percentages and the "real" family; a frontmatter honesty test
 Milestone: M3 · Priority: Must · Status: Decided (no invented statistics, no "in full" claims,
   D25, CLAUDE.md honesty); Assumption (the drafts)
+Findings: S-17 (frontmatter)
 Who and when: Google reads a guide's title and description; the blog index shows them
 Result: no frontmatter carries "77 %", "w całości", "in full", "полностью", "повністю" as a figure
   claim or the "real / rzeczywist / realn / реальн / actually / really" family; a test keeps it so
@@ -764,6 +787,7 @@ Open questions: none
 FR-24. Guide bodies: reported-costs wording and relative self-links
 Milestone: M3 · Priority: Should · Status: Decided (honesty wording, D25); Assumption (the
   mechanical replacement; link rendering)
+Findings: S-17 (bodies), S-21 (self-links)
 Who and when: a reader reaches the end of any of the 52 guides or taps a self-link
 Result: the closing sentence speaks of reported costs, and links to passflat.com open in the same
   tab as relative links
@@ -791,6 +815,7 @@ Open questions: Q-7 (cesja article; blocks nothing here)
 ```text
 FR-25. Titles and descriptions of the page-1 pages with CTR below 1 %
 Milestone: M3 · Priority: Should · Status: Assumption (agent drafts; read in §1 as the H11 item)
+Findings: S-18, S-21 (the cesja description)
 Who and when: Google shows the meters guide, the English hidden-costs guide, the data report, the
   calculator, the cesja guide, the English deposit guide, the English no-agent guide and the English
   occasional-lease guide
@@ -820,6 +845,7 @@ FR-26. District page: how many people look for a flatmate here
 Milestone: M3 · Priority: Must · Status: Decided (honest counts per district, nobody sees anybody,
   "any" profiles never added to a district, no combination with other fields, D49, D51, D68);
   Assumption (the section, the website count shape)
+Findings: S-8 (profile counts)
 Who and when: a visitor reads /[city]/[district]
 Result: a section "Room and shared renting: {district}" names how many active profiles name the
   district, or "nobody yet", and carries the flatmate callout
@@ -852,6 +878,7 @@ Open questions: none
 FR-27. District page: the room reference and the per-person line; the data report's per-person line
 Milestone: M3 · Priority: Must · Status: Decided (room figures per group with N and the level said,
   D23, PRD 3 FR-17; the per-person split, D61, D71)
+Findings: S-8 (room figures), S-7 (the district and data-report line)
 Who and when: a visitor reads the FR-26 section of a district page, or the data report
 Result: the district's room figures (both groups with N; Warsaw when the district has fewer than 5
   room reports, said so) and the district's per-person line, from the same loader as the bot
@@ -884,6 +911,7 @@ Open questions: none
 FR-28. Sitemap, robots, structured data and the submit page's metadata
 Milestone: M3 · Priority: Should · Status: Assumption (priorities, schema choices); dropping
   frozen URLs from the sitemap or adding noindex is FR-29 (Open, Q-1); the Instagram handle is Q-8
+Findings: S-13 (the part that is not Open), S-21 (JSON-LD), S-22
 Who and when: a crawler reads /sitemap.xml, /robots.txt and the JSON-LD of pages
 Result: the roommate page outranks the frozen lists in the sitemap, blog entries carry lastmod,
   structured data points at live surfaces with per-locale URLs, link-preview images are not
@@ -918,6 +946,7 @@ Open questions: Q-1 (FR-29), Q-8 (Instagram handle; blocks the sameAs line only)
 FR-29. Frozen listing pages out of the sitemap, or noindex
 Milestone: M3 · Priority: Could · Status: Open (Q-1: changing the discoverability of existing URLs
   is the owner's)
+Findings: S-13 (the Open part)
 Who and when: a crawler reads the sitemap and the frozen pages
 Result (proposal): `/[city]/replacement`, `/[city]/sublet` and the listing-detail loop leave the
   sitemap; the two list pages get `robots: { index: false, follow: true }`; the pages stay
@@ -938,6 +967,7 @@ Open questions: Q-1 (owner; blocks this requirement only)
 FR-30. Icons and the locale guard
 Milestone: M4 · Priority: Must · Status: Assumption (the mechanism: a redirect for /favicon.ico, an
   ImageResponse apple icon, the guard; no image dependency)
+Findings: S-23
 Who and when: a browser requests /favicon.ico or /apple-touch-icon.png on its own; any request
   carries an unknown first path segment
 Result: no request returns HTTP 500; icons are served; unknown segments return 404
@@ -962,6 +992,7 @@ Open questions: none
 ```text
 FR-31. HTTP headers: link-preview cache and security headers
 Milestone: M4 · Priority: Should · Status: Assumption (values below; a CSP is Later)
+Findings: S-27, S-28 (without a CSP)
 Who and when: a chat app fetches /api/og; any response leaves the server
 Result: /api/og is cached at the edge; every response carries the four security headers
 Acceptance criteria:
@@ -984,6 +1015,7 @@ Open questions: none
 FR-32. The roommate page does not read auth on the server
 Milestone: M4 · Priority: Should · Status: Assumption (client-side resolution through the FR-33
   hook)
+Findings: S-24 (the auth read; the URL-filter parsing is Later)
 Who and when: any request renders /[city]/roommate
 Result: the server does not call Supabase Auth; favourites resolve the session on the client
 Acceptance criteria:
@@ -1007,6 +1039,7 @@ Open questions: none
 ```text
 FR-33. The Supabase client loads only when a session may exist
 Milestone: M4 · Priority: Should · Status: Assumption (the cheap signal and the lazy import)
+Findings: S-25
 Who and when: the header mounts on any page for a visitor
 Result: anonymous visitors never download the Supabase browser client; signed-in visitors see
   their state as today
@@ -1034,6 +1067,7 @@ Open questions: none
 ```text
 FR-34. Contrast, tap targets and the hamburger
 Milestone: M4 · Priority: Should · Status: Assumption (classes below)
+Findings: S-29, S-30
 Who and when: a visitor reads the hero figures or taps the header, banner or costs toolbar controls
   on a phone
 Result: no text is drawn in the lime accent on the light background; every listed control is at
@@ -1063,6 +1097,7 @@ Open questions: none
 ```text
 FR-35. Labels, the banner's privacy link, heading order and a skip link
 Milestone: M4 · Priority: Could · Status: Assumption
+Findings: S-31
 Who and when: a screen-reader user or keyboard user visits the checker, the home page or any page
 Result: every input has a programmatic label, the cookie banner links to the visitor's locale
   policy, headings do not skip levels after the h1 on the building and checker pages and in the
@@ -1096,6 +1131,7 @@ Open questions: none
 FR-36. Measurement and documentation
 Milestone: M5 · Priority: Must · Status: Decided (existing event names, new values only, CLAUDE.md;
   the loop never queries PostHog); Assumption (the readout's shape)
+Findings: S-35 (the deploy checklist)
 Who and when: after M1 – M4 are built, from the code as it is
 Result: the funnels document, the bot README and the architecture file describe the new values and
   the PRD 4 readout; the deploy copy-review checklist is written
@@ -1128,6 +1164,7 @@ Open questions: none
 ```text
 FR-37. Final check and handoff
 Milestone: M5 · Priority: Must · Status: Decided
+Findings: none (the handoff)
 Who and when: the last task of the PRD
 Result: the gate and the e2e suite pass, the requirement map is complete, and the progress entry is
   the owner's handoff
@@ -1206,9 +1243,9 @@ Existing event names only; new values are **Assumptions**. Nothing new is stored
 identities are never joined.
 
 | Event                      | Where        | Change                                                                                                                                                          |
-| -------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- | --- | ---------- | --------------------------------------------------------------------- |
+| -------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `telegram_bot_opened`      | web, callout | new `source` values `home`, `building`, `district`, `hub`, `calculator`, `guide` (FR-8); `has_building_context=false`; `checker`, `empty`, `roommate` unchanged |
-| `cta_click`                | web, callout | new `placement` values `flatmate_callout_home                                                                                                                   | building | district | hub | calculator | guide`(the roommate-page link, FR-8);`header_mobile` unchanged (FR-5) |
+| `cta_click`                | web, callout | new `placement` values `flatmate_callout_<surface>` for the six surfaces above (the roommate-page link, FR-8); `header_mobile` unchanged (FR-5)                 |
 | `roommate_intent_selected` | web          | unchanged; with FR-1 the `find_flatmate` taps fall (the block is open by default); E11's useful actions already count `telegram_bot_opened`                     |
 | `tg_bot_started`           | bot          | unchanged; `payload` now also `mate_web_home` … `mate_web_guide`                                                                                                |
 | `tg_roommate_flow_started` | bot          | unchanged; `entry_detail` now also `home`, `building`, `district`, `hub`, `calculator`, `guide` (from the payloads of FR-8)                                     |

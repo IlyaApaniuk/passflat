@@ -73,7 +73,7 @@ getDistrictMediansCached()])`. Hero chips (204–226) → `/warsaw/replacement|r
   `onClickCapture={() => captureCta('telegram')}`, and 685).
 - Tests: `src/lib/roommate-roles.test.ts`, `src/components/listings/room-money-placement.test.ts`,
   `roommate-role-selector.test.ts`, `room-money-consistency.test.ts`,
-  `src/app/[locale[/[city]/roommate/client-namespaces.test.ts`, `src/i18n/honesty-copy.test.ts`,
+  `src/app/[locale]/[city]/roommate/client-namespaces.test.ts`, `src/i18n/honesty-copy.test.ts`,
   `src/i18n/bot-languages-copy.test.ts`, `src/i18n/messages.test.ts` (parity). Vitest runs in Node
   without a DOM: component logic goes into pure helpers that are tested (spec 01 rule).
 
@@ -198,7 +198,7 @@ get counts or the figure).
     (`listings.flatmateCallout.roommateLink`) and, when `process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`
     is set, the bot button (`listings.findFlatmate.button`) → `botStartUrl(username, surface)`.
   - The two links are a small client component `FlatmateCalloutLinks` (it needs `usePostHog`):
-    the roommate link captures `cta_click { placement: `flatmate*callout*${surface}` }`; the bot
+    the roommate link captures `cta_click` with `placement: 'flatmate_callout_<surface>'`; the bot
     button captures `telegram_bot_opened` with `telegramBotOpenedProperties(surface)`
     (`has_building_context: false`), opens in a new tab.
   - Never returns `null`; without the username the bot button is absent.
