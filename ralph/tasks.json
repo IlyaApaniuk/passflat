@@ -675,14 +675,14 @@
       "title": "Link-preview cache on /api/og and three security headers (FR-31)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#http-headers",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "/api/og success responses carry Cache-Control: public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800; error responses carry no cache header",
         "next.config.mjs headers() sets X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin and Permissions-Policy camera=(), microphone=(), geolocation=() on every route; no framing header (Q-13, T154) and no other Content-Security-Policy",
         "e2e/og-image.spec.ts asserts the cache header; e2e/home.spec.ts asserts the three headers on /"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Assumption values. The site uses no camera, microphone or geolocation (checked 2026-11-20)."
     },
     {

@@ -26,6 +26,13 @@ const MAX_LENGTHS = {
 // eslint-disable-next-line no-control-regex -- matching control chars is the point
 const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
 
+/**
+ * Link-preview cache (spec 09 §HTTP headers, FR-31, Assumption values): a card's text lives in
+ * its URL, so a URL always draws the same card. Set only on the rendered card; a thrown error is
+ * Next's own 500 without this header.
+ */
+const OG_CACHE_CONTROL = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
+
 function readParam(searchParams: URLSearchParams, key: keyof typeof MAX_LENGTHS): string | null {
   const raw = searchParams.get(key);
   if (raw == null) return null;
@@ -262,6 +269,7 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
+      headers: { 'Cache-Control': OG_CACHE_CONTROL },
     },
   );
 }

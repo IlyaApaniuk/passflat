@@ -2,8 +2,22 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+/**
+ * Sent on every route (spec 09 §HTTP headers, FR-31, Assumption values). The site uses no
+ * camera, microphone or geolocation (checked 2026-11-20). No framing header (Q-13, T154) and no
+ * Content-Security-Policy.
+ */
+const SECURITY_HEADERS = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async headers() {
+    return [{ source: '/(.*)', headers: SECURITY_HEADERS }];
+  },
   // Playwright builds and serves into `.next-e2e` so an e2e run never touches the
   // `.next` directory of a running dev server.
   distDir: process.env.NEXT_DIST_DIR || '.next',

@@ -11,6 +11,24 @@ test('home page (default locale) loads', async ({ page }) => {
   await expect(page.locator('body')).toBeVisible();
 });
 
+// PRD 4 FR-31 (spec 09 §HTTP headers): three security headers on every route, no framing
+// header (Q-13, T154) and no Content-Security-Policy. A Polish browser stays on `/`.
+test.describe('security headers on /', () => {
+  test.use({ locale: 'pl-PL' });
+
+  test('/ carries the three security headers and no framing header or CSP', async ({ page }) => {
+    const response = await page.goto('/');
+    expect(response?.status()).toBe(200);
+    expect(new URL(page.url()).pathname).toBe('/');
+    const headers = response?.headers() ?? {};
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(headers['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
+    expect(headers['x-frame-options']).toBeUndefined();
+    expect(headers['content-security-policy']).toBeUndefined();
+  });
+});
+
 test('english home page (/en) loads', async ({ page }) => {
   const response = await page.goto('/en');
   expect(response?.status()).toBeLessThan(400);

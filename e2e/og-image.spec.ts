@@ -14,5 +14,9 @@ test('the cost OG card renders with a figure label', async ({ request }) => {
   const response = await request.get(`/api/og?${params.toString()}`);
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toContain('image/png');
+  // FR-31 (spec 09 §HTTP headers): link previews are cached.
+  expect(response.headers()['cache-control']).toBe(
+    'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
+  );
   expect((await response.body()).byteLength).toBeGreaterThan(1000);
 });

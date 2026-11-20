@@ -175,6 +175,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - `src/content/blog-bodies.test.ts` fails on any guide line with a Markdown link to `/check`, `/costs` or `/building` that matches `FORBIDDEN[locale]`; its `ALLOWED_LINK_LINE_MATCHES` exempts a `{ file, phrase }` (only that phrase, the rest of the line is still checked). Guide lines are rewritten best by a scratchpad script of exact `[file, line, [old, new]]` replacements (example: T142); a line starting with "- " hides from `grep -c "^-[^-]"` over a diff.
 - A dotted single-segment path (`/x.ext`) skips the middleware and reaches `/[locale]` as a "locale"; the home page's `dynamicParams = false` 404s it without a render (before it, `next start` hung on such a request). Next's build table hides `/favicon.ico`: look in `.next/app-path-routes-manifest.json`.
 - `next/og` `ImageResponse` renders a real PNG in Vitest (node) and under `npx tsx`: read the body and check the size from the IHDR bytes (example: `src/app/icon-routes.test.ts`).
+- `next.config.mjs` imports in Vitest with `vi.mock('next-intl/plugin', () => ({ default: () => (c) => c }))`; call `headers()` etc. on the default export (example: `src/next-config-headers.test.ts`). Response headers on `/` in e2e need `test.use({ locale: 'pl-PL' })`, or the response is the `/en` page after the redirect.
 
 ## Log
 
@@ -5181,4 +5182,22 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Assumptions applied** (spec 09 FR-30): the mechanism (two static route handlers drawing the mark with `next/og`) and `Cache-Control: public, max-age=86400, s-maxage=604800` (`BRAND_ICON_HEADERS` in `src/lib/brand-mark.tsx`); plus the home page's `dynamicParams = false` (above), which the spec did not name.
   - The 180 px touch icon keeps the rounded corners and transparent edges of `public/icon.svg` (iOS masks its own corners; the transparent corners lie outside that mask). A full-bleed square would be a design change, not made.
   - No copy, no new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 11:20 · T153 · done
+
+- Done (PRD 4 FR-31 without the framing header; spec 09 §HTTP headers):
+  - `src/app/api/og/route.tsx`: the `ImageResponse` options get `headers: { 'Cache-Control': OG_CACHE_CONTROL }` (`public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800`, a module-private constant next to the route). Next's `ImageResponse` sets `public, max-age=0, must-revalidate` by default in production and lets option headers override it. The route has no error branch of its own: a thrown error is Next's 500 without this header (unchanged).
+  - `next.config.mjs`: `SECURITY_HEADERS` and `headers()` → `[{ source: '/(.*)', headers }]` with `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`. No `X-Frame-Options`, no CSP (Q-13, T154). Re-checked: no `geolocation`, `getUserMedia`, `mediaDevices` or `GeolocateControl` under `src/`.
+  - Tests: `e2e/og-image.spec.ts` asserts the cache header; `e2e/home.spec.ts` new test (browser `pl-PL`, stays on `/`) asserts the three headers and the absence of `x-frame-options` and `content-security-policy`; new `src/app/api/og/route.test.ts` (a rendered card: 200, `image/png`, the cache header, PNG bytes); new `src/next-config-headers.test.ts` (`next-intl/plugin` mocked to identity: `headers()` returns exactly the one rule with the three headers, no framing key, no CSP).
+  - Docs: `docs/specs/README.md` FR-31 row → Done; `docs/architecture.md` §8 notes the headers and the OG cache.
+- Checks:
+  - `npx vitest run src/app/api/og/route.test.ts src/next-config-headers.test.ts`: 2 files / 3 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 178 files / 3610 tests; build OK.
+  - `npm run test:e2e` exit 0: 18 passed (the new security-headers test and the OG card test among them). `next-env.d.ts` restored.
+  - Not verified: the production site (Vercel may add or merge its own headers; the CDN honouring `s-maxage` / `stale-while-revalidate`), real link-preview crawlers. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Assumptions applied** (spec 09 FR-31): the OG cache values (`OG_CACHE_CONTROL` in `src/app/api/og/route.tsx`) and the three header values (`SECURITY_HEADERS` in `next.config.mjs`). A cached card changes only when its URL changes; a figure update reaches previews within a day at the CDN (up to a week stale while revalidating).
+  - The framing header stays open (Q-13, T154 blocked). No copy, no new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.

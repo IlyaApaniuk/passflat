@@ -247,6 +247,7 @@ imported (`src/lib/stripe.ts`, `src/lib/email/client.ts`, `src/lib/supabase/broa
   - API 54321, DB 54322 (shadow 54320), Studio 54323, Inbucket mail 54324; the pooler (54329) is disabled.
   - `site_url` is `http://localhost:3000`.
   - `next.config.mjs` allows images from local storage on `127.0.0.1` / `localhost:54321` outside production.
+  - `next.config.mjs` `headers()` sends `X-Content-Type-Options`, `Referrer-Policy` and `Permissions-Policy` on every route (FR-31, spec 09 §HTTP headers); no framing header (Q-13) and no CSP. `/api/og` sets its own `Cache-Control` on rendered cards.
 - **Env files**: the Prisma CLI loads only `.env`; Next.js loads `.env.local` before `.env`.
   - `CLAUDE.md` says both point to `127.0.0.1:54322`. Not checked here: agents do not open them.
   - Keep the two in sync: otherwise the app and the CLI target different databases.
