@@ -77,6 +77,16 @@ const ROOMMATE_SHELL_KEYS = [
   'listings.roommateH1',
 ];
 
+/** The home framing keys rewritten by PRD 4 FR-6 (spec 08 §Home framing surfaces, §8). */
+const HOME_FRAMING_KEYS = [
+  ...['rentTogether', 'findRoom', 'checkFlat'].flatMap((card) =>
+    ['title', 'description', 'cta'].map((field) => `landing.forWhom.${card}.${field}`),
+  ),
+  'landing.cta.subtitle',
+  'landing.cta.freeNote',
+  'errors.notFound.browse',
+];
+
 /** "Free" in any locale: whether snippets may say so is Q-12, held by a blocked task. */
 const FREE: RegExp = /\bfree\b|bezpłat|darmow|za darmo|бесплатн|безкоштовн|безплатн/i;
 
@@ -157,6 +167,18 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     }
     // The ranking query stays the first words of the Polish title.
     expect(valueAt('pl', 'listings.titleRoommate')).toMatch(/^Szukam współlokatora/);
+  });
+
+  it('the home framing keys (PRD 4 FR-6): no "free", no promise, no placeholder', () => {
+    for (const locale of LOCALES) {
+      for (const key of HOME_FRAMING_KEYS) {
+        const value = valueAt(locale, key);
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect(value as string, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value as string, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+        expect(value as string, `${locale}: ${key}`).not.toContain('{');
+      }
+    }
   });
 
   it('the en.json search finds no claim about reported figures', () => {

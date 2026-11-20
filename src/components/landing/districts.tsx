@@ -9,8 +9,8 @@ import { singleNumberLabelText } from '@/lib/single-number-view';
 const DEFAULT_CITY = 'warsaw';
 
 // A district card's `key` equals its DB slug for every district except the two
-// Praga ones (camelCase key vs hyphenated slug). Override just those so the cost
-// page's ?district=<slug> filter matches and the district is pre-selected.
+// Praga ones (camelCase key vs hyphenated slug). Override just those so the card
+// links to the district page /warsaw/<slug> (PRD 4 FR-6) and finds its figure.
 const DISTRICT_SLUG_OVERRIDES: Record<string, string> = {
   pragaPolnoc: 'praga-polnoc',
   pragaPoludnie: 'praga-poludnie',
@@ -143,7 +143,7 @@ export async function Districts({ medians = [] }: { medians?: HomeDistrictFigure
               <TrackedLink
                 placement="district_card"
                 properties={{ district: DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key }}
-                href={`/${DEFAULT_CITY}/costs?district=${DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key}`}
+                href={`/${DEFAULT_CITY}/${DISTRICT_SLUG_OVERRIDES[district.key] ?? district.key}`}
                 className={`group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br p-4 backdrop-blur-sm transition-all hover:scale-[1.02] sm:p-5 ${district.color}`}
               >
                 <div className="flex items-center gap-2">

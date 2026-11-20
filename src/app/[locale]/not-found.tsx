@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Home, Search } from 'lucide-react';
+import { Home, MapPinned, Users } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Footer } from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LocaleNotFound() {
   const t = await getTranslations('errors.notFound');
+  const tCommon = await getTranslations('common');
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -51,9 +52,20 @@ export default async function LocaleNotFound() {
                 size="lg"
                 className="h-12 rounded-full px-8 text-base"
               >
-                <Link href={`/${DEFAULT_CITY}/replacement`}>
-                  <Search className="mr-2 h-4 w-4" />
+                <Link href={`/${DEFAULT_CITY}/check`}>
+                  <MapPinned className="mr-2 h-4 w-4" />
                   {t('browse')}
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="lg"
+                className="h-12 rounded-full px-8 text-base"
+              >
+                <Link href={`/${DEFAULT_CITY}/roommate`}>
+                  <Users className="mr-2 h-4 w-4" />
+                  {tCommon('findFlatmate')}
                 </Link>
               </Button>
             </div>

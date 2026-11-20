@@ -139,7 +139,7 @@
       "title": "Home framing surfaces stop promoting frozen listings: hero chip, ForWhom, 404, dashboard button, district cards (FR-6)",
       "spec": "docs/specs/08-site-structure-and-entries.md#home-framing-surfaces",
       "dependsOn": ["T120"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Hero: the three chips become one Link to /warsaw/roommate labelled listings.roommateRoles.findFlatmate (a shared namespace); the landing.hero.trust* chip keys are deleted in four locales only if nothing else uses them (the progress entry lists the grep)",
         "ForWhom personas = rentTogether → /warsaw/roommate, findRoom → /warsaw/roommate, checkFlat → /warsaw/check with keys landing.forWhom.<key>.{title,description,cta} from PRD 4 §8; the old findHome, findRoommate and sublet keys are deleted; landing.cta.subtitle is rewritten (§8) and landing.cta.freeNote becomes 'No account needed.' with the PL, RU and UK values of spec 08 (no 'free', Q-12)",
@@ -150,7 +150,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D5 (frozen, not promoted: links re-pointed, no page removed), D48. The hero H1 stays (Q-6, T125)."
     },
     {

@@ -6,7 +6,7 @@
       "heading": "Nie możemy znaleźć tej strony",
       "description": "Strona, której szukasz, mogła zostać przeniesiona, usunięta lub nigdy nie istniała. Wróćmy na właściwą drogę.",
       "home": "Powrót na stronę główną",
-      "browse": "Przeglądaj oferty"
+      "browse": "Sprawdź adres"
     },
     "generic": {
       "metaTitle": "Coś poszło nie tak",
@@ -90,12 +90,9 @@
       "subtitle": "Czynsz administracyjny, kaucje i ukryte koszty wychodzą na jaw dopiero po podpisaniu. Sprawdź koszty zgłoszone przez najemców — przed decyzją, i sfinalizuj ją na gotowych wzorach dokumentów.",
       "browseCta": "Przeglądaj oferty",
       "addCta": "Dodaj ogłoszenie",
-      "trustLeaseTakeovers": "Cesje najmu",
       "trustLeaseTakeoversDesc": "Znajdź najemcę, który przejmie Twój najem i zachowaj kaucję",
       "trustRealCost": "Co ukrywają ogłoszenia",
       "trustRealCostDesc": "Koszty mediów zgłoszone przez najemców — zaplanujesz wydatki przed podpisaniem",
-      "trustRoommate": "Współlokatorzy",
-      "trustSublet": "Podnajem",
       "trustVerified": "Oferty od społeczności",
       "trustVerifiedDesc": "Oferty i opinie o budynkach od społeczności, z jawnymi cenami",
       "costsCta": "Zobacz prawdziwe koszty",
@@ -251,20 +248,20 @@
     "forWhom": {
       "title": "Passflat jest dla",
       "titleHighlight": "każdego",
-      "findHome": {
-        "title": "Znajdź mieszkanie",
-        "description": "Przeglądaj cesje najmu i podnajmy z pełnym rozbiciem kosztów. Bez ukrytych opłat — uczciwe oferty od najemców.",
-        "cta": "Przeglądaj oferty"
+      "rentTogether": {
+        "title": "Wynajem całego mieszkania z kimś",
+        "description": "Załóż krótki profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu. Po angielsku, rosyjsku i ukraińsku.",
+        "cta": "Szukam kogoś do wynajmu"
       },
-      "findRoommate": {
-        "title": "Znajdź współlokatora",
-        "description": "Szukaj kompatybilnych współlokatorów lub dodaj wolny pokój. Cena za osobę, preferencje i kto już mieszka.",
-        "cta": "Szukaj współlokatorów"
+      "findRoom": {
+        "title": "Szukasz pokoju",
+        "description": "Ile kosztuje pokój w Warszawie według raportów najemców i cen ofertowych, lista kontrolna przed zapłatą i gdzie publikowane są pokoje.",
+        "cta": "Zobacz koszty pokoi"
       },
-      "sublet": {
-        "title": "Tymczasowy podnajem",
-        "description": "Jedziesz na wakacje lub w delegację? Podnajmij swoje mieszkanie na określony czas. Podaj dokładne daty, łączną cenę i znajdź tymczasowego najemcę.",
-        "cta": "Przeglądaj podnajmy"
+      "checkFlat": {
+        "title": "Sprawdzasz znalezione mieszkanie",
+        "description": "Znane koszty budynku, lokalizacja i źródła hałasu w jednej odpowiedzi.",
+        "cta": "Sprawdź adres"
       }
     },
     "aboutTeam": {
@@ -288,10 +285,10 @@
     "cta": {
       "title": "Gotowy znaleźć swoje",
       "titleHighlight": "nowe mieszkanie?",
-      "subtitle": "Cesja najmu, współlokator lub podnajem — znajdź odpowiednią opcję z przejrzystymi cenami.",
+      "subtitle": "Wynająć z kimś, znaleźć pokój albo sprawdzić znalezione mieszkanie — zacznij od liczb.",
       "browseCta": "Przeglądaj oferty",
       "listCta": "Dodaj ogłoszenie",
-      "freeNote": "Dodawanie ogłoszeń jest darmowe"
+      "freeNote": "Bez zakładania konta."
     },
     "footer": {
       "tagline": "Wynajem w Warszawie bez niespodzianek: cała prawda o kosztach od najemców, ogłoszenia i darmowe wzory dokumentów.",
@@ -1743,7 +1740,6 @@
     "about": "o",
     "listingType": "Typ",
     "goToDashboard": "Przejdź do konta",
-    "browseListings": "Przeglądaj oferty",
     "savedListings": "Zapisane",
     "noSavedListings": "Brak zapisanych ogłoszeń",
     "noSavedListingsDesc": "Przeglądaj oferty i kliknij ikonę serca, aby je tutaj zapisać",

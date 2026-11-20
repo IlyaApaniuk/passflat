@@ -17,6 +17,30 @@ test('english home page (/en) loads', async ({ page }) => {
   await expect(page.locator('body')).toBeVisible();
 });
 
+// PRD 4 FR-6: outside the footer (its frozen links wait for FR-7, Q-5), the
+// home page no longer links to /replacement, /sublet or /create-listing; the
+// hero chip and two ForWhom cards lead to the roommate page, and the district
+// cards to the district pages.
+test.describe('home framing on /en', () => {
+  test.use({ locale: 'en-US' });
+
+  test('no frozen listings link outside the footer', async ({ page }) => {
+    await page.goto('/en');
+    const frozen = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('a[href]'))
+        .filter((a) => !a.closest('footer'))
+        .map((a) => a.getAttribute('href') ?? '')
+        .filter((href) => /\/(replacement|sublet|create-listing)\b/.test(href)),
+    );
+    expect(frozen).toEqual([]);
+
+    const main = page.locator('main');
+    await expect(main.locator('a[href$="/warsaw/roommate"]')).toHaveCount(3);
+    await expect(main.locator('a[href$="/warsaw/mokotow"]')).toHaveCount(1);
+    await expect(main.locator('a[href*="/costs?district="]')).toHaveCount(0);
+  });
+});
+
 // PRD 4 FR-5: "Find a flatmate" leads the header nav (desktop viewport, so the
 // first match is the nav link, not the mobile pill); building reviews left it.
 // Locale detection follows Accept-Language, so each case pins the browser

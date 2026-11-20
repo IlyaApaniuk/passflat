@@ -6,7 +6,7 @@
       "heading": "We couldn't find that page",
       "description": "The page you're looking for may have been moved, removed, or never existed. Let's get you back on track.",
       "home": "Back to home",
-      "browse": "Browse listings"
+      "browse": "Check an address"
     },
     "generic": {
       "metaTitle": "Something went wrong",
@@ -90,12 +90,9 @@
       "subtitle": "Utilities, deposits and hidden costs only surface after you sign. See the costs tenants reported — before the deal, and close it with ready-made document templates.",
       "browseCta": "Browse Listings",
       "addCta": "Post a Listing",
-      "trustLeaseTakeovers": "Lease Takeovers",
       "trustLeaseTakeoversDesc": "Find tenants to take over your lease and keep your deposit",
       "trustRealCost": "What listings hide",
       "trustRealCostDesc": "Utility costs reported by tenants, so you can plan before you sign",
-      "trustRoommate": "Roommate Search",
-      "trustSublet": "Temporary Sublets",
       "trustVerified": "Community listings",
       "trustVerifiedDesc": "Listings and building reviews from the community, with prices shown openly",
       "costsCta": "See real costs",
@@ -251,20 +248,20 @@
     "forWhom": {
       "title": "Passflat is for",
       "titleHighlight": "everyone",
-      "findHome": {
-        "title": "Find a home",
-        "description": "Browse lease takeovers and sublets with a full cost breakdown. No hidden fees, no surprises — honest listings from tenants.",
-        "cta": "Browse Listings"
+      "rentTogether": {
+        "title": "Renting a whole flat with someone",
+        "description": "Create a short profile in the Passflat Telegram bot: district, budget per person, move-in month. Contacts appear only when the interest is mutual. English, Russian and Ukrainian.",
+        "cta": "Find someone to rent with"
       },
-      "findRoommate": {
-        "title": "Find a roommate",
-        "description": "Search for compatible flatmates or list your spare room. Price per person, lifestyle preferences, and who already lives there.",
-        "cta": "Find Roommates"
+      "findRoom": {
+        "title": "Looking for a room",
+        "description": "What a room costs in Warsaw from tenant reports and asking prices, a checklist before you pay, and where rooms are listed.",
+        "cta": "See room costs"
       },
-      "sublet": {
-        "title": "Temporary sublet",
-        "description": "Going on vacation or a business trip? Sublet your place for a fixed period. Set exact dates, total price, and find a temporary tenant.",
-        "cta": "Browse Sublets"
+      "checkFlat": {
+        "title": "Checking a flat you found",
+        "description": "Known costs for the building, the location and the nuisances, in one answer.",
+        "cta": "Check an address"
       }
     },
     "aboutTeam": {
@@ -288,10 +285,10 @@
     "cta": {
       "title": "Ready to find your",
       "titleHighlight": "next home?",
-      "subtitle": "Lease takeovers, roommate search, or a sublet — find the right option with transparent pricing.",
+      "subtitle": "Someone to rent with, a room, or a flat you already found — start with the figures.",
       "browseCta": "Browse Listings",
       "listCta": "Post a Listing",
-      "freeNote": "Posting listings is free"
+      "freeNote": "No account needed."
     },
     "footer": {
       "tagline": "Renting in Warsaw without surprises: the full truth on costs from tenants, listings, and free document templates.",
@@ -1743,7 +1740,6 @@
     "about": "about",
     "listingType": "Type",
     "goToDashboard": "Go to Dashboard",
-    "browseListings": "Browse Listings",
     "savedListings": "Saved",
     "noSavedListings": "No saved listings yet",
     "noSavedListingsDesc": "Browse listings and tap the heart icon to save them here",

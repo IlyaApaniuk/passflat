@@ -157,6 +157,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - Node's `--env-file` / `--env-file-if-exists` never overrides a variable already set in the environment: a value on the command line wins over `.env.local` (proven in T116 for `npm run bot:posts`).
 - Tailwind's `sm:not-sr-only` resets padding and margin to 0 at that breakpoint: put the spacing of a `sr-only sm:not-sr-only` heading on a wrapper (example: the roommate h1 in `listings-page-client.tsx`). `ListingsPageClient` render tests mock `Footer` to a `data-shell` marker (`room-money-placement.test.ts`).
 - **2026-11-19, evening (D75 – D77), a note on the T105 handoff below; the entry itself is not rewritten.** Deploy step 3 is superseded: `ROOMMATE_MATCHING_ENABLED=true` is set in Vercel **at the PRD 3 deploy** (D75), so stage 2 is live from day 0 and the daily go check from 2027-01-04 is not run; the stage 1 readout of 2027-01-18 still decides whether the test continues. The "approve before the switch" copy of the handoff (terms, safety lines, statement of reasons, report and appeal texts, the rest of stage 2) is therefore approved before the deploy, with the privacy section. Deploy step 5 uses a **separate production bot** (D76): `@passflatdev_bot` stays the dev bot with its token only in `.env.local`; the production token goes only into Vercel; its username is Open (task T117) and until then `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` stays unset. Deploy step 6 (BotFather by hand) is replaced by `npm run bot:profile` (D77, task T115), which also sets the name and the photo (`public/bot-avatar.png`, task T114). Step 7's `<bot>` placeholder is handled by task T116. The posting kit's "matching isn't open yet" sentence is deleted before the first slot, not on a switch day.
+- `src/components/landing/no-frozen-links.test.ts` fails on any `/replacement`, `/sublet` or `/create-listing` in a non-test file under `src/components/landing/` (except `footer.tsx`, until FR-7), `src/app/[locale]/page.tsx` or `not-found.tsx`; landing server components render in Vitest with `next-intl/server` mocked (example: `home-framing.test.ts`).
 - e2e runs Desktop Chrome with an `en-US` browser locale, and next-intl's locale detection sends `/` to `/en`: a test of the Polish `/` needs `test.use({ locale: 'pl-PL' })` (example: the header tests in `e2e/home.spec.ts`). Phone layouts can be measured in a temporary spec with `page.setViewportSize` and `getBoundingClientRect` / `scrollWidth` in `page.evaluate`.
 
 ## Log
@@ -3770,3 +3771,102 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The footer keeps "Roommate Search" → `/warsaw/roommate` as before, so the roommate page is linked from both the header and the footer.
   - No new table, migration or event.
 - Next: `node scripts/ralph-tasks.mjs next` (T121, home framing surfaces).
+
+### 2026-11-20 07:50 · T121 · done
+
+- Done (PRD 4 FR-6, spec 08 §Home framing surfaces):
+  - `src/components/landing/hero.tsx`: the three chips (Lease Takeovers, Roommate Search, Temporary Sublets) are now one violet chip `Link` → `/warsaw/roommate`, labelled `tRoot('listings.roommateRoles.findFlatmate')`. The chip styling and position are unchanged. The H1 and subtitle are unchanged (Q-6 / T125, FR-10 / T124).
+  - `src/components/landing/for-whom.tsx`: the personas are `rentTogether` (Users) → `/warsaw/roommate`, `findRoom` (Search) → `/warsaw/roommate`, `checkFlat` (MapPin) → `/warsaw/check`, in that order. The violet, blue and emerald card colours are the agent's choice.
+  - `src/app/[locale]/not-found.tsx`: the second (outline) button → `/warsaw/check` (MapPinned icon, `errors.notFound.browse`). A new third ghost button → `/warsaw/roommate` (Users icon, `common.findFlatmate` via `getTranslations('common')`). `generateMetadata` (noindex, nofollow) is unchanged, and so is the 404 status (the not-found boundary).
+  - `src/app/[locale]/dashboard/client.tsx`: the saved-listings empty-state button → `/warsaw/costs` with **`dashboard.accessBrowse`** ("Browse data"), the label the dashboard already uses for its costs link. The listings section (including its `/${listingsCitySlug}/replacement` share path) is unchanged.
+  - `src/components/landing/districts.tsx`: the cards link to `/warsaw/<slug>` (the district pages), keeping `DISTRICT_SLUG_OVERRIDES` (`praga-polnoc`, `praga-poludnie`). `cta_click {placement: 'district_card', district}` is unchanged.
+  - Copy, in four locales: `landing.forWhom.{rentTogether,findRoom,checkFlat}.{title,description,cta}` are new; `landing.cta.subtitle`, `landing.cta.freeNote` and `errors.notFound.browse` are rewritten.
+  - Deleted keys, in four locales:
+    - `landing.forWhom.{findHome,findRoommate,sublet}`.
+    - `landing.hero.trustLeaseTakeovers`, `trustRoommate`, `trustSublet`. A grep of `src`, `e2e`, `scripts` and `docs/specs` found them only in `hero.tsx` (plus the spec line that names them).
+    - `dashboard.browseListings`. Its only reader was the changed button (grep).
+  - `docs/specs/README.md` PRD 4 map: FR-6 → Done.
+- Tests:
+  - New `src/components/landing/no-frozen-links.test.ts` (static scan). It reads every non-test `.ts`/`.tsx` under `src/components/landing/` (recursive) except `footer.tsx`, plus `src/app/[locale]/page.tsx` and `not-found.tsx`, and expects no line matching `/\/(replacement|sublet|create-listing)\b/`. It also checks:
+    - the scanned list holds hero, for-whom, districts, header and both pages, and no test file;
+    - the pattern catches the old href forms, and not the listing type `'replacement'` used as a value in `how-it-works-tabs.tsx`;
+    - the footer still matches. That exclusion goes when FR-7 (T122) is answered.
+  - New `src/components/landing/home-framing.test.ts`, with `next-intl/server` mocked to `createTranslator` with `onError` that throws:
+    - ForWhom: the EN anchors, labels and text order. In four locales: hrefs, CTA labels, title and description, subtitle and note from their keys, and no frozen route. The forWhom key set is exactly `title, titleHighlight, rentTogether, findRoom, checkFlat`. The freeNote values equal spec 08's four.
+    - 404: the EN anchors `/`, `/warsaw/check`, `/warsaw/roommate`; outline vs ghost classes; labels from keys in four locales (`browse` equals `common.checkAddress`); `robots` noindex/nofollow.
+    - District cards: the 12 hrefs, Praga overrides included.
+    - Dashboard, a static read of the client: the new `Link` line, no `/warsaw/replacement`, no `dashboard.browseListings`, and the key is gone from four locales. The listings share path stays.
+  - `hero.test.ts`: the links are costs, check, then the roommate chip, labelled with `listings.roommateRoles.findFlatmate` in four locales. No frozen route. The three trust keys are gone in four locales.
+  - `honesty-copy.test.ts`: the new `HOME_FRAMING_KEYS` (the 9 ForWhom keys, `landing.cta.subtitle`, `freeNote`, `errors.notFound.browse`) exist in four locales, with no FREE (Q-12), no PROMISE and no `{`. They are not in `REWRITTEN_KEYS`: the UK card title given by §8, «Зняти квартиру повністю удвох», would trip its `повністю` rule, which is about deposits.
+  - `e2e/home.spec.ts` "home framing on /en" (`en-US`):
+    - no `a[href]` outside `footer` matches a frozen route;
+    - `main` holds 3 links to `/warsaw/roommate` (the chip and two cards) and 1 to `/warsaw/mokotow`;
+    - no `costs?district=` link.
+- Checks:
+  - `npx vitest run src/components/landing/ src/i18n/`: 8 files, 70 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 147 files / 3150 tests;
+    - build OK (183 pages).
+  - `npm run test:e2e` exit 0: 11 passed. The `[WebServer] fetch failed` lines come from the database-less e2e build, as before.
+  - `next-env.d.ts` restored. Prettier was run on the new tests and `not-found.tsx`.
+  - The 404 and the dashboard were not rendered in a browser (the render tests and the static read are the proof). Nothing deployed, no migration, no event, no message sent.
+- Did not work: the first hero test left the locale at `uk` after its loop before the EN assertion (a test bug, fixed).
+- Owner review:
+  - **Draft copy (agent copy, D29).** Given by PRD 4 §8 in four locales: the `rentTogether` card, `freeNote`, `errors.notFound.browse`. Given in EN only: the `findRoom` and `checkFlat` cards and `cta.subtitle`; **their PL, RU and UK are the agent's drafts** (the spec says "analogues in the task", and the task gave none).
+    - `landing.forWhom.rentTogether`:
+      - title: pl "Wynajem całego mieszkania z kimś" · en "Renting a whole flat with someone" · ru «Снять квартиру целиком вдвоём» · uk «Зняти квартиру повністю удвох»
+      - description:
+        - pl "Załóż krótki profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu. Po angielsku, rosyjsku i ukraińsku."
+        - en "Create a short profile in the Passflat Telegram bot: district, budget per person, move-in month. Contacts appear only when the interest is mutual. English, Russian and Ukrainian."
+        - ru «Создай короткую анкету в Telegram-боте Passflat: район, бюджет на человека, месяц заезда. Контакты видны, только когда интерес взаимный. По-английски, по-русски и по-украински.»
+        - uk «Створи коротку анкету в Telegram-боті Passflat: район, бюджет на людину, місяць заїзду. Контакти видно, лише коли інтерес взаємний. Англійською, російською та українською.»
+      - cta: pl "Szukam kogoś do wynajmu" · en "Find someone to rent with" · ru «Ищу, с кем снять» · uk «Шукаю, з ким зняти»
+    - `landing.forWhom.findRoom`:
+      - title: pl "Szukasz pokoju" · en "Looking for a room" · ru «Снять комнату» · uk «Зняти кімнату»
+      - description:
+        - pl "Ile kosztuje pokój w Warszawie według raportów najemców i cen ofertowych, lista kontrolna przed zapłatą i gdzie publikowane są pokoje."
+        - en "What a room costs in Warsaw from tenant reports and asking prices, a checklist before you pay, and where rooms are listed."
+        - ru «Сколько стоит комната в Варшаве по отчётам арендаторов и ценам из объявлений, чек-лист перед оплатой и где публикуют комнаты.»
+        - uk «Скільки коштує кімната у Варшаві за звітами орендарів і цінами з оголошень, чек-лист перед оплатою і де публікують кімнати.»
+      - cta: pl "Zobacz koszty pokoi" · en "See room costs" · ru «Смотреть цены комнат» · uk «Дивитися ціни кімнат»
+    - `landing.forWhom.checkFlat`:
+      - title: pl "Sprawdzasz znalezione mieszkanie" · en "Checking a flat you found" · ru «Проверить найденную квартиру» · uk «Перевірити знайдену квартиру»
+      - description:
+        - pl "Znane koszty budynku, lokalizacja i źródła hałasu w jednej odpowiedzi."
+        - en "Known costs for the building, the location and the nuisances, in one answer."
+        - ru «Известные расходы по дому, локация и источники шума — в одном ответе.»
+        - uk «Відомі витрати по будинку, локація та джерела шуму — в одній відповіді.»
+      - cta: pl "Sprawdź adres" · en "Check an address" · ru «Проверить адрес» · uk «Перевірити адресу»
+    - `landing.cta.subtitle`:
+      - pl "Wynająć z kimś, znaleźć pokój albo sprawdzić znalezione mieszkanie — zacznij od liczb."
+      - en "Someone to rent with, a room, or a flat you already found — start with the figures."
+      - ru «Снять вдвоём, найти комнату или проверить найденную квартиру — начни с цифр.»
+      - uk «Зняти удвох, знайти кімнату чи перевірити знайдену квартиру — почни з цифр.»
+    - `landing.cta.freeNote`: pl "Bez zakładania konta." · en "No account needed." · ru «Без регистрации.» · uk «Без реєстрації.»
+    - `errors.notFound.browse`: pl "Sprawdź adres" · en "Check an address" · ru «Проверить адрес» · uk «Перевірити адресу»
+    - Deleted:
+      - `landing.hero.trustLeaseTakeovers` / `trustRoommate` / `trustSublet` (en "Lease Takeovers" / "Roommate Search" / "Temporary Sublets").
+      - `landing.forWhom.findHome` / `findRoommate` / `sublet`.
+      - `dashboard.browseListings` (en "Browse Listings").
+    - Draft notes:
+      - The agent's terms follow the existing figure labels: PL "raporty najemców" / "ceny ofertowe", RU «отчёты арендаторов» / «цены из объявлений», UK «звіти орендарів» / «ціни з оголошень».
+      - "Nuisances" follows the checker's noise sources («источники шума»).
+      - The RU and UK titles of cards 2 and 3 are infinitives, like card 1's; the PL ones are second-person ("Szukasz pokoju", "Sprawdzasz…").
+  - Unchanged and now reading oddly beside the new section:
+    - The ForWhom section heading `landing.cta.title` + `titleHighlight` ("Ready to find your next home?").
+    - `dashboard.noSavedListingsDesc` ("Browse listings and tap the heart icon…"), above a button that now leads to the costs.
+    - `landing.hero.trustLeaseTakeoversDesc`, which nothing reads; it predates this task.
+    - None of these is in FR-6's acceptance.
+  - Namespaces and providers:
+    - The hero (client) reads `landing.hero.*` and `listings.roommateRoles.findFlatmate`. Both `landing` and `listings` are in `SHARED_CLIENT_NAMESPACES` (the locale layout's provider).
+    - The dashboard client reads `dashboard.accessBrowse` (`dashboard` is shared).
+    - ForWhom, the 404 and the district cards are server components (`getTranslations`).
+  - **Assumptions applied (spec 08 FR-6, targets and labels):**
+    - The targets live in the `personas` array (`for-whom.tsx`), the 404's two `Link`s, and the hero chip and dashboard `href`s.
+    - The dashboard label is `dashboard.accessBrowse` rather than `costs.title` ("Cost Transparency"): it is an action label already used for the same link.
+  - The ForWhom "Looking for a room" card leads to `/warsaw/roommate`, where the room money block shows only for `find_room` or with 0 offers in the city (spec 02). With offers and no role tapped, that visitor first sees the flatmate block.
+  - `cta_click {placement: 'district_card'}` now counts taps to the district pages, not to the costs map filter. Compare it with pre-deploy numbers knowing that.
+  - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next`.

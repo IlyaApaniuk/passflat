@@ -97,6 +97,45 @@ describe('Hero city tiles (D23)', () => {
   });
 });
 
+describe('Hero roommate chip (PRD 4 FR-6)', () => {
+  beforeEach(() => {
+    state.locale = 'en';
+  });
+
+  const links = () =>
+    [
+      ...renderToStaticMarkup(createElement(Hero, {})).matchAll(
+        /<a href="([^"]*)">([\s\S]*?)<\/a>/g,
+      ),
+    ].map(([, href, inner]) => [href, text(inner).trim()]);
+
+  it('one chip to the roommate page after the two CTAs, labelled from the shared namespace', () => {
+    for (const locale of LOCALES) {
+      state.locale = locale;
+      const listings = messages[locale].listings as { roommateRoles: Record<string, string> };
+      expect(links(), locale).toEqual([
+        ['/warsaw/costs', expect.any(String)],
+        ['/warsaw/check', expect.any(String)],
+        ['/warsaw/roommate', listings.roommateRoles.findFlatmate],
+      ]);
+    }
+    state.locale = 'en';
+    expect(links()[2][1]).toBe('Looking for someone to rent with');
+  });
+
+  it('no link to the frozen listings, and the old chip keys are gone in four locales', () => {
+    expect(links().map(([href]) => href)).not.toContainEqual(
+      expect.stringMatching(/\/(replacement|sublet|create-listing)\b/),
+    );
+    for (const locale of LOCALES) {
+      const hero = (messages[locale].landing as { hero: Record<string, string> }).hero;
+      for (const key of ['trustLeaseTakeovers', 'trustRoommate', 'trustSublet']) {
+        expect(hero, `${locale}: ${key}`).not.toHaveProperty(key);
+      }
+    }
+  });
+});
+
 describe('Hero deposit stat', () => {
   beforeEach(() => {
     state.locale = 'en';

@@ -140,8 +140,8 @@ export function Hero({ stats: liveStats }: HeroProps) {
           </p>
 
           {/* Two actions, two intents: browse the data or probe one address.
-              Everything else the hero used to ask for (reviews, the niche
-              rental modes) lives in the nav and its own sections — one screen,
+              Everything else the hero used to ask for (reviews, the listing
+              types) lives in the nav and its own sections — one screen,
               one verb. */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             {/* Primary CTA — the cost data itself. Deliberately NOT a submit
@@ -199,29 +199,15 @@ export function Hero({ stats: liveStats }: HeroProps) {
             </Reveal>
           )}
 
-          {/* Niche rental modes — SEO entries, not first-screen actions, so
-              they trail the medians instead of crowding the CTA row. */}
+          {/* The roommate entry (PRD 4 FR-6): one chip after the medians. The
+              frozen listing types (D5) are no longer promoted here. */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-            <Link
-              href={`/${DEFAULT_CITY}/replacement`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              {t('trustLeaseTakeovers')}
-            </Link>
             <Link
               href={`/${DEFAULT_CITY}/roommate`}
               className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              {t('trustRoommate')}
-            </Link>
-            <Link
-              href={`/${DEFAULT_CITY}/sublet`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              {t('trustSublet')}
+              {tRoot('listings.roommateRoles.findFlatmate')}
             </Link>
           </div>
         </div>
