@@ -94,6 +94,28 @@ describe('flatmateCalloutView', () => {
         placement: 'flatmate_callout_calculator',
       });
     });
+
+    it('guide (FR-12): a static page passes no counts → the question, no count line, mate_web_guide', () => {
+      expect(flatmateCalloutView({ surface: 'guide', hasUsername: true })).toEqual({
+        titleKey: 'flatmateCallout.title',
+        countLine: 'none',
+        total: 0,
+        showBotButton: true,
+        payload: 'mate_web_guide',
+        placement: 'flatmate_callout_guide',
+      });
+    });
+
+    it('report (FR-12): no counts → the question, no count line, its own mate_web_report', () => {
+      expect(flatmateCalloutView({ surface: 'report', hasUsername: true })).toEqual({
+        titleKey: 'flatmateCallout.title',
+        countLine: 'none',
+        total: 0,
+        showBotButton: true,
+        payload: 'mate_web_report',
+        placement: 'flatmate_callout_report',
+      });
+    });
   });
 
   it('without the username: no bot button, the rest unchanged', () => {

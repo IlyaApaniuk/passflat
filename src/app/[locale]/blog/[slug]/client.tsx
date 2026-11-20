@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Link } from '@/i18n/navigation';
@@ -15,6 +16,8 @@ const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
   'protokol-zdawczo-odbiorczy-warsaw': 'protokol',
 };
 
+const DEFAULT_CITY = 'warsaw';
+
 // Hosts whose links earn a commission. Drives both the rel="sponsored"
 // annotation (Google requires it on paid links) and the click event.
 // prf.hn is Partnerize's tracking domain (Wise campaign).
@@ -29,9 +32,17 @@ function affiliateHost(href: string): string | null {
   }
 }
 
-export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown } }) {
+export function BlogArticle({
+  post,
+  flatmateCallout,
+}: {
+  post: BlogPost & { mdxSource?: unknown };
+  /** `<FlatmateCallout surface="guide" />` from the server page (PRD 4 FR-12). */
+  flatmateCallout: ReactNode;
+}) {
   const t = useTranslations('blog');
   const tDocs = useTranslations('documents');
+  const tListings = useTranslations('listings');
   const posthog = usePostHog();
 
   // Markdown links render as plain <a>, so affiliate clicks are caught here by
@@ -114,6 +125,23 @@ export function BlogArticle({ post }: { post: BlogPost & { mdxSource?: unknown }
               />
             </div>
           )}
+
+          {/* PRD 4 FR-12: the end of every guide. The bridge line is the roommate page's, without
+              its cost_data_cta_clicked event (that one belongs to the roommate bridge). */}
+          <div className="mx-auto mt-10 max-w-3xl space-y-4">
+            <p className="text-sm">
+              <Link
+                href={`/${DEFAULT_CITY}/check`}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {tListings('roommateCostsBridge')}{' '}
+                <span className="font-medium text-primary underline-offset-4 hover:underline">
+                  {tListings('roommateCostsBridgeCta')}
+                </span>
+              </Link>
+            </p>
+            {flatmateCallout}
+          </div>
         </div>
       </section>
     </>

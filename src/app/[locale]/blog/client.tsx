@@ -76,17 +76,35 @@ export function BlogClient({ posts }: { posts: PostSummary[] }) {
       </section>
 
       <section className="border-t bg-muted/30 py-16 md:py-24">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-lg text-muted-foreground">{t('ctaText')}</p>
-          <Button size="lg" className="mt-6 gap-2" asChild>
-            <Link href={`/${DEFAULT_CITY}/costs`}>
-              {t('ctaButton')}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+        <BlogCta />
       </section>
     </>
+  );
+}
+
+/**
+ * The list's closing call (PRD 4 FR-12, spec 08 §Callout placements): the cost data and, next to
+ * it, the roommate page. No event of its own: the callout's placements are the guides' and the
+ * report's.
+ */
+function BlogCta() {
+  const t = useTranslations('blog');
+
+  return (
+    <div className="container mx-auto px-4 text-center">
+      <p className="text-lg text-muted-foreground">{t('ctaText')}</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Button size="lg" className="gap-2" asChild>
+          <Link href={`/${DEFAULT_CITY}/costs`}>
+            {t('ctaButton')}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Button size="lg" variant="outline" asChild>
+          <Link href={`/${DEFAULT_CITY}/roommate`}>{t('ctaFlatmate')}</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -115,15 +133,7 @@ function BlogComingSoon() {
       </section>
 
       <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-lg text-muted-foreground">{t('ctaText')}</p>
-          <Button size="lg" className="mt-6 gap-2" asChild>
-            <Link href={`/warsaw/costs`}>
-              {t('ctaButton')}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+        <BlogCta />
       </section>
     </>
   );

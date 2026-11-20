@@ -5,6 +5,7 @@ import { getLocale, getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAlternates, getOgImage, getCostOgImage } from '@/lib/seo';
@@ -293,6 +294,12 @@ export default async function WarsawRentPricesReport({ params }: PageProps) {
                 </CardContent>
               </Card>
             )}
+
+            {/* PRD 4 FR-12: the flatmate callout under the city figure, its own surface so the
+                readout tells it from the guides; no counts (spec 08 §Callout placements). */}
+            <div className="mt-6">
+              <FlatmateCallout surface="report" />
+            </div>
 
             {/* Anatomy of the real monthly cost */}
             <h2 className="mt-10 text-xl font-semibold">{t('rentReport.anatomyTitle')}</h2>

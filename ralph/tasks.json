@@ -263,7 +263,7 @@
       "title": "The callout on the blog list, every guide and the data report (FR-12)",
       "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
       "dependsOn": ["T123"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Blog list: a second button 'Find a flatmate' → /warsaw/roommate (blog.ctaFlatmate) next to blog.ctaButton; blog.ctaText is rewritten to name both (PRD 4 §8)",
         "Guide article: after the body and the template block, one line with listings.roommateCostsBridge and a Link to /warsaw/check (listings.roommateCostsBridgeCta), then FlatmateCallout surface='guide' without counts, rendered by the server page and passed to the client",
@@ -272,7 +272,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48. Static blog pages carry no counts (Assumption). The data report has its own surface value 'report' so the readout tells it apart from the guides (gap review)."
     },
     {

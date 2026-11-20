@@ -4098,3 +4098,44 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_calculator'}` and `telegram_bot_opened {source: 'calculator'}` (payload `mate_web_calculator`).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:35 · T128 · done
+
+- Done (PRD 4 FR-12: the blog list, every guide and the data report; spec 08 §Callout placements):
+  - `src/app/[locale]/blog/client.tsx`: the closing CTA is one `BlogCta` used by the list and the (unreachable, the report is always featured) coming-soon state. Next to `blog.ctaButton` → `/warsaw/costs`, a second `Button variant="outline"` → `/warsaw/roommate` with `blog.ctaFlatmate`. No event on it (spec 08 defines none for the list).
+  - `src/app/[locale]/blog/[slug]/client.tsx`: new required prop `flatmateCallout: ReactNode`. After the body and the template block (when present), a `max-w-3xl` block: one line `listings.roommateCostsBridge` + linked `listings.roommateCostsBridgeCta` → `/warsaw/check` (the roommate page's markup), then `{flatmateCallout}`. The bridge link captures nothing.
+  - `blog/[slug]/page.tsx` passes `<FlatmateCallout surface="guide" />` (no counts). Guides stay SSG (`●` in the build table).
+  - `blog/warsaw-rent-prices/page.tsx`: `<FlatmateCallout surface="report" />` in a `mt-6` wrapper right under the city figure card (also when there is no city figure), before the anatomy h2; no counts. T129 adds the per-person line.
+  - Copy in four locales (scratchpad script): `blog.ctaText` rewritten, `blog.ctaFlatmate` new. `blog.ctaText` joins `REWRITTEN_KEYS` (`honesty-copy.test.ts`).
+  - `docs/specs/README.md` PRD 4 map: FR-12 → Done (T127, T128).
+- Tests:
+  - New `src/app/[locale]/blog/flatmate-callout-placement.test.ts`:
+    - Blog list, with posts and in the coming-soon state: the §8 text, the costs link, then exactly one `/warsaw/roommate` link labelled "Find a flatmate".
+    - Copy: `blog.ctaFlatmate` equals `common.findFlatmate` in each locale; the EN drafts equal PRD 4 §8; each locale's `ctaText` names both renting together and checking a flat.
+    - Guide: the server page passes a `FlatmateCallout` element with props exactly `{ surface: 'guide' }` and loads no counts. Rendered: the question h2 (`flatmate-callout-guide-title`), no count line, `/warsaw/roommate`, `t.me/<bot>?start=mate_web_guide`.
+    - Guide order: body < template block (`cesja`) < bridge `/warsaw/check` ("Found a place? Check the address and known costs") < callout. Without a template (other slug, or templates switched off) the bridge and callout follow the body directly. Without the username: bridge and callout stay, no `t.me/`.
+    - Static scan: `{flatmateCallout}` once, no import of the server callout, the only capture is `affiliate_link_clicked`. The client reads `blog`, `documents`, `listings`, all in `SHARED_CLIENT_NAMESPACES`; its `useTranslations` mock reads only those (`onError` throws); the page has no scoped provider.
+  - `blog/warsaw-rent-prices/page.test.ts`: the async callout is mocked to a marker (it cannot run inside `renderToStaticMarkup`), `loadCityFigure` serves a fixture. New block: one callout, props `{ surface: 'report' }`; after the city figure "≈ 4 321 zł" and before the anatomy title; still rendered without a city figure; the source has no `loadFlatmateBlockCounts`.
+  - `src/lib/roommate/flatmate-callout.test.ts`: exact `flatmateCalloutView` rows for `guide` (`mate_web_guide`, `flatmate_callout_guide`) and `report` (`mate_web_report`, `flatmate_callout_report`), both with no counts → `none`.
+- Checks:
+  - Focused Vitest (`src/app/[locale]/blog/`, callout view, `src/i18n/`, `src/components/roommate/`, area consistency): 9 files / 153 passed.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 155 files / 3302 tests; build OK (183 pages; `/[locale]/blog` and `/[locale]/blog/[slug]` `●`, the report `ƒ` as before).
+  - The prerendered `.next/server/app/en/blog/bank-account-rent-poland.html` contains `flatmate-callout-guide-title`, "Found a place?" and `/en/warsaw/check`.
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks). No page looked at in a browser. Nothing deployed, no migration, no event name added, no message sent.
+- Did not work: the first static scan for `cost_data_cta_clicked` matched the explanatory comment in the client; the scan now looks for `capture('…')` calls.
+- Owner review:
+  - **Draft copy (agent copy, D29).** EN from PRD 4 §8; `ctaFlatmate` reuses each locale's `common.findFlatmate` as §8 says; **the PL, RU and UK `ctaText` are the agent's drafts** («ты» / «ти», as the newer site copy and the bridge line).
+    - `blog.ctaText`:
+      - pl "Szukasz kogoś do wspólnego wynajmu albo sprawdzasz mieszkanie? Zacznij od kosztów zgłoszonych przez najemców."
+      - en "Looking for someone to rent with, or checking a flat? Start with the figures tenants reported."
+      - ru «Ищешь, с кем снять квартиру, или проверяешь вариант? Начни с расходов, о которых сообщили жильцы.»
+      - uk «Шукаєш, з ким зняти квартиру, чи перевіряєш варіант? Почни з витрат, про які повідомили мешканці.»
+      - old: en "While you wait, explore what tenants pay by building" · pl "W międzyczasie zobacz, ile płacą najemcy wg budynków" · ru «А пока посмотрите, что платят жильцы по зданиям» · uk «А поки подивіться, скільки платять мешканці по будинках»
+    - `blog.ctaFlatmate` (new): pl "Szukam współlokatora" · en "Find a flatmate" · ru «Найти соседа» · uk «Знайти співмешканця». PL reads "I'm looking for a flatmate" (the `common` value); change both if a PL imperative is wanted.
+    - Reused unchanged: `listings.roommateCostsBridge`, `listings.roommateCostsBridgeCta`, and the callout's T123 keys.
+  - **Namespaces and providers:** the blog list (`BlogClient`) reads `blog`; the guide client (`BlogArticle`) reads `blog`, `documents` and now `listings`, all in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider (no scoped provider on the blog). `FlatmateCallout` reads `listings` on the server (`getTranslations('listings')`); its client links read none. The report is a server page (`getTranslations()`).
+  - **Assumptions applied:** no counts on guides and on the report (no `counts` passed; spec 08 table). Placements: guide end block in `blog/[slug]/client.tsx`; report `mt-6` wrapper under the city figure in `warsaw-rent-prices/page.tsx`.
+  - **Agent's choices:** the guide bridge line has no event (spec 08: no `cost_data_cta_clicked` from guides). The blog list's flatmate button has no event either. The report callout renders even when the city figure is missing.
+  - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_guide' | 'flatmate_callout_report'}` and `telegram_bot_opened {source: 'guide' | 'report'}` (payloads `mate_web_guide` / `mate_web_report`).
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next` (T129 adds the per-person line to the report callout).

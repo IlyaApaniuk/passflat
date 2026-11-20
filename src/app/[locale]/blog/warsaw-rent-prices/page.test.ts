@@ -4,6 +4,8 @@ import { createElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SingleNumberFigure } from '@/lib/cost-figures';
+
 const LOCALES = ['pl', 'en', 'ru', 'uk'] as const;
 type Locale = (typeof LOCALES)[number];
 
@@ -28,6 +30,9 @@ const state = vi.hoisted(() => ({
   locale: 'en' as 'pl' | 'en' | 'ru' | 'uk',
   deposits: [] as DepositRow[],
   findMany: [] as unknown[],
+  cityFigure: null as SingleNumberFigure | null,
+  /** The props of every `FlatmateCallout` the page rendered. */
+  callouts: [] as unknown[],
 }));
 
 vi.mock('next-intl/server', async () => {
@@ -59,7 +64,7 @@ vi.mock('@/lib/prisma', () => ({
 // The cost figures of the report are tested in `src/lib/area-figures-consistency.test.ts`.
 vi.mock('@/lib/cost-aggregates', () => ({ getBuildingsData: vi.fn(async () => []) }));
 vi.mock('@/lib/cost-figures-query', () => ({
-  loadCityFigure: vi.fn(async () => null),
+  loadCityFigure: vi.fn(async () => state.cityFigure),
   loadDistrictFigures: vi.fn(async () => []),
 }));
 vi.mock('@/i18n/navigation', () => ({
@@ -67,6 +72,14 @@ vi.mock('@/i18n/navigation', () => ({
     createElement('a', { href }, children),
 }));
 vi.mock('@/components/landing/footer', () => ({ Footer: () => null }));
+// The async server callout cannot run inside `renderToStaticMarkup`; a marker stands in for it
+// (its own render is tested in `src/components/roommate/flatmate-callout.test.ts`).
+vi.mock('@/components/roommate/flatmate-callout', () => ({
+  FlatmateCallout: (props: { surface: string }) => {
+    state.callouts.push(props);
+    return createElement('section', { 'data-callout': props.surface }, 'FLATMATE_CALLOUT');
+  },
+}));
 
 import WarsawRentPricesReport from './page';
 
@@ -157,5 +170,63 @@ describe('blog data report: deposit numbers', () => {
     expect(page).not.toContain(report('en').kaucjaTitle);
     expect(page).not.toContain(report('en').faqQ3);
     expect(page).not.toContain('got the deposit back');
+  });
+});
+
+// PRD 4 FR-12 (spec 08 §Callout placements): the flatmate callout under the city figure, with its
+// own surface `report` so the readout tells it from the guides; no counts. T129 adds the split.
+const CITY_FIGURE: SingleNumberFigure = {
+  group: 'tenant',
+  metric: 'completeTotal',
+  value: 4321,
+  n: 6,
+  reportCount: 6,
+  rent: { value: 3500, n: 6 },
+  expenses: { value: 821, n: 6 },
+  rentPerM2: null,
+  completeTotalPerM2: null,
+  adminFeePerM2: null,
+};
+
+describe('blog data report: the flatmate callout', () => {
+  beforeEach(() => {
+    state.locale = 'en';
+    state.deposits = [];
+    state.callouts = [];
+    state.cityFigure = CITY_FIGURE;
+  });
+
+  it('renders FlatmateCallout once with surface "report" and no counts', async () => {
+    await renderReport();
+    expect(state.callouts).toEqual([{ surface: 'report' }]);
+  });
+
+  it('sits under the city figure and before the anatomy section', async () => {
+    const page = await renderReport();
+    const figure = page.indexOf('≈ 4 321 zł');
+    const callout = page.indexOf('FLATMATE_CALLOUT');
+    const anatomy = page.indexOf(report('en').anatomyTitle);
+    expect(figure).toBeGreaterThan(-1);
+    expect(callout).toBeGreaterThan(figure);
+    expect(anatomy).toBeGreaterThan(callout);
+  });
+
+  it('without a city figure the callout still renders, before the anatomy section', async () => {
+    state.cityFigure = null;
+    const page = await renderReport();
+    expect(page).not.toContain('≈ 4 321 zł');
+    expect(state.callouts).toEqual([{ surface: 'report' }]);
+    expect(page.indexOf(report('en').anatomyTitle)).toBeGreaterThan(
+      page.indexOf('FLATMATE_CALLOUT'),
+    );
+  });
+
+  it('loads no counts', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/app/[locale]/blog/warsaw-rent-prices/page.tsx'),
+      'utf8',
+    );
+    expect(source).not.toContain('loadFlatmateBlockCounts');
+    expect(source).toContain('<FlatmateCallout surface="report" />');
   });
 });

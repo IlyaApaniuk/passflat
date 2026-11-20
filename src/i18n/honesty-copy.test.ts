@@ -74,6 +74,8 @@ const REWRITTEN_KEYS = [
   'landing.footer.tagline',
   'landing.hero.costsCta',
   'landing.tools.templatesDescription',
+  // PRD 4 FR-12 (spec 08 §Callout placements).
+  'blog.ctaText',
 ];
 
 /** The home keys rewritten by PRD 4 FR-10 (spec 08 §Home copy), cost-first positioning kept. */
