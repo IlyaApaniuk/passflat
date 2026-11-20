@@ -683,9 +683,11 @@ curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
 | `mate…`        | roommate posts, the roommate page's block              | the roommate flow, with a source (table below)                                 |
 | anything else  | campaign tags such as `thr_med`                        | the `startAfterPayload` reply; attribution only                                |
 
-The website sends `web_checker` and `web_empty`, and the roommate page's
-"Looking for someone to rent with" block sends `mate_web_roommate`
-(`TelegramBotSource` and `botStartPayload` in
+The website sends `web_checker` and `web_empty`; the roommate page's
+"Looking for someone to rent with" block sends `mate_web_roommate`, and the
+shared flatmate callout (PRD 4 FR-8) sends `mate_web_<surface>` for `home`,
+`building`, `district`, `hub`, `calculator`, `guide` and `report`
+(`TelegramBotSource`, `FLATMATE_SURFACES` and `botStartPayload` in
 `src/lib/analytics/telegram-events.ts`). Every payload is attribution: the raw
 string is `tg_bot_started.payload`, and the first one a chat brings is kept in
 `TelegramChat.startPayload` (a later `/start` does not overwrite it). Both keep
@@ -705,7 +707,7 @@ starts with `mate` opens the roommate flow (`openRoommate`) with a source from
 | `mate`                                                                 | `direct`                                                      |
 | `mate_tg`, `mate_fb`, `mate_ig`, `mate_threads`                        | `tg`, `fb`, `ig`, `threads`                                   |
 | `mate_<source>_<detail>`, source above, detail `[a-z0-9]{1,24}`        | that source and detail (the posting kit's group keys)         |
-| `mate_web`, `mate_web_<detail>`                                        | `web` (and the detail); the website sends `mate_web_roommate` |
+| `mate_web`, `mate_web_<detail>`                                        | `web` (and the detail); website buttons: `mate_web_<surface>` |
 | any other payload starting `mate` (`mate_xyz`, `mate_tg_Bad`, `matey`) | `other`, no detail, no error                                  |
 | no payload: `/mate`, the `rm:start` button                             | `bot_menu`                                                    |
 

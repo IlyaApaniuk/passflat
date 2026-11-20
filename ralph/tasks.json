@@ -174,7 +174,7 @@
       "title": "One shared FlatmateCallout, the new telegram_bot_opened sources, and the thesis section under the home hero (FR-8, FR-9)",
       "spec": "docs/specs/08-site-structure-and-entries.md#flatmate-callout",
       "dependsOn": ["T118"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "src/components/roommate/flatmate-callout.tsx, an async server component: FlatmateCallout({ surface, counts? }) renders a section with an h2 (listings.flatmateCallout.homeTitle for home, else listings.flatmateCallout.title), listings.findFlatmate.how, listings.findFlatmate.languages, the count line when counts.status === 'counts' (count, or first at 0), a link to /warsaw/roommate (listings.flatmateCallout.roommateLink) and, with NEXT_PUBLIC_TELEGRAM_BOT_USERNAME set, the bot button (listings.findFlatmate.button); it never returns null",
         "The links are a small client component that reads no message namespace (the server callout passes both labels as string props): the roommate link captures cta_click {placement: 'flatmate_callout_<surface>'}; the bot button captures telegram_bot_opened with telegramBotOpenedProperties(surface) (has_building_context false) and opens a new tab",
@@ -186,7 +186,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48, D50; PRD 3 FR-2 (mate_web_<detail>). Spec 08 §Flatmate callout and §Home thesis section. A client component cannot import the async callout: client pages receive it from their server page as a ReactNode prop. The per-person line is added by T129. Do not reuse TelegramBotCta (its checker namespace stays off these routes). The callout is rendered on the home page in this task so knip finds no unused file."
     },
     {

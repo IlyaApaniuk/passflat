@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest';
+
+import { FLATMATE_SURFACES } from '@/lib/analytics/telegram-events';
+
+import type { FlatmateBlockCounts } from './flatmate-block';
+import { flatmateCalloutView } from './flatmate-callout';
+
+// PRD 4 FR-8 (spec 08 §Flatmate callout): the pure props mapper of the shared callout.
+
+const COUNTS: FlatmateBlockCounts = {
+  status: 'counts',
+  total: 7,
+  top: [{ slug: 'mokotow', count: 4 }],
+};
+
+describe('flatmateCalloutView', () => {
+  describe('the count line per counts state', () => {
+    it.each<[string, FlatmateBlockCounts | undefined, 'count' | 'first' | 'none', number]>([
+      ['counts above zero → the number', COUNTS, 'count', 7],
+      [
+        'zero profiles → "be among the first", no number',
+        { status: 'counts', total: 0, top: [] },
+        'first',
+        0,
+      ],
+      ['unavailable (database error) → no line', { status: 'unavailable' }, 'none', 0],
+      ['not loaded (static page, rejected loader) → no line', undefined, 'none', 0],
+    ])('%s', (_name, counts, countLine, total) => {
+      const view = flatmateCalloutView({ surface: 'hub', counts, hasUsername: true });
+      expect(view.countLine).toBe(countLine);
+      expect(view.total).toBe(total);
+    });
+
+    it('the count line does not depend on the username', () => {
+      expect(
+        flatmateCalloutView({ surface: 'home', counts: COUNTS, hasUsername: false }).countLine,
+      ).toBe('count');
+    });
+  });
+
+  describe.each(FLATMATE_SURFACES)('surface %s', (surface) => {
+    const view = flatmateCalloutView({ surface, counts: COUNTS, hasUsername: true });
+
+    it('payload mate_web_<surface>, placement flatmate_callout_<surface>', () => {
+      expect(view.payload).toBe(`mate_web_${surface}`);
+      expect(view.placement).toBe(`flatmate_callout_${surface}`);
+    });
+
+    it('the thesis title only on home, the question elsewhere', () => {
+      expect(view.titleKey).toBe(
+        surface === 'home' ? 'flatmateCallout.homeTitle' : 'flatmateCallout.title',
+      );
+    });
+
+    it('with the username: the bot button', () => {
+      expect(view.showBotButton).toBe(true);
+    });
+  });
+
+  it('without the username: no bot button, the rest unchanged', () => {
+    const withBot = flatmateCalloutView({
+      surface: 'calculator',
+      counts: COUNTS,
+      hasUsername: true,
+    });
+    const without = flatmateCalloutView({
+      surface: 'calculator',
+      counts: COUNTS,
+      hasUsername: false,
+    });
+    expect(without.showBotButton).toBe(false);
+    expect({ ...without, showBotButton: true }).toEqual(withBot);
+  });
+});

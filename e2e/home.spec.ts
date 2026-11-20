@@ -19,8 +19,8 @@ test('english home page (/en) loads', async ({ page }) => {
 
 // PRD 4 FR-6: outside the footer (its frozen links wait for FR-7, Q-5), the
 // home page no longer links to /replacement, /sublet or /create-listing; the
-// hero chip and two ForWhom cards lead to the roommate page, and the district
-// cards to the district pages.
+// hero chip, the thesis section's link (FR-9) and two ForWhom cards lead to the
+// roommate page, and the district cards to the district pages.
 test.describe('home framing on /en', () => {
   test.use({ locale: 'en-US' });
 
@@ -35,11 +35,48 @@ test.describe('home framing on /en', () => {
     expect(frozen).toEqual([]);
 
     const main = page.locator('main');
-    await expect(main.locator('a[href$="/warsaw/roommate"]')).toHaveCount(3);
+    await expect(main.locator('a[href$="/warsaw/roommate"]')).toHaveCount(4);
     await expect(main.locator('a[href$="/warsaw/mokotow"]')).toHaveCount(1);
     await expect(main.locator('a[href*="/costs?district="]')).toHaveCount(0);
   });
 });
+
+// PRD 4 FR-9: right under the hero, a section headed by the thesis sentence
+// ("Passflat helps people in Warsaw find someone to rent with ...") links to
+// the roommate page. The e2e build sets no NEXT_PUBLIC_TELEGRAM_BOT_USERNAME, so
+// the callout's bot button is absent there.
+for (const [path, browserLocale, thesisStart] of [
+  ['/', 'pl-PL', 'Passflat pomaga znaleźć w Warszawie'],
+  ['/en', 'en-US', 'Passflat helps people in Warsaw'],
+] as const) {
+  test.describe(`thesis section on ${path}`, () => {
+    test.use({ locale: browserLocale });
+
+    test(`thesis section on ${path} links to the roommate page; no bot button (the e2e build has no bot username)`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      expect(new URL(page.url()).pathname).toBe(path);
+      // A section named by its own h2 (aria-labelledby) is a `region`; other home
+      // sections hold h2s mentioning Passflat too, but carry no accessible name.
+      const section = page.locator('main').getByRole('region', { name: /Passflat/ });
+      await expect(section).toHaveCount(1);
+      const heading = section.getByRole('heading', { level: 2 });
+      await expect(heading).toHaveCount(1);
+      await expect(heading).toContainText(thesisStart);
+      await expect(section.locator('a[href$="/warsaw/roommate"]')).toHaveCount(1);
+      await expect(section.locator('a[href*="t.me/"]')).toHaveCount(0);
+
+      // Right under the hero: the first section after the hero's own section.
+      const firstSections = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('main section'))
+          .slice(0, 2)
+          .map((element) => element.getAttribute('aria-labelledby')),
+      );
+      expect(firstSections[1]).toBe('flatmate-callout-home-title');
+    });
+  });
+}
 
 // PRD 4 FR-5: "Find a flatmate" leads the header nav (desktop viewport, so the
 // first match is the nav link, not the mobile pill); building reviews left it.

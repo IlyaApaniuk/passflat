@@ -159,6 +159,8 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - **2026-11-19, evening (D75 – D77), a note on the T105 handoff below; the entry itself is not rewritten.** Deploy step 3 is superseded: `ROOMMATE_MATCHING_ENABLED=true` is set in Vercel **at the PRD 3 deploy** (D75), so stage 2 is live from day 0 and the daily go check from 2027-01-04 is not run; the stage 1 readout of 2027-01-18 still decides whether the test continues. The "approve before the switch" copy of the handoff (terms, safety lines, statement of reasons, report and appeal texts, the rest of stage 2) is therefore approved before the deploy, with the privacy section. Deploy step 5 uses a **separate production bot** (D76): `@passflatdev_bot` stays the dev bot with its token only in `.env.local`; the production token goes only into Vercel; its username is Open (task T117) and until then `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` stays unset. Deploy step 6 (BotFather by hand) is replaced by `npm run bot:profile` (D77, task T115), which also sets the name and the photo (`public/bot-avatar.png`, task T114). Step 7's `<bot>` placeholder is handled by task T116. The posting kit's "matching isn't open yet" sentence is deleted before the first slot, not on a switch day.
 - `src/components/landing/no-frozen-links.test.ts` fails on any `/replacement`, `/sublet` or `/create-listing` in a non-test file under `src/components/landing/` (except `footer.tsx`, until FR-7), `src/app/[locale]/page.tsx` or `not-found.tsx`; landing server components render in Vitest with `next-intl/server` mocked (example: `home-framing.test.ts`).
 - e2e runs Desktop Chrome with an `en-US` browser locale, and next-intl's locale detection sends `/` to `/en`: a test of the Polish `/` needs `test.use({ locale: 'pl-PL' })` (example: the header tests in `e2e/home.spec.ts`). Phone layouts can be measured in a temporary spec with `page.setViewportSize` and `getBoundingClientRect` / `scrollWidth` in `page.evaluate`.
+- A nested async server component (the home page's `HomeContent`) is tested without RSC: `await` the page, call the Suspense child's `type()`, walk the element tree by component identity; `vi.doMock` in a top-level loop before the dynamic `import('./page')` stubs many sections at once (example: `src/app/[locale]/home-thesis.test.ts`).
+- In e2e, a section with `aria-labelledby` is a `region` named by its heading: `getByRole('region', { name })` finds it, while `locator('section').filter({ has: heading })` also matches sections that merely contain such a heading.
 
 ## Log
 
@@ -3869,4 +3871,80 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The ForWhom "Looking for a room" card leads to `/warsaw/roommate`, where the room money block shows only for `find_room` or with 0 offers in the city (spec 02). With offers and no role tapped, that visitor first sees the flatmate block.
   - `cta_click {placement: 'district_card'}` now counts taps to the district pages, not to the costs map filter. Compare it with pre-deploy numbers knowing that.
   - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:10 · T123 · done
+
+- Done (PRD 4 FR-8, FR-9, spec 08 §Flatmate callout and §Home thesis section):
+  - `src/lib/analytics/telegram-events.ts`:
+    - New `FLATMATE_SURFACES` (`home`, `building`, `district`, `hub`, `calculator`, `guide`, `report`) and `FlatmateSurface`. `TelegramBotSource` = `checker | empty | roommate | FlatmateSurface`.
+    - `botStartPayload`: a building → `b_<id>`; `checker` and `empty` → `web_<source>`; `roommate` and the seven surfaces → `mate_web_<source>`.
+  - New `src/lib/roommate/flatmate-callout.ts`: pure `flatmateCalloutView({ surface, counts, hasUsername })` → `{ titleKey, countLine, total, showBotButton, payload, placement }`. The count rule reuses `flatmateBlockView(counts, [])`. `total` is one field beyond the spec's shape: it feeds `{count}`.
+  - New `src/components/roommate/flatmate-callout.tsx`, an async server component (`getTranslations('listings')`). `FlatmateCallout({ surface, counts? })` renders `section aria-labelledby="flatmate-callout-<surface>-title"`, in this order:
+    - the `h2` (`flatmateCallout.homeTitle` on home, else `flatmateCallout.title`);
+    - `findFlatmate.how`, then `findFlatmate.languages`;
+    - the count line (`findFlatmate.count` / `first`);
+    - the links.
+    - It never returns null.
+  - New `src/components/roommate/flatmate-callout-links.tsx` (client, reads no namespace). It takes `surface`, `placement`, `roommateLabel` and an optional `bot: { href, label }`:
+    - The bot button comes first when present (`Button`, `Send` icon, new tab). Its click captures `telegram_bot_opened` with `telegramBotOpenedProperties(surface)`.
+    - The roommate link is `TrackedLink` → `/warsaw/roommate`. It captures `cta_click {placement}` and is outline beside the bot button, the default style alone.
+  - `src/app/[locale]/page.tsx`: `HomeContent`'s `Promise.allSettled` gains `loadFlatmateBlockCounts()` (a rejection → `undefined`). `<FlatmateCallout surface="home" counts={…} />` sits between `Hero` and `CheckAddress` inside `main`, in a `container max-w-3xl pt-12 sm:pt-16` wrapper.
+  - Copy: new `listings.flatmateCallout.{homeTitle,title,roommateLink}` in four locales.
+  - `e2e/home.spec.ts`:
+    - New "thesis section on / and /en … no bot button (the e2e build has no bot username)": one `region` named /Passflat/ in `main` with exactly one h2 holding the locale's thesis start, one link to `/warsaw/roommate`, no `t.me/` link. It is the second `main section`, right after the hero.
+    - The FR-6 test now expects 4 roommate links in `main` (the callout's link added), not 3.
+  - Docs:
+    - `src/lib/bot/README.md`: the website payload paragraph names `mate_web_<surface>` and the seven surfaces. The `mate_web` table cell was rewritten at its exact width.
+    - `docs/architecture.md`: the Telegram bot row says `?start=mate_web_<surface>`, within the column width.
+    - `docs/specs/README.md`: PRD 4 map FR-8, FR-9 → Done.
+- Tests:
+  - `telegram-events.test.ts`: a `PAYLOADS` table `satisfies Record<TelegramBotSource, string>` (a missing source fails typecheck) and covers exactly the old three plus the seven. Per source: payload with no or empty building id, `b_<id>` with one, deep-link shape. Per surface: a round trip through `parseStartPayload` → `{ kind: 'roommate', source: 'web', detail: <surface> }`, and `telegram_bot_opened` `{source: surface, has_building_context: false}`. The checker payloads stay `kind: 'web'`.
+  - New `src/lib/roommate/flatmate-callout.test.ts`:
+    - the four counts states (above 0, 0, `unavailable`, `undefined`);
+    - per surface: payload, placement, title key and the bot button;
+    - without the username, only `showBotButton` changes.
+  - New `src/components/roommate/flatmate-callout.test.ts` (real locale files, `getTranslations` with an `onError` that throws, and `next-intl`'s `useTranslations` mocked to throw):
+    - The exact EN text order and both anchors on home.
+    - The question h2, its id and the bot payload on the six other surfaces.
+    - Every text from its key in four locales.
+    - The count line per state, and the no-username case (section kept, roommate link only, no `t.me`).
+    - The server reads only `listings`, and the links get string props; the links file imports no `next-intl`.
+    - Per surface, each click captures exactly one event.
+  - New `src/app/[locale]/home-thesis.test.ts`. The home sections are stubbed, and Prisma and the home figure loaders fail:
+    - the component order in `main` starts `Hero`, `FlatmateCallout`, `CheckAddress`, and the callout appears once with `{ surface: 'home', counts }`;
+    - resolved counts render the thesis h2 and the count line;
+    - a rejected loader → `counts: undefined`, no count line, the roommate link only.
+- Checks:
+  - Focused Vitest (the four new or changed files plus `messages.test.ts`, `honesty-copy.test.ts`, `no-frozen-links.test.ts`): 7 files / 107 passed.
+  - `npm run verify` exit 0, run twice (the second after the doc edits):
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 150 files / 3235 tests;
+    - build OK (183 pages).
+  - `npm run test:e2e` exit 0: 13 passed. The `[roommate] website counts failed` and Prisma lines come from the database-less e2e build: the loader catches and the section renders without a count.
+  - `next-env.d.ts` restored; `prettier --check` clean on the three docs.
+  - Nothing deployed, no migration, no event name added, no message sent. The bot button was not seen in a browser: no username in the e2e build. The render tests are the proof.
+- Did not work: the first e2e draft found the section with `locator('main section').filter({ has: h2 /Passflat/ })` and matched 3 sections, because other home sections hold h2s mentioning Passflat. It now uses `getByRole('region', { name: /Passflat/ })` (Learnings).
+- Owner review:
+  - **Draft copy (agent copy, D29), PRD 4 §8 as given:**
+    - `listings.flatmateCallout.homeTitle` (the thesis, D48):
+      - pl "Passflat pomaga znaleźć w Warszawie kogoś do wspólnego wynajmu i zobaczyć, ile to kosztuje na osobę"
+      - en "Passflat helps people in Warsaw find someone to rent with and see what it costs per person"
+      - ru «Passflat помогает найти в Варшаве, с кем снять квартиру, и увидеть, сколько это стоит на человека»
+      - uk «Passflat допомагає знайти у Варшаві, з ким зняти квартиру, і побачити, скільки це коштує на людину»
+    - `listings.flatmateCallout.title`: pl "Szukasz kogoś do wspólnego wynajmu w Warszawie?" · en "Looking for someone to rent with in Warsaw?" · ru «Ищешь, с кем снять квартиру в Варшаве?» · uk «Шукаєш, з ким зняти квартиру у Варшаві?»
+    - `listings.flatmateCallout.roommateLink`: pl "Zobacz koszty na osobę i profile" · en "See the figures per person and the profiles" · ru «Смотреть цифры на человека и анкеты» · uk «Дивитися цифри на людину та анкети»
+    - Reused unchanged: `listings.findFlatmate.how`, `languages`, `count`, `first`, `button`.
+  - Namespaces and providers: the server callout reads `listings` through `getTranslations('listings')`. `FlatmateCalloutLinks` (client) reads no namespace: it gets both labels as string props, so it also works under the calculator's scoped provider. `TrackedLink` reads none either.
+  - **Assumptions applied (spec 08 FR-8 component and copy, FR-9 placement):**
+    - The surfaces live in `FLATMATE_SURFACES` (`telegram-events.ts`); the callout's rules in `flatmateCalloutView` (`src/lib/roommate/flatmate-callout.ts`); the roommate path in `FLATMATE_CALLOUT_ROOMMATE_PATH` (`flatmate-callout-links.tsx`).
+    - The home placement is in `page.tsx`.
+  - Agent's choices:
+    - The card style (`rounded-2xl border bg-primary/5`), the home wrapper spacing, and the order bot button then roommate link.
+    - The roommate link uses the default style when it stands alone.
+  - **The count line does not depend on the username.** This follows the spec's rule (`counts.status === 'counts'`). The roommate page's block hides counts without the username (FR-2). Production has no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` today (T117), so after deploy the home section can show "Be among the first." (or a count) with no bot button, while the roommate page it links to says "The Telegram bot is not connected yet." To hide the count line until the bot is connected, change `flatmateCalloutView` to treat `hasUsername: false` like no counts.
+  - `cta_click {placement: 'flatmate_callout_home'}` and `telegram_bot_opened {source: 'home'}` are new values of existing events (spec 01 §PRD 4 values). The readout docs (`docs/analytics/activation-funnels.md`) belong to spec 05's task.
+  - The other surfaces (building, hub, district, calculator, guide, report) are not placed yet; they are their own tasks (FR-11, FR-12, FR-26). The per-person line (`split`) is T129.
+  - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.

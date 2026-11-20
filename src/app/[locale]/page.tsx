@@ -15,7 +15,9 @@ import { CityNotify } from '@/components/landing/city-notify';
 import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 import { LandingContent } from '@/components/landing/landing-content';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { prisma } from '@/lib/prisma';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { depositClaim } from '@/lib/deposit-claim';
 import {
   loadFeaturedBuilding,
@@ -150,15 +152,18 @@ function HomeSkeleton() {
 }
 
 async function HomeContent() {
-  const [statsResult, costResult, districtResult] = await Promise.allSettled([
+  const [statsResult, costResult, districtResult, flatmateResult] = await Promise.allSettled([
     getStatsCached(),
     getTopBuildingCostDataCached(),
     getDistrictMediansCached(),
+    loadFlatmateBlockCounts(),
   ]);
 
   const heroStats = statsResult.status === 'fulfilled' ? statsResult.value : undefined;
   const costBuildingData = costResult.status === 'fulfilled' ? costResult.value : undefined;
   const districtMedians = districtResult.status === 'fulfilled' ? districtResult.value : [];
+  // A rejection → no count line; the thesis section still renders with its links.
+  const flatmateCounts = flatmateResult.status === 'fulfilled' ? flatmateResult.value : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -168,6 +173,10 @@ async function HomeContent() {
             longer showcases them; their pages remain reachable by direct link. */}
         <main className="flex-1">
           <Hero stats={heroStats} />
+          {/* The thesis right under the hero (PRD 4 FR-9, D48). */}
+          <div className="container mx-auto max-w-3xl px-4 pt-12 sm:px-6 sm:pt-16">
+            <FlatmateCallout surface="home" counts={flatmateCounts} />
+          </div>
           <CheckAddress citySlug={DEFAULT_CITY} />
           <Districts medians={districtMedians} />
           <BentoGrid />

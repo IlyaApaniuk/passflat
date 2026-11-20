@@ -400,6 +400,11 @@
       "notConnected": "The Telegram bot is not connected yet.",
       "button": "Open the bot in Telegram"
     },
+    "flatmateCallout": {
+      "homeTitle": "Passflat helps people in Warsaw find someone to rent with and see what it costs per person",
+      "title": "Looking for someone to rent with in Warsaw?",
+      "roommateLink": "See the figures per person and the profiles"
+    },
     "roomMoney": {
       "title": "Found a room? What it will cost you per person, and is it safe to pay the deposit?",
       "figuresLead": "A room in Warsaw, per month:",
