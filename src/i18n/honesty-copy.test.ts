@@ -73,6 +73,32 @@ const COST_PAGE_KEYS = [
   'listings.detail.buildingCostHint',
 ];
 
+/**
+ * The data report's title, description, OG title and body keys, the About, How it works and
+ * blog descriptions and the how-it-works listings step rewritten by PRD 4 FR-21, part 2 (spec 09
+ * §Honesty keys under test; appendix seo.md table F and its note).
+ */
+const REPORT_PAGE_KEYS = [
+  'rentReport.metaTitle',
+  'rentReport.metaDescription',
+  'rentReport.ogTitle',
+  'rentReport.lead',
+  'rentReport.checkStep1',
+  'rentReport.anatomyTitle',
+  'rentReport.doplatyBody2',
+  'meta.aboutDescription',
+  'meta.howItWorksDescription',
+  'meta.blogDescription',
+  'howItWorksPage.seekers.step1Desc',
+];
+
+/** The page descriptions among them, which promote no listing (D5). */
+const PAGE_DESCRIPTION_KEYS = [
+  'meta.aboutDescription',
+  'meta.howItWorksDescription',
+  'meta.blogDescription',
+];
+
 /** The spec's list as found on 2026-11-19, plus the keys the en.json search found with it. */
 const REWRITTEN_KEYS = [
   'landing.hero.subtitle',
@@ -127,6 +153,8 @@ const REWRITTEN_KEYS = [
   ...HELP_ABOUT_KEYS,
   // PRD 4 FR-21, part 1 (spec 09 §Honesty keys under test).
   ...COST_PAGE_KEYS,
+  // PRD 4 FR-21, part 2 (spec 09 §Honesty keys under test).
+  ...REPORT_PAGE_KEYS,
 ];
 
 /**
@@ -227,8 +255,22 @@ const ROOMS_OR_FLATMATES: Record<Locale, RegExp> = {
 };
 
 /**
+ * The EN whole-file scan (spec 09 §Honesty keys under test): "really" joined on 2026-11-20 and
+ * matched no value then, so no entry was added for it.
+ */
+const EN_SCAN = /verified|checked|actually|really|in full/i;
+
+/** The two figure groups a report-wide sentence names (D23: tenant reports or asking prices). */
+const BOTH_GROUPS: Record<Locale, RegExp[]> = {
+  en: [/tenant reports/, /asking prices/],
+  pl: [/zgłoszeń najemców/, /cen ofertowych/],
+  ru: [/отчётов жильцов/, /цен объявлений/],
+  uk: [/звітів мешканців/, /цін оголошень/],
+};
+
+/**
  * en.json matches of the spec's search ("verified", "checked", "actually",
- * "in full") that are not claims about reported figures.
+ * "really", "in full") that are not claims about reported figures.
  */
 const ALLOWED_EN_MATCHES: Record<string, string> = {
   'landing.bentoGrid.depositReturnDesc':
@@ -590,11 +632,89 @@ describe('honesty copy (spec 03 §Marketing copy)', () => {
     expect('na gotowych wzorach dokumentów').toMatch(TEMPLATES.pl);
   });
 
+  it('the data report and page keys (PRD 4 FR-21, part 2): no claim, "actual", market, percentage, "free" or promise', () => {
+    expect(REPORT_PAGE_KEYS).toHaveLength(11);
+    for (const locale of LOCALES) {
+      for (const key of REPORT_PAGE_KEYS) {
+        const value = valueAt(locale, key) as string;
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect(value, `${locale}: ${key}`).not.toMatch(FORBIDDEN[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(REAL_OR_TRUTH[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(ACTUAL[locale]);
+        expect(value, `${locale}: ${key}`).not.toMatch(/market|rynk|рын|ринк/i);
+        expect(value, `${locale}: ${key}`).not.toMatch(/%|procent|процент|відсот/i);
+        expect(value, `${locale}: ${key}`).not.toMatch(FREE);
+        expect(value, `${locale}: ${key}`).not.toMatch(PROMISE[locale]);
+      }
+      // The report's title, description and OG title carry the year; the body keys none.
+      for (const key of [
+        'rentReport.metaTitle',
+        'rentReport.metaDescription',
+        'rentReport.ogTitle',
+      ]) {
+        expect(valueAt(locale, key) as string, `${locale}: ${key}`).toContain('{year}');
+      }
+      for (const key of [
+        'rentReport.checkStep1',
+        'rentReport.anatomyTitle',
+        'rentReport.doplatyBody2',
+        ...PAGE_DESCRIPTION_KEYS,
+      ]) {
+        expect(valueAt(locale, key) as string, `${locale}: ${key}`).not.toContain('{');
+      }
+      // A district's figure is the tenant group or the asking-price group, each with its N (D23):
+      // the report-wide sentences name both and never call the whole table tenant reports.
+      for (const key of ['rentReport.metaDescription', 'rentReport.lead']) {
+        const value = valueAt(locale, key) as string;
+        for (const group of BOTH_GROUPS[locale]) expect(value, `${locale}: ${key}`).toMatch(group);
+        expect(value, `${locale}: ${key}`).toMatch(/\bN\b|liczbą zgłoszeń/);
+      }
+      // The page descriptions sell no listing (D5).
+      for (const key of PAGE_DESCRIPTION_KEYS) {
+        expect(valueAt(locale, key) as string, `${locale}: ${key}`).not.toMatch(LISTINGS[locale]);
+      }
+      // The how-it-works step keeps its link tag around the same words.
+      const step = valueAt(locale, 'howItWorksPage.seekers.step1Desc') as string;
+      expect(step, locale).toMatch(/^<browseLink>[^<]+<\/browseLink> /);
+    }
+  });
+
+  it('the data report EN drafts (table F and its note)', () => {
+    expect(valueAt('en', 'rentReport.metaTitle')).toBe(
+      'Rent in Warsaw {year}: what tenants report, by district',
+    );
+    expect(valueAt('en', 'rentReport.metaDescription')).toBe(
+      'Monthly rent and utilities in Warsaw {year} by district: medians from tenant reports or asking prices, each with its N, deposit returns, cost checklist.',
+    );
+    expect(valueAt('pl', 'rentReport.metaTitle')).toBe(
+      'Czynsz i opłaty w Warszawie {year} — zgłoszenia wg dzielnic',
+    );
+    expect(valueAt('pl', 'rentReport.ogTitle')).toBe(
+      'Wynajem w Warszawie {year}: zgłoszenia wg dzielnic',
+    );
+  });
+
+  it('the EN scan includes "really" and catches every earlier word', () => {
+    for (const text of ['verified', 'checked', 'actually', 'what it really costs', 'in full']) {
+      expect(text).toMatch(EN_SCAN);
+    }
+    expect('fully or partly').not.toMatch(EN_SCAN);
+    expect(EN_SCAN.flags).not.toContain('g');
+  });
+
   it('the en.json search finds no claim about reported figures', () => {
     const matches = leaves(messages.en)
-      .filter(([, value]) => /verified|checked|actually|in full/i.test(value))
+      .filter(([, value]) => EN_SCAN.test(value))
       .map(([path]) => path);
 
     expect(matches.filter((path) => !(path in ALLOWED_EN_MATCHES))).toEqual([]);
+  });
+
+  it('every EN allowed match still matches the scan', () => {
+    for (const [path, reason] of Object.entries(ALLOWED_EN_MATCHES)) {
+      const value = leaves(messages.en).find(([key]) => key === path)?.[1];
+      expect(value, path).toMatch(EN_SCAN);
+      expect(reason.trim().length, path).toBeGreaterThan(0);
+    }
   });
 });

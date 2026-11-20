@@ -4575,3 +4575,100 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **Namespaces and providers:** `ListingsEmptyState` (client) reads `listings.demandCapture.costCtaTitle` through `useTranslations()`; `listings` is in `SHARED_CLIENT_NAMESPACES` of the locale layout's provider, with no scoped provider on the listings pages. The `costsSeo.*` and `calculator.meta*` keys are read only server-side in `generateMetadata` (`getTranslations()`: building, district, city and calculator pages). No wiring changed.
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next` (T139: the data report and page keys, FR-21 part 2; it imports `FORBIDDEN` from `src/i18n/honesty-rules.ts` and can use `ALLOWED_KEY_MATCHES`).
+
+### 2026-11-20 09:29 · T139 · done
+
+- Done (PRD 4 FR-21, part 2 of 2; spec 09 §Honesty keys under test):
+  - Copy in four locales (scratchpad script, exact-once replacement per file, 11 lines per file), all eleven keys added to `REWRITTEN_KEYS` as `REPORT_PAGE_KEYS`: `rentReport.metaTitle`, `metaDescription`, `ogTitle`, `lead`, `checkStep1`, `anatomyTitle`, `doplatyBody2`, `meta.aboutDescription`, `meta.howItWorksDescription`, `meta.blogDescription`, `howItWorksPage.seekers.step1Desc`. No code changed (every caller passes the same values; `lead` still receives an unused `{city}`).
+  - The EN whole-file scan is now `EN_SCAN = /verified|checked|actually|really|in full/i`. **New matches: none** (no en.json value says "really" since T138 rewrote `calculator.metaTitle`), so `ALLOWED_EN_MATCHES` is unchanged (8 paths).
+  - `ALLOWED_KEY_MATCHES` stays empty: none of the eleven new values matches `FORBIDDEN`.
+  - `docs/specs/README.md` PRD 4 map: FR-21 → Done (T138, T139).
+- Tests (`src/i18n/honesty-copy.test.ts`), new cases:
+  - the eleven keys in four locales: no FORBIDDEN, "real"/"truth", "actual", market, percentage, "free" or promise. The report's title, description and OG title keep `{year}`; the body keys and page descriptions hold no placeholder. `rentReport.metaDescription` and `lead` name both groups (tenant reports and asking prices) and N (or "liczbą zgłoszeń"). The three `meta.*Description` hold no listings word. `step1Desc` still opens with its `<browseLink>` tag;
+  - the EN table F drafts and the PL title and OG title verbatim;
+  - a self-check of `EN_SCAN` (catches "what it really costs" and the earlier words, passes "fully or partly", no `g` flag);
+  - every `ALLOWED_EN_MATCHES` entry still matches the scan and has a reason.
+- Checks:
+  - Focused Vitest (`src/i18n/`, the data report, How it works and About dirs): 6 files / 85 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 161 files / 3453 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored. `npm run test:e2e` not run (not in the task's checks). No page looked at in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (agent copy, D29).** `rentReport.metaTitle` / `metaDescription` are table F (`docs/product/reviews/2026-11-19-site-audit/seo.md`) verbatim; `ogTitle` follows the note under table F; everything else is the agent's draft. RU/UK keep «вы» / «ви» on the data report (`checkStep1` «Проверьте» / «Перевірте», as `checkStep2` and `checkIntro` do); the other new values use no direct address.
+    - `rentReport.metaTitle` (table F):
+      - pl "Czynsz i opłaty w Warszawie {year} — zgłoszenia wg dzielnic"
+      - en "Rent in Warsaw {year}: what tenants report, by district"
+      - ru «Аренда в Варшаве {year}: отчёты жильцов по районам»
+      - uk «Оренда у Варшаві {year}: звіти мешканців за районами»
+      - old en "How much rent costs in Warsaw in {year} — real tenant data"
+    - `rentReport.metaDescription` (table F):
+      - pl "Czynsz i opłaty w Warszawie {year} wg dzielnic: mediany ze zgłoszeń najemców lub cen ofertowych, każda z liczbą zgłoszeń, zwroty kaucji i lista kontrolna kosztów."
+      - en "Monthly rent and utilities in Warsaw {year} by district: medians from tenant reports or asking prices, each with its N, deposit returns, cost checklist."
+      - ru «Аренда и коммуналка в Варшаве {year} по районам: медианы из отчётов жильцов или цен объявлений, каждая с числом N, возврат депозитов и чек-лист расходов.»
+      - uk «Оренда й комуналка у Варшаві {year} за районами: медіани зі звітів мешканців або цін оголошень, кожна з N, повернення застав і чек-лист витрат.»
+      - old en "Real rental costs in Warsaw in {year} by district: median rent and utilities. Updated automatically."
+      - The page shows the deposit section only when deposit answers exist (`report.deposit`); without it the description promises a section that is absent. The blog list's report card reads this key too.
+    - `rentReport.ogTitle` (the note under table F):
+      - pl "Wynajem w Warszawie {year}: zgłoszenia wg dzielnic"
+      - en "Renting in Warsaw {year}: reports by district"
+      - ru «Аренда в Варшаве {year}: отчёты по районам»
+      - uk «Оренда у Варшаві {year}: звіти за районами»
+      - old en "Renting in Warsaw {year}: real data"
+    - `rentReport.lead` (agent draft; **differs from the note**, which says "Realne koszty" → "Zgłoszone koszty"):
+      - pl "Koszty najmu w Warszawie według dzielnic: mediana czynszu najmu i mediów ze zgłoszeń najemców lub cen ofertowych, każda z liczbą zgłoszeń. Liczby aktualizują się wraz z napływem nowych zgłoszeń."
+      - en "Rental costs in Warsaw by district: the median rent and utilities from tenant reports or asking prices, each with its N. The figures update as new reports come in."
+      - ru «Расходы на аренду в Варшаве по районам: медиана аренды и коммуналки из отчётов жильцов или цен объявлений, каждая с числом N. Цифры обновляются по мере поступления новых отчётов.»
+      - uk «Витрати на оренду у Варшаві за районами: медіана оренди та комуналки зі звітів мешканців або цін оголошень, кожна з N. Цифри оновлюються в міру надходження нових звітів.»
+      - old en "Real rental costs in Warsaw by district: the typical rent and utilities. …"; old pl/ru/uk said "on average" (średnio, в среднем) for what is a median.
+      - Why: a district row shows the asking-price group when tenants reported too little (D23), so "Zgłoszone koszty" over the whole table would call asking prices reported costs; the lead names both groups as the table F description does.
+    - `rentReport.checkStep1` ("free" dropped, Q-12; "no account" kept, as `landing.cta.freeNote` in spec 08):
+      - pl "Sprawdź adres — bez zakładania konta: zgłoszone koszty tego budynku, transport i minusy lokalizacji."
+      - en "Check the address — no account needed: the reported costs for the building, transport and location downsides."
+      - ru «Проверьте адрес — без регистрации: расходы этого дома по отчётам, транспорт и минусы локации.»
+      - uk «Перевірте адресу — без реєстрації: витрати цього будинку за звітами, транспорт і мінуси локації.»
+      - old en "Check the address — free, no account: real tenant costs for the building, transport and location downsides."
+    - `rentReport.anatomyTitle`:
+      - pl "Z czego składa się miesięczny koszt najmu"
+      - en "What the monthly cost is made of"
+      - ru «Из чего складывается ежемесячный платёж»
+      - uk «З чого складається щомісячний платіж»
+      - old en "What the real monthly cost is made of" (pl «prawdziwy», ru «настоящий», uk «справжній»)
+    - `rentReport.doplatyBody2`:
+      - pl "To najczęstsza przykra niespodzianka najmu — i główny powód, dla którego cena z ogłoszenia rozjeżdża się z tym, co ostatecznie płacisz."
+      - en "It is the most common unpleasant surprise of renting here — and the main reason the price in a listing and what you end up paying diverge."
+      - ru «Это самый частый неприятный сюрприз аренды — и главная причина, почему цена из объявления и итоговый платёж расходятся.»
+      - uk «Це найчастіший неприємний сюрприз оренди — і головна причина, чому ціна з оголошення і підсумковий платіж розходяться.»
+      - old en "… the main reason listing prices and reality diverge" (pl «rzeczywistością», ru/uk «реальная / реальна вартість»). "A listing" here is any advert in Warsaw, not Passflat's frozen listings. PL addresses the reader with "płacisz" (informal), as `doplatyBody1` does ("przywykłeś").
+    - `meta.aboutDescription` (follows the About page of T132: the flatmate pillar first):
+      - pl "O Passflat: pomagamy osobom w Warszawie znaleźć kogoś do wspólnego wynajmu w naszym bocie w Telegramie i zobaczyć, ile kosztuje najem, na podstawie kosztów zgłoszonych przez najemców według budynków i dzielnic."
+      - en "About Passflat: we help people in Warsaw find someone to rent with in our Telegram bot and see what renting costs, from the costs tenants reported by building and district."
+      - ru «О Passflat: помогаем людям в Варшаве найти, с кем снять квартиру, в нашем Telegram-боте и увидеть, сколько стоит аренда, — по расходам, о которых сообщили жильцы, по домам и районам.»
+      - uk «Про Passflat: допомагаємо людям у Варшаві знайти, з ким зняти квартиру, у нашому Telegram-боті й побачити, скільки коштує оренда, — за витратами, про які повідомили мешканці, по будинках і районах.»
+      - old en "Passflat — a Warsaw rental service: real costs from tenants …, lease-takeover and sublet listings, and free document templates. Everything visible before you sign."
+    - `meta.howItWorksDescription` (the `/how-it-works` page still explains the lease-takeover and sublet listings; the description names them as content, cost tab first, no call to browse):
+      - pl "Jak działa Passflat: koszty zgłoszone przez najemców według budynków i dzielnic Warszawy, jak anonimowo dodać swoje oraz jak wygląda cesja najmu i podnajem. Krok po kroku."
+      - en "How Passflat works: the costs tenants reported by building and district in Warsaw, how to add yours anonymously, and how lease takeovers and sublets work. Step by step."
+      - ru «Как работает Passflat: расходы, о которых сообщили жильцы, по домам и районам Варшавы, как анонимно добавить свои и как устроены переуступка аренды и субаренда. Пошагово.»
+      - uk «Як працює Passflat: витрати, про які повідомили мешканці, по будинках і районах Варшави, як анонімно додати свої і як влаштовані переуступка оренди та суборенда. Покроково.» (old uk had the typo «субооренду»)
+      - old en "How Passflat works: see real costs by building and district in Warsaw, take over a lease, find a roommate or sublet, and download free document templates. Step by step, transparently."
+    - `meta.blogDescription` (lease takeovers dropped: the cesja guide's future is Q-7, T146):
+      - pl "Poradniki o najmie w Warszawie: ukryte koszty i dopłaty, zwrot kaucji, umowy najmu, liczniki i internet oraz porady dla obcokrajowców."
+      - en "Guides to renting in Warsaw: hidden costs and utility top-ups, getting the deposit back, lease contracts, meters and internet, and advice for foreigners."
+      - ru «Гайды по аренде в Варшаве: скрытые расходы и доплаты, возврат залога, договоры аренды, счётчики и интернет, советы для иностранцев.»
+      - uk «Гайди з оренди у Варшаві: приховані витрати й доплати, повернення застави, договори оренди, лічильники та інтернет, поради для іноземців.»
+      - old en "Guides and tips on renting in Warsaw: lease takeovers, hidden costs, utilities, and advice for foreigners — everything about the real rental market."
+    - `howItWorksPage.seekers.step1Desc` (frozen listings tab; only the claim changed, the link tag and its words kept):
+      - pl "<browseLink>Przeglądaj ogłoszenia</browseLink> cesji najmu w Warszawie z kosztami podanymi przez obecnego najemcę — czynsz, opłaty administracyjne i media."
+      - en "<browseLink>Browse listings</browseLink> for lease takeover apartments in Warsaw with the costs the current tenant entered — rent, admin fees and utilities."
+      - ru «<browseLink>Просмотрите объявления</browseLink> квартир для передачи аренды в Варшаве с расходами, которые указал текущий арендатор, — аренда, административные сборы и коммунальные.»
+      - uk «<browseLink>Перегляньте оголошення</browseLink> квартир для передачі оренди у Варшаві з витратами, які вказав поточний орендар, — оренда, адміністративні збори та комунальні.»
+      - old en "… with full cost breakdown — rent, admin fees, and actual utility costs." The listing's costs are the author's own fields (`rent`, `adminFee`, `utilitiesAvg`).
+  - **EN scan:** `really` added; no new match, so nothing added to `ALLOWED_EN_MATCHES`.
+  - **Not covered (no task, owner's call):** `rentReport.doplatyBody1` still says "realnym zużyciem" / «реальным потреблением» / «реальним споживанням» (actual usage of a meter, not a figure claim) and is not under the test; the rest of `/how-it-works` (seekers, listers tabs, `ctaBrowse`, `ctaPost`, the subtitle "pass on your lease") still promotes the frozen listings (D5).
+  - **Namespaces and providers:** every changed key is read server-side except `howItWorksPage.seekers.step1Desc`: the data report (`blog/warsaw-rent-prices/page.tsx`, `getTranslations()` in the page and in `generateMetadata`; the blog list's `blog/page.tsx` reads `rentReport.metaDescription` the same way), `meta.*Description` in `generateMetadata` of the about, how-it-works and blog pages. `HowItWorksClient` (client) reads `howItWorksPage` through `useTranslations('howItWorksPage')` with `t.rich`, from the page's scoped `NextIntlClientProvider` (`how-it-works/page.tsx`, `pickMessages(messages, ['howItWorksPage', 'documents', 'common'])`); the page also reads it server-side for the HowTo JSON-LD (`plain('seekers.step1Desc', ['browseLink'])`). No wiring changed.
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.

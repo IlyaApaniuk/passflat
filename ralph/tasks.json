@@ -447,14 +447,14 @@
       "title": "The data report, page descriptions and the remaining keys under the honesty test; 'really' in the EN whole-file scan (FR-21, part 2)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#honesty-keys-under-test",
       "dependsOn": ["T138"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Rewritten in four locales and added to REWRITTEN_KEYS: rentReport.metaTitle, metaDescription, ogTitle, lead, checkStep1, anatomyTitle, doplatyBody2 (table F and its note), meta.aboutDescription, meta.howItWorksDescription, meta.blogDescription, howItWorksPage.seekers.step1Desc; every value passes FORBIDDEN of its locale",
         "The EN whole-file scan regex becomes /verified|checked|actually|really|in full/i; every new match that is not a claim about figures goes into ALLOWED_EN_MATCHES with a one-line reason; the progress entry lists them",
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D25."
     },
     {
