@@ -5029,3 +5029,15 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - The move-out frontmatter "Cleaning disputes are the top reason …" (T141 note) is unchanged.
   - No new table, migration, event name or i18n key.
 - Next: `node scripts/ralph-tasks.mjs next`. T144 moves `markdownToHtml` to `src/lib/blog-markdown.ts` and renders `https://passflat.com/` links as relative (FR-24 part 3); then the FR-24 row in `docs/specs/README.md` can be Done.
+
+### 2026-11-20 10:15 · T144 · done
+
+- Done: `markdownToHtml` and `affiliateHost` (with `AFFILIATE_HOSTS`) moved from `src/app/[locale]/blog/[slug]/client.tsx` to the pure module `src/lib/blog-markdown.ts`, which the client imports (the click handler still uses `affiliateHost`). A Markdown link whose href starts with `https://passflat.com/` renders as `<a href="<path>">` (no `target`, no `rel`); other absolute links keep `target="_blank" rel="noopener"`, affiliate links keep `rel="sponsored nofollow noopener"`, relative links are unchanged. New `src/lib/blog-markdown.test.ts`: the four hrefs (own, external, affiliate, relative), the pl default-locale path inside a sentence and a list item, a look-alike host `passflat.com.example.org` that stays external, the block rendering (headings, emphasis, lists, paragraphs) and `affiliateHost`. `blog-bodies.test.ts` comment points to the new module. FR-24 row in `docs/specs/README.md` → Done.
+- Checks:
+  - `npx vitest run src/lib/blog-markdown.test.ts src/content/`: 3 files / 24 passed.
+  - Output unchanged except links: a scratchpad `npx tsx` script rendered all 52 guides with the HEAD `markdownToHtml` and the new one; after rewriting the old `https://passflat.com/…" target="_blank" rel="noopener"` anchors to relative ones, 0 differences; 144 own links became relative, 24 external links keep `target="_blank"`, no absolute passflat.com anchor is left.
+  - `npm run verify` exit 0: lint, typecheck; knip 26 unused exports / 17 types, as before; Vitest 165 files / 3484 tests; build OK (183 pages). `next-env.d.ts` restored.
+  - Not run: `npm run test:e2e` (not in the task's checks); no guide opened in a browser. Nothing deployed, no migration, no event, no message sent.
+- Did not work: nothing.
+- Owner review: **Assumption (spec 09, link rendering):** the own-origin prefix is the constant `OWN_ORIGIN = 'https://passflat.com'` in `src/lib/blog-markdown.ts`; only the exact prefix `https://passflat.com/` counts (no `www.`, no `http://`; no guide uses either). No new table, migration, event name or i18n key.
+- Next: `node scripts/ralph-tasks.mjs next`.

@@ -529,13 +529,13 @@
       "title": "Guide links to passflat.com open in the same tab; the markdown renderer moves to a pure module (FR-24, part 3)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#guide-bodies",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "markdownToHtml moves from src/app/[locale]/blog/[slug]/client.tsx to a pure module src/lib/blog-markdown.ts that the client imports; the output is unchanged except for links",
         "An href starting with https://passflat.com/ renders as its path, without target and rel; other absolute links keep target='_blank' rel='noopener'; the affiliate rule is unchanged; a unit test with four hrefs"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Audit S-21. Guide links already carry the locale (gap review checked 328)."
     },
     {

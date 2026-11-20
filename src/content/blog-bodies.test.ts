@@ -12,7 +12,7 @@ import { FORBIDDEN, type HonestyLocale } from '@/i18n/honesty-rules';
 
 const BLOG_DIR = join(process.cwd(), 'src/content/blog');
 const FILE_NAME = /^(.+)-(en|pl|ru|uk)\.mdx$/;
-/** A Markdown link, the same shape `markdownToHtml` (`blog/[slug]/client.tsx`) renders. */
+/** A Markdown link, the same shape `markdownToHtml` (`src/lib/blog-markdown.ts`) renders. */
 const LINK = /\[([^\]]+)\]\(([^)]+)\)/;
 /** An href to the checker, the cost pages (including the submit form) or a building page. */
 const COST_HREF = /\/(check|costs|building)(?=[/?#]|$)/;

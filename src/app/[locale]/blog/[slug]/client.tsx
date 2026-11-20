@@ -9,6 +9,7 @@ import { MDXRemote } from 'next-mdx-remote';
 import type { BlogPost } from '@/lib/blog';
 import { TemplateDownload } from '@/components/documents/template-download';
 import { isDocumentTemplatesEnabled } from '@/lib/feature-flags';
+import { affiliateHost, markdownToHtml } from '@/lib/blog-markdown';
 
 // Articles that end with a matching document-template download block.
 const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
@@ -17,20 +18,6 @@ const SLUG_TO_DOC: Record<string, 'cesja' | 'protokol'> = {
 };
 
 const DEFAULT_CITY = 'warsaw';
-
-// Hosts whose links earn a commission. Drives both the rel="sponsored"
-// annotation (Google requires it on paid links) and the click event.
-// prf.hn is Partnerize's tracking domain (Wise campaign).
-const AFFILIATE_HOSTS = ['connectorlink.online', 'prf.hn'];
-
-function affiliateHost(href: string): string | null {
-  try {
-    const host = new URL(href).hostname.replace(/^www\./, '');
-    return AFFILIATE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) ? host : null;
-  } catch {
-    return null;
-  }
-}
 
 export function BlogArticle({
   post,
@@ -151,58 +138,4 @@ export function BlogArticle({
 function MarkdownContent({ content }: { content: string }) {
   const html = markdownToHtml(content);
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-function markdownToHtml(md: string): string {
-  let html = md;
-
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // External links open in a new tab; affiliate links additionally carry
-  // rel="sponsored" (required for paid links) on top of the safety rel.
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, href: string) => {
-    if (!/^https?:\/\//.test(href)) return `<a href="${href}">${text}</a>`;
-    const rel = affiliateHost(href) ? 'sponsored nofollow noopener' : 'noopener';
-    return `<a href="${href}" target="_blank" rel="${rel}">${text}</a>`;
-  });
-
-  const lines = html.split('\n');
-  const result: string[] = [];
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      if (!inList) {
-        result.push('<ul>');
-        inList = true;
-      }
-      result.push(`<li>${trimmed.slice(2)}</li>`);
-    } else {
-      if (inList) {
-        result.push('</ul>');
-        inList = false;
-      }
-      if (
-        trimmed &&
-        !trimmed.startsWith('<h') &&
-        !trimmed.startsWith('<ul') &&
-        !trimmed.startsWith('<li') &&
-        !trimmed.startsWith('</') &&
-        !trimmed.startsWith('<ol')
-      ) {
-        result.push(`<p>${trimmed}</p>`);
-      } else if (trimmed) {
-        result.push(trimmed);
-      }
-    }
-  }
-  if (inList) result.push('</ul>');
-
-  return result.join('\n');
 }
