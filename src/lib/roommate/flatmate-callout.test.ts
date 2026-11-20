@@ -57,7 +57,7 @@ describe('flatmateCalloutView', () => {
     });
   });
 
-  describe('the placements of PRD 4 FR-11 (spec 08 §Callout placements)', () => {
+  describe('the placements of PRD 4 FR-11, FR-12 (spec 08 §Callout placements)', () => {
     it('building: no counts are passed → the question, no count line, mate_web_building', () => {
       expect(flatmateCalloutView({ surface: 'building', hasUsername: true })).toEqual({
         titleKey: 'flatmateCallout.title',
@@ -82,6 +82,17 @@ describe('flatmateCalloutView', () => {
 
     it('hub: a rejected load (counts undefined) → no count line', () => {
       expect(flatmateCalloutView({ surface: 'hub', hasUsername: true }).countLine).toBe('none');
+    });
+
+    it('calculator (FR-12): no counts are passed → the question, no count line, mate_web_calculator', () => {
+      expect(flatmateCalloutView({ surface: 'calculator', hasUsername: true })).toEqual({
+        titleKey: 'flatmateCallout.title',
+        countLine: 'none',
+        total: 0,
+        showBotButton: true,
+        payload: 'mate_web_calculator',
+        placement: 'flatmate_callout_calculator',
+      });
     });
   });
 

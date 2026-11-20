@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { Footer } from '@/components/landing/footer';
+import { FlatmateCallout } from '@/components/roommate/flatmate-callout';
 import { getAlternates, getOgImage } from '@/lib/seo';
 import { JsonLd, breadcrumbJsonLd } from '@/lib/json-ld';
 import { calculatorBaseline } from '@/lib/calculator-baseline';
@@ -104,6 +105,9 @@ export default async function CalculatorPage({ params, searchParams }: PageProps
               cityRentPerM2={cityRentPerM2}
               cityRentLabel={cityRentLabel}
               initialDistrict={initialDistrict}
+              // FR-12: no counts on the calculator (spec 08 §Flatmate callout). A server component
+              // (it reads `listings` itself), so it needs nothing from the scoped provider.
+              flatmateCallout={<FlatmateCallout surface="calculator" />}
             />
           </NextIntlClientProvider>
         </div>

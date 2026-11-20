@@ -423,6 +423,7 @@ describe('calculator baseline (D23, tariffs unchanged)', () => {
       districts,
       cityRentPerM2,
       cityRentLabel,
+      flatmateCallout: null,
     };
 
     const wola = render(createElement(CalculatorClient, { ...props, initialDistrict: 'wola' }));

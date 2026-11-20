@@ -247,14 +247,14 @@
       "title": "The callout under the calculator result (FR-12)",
       "spec": "docs/specs/08-site-structure-and-entries.md#callout-placements",
       "dependsOn": ["T123"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The server page src/app/[locale]/[city]/calculator/page.tsx renders FlatmateCallout surface='calculator' without counts and passes it to the calculator client as a ReactNode prop, placed under the result buttons; the scoped provider (calculator, common, share) is unchanged because the callout's client links take their labels as props",
         "A test asserts the calculator page passes the callout (a static read or a render-props helper) and flatmateCalloutView's calculator row",
         "The progress entry names the namespaces the calculator client tree receives"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D48. The calculator cannot render in the e2e build (a city page, no database)."
     },
     {

@@ -40,6 +40,12 @@ interface Props {
   /** The group and N of `cityRentPerM2` ("Tenant reports (120)"), rendered by the page. */
   cityRentLabel: string | null;
   initialDistrict: string | null;
+  /**
+   * The flatmate callout (spec 08 §Callout placements, FR-12), rendered by the server page: an
+   * async server component cannot be imported here. Its links take their labels as props, so the
+   * scoped provider (`calculator`, `common`, `share`) needs no other namespace.
+   */
+  flatmateCallout: ReactNode;
 }
 
 const CITY_VALUE = '__city';
@@ -86,6 +92,7 @@ export function CalculatorClient({
   cityRentPerM2,
   cityRentLabel,
   initialDistrict,
+  flatmateCallout,
 }: Props) {
   const t = useTranslations();
   const posthog = usePostHog();
@@ -411,6 +418,8 @@ export function CalculatorClient({
       <p className="mt-4 text-center text-xs text-muted-foreground">
         {t('calculator.sourcesNote')}
       </p>
+
+      <div className="mt-8">{flatmateCallout}</div>
     </div>
   );
 }

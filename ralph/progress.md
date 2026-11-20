@@ -163,6 +163,7 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
 - In e2e, a section with `aria-labelledby` is a `region` named by its heading: `getByRole('region', { name })` finds it, while `locator('section').filter({ has: heading })` also matches sections that merely contain such a heading.
 - A copy pattern for Polish "prawd-" (truth) also matches "sprawdz-" (check): anchor it at a word start with a Polish letter class (`(^|[^a-ząćęłńóśźż])prawd`, `REAL_OR_TRUTH` in `honesty-copy.test.ts`); `\b` does not work next to non-ASCII letters.
 - A page that renders the async `FlatmateCallout` cannot go through `renderToStaticMarkup` whole: mock `@/components/roommate/flatmate-callout` (as `area-figures-consistency.test.ts` does for the hub), or find the element and render `await FlatmateCallout(element.props)` (example: `src/app/[locale]/[city]/hub-callout.test.ts`).
+- A nested `NextIntlClientProvider` with `messages` replaces the layout's messages (no merge): a scoped client tree sees only its own namespaces. Prove a tree under it by mocking `useTranslations` over the provider's `messages` prop with `onError` throwing (example: `src/app/[locale]/[city]/calculator/flatmate-callout-placement.test.ts`).
 - The real `BuildingCostsClient` renders in Vitest (state `building` from `summarizeFigures` over two `user` reports) with `next-intl` (`useTranslations`, `useLocale`), `posthog-js/react`, `@/i18n/navigation`, `Footer`, `ShareButton`, `FollowBuildingButton`, `LocationScore` and `TenantTags` mocked (example: `building/[slug]/flatmate-callout-placement.test.ts`).
 
 ## Log
@@ -4057,5 +4058,43 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - **The hub serves every city in the database.** The callout's copy names Warsaw and links `/warsaw/roommate`, so a non-Warsaw hub would show a Warsaw callout. The spec does not restrict it.
   - As T123 noted for home, the hub's count line does not depend on the bot username. In production (no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` until T117), the hub shows the count line with only the roommate link.
   - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_building' | 'flatmate_callout_hub'}` and `telegram_bot_opened {source: 'building' | 'hub'}` (bot payloads `mate_web_building` / `mate_web_hub`).
+  - No new table, migration or event name.
+- Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 08:22 · T127 · done
+
+- Done (PRD 4 FR-12, calculator only; spec 08 §Callout placements):
+  - `src/app/[locale]/[city]/calculator/page.tsx` renders `<FlatmateCallout surface="calculator" />` with no `counts` and no counts load. It passes the element to `CalculatorClient` as the new `flatmateCallout: ReactNode` prop, inside the unchanged `NextIntlClientProvider` (`pickMessages(messages, ['calculator', 'common', 'share'])`).
+  - `calculator/client.tsx` places `{flatmateCallout}` in a `mt-8` wrapper at the end of the page column: under the result card with its buttons (see data, add your costs, share) and under the one-line `calculator.sourcesNote` caption. The client does not import the server callout.
+  - `revalidate = 3600` is unchanged; the build table shows `/[locale]/[city]/calculator` as `ƒ`, like every `[city]` route before this task.
+  - `src/lib/area-figures-consistency.test.ts` passes `flatmateCallout: null` to its `CalculatorClient` renders (the prop is required).
+  - The spec README row FR-12 stays Planned: T128 (blog list, guides, data report) is still todo.
+- Tests:
+  - New `src/app/[locale]/[city]/calculator/flatmate-callout-placement.test.ts`:
+    - Static scan: `{flatmateCallout}` appears once in `client.tsx`, and the client does not import `roommate/flatmate-callout`.
+    - The server page, over a Prisma mock, passes a `FlatmateCallout` element with props exactly `{ surface: 'calculator' }`, and `loadFlatmateBlockCounts` is never called.
+    - The provider's messages have exactly the keys `calculator`, `common`, `share`.
+    - Rendered, that element shows the question h2 (`flatmate-callout-calculator-title`), no count line, `/warsaw/roommate`, and `t.me/<bot>?start=mate_web_calculator`.
+    - The whole client tree is rendered with the callout's output in the slot. Its `useTranslations` reads only the provider's messages (`onError` throws), so the callout links need no namespace. The section comes after the see-data link, the submit link, the share button and the sources note.
+    - ISR: `revalidate` is 3600, and the page has no request-time API.
+  - `src/lib/roommate/flatmate-callout.test.ts`: the exact `flatmateCalloutView` row for `calculator` (no counts → `none`, `mate_web_calculator`, `flatmate_callout_calculator`).
+- Checks:
+  - Focused Vitest (calculator dir, callout view, components/roommate, area consistency): 4 files / 87 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 154 files / 3276 tests;
+    - build OK (183 pages).
+  - `next-env.d.ts` restored.
+  - `npm run test:e2e` was not run: not in the task's checks, and the calculator is a city page that cannot render in the e2e build (no database). The page was not looked at in a browser; the render tests are the proof.
+  - Nothing deployed, no migration, no event name added, no message sent.
+- Did not work: nothing.
+- Owner review:
+  - **Namespaces the calculator client tree receives:** exactly `calculator`, `common`, `share`, from the page's scoped `NextIntlClientProvider`. A nested provider replaces the layout's messages; it does not merge them (`use-intl`'s provider: `messages === undefined ? prevContext.messages : messages`). The callout reads `listings` on the server (`getTranslations('listings')`). Its client links (`FlatmateCalloutLinks`, `TrackedLink`) read no namespace and get string labels.
+  - **Copy:** no new or changed key; the callout reuses T123's keys.
+  - **Assumptions applied:** no counts on the calculator (`page.tsx` passes none).
+  - **Agent's choice:** the callout comes after the sources note, not between the result card and the note, so that the caption stays attached to the result. To place it directly under the buttons, move the `mt-8` wrapper above the `sourcesNote` paragraph in `client.tsx`.
+  - The calculator serves every city in the database; as on the hub (T126), the callout names Warsaw and links `/warsaw/roommate` on any city's calculator.
+  - New values of existing events (spec 01 §PRD 4 values): `cta_click {placement: 'flatmate_callout_calculator'}` and `telegram_bot_opened {source: 'calculator'}` (payload `mate_web_calculator`).
   - No new table, migration or event name.
 - Next: `node scripts/ralph-tasks.mjs next`.
