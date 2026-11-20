@@ -51,7 +51,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   let cityPages: MetadataRoute.Sitemap = [];
-  let listingPages: MetadataRoute.Sitemap = [];
   let buildingPages: MetadataRoute.Sitemap = [];
 
   try {
@@ -75,32 +74,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? [entry(`/${c.slug}/check`, 'weekly', 0.8), entry(`/${c.slug}/review`, 'weekly', 0.7)]
         : []),
       entry(`/${c.slug}/calculator`, 'weekly', 0.7),
-      // PRD 4 FR-28 (Assumption): the roommate page outranks the frozen lists (D5).
-      entry(`/${c.slug}/replacement`, 'weekly', 0.4),
-      entry(`/${c.slug}/sublet`, 'weekly', 0.4),
+      // PRD 4 FR-29 (D78): the frozen lists (/replacement, /sublet) and their listing details
+      // are not listed; the pages stay reachable and the two lists carry noindex, follow.
       entry(`/${c.slug}/roommate`, 'weekly', 0.8),
       ...c.districts.map((d) => entry(`/${c.slug}/${d.slug}`, 'weekly', 0.6)),
     ]);
-
-    const listings = await prisma.listing.findMany({
-      where: { status: 'active' },
-      select: {
-        id: true,
-        slug: true,
-        type: true,
-        updatedAt: true,
-        building: { select: { city: { select: { slug: true } } } },
-      },
-    });
-
-    listingPages = listings.map((listing) => {
-      const citySlug = listing.building.city.slug;
-      const path = `/${citySlug}/${listing.type}/${listing.slug ?? listing.id}`;
-      return {
-        ...entry(path, 'weekly', 0.8),
-        lastModified: listing.updatedAt,
-      };
-    });
 
     const buildings = await prisma.building.findMany({
       where: { costReports: { some: { isVisible: true } } },
@@ -136,5 +114,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(date),
   }));
 
-  return [...staticPages, ...cityPages, ...blogPages, ...listingPages, ...buildingPages];
+  return [...staticPages, ...cityPages, ...blogPages, ...buildingPages];
 }

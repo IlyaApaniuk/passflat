@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * PRD 4 FR-28 (spec 09 §Sitemap, robots, structured data and the submit page's metadata):
- * the roommate page outranks the frozen lists, blog entries carry their lastmod, and the
- * listing-detail loop stays until Q-1 (FR-29, T150).
+ * PRD 4 FR-28 and FR-29 (spec 09 §Sitemap, robots, structured data and the submit page's
+ * metadata): the roommate page is listed, the frozen lists and their listing details are not
+ * (D78), and blog entries carry their lastmod.
  */
 
 const BASE = 'https://passflat.com';
@@ -46,6 +46,7 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
+import { prisma } from '@/lib/prisma';
 import sitemap from './sitemap';
 
 function find(entries: MetadataRoute.Sitemap, path: string) {
@@ -65,21 +66,19 @@ beforeEach(() => {
 });
 
 describe('sitemap', () => {
-  it('ranks the roommate page above the frozen lists', async () => {
+  it('lists the roommate page and leaves out the frozen lists and listing details (D78)', async () => {
     const entries = await sitemap();
 
     expect(find(entries, '/warsaw/roommate')).toMatchObject({
       changeFrequency: 'weekly',
       priority: 0.8,
     });
-    expect(find(entries, '/warsaw/replacement')).toMatchObject({
-      changeFrequency: 'weekly',
-      priority: 0.4,
-    });
-    expect(find(entries, '/warsaw/sublet')).toMatchObject({
-      changeFrequency: 'weekly',
-      priority: 0.4,
-    });
+    // The mocked database holds an active replacement listing; neither it nor the two lists
+    // may appear, under any path.
+    const frozen = entries.filter((e) => /\/(replacement|sublet)(\/|$)/.test(e.url));
+    expect(frozen.map((e) => e.url)).toEqual([]);
+    expect(entries.some((e) => e.url.includes('pulawska-12-room'))).toBe(false);
+    expect(prisma.listing.findMany).not.toHaveBeenCalled();
   });
 
   it('gives each guide one entry with the latest date of its locales as lastModified', async () => {
@@ -101,14 +100,9 @@ describe('sitemap', () => {
     );
   });
 
-  it('keeps the listing-detail loop and the building lastmod', async () => {
+  it('keeps the building lastmod', async () => {
     const entries = await sitemap();
 
-    expect(find(entries, '/warsaw/replacement/pulawska-12-room')).toMatchObject({
-      changeFrequency: 'weekly',
-      priority: 0.8,
-      lastModified: new Date('2026-10-01T10:00:00Z'),
-    });
     expect(find(entries, '/warsaw/building/pulawska-12').lastModified).toEqual(
       new Date('2026-11-01T10:00:00Z'),
     );

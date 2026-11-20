@@ -629,13 +629,13 @@
       "title": "Frozen listing pages out of the sitemap, or noindex (FR-29, owner question Q-1)",
       "spec": "docs/specs/09-search-metadata-and-performance.md#sitemap-robots-structured-data-and-the-submit-pages-metadata",
       "dependsOn": ["T149"],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-1 with (a): /[city]/replacement, /[city]/sublet and the listing-detail loop leave the sitemap and the two list pages carry robots { index: false, follow: true }; the sitemap test asserts their absence; no URL is removed or redirected",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-1 (PRD 4, decision review row 1). Drop /replacement, /sublet and the listing details from the sitemap and set noindex, follow on the two list pages? (a) yes; the pages stay reachable, no redirect (proposal). (b) keep them listed at 0.4 (T149 lowers them). Changing the discoverability of existing URLs is the owner's call.\nOwner answer: Q-1 (a), D78: drop /replacement, /sublet and the listing details from the sitemap; noindex, follow on the two list pages; pages reachable, no redirect; see spec 09 section Sitemap, robots, structured data"
     },
     {
