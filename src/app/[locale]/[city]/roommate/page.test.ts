@@ -114,13 +114,14 @@ describe('/[city]/roommate page: the flatmate block counts (spec 02 §Find a fla
     expect(props.listingType).toBe('roommate');
   });
 
-  it('another city: no counts query and no block', async () => {
+  it('another city: no counts query and no counts passed', async () => {
     const props = await render('krakow');
     expect(findMany).not.toHaveBeenCalled();
     expect(props.flatmateCounts).toBeUndefined();
   });
 
-  it('without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: no counts query and no block', async () => {
+  // The block itself still renders without counts (`roommatePageLayout`, PRD 4 FR-2).
+  it('without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: no counts query and no counts passed', async () => {
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
     const props = await render('warsaw');
     expect(findMany).not.toHaveBeenCalled();

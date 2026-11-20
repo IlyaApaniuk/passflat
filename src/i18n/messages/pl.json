@@ -398,6 +398,7 @@
       "topItem": "{name}: {count, plural, one {# profil} few {# profile} many {# profili} other {# profilu}}",
       "how": "Załóż profil w bocie Passflat w Telegramie: dzielnica, budżet na osobę, miesiąc przeprowadzki. Kontakty widać dopiero przy obopólnym zainteresowaniu.",
       "languages": "Bot mówi po angielsku, rosyjsku i ukraińsku.",
+      "notConnected": "Bot Telegram nie jest jeszcze podłączony.",
       "button": "Otwórz bota w Telegramie"
     },
     "roomMoney": {

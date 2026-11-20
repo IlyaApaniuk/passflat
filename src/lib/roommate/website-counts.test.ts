@@ -15,11 +15,7 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/prisma', () => ({ prisma: { roommateProfile: { findMany } } }));
 
 import { activeProfilesWhere } from './counts';
-import {
-  FLATMATE_COUNTS_REVALIDATE_SECONDS,
-  loadFlatmateBlockCounts,
-  pageHasFlatmateBlock,
-} from './website-counts';
+import { FLATMATE_COUNTS_REVALIDATE_SECONDS, loadFlatmateBlockCounts } from './website-counts';
 
 const profile = (id: string, districtSlugs: string[], anyDistrict = false) => ({
   id,
@@ -87,22 +83,5 @@ describe('loadFlatmateBlockCounts', () => {
     findMany.mockRejectedValue(new Error('connection refused'));
     await expect(loadFlatmateBlockCounts()).resolves.toEqual({ status: 'unavailable' });
     expect(error).toHaveBeenCalledWith('[roommate] website counts failed', 'connection refused');
-  });
-});
-
-describe('pageHasFlatmateBlock', () => {
-  it('only the checker city with a configured bot', () => {
-    expect(pageHasFlatmateBlock('warsaw', 'passflat_test_bot')).toBe(true);
-    expect(pageHasFlatmateBlock('krakow', 'passflat_test_bot')).toBe(false);
-    expect(pageHasFlatmateBlock('warsaw', '')).toBe(false);
-    expect(pageHasFlatmateBlock('warsaw', undefined)).toBe(false);
-  });
-
-  it('reads NEXT_PUBLIC_TELEGRAM_BOT_USERNAME by default', () => {
-    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', 'passflat_test_bot');
-    expect(pageHasFlatmateBlock('warsaw')).toBe(true);
-    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
-    expect(pageHasFlatmateBlock('warsaw')).toBe(false);
-    vi.unstubAllEnvs();
   });
 });

@@ -1,14 +1,13 @@
 import { unstable_cache } from 'next/cache';
 
-import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
-
 import { loadRoommateCounts } from './counts';
 import type { FlatmateBlockCounts } from './flatmate-block';
 
 /**
  * Server side of the roommate page's "Looking for someone to rent with" block (spec 02 §Find a
  * flatmate). Website only: the bot reads `loadRoommateCounts` directly, so this bare
- * `unstable_cache` never runs under `bot:dev`.
+ * `unstable_cache` never runs under `bot:dev`. Whether the page loads them is
+ * `canLoadFlatmateCounts` (`flatmate-block.ts`, client-safe).
  */
 
 /** **Assumption** (spec 02 §Find a flatmate, D68): the website's counts are at most an hour old. */
@@ -43,16 +42,4 @@ export async function loadFlatmateBlockCounts(): Promise<FlatmateBlockCounts> {
     );
     return { status: 'unavailable' };
   }
-}
-
-/**
- * Whether the roommate page of `citySlug` has the block: only the checker city (`warsaw`), and
- * only when the bot is configured (`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`), so no other page loads
- * the counts.
- */
-export function pageHasFlatmateBlock(
-  citySlug: string,
-  botUsername: string | undefined = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
-): boolean {
-  return citySlug === LOCATION_CHECKER_CITY_SLUG && Boolean(botUsername);
 }

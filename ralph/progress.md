@@ -3598,3 +3598,69 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
   - No new table, migration, event or copy key.
   - This iteration ran on Claude Fable 5.1 (the session's model), so the commit's `Co-Authored-By` names Fable 5.1 rather than the prompt's Opus 5.5 line, as T114 did.
 - Next: `node scripts/ralph-tasks.mjs next` (M7: T115 is runnable; T114 waits for the owner's `sips` step; T117 is blocked on the username).
+
+### 2026-11-20 07:20 · T118 · done
+
+- Done (PRD 4 FR-1, FR-2, spec 08 §Roommate page default view):
+  - `src/lib/roommate-roles.ts`:
+    - `showsFlatmateBlock` is true for intent `undefined` and `find_flatmate`, false for `find_room` and `offer_room`.
+    - New pure `roommatePageLayout({ listingType, citySlug, cityOfferCount, roleState, emptyKind, hasUsername })` → `{ showFlatmateBlock, showRoomMoney, showCountLine, showBotButton, selectorAboveTabs }`.
+    - Both blocks only on the roommate page of the checker city. `showCountLine` is false only for `roommate` with `cityOfferCount === 0`. `showBotButton` = block shown and a username. `selectorAboveTabs` = `roommate`.
+  - `src/lib/roommate/flatmate-block.ts` (client-safe) now holds the split helpers. `pageHasFlatmateBlock(citySlug)` = the checker city and decides the render. `canLoadFlatmateCounts(citySlug, botUsername = env)` is the old rule and gates loading the counts.
+    - `flatmateBlockView` takes `undefined` counts (→ no count line, no districts).
+    - The old `pageHasFlatmateBlock(citySlug, botUsername)` is removed from `website-counts.ts`, which keeps the cached loader only.
+  - `src/components/listings/find-flatmate-block.tsx`: never returns `null`, and `counts` is optional.
+    - Without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`: title, how and languages, then the new `listings.findFlatmate.notConnected` line. No count line (passed counts are ignored), no district list, no button, no capture.
+    - With the username, as before.
+  - `src/components/listings/listings-page-client.tsx` reads `roommatePageLayout`:
+    - The `RoommateRoleSelector` row now renders first in the content column, before the `motion.div` with the type tabs.
+    - The `listings.listingsInCity` line is gated on `showCountLine` in the desktop and mobile variants. The mobile sort/map group got `ml-auto` so it stays on the right without the count.
+    - `FindFlatmateBlock` renders on `showFlatmateBlock` (no `flatmateCounts &&`), then `RoomMoneyBlock` (`layout.showRoomMoney && roomMoney !== undefined`), then the empty states or the grid.
+    - `/replacement` and `/sublet` are unchanged (no selector, count line kept).
+  - `src/app/[locale]/[city]/roommate/page.tsx` loads counts under `canLoadFlatmateCounts(citySlug)`.
+  - Docs:
+    - `src/lib/bot/README.md` "What the code does in that state": the block shows without counts and button and says the bot is not connected.
+    - `docs/architecture.md` Telegram bot row: the cell is rewritten within its column width, no re-pad.
+    - `docs/specs/README.md` PRD 4 map: FR-1, FR-2 → Done.
+- Tests:
+  - `roommate-roles.test.ts`: all four intents (including the reopened chip). Six `roommatePageLayout` cases: default view, each intent, offers present, no username, another city, `/replacement` and `/sublet`.
+  - `flatmate-block.test.ts`: `undefined` counts, `pageHasFlatmateBlock`, and `canLoadFlatmateCounts` (explicit argument and env default). These moved from `website-counts.test.ts`.
+  - `find-flatmate-block.test.ts`:
+    - No username: the exact EN text, with and without counts, no `<a>`, no capture.
+    - The `notConnected` line in four locales, right after the languages line, closing the block.
+    - With a username, never the line. No counts passed: no count line, still one bot link.
+  - `room-money-placement.test.ts`:
+    - The two default-view cases are updated (flatmate block first). New: `offer_room`.
+    - The selector row before both tab variants (`data-row` markers). `/replacement` and `/sublet` have no selector.
+    - The count line: absent on desktop and mobile at 0 offers, back as "1 listing" ×2 with offers, kept on `/replacement` and `/sublet` at 0.
+    - No counts → the block still first. Another city → no block.
+  - `page.test.ts`: two test titles reworded ("no counts passed"). The assertions are unchanged.
+  - `roommate_intent_selected`: `roommate-role-selector.test.ts` unchanged and passing.
+- Checks:
+  - `npx vitest run` over the affected files: 25 files / 548 passed.
+  - `npm run verify` exit 0:
+    - lint, typecheck;
+    - knip 26 unused exports / 17 types, as before;
+    - Vitest 143 files / 3104 tests;
+    - build OK (183 pages).
+  - `npx prettier --check docs/architecture.md src/lib/bot/README.md` clean. `next-env.d.ts` restored.
+  - **The roommate page was not rendered** (it needs a database, so it is not e2e-testable). The helper and component tests are the proof. Nothing deployed, no migration, no event added, no message sent.
+- Did not work: the first header-order test matched `data-slot`, which the real shadcn `Button` also renders (the map toggle). The mocks now use `data-row`.
+- Owner review:
+  - **Draft copy (agent copy, D29), the PRD 4 §8 text as given:** `listings.findFlatmate.notConnected`.
+    - pl "Bot Telegram nie jest jeszcze podłączony."
+    - en "The Telegram bot is not connected yet."
+    - ru «Telegram-бот пока не подключён.»
+    - uk «Telegram-бот поки не підключений.»
+  - Namespace and provider: `listings` (in `SHARED_CLIENT_NAMESPACES`, the shared locale layout's provider), read by `FindFlatmateBlock` through `useTranslations('listings.findFlatmate')`. `client-namespaces.test.ts` passes.
+  - **Assumptions applied (spec 08, D68):**
+    - The placement and order (selector above the tabs; flatmate block, room money, then empty state or grid; the block stays first when offers exist) live in `roommatePageLayout` (`src/lib/roommate-roles.ts`).
+    - The honest line (FR-2) is one copy key.
+  - Agent's choices:
+    - The "not connected" line is `font-medium`, in the button's place.
+    - Without a username, counts are never shown even if passed.
+    - The room money block uses the same checker-city rule inside the helper, and the page still needs its `roomMoney` prop.
+  - `flatmate-block.ts` now imports the constant `LOCATION_CHECKER_CITY_SLUG` from `location-checker.ts` (pure, no Prisma) into the roommate client tree, so the rule has one source. The modules it imports join that client chunk.
+  - Production today has no `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, so after this deploy `/warsaw/roommate` shows the block with the "not connected" line by default. Setting the username (T117, D76) brings back the button and counts.
+  - No new table, migration or event.
+- Next: `node scripts/ralph-tasks.mjs next`. T119 (roommate page shell and metadata) adds `showH1` to `roommatePageLayout` and builds on this layout.

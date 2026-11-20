@@ -45,11 +45,7 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useFavorites } from '@/hooks/use-favorites';
 import { filterListings } from '@/lib/listings-filter';
 import { listingsEmptyKind, serverListNarrowed } from '@/lib/listings-empty-kind';
-import {
-  INITIAL_ROOMMATE_ROLE_STATE,
-  showsFlatmateBlock,
-  showsRoomMoneyBlock,
-} from '@/lib/roommate-roles';
+import { INITIAL_ROOMMATE_ROLE_STATE, roommatePageLayout } from '@/lib/roommate-roles';
 import type { FlatmateBlockCounts } from '@/lib/roommate/flatmate-block';
 import type { Listing, ListingType, CityBounds, MapBounds } from '@/lib/listings-data';
 
@@ -67,9 +63,9 @@ interface Props {
    */
   cityOfferCount?: number;
   /**
-   * `/warsaw/roommate` only (spec 02 §Find a flatmate): the server-loaded counts of the
-   * "Looking for someone to rent with" block. Absent on every other page, which then never
-   * shows the block.
+   * `/warsaw/roommate` with a configured bot only (spec 02 §Find a flatmate): the server-loaded
+   * counts of the "Looking for someone to rent with" block. Absent → the block without its count
+   * line; whether the block shows is `roommatePageLayout` (spec 08 §Roommate page default view).
    */
   flatmateCounts?: FlatmateBlockCounts;
   /**
@@ -237,11 +233,32 @@ function ListingsPageInner({
         ? 'no_offers_in_city'
         : 'none';
 
+  // Spec 08 §Roommate page default view: the flatmate block by default, the selector above the
+  // type tabs, no "0 listings" line while the city has no offer.
+  const layout = roommatePageLayout({
+    listingType,
+    citySlug,
+    cityOfferCount,
+    roleState,
+    emptyKind,
+    hasUsername: Boolean(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME),
+  });
+
   // Spec 02 §Room money block: its address-check item replaces the bridge line while it shows.
-  const showRoomMoney =
-    listingType === 'roommate' &&
-    roomMoney !== undefined &&
-    showsRoomMoneyBlock(roleState, emptyKind);
+  // `roomMoney` is absent on every page the server does not load it for.
+  const showRoomMoney = layout.showRoomMoney && roomMoney !== undefined;
+
+  // Roommate only (spec 02 §Role selector): the role choices. Choosing is never required; the
+  // list below stays rendered.
+  const roleSelector = layout.selectorAboveTabs && (
+    <div className="border-b bg-card px-4 py-2">
+      <RoommateRoleSelector
+        state={roleState}
+        onStateChange={setRoleState}
+        onScrollListToTop={() => listRef.current?.scrollTo({ top: 0 })}
+      />
+    </div>
+  );
 
   // The existing filter reset; when the server list was narrowed by URL params, fetch the
   // whole city again (the reset already dropped the params from the URL).
@@ -264,6 +281,10 @@ function ListingsPageInner({
         />
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* Spec 08 §Roommate page default view: the role selector stands above the frozen
+              type tabs and the count/sort/filter row. */}
+          {roleSelector}
+
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -276,9 +297,11 @@ function ListingsPageInner({
                 <ListingTypeTabs variant="tabs" listingType={listingType} citySlug={citySlug} />
                 <div className="shrink-0">{sortSelect}</div>
               </div>
-              <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
-                {countText}
-              </p>
+              {layout.showCountLine && (
+                <p aria-live="polite" className="mt-2 text-sm text-muted-foreground">
+                  {countText}
+                </p>
+              )}
             </div>
 
             {/* Mobile: full-width segmented type, then count + sort/map, then the
@@ -286,10 +309,13 @@ function ListingsPageInner({
             <div className="xl:hidden">
               <ListingTypeTabs variant="segmented" listingType={listingType} citySlug={citySlug} />
               <div className="mt-3 flex items-center justify-between gap-2">
-                <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
-                  {countText}
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
+                {layout.showCountLine && (
+                  <p aria-live="polite" className="min-w-0 text-sm text-muted-foreground">
+                    {countText}
+                  </p>
+                )}
+                {/* ml-auto keeps sort and map on the right when the count line is absent. */}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {sortSelect}
                   <Button variant="outline" size="icon" onClick={() => setShowMap(!showMap)}>
                     {showMap ? <List className="h-4 w-4" /> : <Map className="h-4 w-4" />}
@@ -320,19 +346,6 @@ function ListingsPageInner({
               scrollToSection={filterSection}
             />
           </motion.div>
-
-          {/* Roommate only (spec 02 §Role selector): two equal role choices,
-              directly above the bridge. Choosing is never required; the list
-              below stays rendered. */}
-          {listingType === 'roommate' && (
-            <div className="border-b bg-card px-4 py-2">
-              <RoommateRoleSelector
-                state={roleState}
-                onStateChange={setRoleState}
-                onScrollListToTop={() => listRef.current?.scrollTo({ top: 0 })}
-              />
-            </div>
-          )}
 
           {/* Roommate search is where organic clicks actually land ("szukam
               współlokatora warszawa"), and it is a frozen part of the product —
@@ -380,9 +393,9 @@ function ListingsPageInner({
                   showMap ? 'hidden xl:block xl:max-w-xl' : ''
                 }`}
               >
-                {/* Spec 02 §Find a flatmate: at the top of the scrolling list, so it
+                {/* Spec 08 §Roommate page default view: first in the scrolling list, so it
                     scrolls with the list; the list stays rendered below. */}
-                {listingType === 'roommate' && flatmateCounts && showsFlatmateBlock(roleState) && (
+                {layout.showFlatmateBlock && (
                   <FindFlatmateBlock counts={flatmateCounts} districts={districts} />
                 )}
                 {/* Spec 02 §Room money block: "I'm looking for a room" or no offer in the city. */}

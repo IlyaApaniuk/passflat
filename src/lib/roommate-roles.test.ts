@@ -4,6 +4,7 @@ import {
   ROOMMATE_OFFER_HREF,
   chooseRoommateRole,
   reopenRoommateRoles,
+  roommatePageLayout,
   showsFlatmateBlock,
   showsRoomMoneyBlock,
 } from './roommate-roles';
@@ -47,13 +48,19 @@ describe('roommate role selector logic', () => {
     expect(Object.keys(chooseRoommateRole('find_flatmate').properties)).toEqual(['intent']);
   });
 
-  it('the flatmate block shows only once find_flatmate is chosen, also after the chip reopens', () => {
-    expect(showsFlatmateBlock(INITIAL_ROOMMATE_ROLE_STATE)).toBe(false);
-    expect(showsFlatmateBlock(chooseRoommateRole('find_room').state)).toBe(false);
-    expect(showsFlatmateBlock(chooseRoommateRole('offer_room').state)).toBe(false);
+  it('the flatmate block shows by default and for find_flatmate, not for find_room or offer_room (PRD 4 FR-1)', () => {
+    // All four intents: undefined (no role chosen), find_flatmate, find_room, offer_room.
+    expect(showsFlatmateBlock(INITIAL_ROOMMATE_ROLE_STATE)).toBe(true);
+    expect(showsFlatmateBlock({ intent: undefined, collapsed: false })).toBe(true);
     const flatmate = chooseRoommateRole('find_flatmate').state;
     expect(showsFlatmateBlock(flatmate)).toBe(true);
     expect(showsFlatmateBlock(reopenRoommateRoles(flatmate))).toBe(true);
+    expect(showsFlatmateBlock(chooseRoommateRole('find_room').state)).toBe(false);
+    expect(showsFlatmateBlock(chooseRoommateRole('offer_room').state)).toBe(false);
+    // The chip reopened keeps the chosen intent, so the block stays hidden.
+    expect(showsFlatmateBlock(reopenRoommateRoles(chooseRoommateRole('find_room').state))).toBe(
+      false,
+    );
   });
 
   it('the room money block shows for find_room and on a city without offers, whatever the role', () => {
@@ -93,5 +100,94 @@ describe('roommate role selector logic', () => {
       pathname: '/create-listing',
       query: { type: 'roommate' },
     });
+  });
+});
+
+describe('roommatePageLayout (spec 08 §Roommate page default view)', () => {
+  type Input = Parameters<typeof roommatePageLayout>[0];
+  const DEFAULT_VIEW: Input = {
+    listingType: 'roommate',
+    citySlug: 'warsaw',
+    cityOfferCount: 0,
+    roleState: INITIAL_ROOMMATE_ROLE_STATE,
+    emptyKind: 'no_offers_in_city',
+    hasUsername: true,
+  };
+  const layout = (overrides: Partial<Input> = {}) =>
+    roommatePageLayout({ ...DEFAULT_VIEW, ...overrides });
+
+  it('the default view: the flatmate block, room money, no count line at 0 offers, the selector above the tabs', () => {
+    expect(layout()).toEqual({
+      showFlatmateBlock: true,
+      showRoomMoney: true,
+      showCountLine: false,
+      showBotButton: true,
+      selectorAboveTabs: true,
+    });
+  });
+
+  it('each intent: find_flatmate keeps the block, find_room and offer_room hide it', () => {
+    const at = (intent: 'find_room' | 'offer_room' | 'find_flatmate') =>
+      layout({ roleState: chooseRoommateRole(intent).state });
+    expect(at('find_flatmate')).toMatchObject({ showFlatmateBlock: true, showBotButton: true });
+    expect(at('find_room')).toMatchObject({ showFlatmateBlock: false, showBotButton: false });
+    expect(at('offer_room')).toMatchObject({ showFlatmateBlock: false, showBotButton: false });
+    // The rest does not depend on the role.
+    for (const intent of ['find_room', 'offer_room', 'find_flatmate'] as const) {
+      expect(at(intent)).toMatchObject({ showCountLine: false, selectorAboveTabs: true });
+    }
+    // Room money keeps its own rule (find_room, or no offer in the city whatever the role).
+    expect(at('find_room').showRoomMoney).toBe(true);
+    expect(at('offer_room').showRoomMoney).toBe(true);
+    expect(
+      layout({ roleState: chooseRoommateRole('offer_room').state, emptyKind: 'none' })
+        .showRoomMoney,
+    ).toBe(false);
+  });
+
+  it('offers present: the block stays first, the count line is back, no room money by default', () => {
+    expect(layout({ cityOfferCount: 3, emptyKind: 'none' })).toEqual({
+      showFlatmateBlock: true,
+      showRoomMoney: false,
+      showCountLine: true,
+      showBotButton: true,
+      selectorAboveTabs: true,
+    });
+    // Filters that match nothing in a city with offers: still offers, so the count line shows.
+    expect(layout({ cityOfferCount: 3, emptyKind: 'no_match_for_filters' }).showCountLine).toBe(
+      true,
+    );
+  });
+
+  it('no username: the block without its bot button, the rest unchanged', () => {
+    expect(layout({ hasUsername: false })).toEqual({
+      showFlatmateBlock: true,
+      showRoomMoney: true,
+      showCountLine: false,
+      showBotButton: false,
+      selectorAboveTabs: true,
+    });
+  });
+
+  it('another city: no flatmate block and no room money; the selector and the count rule stay', () => {
+    expect(layout({ citySlug: 'krakow' })).toEqual({
+      showFlatmateBlock: false,
+      showRoomMoney: false,
+      showCountLine: false,
+      showBotButton: false,
+      selectorAboveTabs: true,
+    });
+  });
+
+  it('/replacement and /sublet are unchanged: count line, no selector, no blocks', () => {
+    for (const listingType of ['replacement', 'sublet'] as const) {
+      expect(layout({ listingType, cityOfferCount: undefined })).toEqual({
+        showFlatmateBlock: false,
+        showRoomMoney: false,
+        showCountLine: true,
+        showBotButton: false,
+        selectorAboveTabs: false,
+      });
+    }
   });
 });

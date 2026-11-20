@@ -82,7 +82,7 @@
       "title": "Roommate page opens on the flatmate block; honest line without the bot username (FR-1, FR-2)",
       "spec": "docs/specs/08-site-structure-and-entries.md#roommate-page-default-view",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "showsFlatmateBlock(state) is true for intent undefined and find_flatmate and false for find_room and offer_room; roommate-roles.test.ts covers all four",
         "A pure roommatePageLayout({ listingType, citySlug, cityOfferCount, roleState, emptyKind, hasUsername }) → { showFlatmateBlock, showRoomMoney, showCountLine, showBotButton, selectorAboveTabs } in src/lib/roommate-roles.ts drives the page; tested for the default view (block shown, count line hidden at cityOfferCount 0, selector above the tabs), each intent, offers present, no username, another city",
@@ -93,7 +93,7 @@
         "Copy: every new or changed key in all four files of src/i18n/messages/ (parity test); drafts are agent copy for the owner (D29): list every key by locale in the progress entry under Owner review, and name the namespace and provider each client component receives (docs/specs/README.md copy rules)"
       ],
       "checks": ["npm run verify"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "D5, D41, D48, D68 (placement is an Assumption). Hiding the type tabs is FR-7 (T122, blocked on Q-5). The roommate page cannot render in the e2e build (no database): the helper tests are the proof, and the progress entry says the page was not rendered."
     },
     {

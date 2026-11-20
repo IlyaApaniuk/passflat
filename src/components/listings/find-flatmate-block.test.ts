@@ -59,7 +59,7 @@ const COUNTS: FlatmateBlockCounts = {
   ],
 };
 
-function text(counts: FlatmateBlockCounts, locale: Locale = 'en'): string {
+function text(counts: FlatmateBlockCounts | undefined, locale: Locale = 'en'): string {
   state.locale = locale;
   const html = renderToStaticMarkup(
     createElement(FindFlatmateBlock, { counts, districts: DISTRICTS }),
@@ -200,11 +200,57 @@ describe('FindFlatmateBlock', () => {
     expect(rendered).not.toContain('Districts named most often');
   });
 
-  it('renders nothing without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', () => {
+  it('without NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: title, how, languages and "not connected"; no count line, no button (PRD 4 FR-2)', () => {
     vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
-    expect(FindFlatmateBlock({ counts: COUNTS, districts: DISTRICTS })).toBeNull();
-    expect(text(COUNTS)).toBe('');
+    const expected =
+      'Looking for someone to rent with? ' +
+      'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+      'Contacts appear only when the interest is mutual. ' +
+      'The bot speaks English, Russian and Ukrainian. The Telegram bot is not connected yet.';
+    // Never null; counts are not loaded without a bot, and passed ones are not shown either.
+    expect(FindFlatmateBlock({ districts: DISTRICTS })).not.toBeNull();
+    expect(text(undefined)).toBe(expected);
+    expect(text(COUNTS)).toBe(expected);
+    expect(text({ status: 'counts', total: 0, top: [] })).toBe(expected);
+    expect(findAll(FindFlatmateBlock({ districts: DISTRICTS }), (el) => el.type === 'a')).toEqual(
+      [],
+    );
     expect(capture).not.toHaveBeenCalled();
+  });
+
+  it.each<[Locale, string]>([
+    ['pl', 'Bot Telegram nie jest jeszcze podłączony.'],
+    ['en', 'The Telegram bot is not connected yet.'],
+    ['ru', 'Telegram-бот пока не подключён.'],
+    ['uk', 'Telegram-бот поки не підключений.'],
+  ])('the "not connected" line in %s, under the languages line, ends the block', (locale, line) => {
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+    const rendered = text(undefined, locale);
+    const languages = (messages[locale].listings as { findFlatmate: { languages: string } })
+      .findFlatmate.languages;
+    expect(rendered.endsWith(`${languages} ${line}`)).toBe(true);
+  });
+
+  it('with the username, the block never shows the "not connected" line', () => {
+    for (const locale of LOCALES) {
+      const notConnected = (messages[locale].listings as { findFlatmate: { notConnected: string } })
+        .findFlatmate.notConnected;
+      expect(text(COUNTS, locale)).not.toContain(notConnected);
+      expect(text(undefined, locale)).not.toContain(notConnected);
+    }
+  });
+
+  it('with the username but no counts passed: no count line, still the button', () => {
+    expect(text(undefined)).toBe(
+      'Looking for someone to rent with? ' +
+        'Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. ' +
+        'Contacts appear only when the interest is mutual. ' +
+        'The bot speaks English, Russian and Ukrainian. Open the bot in Telegram',
+    );
+    const links = findAll(FindFlatmateBlock({ districts: DISTRICTS }), (el) => el.type === 'a');
+    expect(links.map((link) => link.props.href)).toEqual([
+      'https://t.me/passflat_test_bot?start=mate_web_roommate',
+    ]);
   });
 
   it('its own button: the roommate deep link, a new tab, mate_web_roommate', () => {

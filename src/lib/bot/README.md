@@ -42,9 +42,11 @@ its username is not chosen yet.
 
 What the code does in that state: without `TELEGRAM_BOT_TOKEN` the webhook
 route answers 503, and the follow-ups cron and the roommate cron send nothing;
-without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` the website's bot links
-(`components/costs/telegram-bot-cta.tsx`,
-`components/listings/find-flatmate-block.tsx`) render nothing. The follow-ups
+without `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` the website's bot link
+(`components/costs/telegram-bot-cta.tsx`) renders nothing, and the roommate
+page's flatmate block (`components/listings/find-flatmate-block.tsx`) shows
+without its count line and its button, saying the bot is not connected yet
+(PRD 4 FR-2); the page loads no counts. The follow-ups
 cron still runs `clearStaleLetterParties()` on `deposit_cases` first, and the
 roommate cron its housekeeping on `roommate_profiles` and `roommate_reports`,
 so each fails while its migrations are missing (`docs/architecture.md` §9).

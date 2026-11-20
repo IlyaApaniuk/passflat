@@ -1,5 +1,7 @@
 import type { RoommateIntent } from '@/lib/analytics/interest-events';
+import type { ListingType } from '@/lib/listings-data';
 import type { ListingsEmptyKind } from '@/lib/listings-empty-kind';
+import { pageHasFlatmateBlock } from '@/lib/roommate/flatmate-block';
 
 /**
  * The role selector on `/[city]/roommate` (spec 02 §Role selector, FR-14, FR-3; the third
@@ -48,9 +50,13 @@ export function reopenRoommateRoles(state: RoommateRoleState): RoommateRoleState
   return { ...state, collapsed: false };
 }
 
-/** True when the "Looking for someone to rent with" block shows (the role is chosen). */
+/**
+ * True when the "Looking for someone to rent with" block shows: by default (no role chosen yet)
+ * and for "Looking for someone to rent with"; "I'm looking for a room" and "I have a free room"
+ * hide it (spec 08 §Roommate page default view, PRD 4 FR-1).
+ */
 export function showsFlatmateBlock(state: RoommateRoleState): boolean {
-  return state.intent === 'find_flatmate';
+  return state.intent === undefined || state.intent === 'find_flatmate';
 }
 
 /**
@@ -63,4 +69,55 @@ export function showsRoomMoneyBlock(
   emptyKind: ListingsEmptyKind,
 ): boolean {
   return state.intent === 'find_room' || emptyKind === 'no_offers_in_city';
+}
+
+interface RoommatePageLayoutInput {
+  listingType: ListingType;
+  citySlug: string;
+  /** Roommate only: active offers in the city without the URL filters; absent elsewhere. */
+  cityOfferCount?: number;
+  roleState: RoommateRoleState;
+  emptyKind: ListingsEmptyKind;
+  /** Whether `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` is set. */
+  hasUsername: boolean;
+}
+
+interface RoommatePageLayout {
+  /** The "Looking for someone to rent with" block, first in the scrolling list. */
+  showFlatmateBlock: boolean;
+  /** The room money block, after the flatmate block (the page also needs its `roomMoney`). */
+  showRoomMoney: boolean;
+  /** The `listings.listingsInCity` line (desktop and mobile). */
+  showCountLine: boolean;
+  /** The flatmate block's bot button; without it the block says the bot is not connected. */
+  showBotButton: boolean;
+  /** The role selector row stands above the type tabs row. */
+  selectorAboveTabs: boolean;
+}
+
+/**
+ * What `ListingsPageClient` shows on a listings page (spec 08 §Roommate page default view, PRD 4
+ * FR-1, FR-2; the placement and order are an **Assumption**, D68). Only the roommate page of the
+ * checker city has the two blocks; `/replacement` and `/sublet` keep the count line and have no
+ * selector.
+ */
+export function roommatePageLayout({
+  listingType,
+  citySlug,
+  cityOfferCount,
+  roleState,
+  emptyKind,
+  hasUsername,
+}: RoommatePageLayoutInput): RoommatePageLayout {
+  const roommate = listingType === 'roommate';
+  const blocksCity = roommate && pageHasFlatmateBlock(citySlug);
+  const showFlatmateBlock = blocksCity && showsFlatmateBlock(roleState);
+  return {
+    showFlatmateBlock,
+    showRoomMoney: blocksCity && showsRoomMoneyBlock(roleState, emptyKind),
+    // "0 listings" is not shown while the city has no offer at all.
+    showCountLine: !(roommate && cityOfferCount === 0),
+    showBotButton: showFlatmateBlock && hasUsername,
+    selectorAboveTabs: roommate,
+  };
 }

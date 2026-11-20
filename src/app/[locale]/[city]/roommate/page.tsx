@@ -13,7 +13,8 @@ import {
   getCityWithDistricts,
 } from '@/lib/listings-query';
 import type { CityBounds } from '@/lib/listings-data';
-import { loadFlatmateBlockCounts, pageHasFlatmateBlock } from '@/lib/roommate/website-counts';
+import { canLoadFlatmateCounts } from '@/lib/roommate/flatmate-block';
+import { loadFlatmateBlockCounts } from '@/lib/roommate/website-counts';
 import { loadRoomMoneyReference, pageHasRoomMoneyBlock } from '@/lib/roommate/room-money';
 import type { RoomMoneyFigures } from '@/components/listings/room-money-block';
 
@@ -58,12 +59,13 @@ export default async function RoommatePage({ params, searchParams }: PageProps) 
   const parsed = parseSearchParams(search);
   // The count ignores the URL filters, so a reload with strict filters never reads as an
   // empty city (spec 02 §Empty states). The "Looking for someone to rent with" block's counts
-  // (spec 02 §Find a flatmate) and the room money block's city room reference (spec 02 §Room
-  // money block) are loaded only where those blocks can show.
+  // (spec 02 §Find a flatmate) are loaded only with a bot to join (the block itself renders
+  // without them, spec 08 §Roommate page default view), and the room money block's city room
+  // reference (spec 02 §Room money block) only where that block can show.
   const [listings, cityOfferCount, flatmateCounts, roomReference] = await Promise.all([
     queryListings({ cityId: city.id, type: 'roommate', ...parsed }),
     countCityListings({ cityId: city.id, type: 'roommate' }),
-    pageHasFlatmateBlock(citySlug) ? loadFlatmateBlockCounts() : undefined,
+    canLoadFlatmateCounts(citySlug) ? loadFlatmateBlockCounts() : undefined,
     pageHasRoomMoneyBlock(citySlug) ? loadRoomMoneyReference(city.id) : undefined,
   ]);
   const serialized = listings.map(serializeListing);

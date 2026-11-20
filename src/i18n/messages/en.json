@@ -398,6 +398,7 @@
       "topItem": "{name}: {count, plural, one {# profile} other {# profiles}}",
       "how": "Create a profile in the Passflat bot on Telegram: district, budget per person, move-in month. Contacts appear only when the interest is mutual.",
       "languages": "The bot speaks English, Russian and Ukrainian.",
+      "notConnected": "The Telegram bot is not connected yet.",
       "button": "Open the bot in Telegram"
     },
     "roomMoney": {

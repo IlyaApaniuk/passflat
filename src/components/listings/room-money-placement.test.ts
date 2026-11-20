@@ -57,13 +57,19 @@ vi.mock('@/hooks/use-url-filters', () => ({
 vi.mock('@/hooks/use-favorites', () => ({
   useFavorites: () => ({ isFavorite: () => false, toggleFavorite: vi.fn() }),
 }));
-vi.mock('@/components/listings/listing-filters', () => ({
-  ListingFiltersDesktop: () => null,
-  ListingFiltersMobile: () => null,
-  ActiveFilters: () => null,
-  QuickFilters: () => null,
-  ListingTypeTabs: () => null,
-}));
+vi.mock('@/components/listings/listing-filters', async () => {
+  const { createElement: el } = await import('react');
+  return {
+    ListingFiltersDesktop: () => null,
+    ListingFiltersMobile: () => null,
+    ActiveFilters: () => null,
+    QuickFilters: () => null,
+    // `data-row`, not `data-marker`: the header rows are checked apart from the list markers
+    // (and not `data-slot`, which the real `Button` renders).
+    ListingTypeTabs: ({ variant }: { variant: string }) =>
+      el('div', { 'data-row': `tabs:${variant}` }),
+  };
+});
 vi.mock('@/components/ui/select', () => {
   const Pass = ({ children }: { children?: ReactNode }) => children ?? null;
   return {
@@ -74,9 +80,10 @@ vi.mock('@/components/ui/select', () => {
     SelectValue: () => null,
   };
 });
-vi.mock('@/components/listings/roommate-role-selector', () => ({
-  RoommateRoleSelector: () => null,
-}));
+vi.mock('@/components/listings/roommate-role-selector', async () => {
+  const { createElement: el } = await import('react');
+  return { RoommateRoleSelector: () => el('div', { 'data-row': 'selector' }) };
+});
 vi.mock('@/components/listings/listings-page-skeleton', () => ({
   ListingsPageSkeleton: () => null,
 }));
@@ -92,7 +99,10 @@ vi.mock('@/components/listings/listings-empty-state', async () => {
 vi.mock('@/components/listings/listings-no-match', () => ({ ListingsNoMatch: () => null }));
 vi.mock('@/components/listings/find-flatmate-block', async () => {
   const { createElement: el } = await import('react');
-  return { FindFlatmateBlock: () => el('div', { 'data-marker': 'flatmate' }) };
+  return {
+    FindFlatmateBlock: ({ counts }: { counts?: unknown }) =>
+      el('div', { 'data-marker': 'flatmate', 'data-counts': counts ? 'yes' : 'no' }),
+  };
 });
 vi.mock('./room-money-block', async () => {
   const { createElement: el } = await import('react');
@@ -117,35 +127,55 @@ const LISTING = {
 
 const FIGURES = { reference: { level: 'city' }, areaName: 'Warsaw' } as unknown as RoomMoneyFigures;
 
-function render({
+type RenderOptions = {
+  intent?: 'find_room' | 'offer_room' | 'find_flatmate';
+  offers: boolean;
+  citySlug?: string;
+  listingType?: 'roommate' | 'sublet' | 'replacement';
+  roomMoney?: RoomMoneyFigures | null;
+  withCounts?: boolean;
+};
+
+function html({
   intent,
   offers,
   citySlug = 'warsaw',
   listingType = 'roommate',
   roomMoney,
-}: {
-  intent?: 'find_room' | 'offer_room' | 'find_flatmate';
-  offers: boolean;
-  citySlug?: string;
-  listingType?: 'roommate' | 'sublet';
-  roomMoney?: RoomMoneyFigures | null;
-}): { markers: string[]; bridge: boolean } {
+  withCounts = true,
+}: RenderOptions): string {
   h.initial = intent ? { intent, collapsed: true } : { collapsed: false };
-  const html = renderToStaticMarkup(
+  return renderToStaticMarkup(
     createElement(ListingsPageClient, {
       listings: offers ? [LISTING] : [],
       districts: [],
       citySlug,
       listingType,
       cityOfferCount: listingType === 'roommate' ? (offers ? 1 : 0) : undefined,
-      flatmateCounts: { status: 'counts', total: 0, top: [] },
+      flatmateCounts: withCounts ? { status: 'counts', total: 0, top: [] } : undefined,
       roomMoney,
     }),
   );
+}
+
+function render(options: RenderOptions): { markers: string[]; bridge: boolean } {
+  const page = html(options);
   return {
-    markers: [...html.matchAll(/data-marker="([^"]+)"/g)].map((match) => match[1]),
-    bridge: html.includes(`href="/${citySlug}/check"`),
+    markers: [...page.matchAll(/data-marker="([^"]+)"/g)].map((match) => match[1]),
+    bridge: page.includes(`href="/${options.citySlug ?? 'warsaw'}/check"`),
   };
+}
+
+/** The header rows in document order: the selector, the two type tab variants. */
+function slots(options: RenderOptions): string[] {
+  return [...html(options).matchAll(/data-row="([^"]+)"/g)].map((match) => match[1]);
+}
+
+/** How many `listings.listingsInCity` lines render (desktop and mobile each have one). */
+function countLines(options: RenderOptions): string[] {
+  return [...html(options).matchAll(/<p aria-live="polite"[^>]*>([\s\S]*?)<\/p>/g)].map((match) =>
+    match[1].replace(/<[^>]+>/g, ''),
+  );
 }
 
 describe('ListingsPageClient: the room money block (spec 02 §Room money block)', () => {
@@ -153,9 +183,9 @@ describe('ListingsPageClient: the room money block (spec 02 §Room money block)'
     h.initial = { collapsed: false };
   });
 
-  it('no role chosen, offers in the city: no block, the bridge line stays', () => {
+  it('no role chosen, offers in the city: the flatmate block first, no room money block, the bridge line stays', () => {
     expect(render({ offers: true, roomMoney: FIGURES })).toEqual({
-      markers: ['list'],
+      markers: ['flatmate', 'list'],
       bridge: true,
     });
   });
@@ -167,11 +197,21 @@ describe('ListingsPageClient: the room money block (spec 02 §Room money block)'
     });
   });
 
-  it('no offers in the city, no role chosen: the block above the empty state, no bridge line', () => {
+  it('no offers in the city, no role chosen: the flatmate block, then room money, then the empty state; no bridge line', () => {
     expect(render({ offers: false, roomMoney: FIGURES })).toEqual({
-      markers: ['room-money:figures:warsaw', 'empty-state'],
+      markers: ['flatmate', 'room-money:figures:warsaw', 'empty-state'],
       bridge: false,
     });
+  });
+
+  it('"I have a free room": no flatmate block; room money only on a city without offers', () => {
+    expect(render({ intent: 'offer_room', offers: true, roomMoney: FIGURES }).markers).toEqual([
+      'list',
+    ]);
+    expect(render({ intent: 'offer_room', offers: false, roomMoney: FIGURES }).markers).toEqual([
+      'room-money:figures:warsaw',
+      'empty-state',
+    ]);
   });
 
   it('no offers in the city and "Looking for someone to rent with": both blocks, flatmate first', () => {
@@ -211,5 +251,62 @@ describe('ListingsPageClient: the room money block (spec 02 §Room money block)'
       render({ intent: 'find_room', offers: false, listingType: 'sublet', roomMoney: FIGURES })
         .markers,
     ).toEqual(['empty-state']);
+  });
+});
+
+describe('ListingsPageClient: the roommate page default view (spec 08, PRD 4 FR-1, FR-2)', () => {
+  beforeEach(() => {
+    h.initial = { collapsed: false };
+  });
+
+  it('the role selector row renders above the type tabs row (desktop and mobile tabs)', () => {
+    expect(slots({ offers: false, roomMoney: FIGURES })).toEqual([
+      'selector',
+      'tabs:tabs',
+      'tabs:segmented',
+    ]);
+    expect(slots({ offers: true, roomMoney: FIGURES })).toEqual([
+      'selector',
+      'tabs:tabs',
+      'tabs:segmented',
+    ]);
+  });
+
+  it('/replacement and /sublet: no selector, the tabs as before', () => {
+    for (const listingType of ['replacement', 'sublet'] as const) {
+      expect(slots({ offers: true, listingType })).toEqual(['tabs:tabs', 'tabs:segmented']);
+    }
+  });
+
+  it('the count line is absent on desktop and mobile while the city has no offer', () => {
+    expect(countLines({ offers: false, roomMoney: FIGURES })).toEqual([]);
+    expect(countLines({ intent: 'find_flatmate', offers: false, roomMoney: FIGURES })).toEqual([]);
+  });
+
+  it('the count line is back on desktop and mobile once the city has an offer', () => {
+    expect(countLines({ offers: true, roomMoney: FIGURES })).toEqual(['1 listing', '1 listing']);
+  });
+
+  it('/replacement and /sublet keep the count line, also with nothing listed', () => {
+    for (const listingType of ['replacement', 'sublet'] as const) {
+      expect(countLines({ offers: false, listingType })).toEqual(['0 listings', '0 listings']);
+    }
+  });
+
+  it('no counts passed (no bot username): the flatmate block still renders first', () => {
+    const page = html({ offers: false, roomMoney: FIGURES, withCounts: false });
+    expect(page).toContain('data-marker="flatmate" data-counts="no"');
+    expect(render({ offers: false, roomMoney: FIGURES, withCounts: false }).markers).toEqual([
+      'flatmate',
+      'room-money:figures:warsaw',
+      'empty-state',
+    ]);
+    expect(html({ offers: false, roomMoney: FIGURES })).toContain(
+      'data-marker="flatmate" data-counts="yes"',
+    );
+  });
+
+  it('another city: no flatmate block even with counts passed', () => {
+    expect(render({ offers: true, citySlug: 'krakow' }).markers).toEqual(['list']);
   });
 });

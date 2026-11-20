@@ -12,23 +12,25 @@ import { type FlatmateBlockCounts, flatmateBlockView } from '@/lib/roommate/flat
  * "Looking for someone to rent with?" on `/warsaw/roommate` (spec 02 §Find a flatmate, PRD 3
  * FR-21): who already has a profile, how matching works in the bot, the bot's languages and a
  * button into the bot's roommate entry. Not `TelegramBotCta`: that one reads the `checker`
- * namespace, which this route does not receive; these keys live in `listings`. Renders nothing
- * until the bot username is configured.
+ * namespace, which this route does not receive; these keys live in `listings`. Never renders
+ * nothing (PRD 4 FR-2): until the bot username is configured it shows the title, how it works
+ * and the languages, then "the bot is not connected yet", with no count line and no button.
  */
 export function FindFlatmateBlock({
   counts,
   districts,
 }: {
-  counts: FlatmateBlockCounts;
+  /** Loaded only with a configured bot; absent or `unavailable` → no count line. */
+  counts?: FlatmateBlockCounts;
   /** The city's districts as the listings district filter names them. */
   districts: readonly { slug: string; name: string }[];
 }) {
   const t = useTranslations('listings.findFlatmate');
   const posthog = usePostHog();
   const username = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
-  if (!username) return null;
 
-  const view = flatmateBlockView(counts, districts);
+  // No counts without a bot to join, even if some were passed.
+  const view = flatmateBlockView(username ? counts : undefined, districts);
 
   return (
     <section
@@ -56,20 +58,24 @@ export function FindFlatmateBlock({
       )}
       <p className="text-muted-foreground">{t('how')}</p>
       <p className="text-muted-foreground">{t('languages')}</p>
-      <Button asChild className="h-auto min-h-11 whitespace-normal">
-        <a
-          href={botStartUrl(username, 'roommate')}
-          target="_blank"
-          rel="noopener noreferrer"
-          // Fire-and-forget: no preventDefault, so the link opens as usual.
-          onClick={() =>
-            posthog?.capture('telegram_bot_opened', telegramBotOpenedProperties('roommate'))
-          }
-        >
-          <Send className="h-4 w-4" />
-          {t('button')}
-        </a>
-      </Button>
+      {username ? (
+        <Button asChild className="h-auto min-h-11 whitespace-normal">
+          <a
+            href={botStartUrl(username, 'roommate')}
+            target="_blank"
+            rel="noopener noreferrer"
+            // Fire-and-forget: no preventDefault, so the link opens as usual.
+            onClick={() =>
+              posthog?.capture('telegram_bot_opened', telegramBotOpenedProperties('roommate'))
+            }
+          >
+            <Send className="h-4 w-4" />
+            {t('button')}
+          </a>
+        </Button>
+      ) : (
+        <p className="font-medium">{t('notConnected')}</p>
+      )}
     </section>
   );
 }

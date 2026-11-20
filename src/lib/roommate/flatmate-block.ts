@@ -1,3 +1,5 @@
+import { LOCATION_CHECKER_CITY_SLUG } from '@/lib/location-checker';
+
 import type { DistrictCount } from './counts';
 
 /**
@@ -5,6 +7,25 @@ import type { DistrictCount } from './counts';
  * PRD 3 FR-21). Pure and client-safe: the server loads the counts (`website-counts.ts`) and
  * passes them down; this module decides what the block says.
  */
+
+/**
+ * Whether the roommate page of `citySlug` renders the block: only the checker city (`warsaw`),
+ * with or without the bot username (spec 08 §Roommate page default view, PRD 4 FR-2).
+ */
+export function pageHasFlatmateBlock(citySlug: string): boolean {
+  return citySlug === LOCATION_CHECKER_CITY_SLUG;
+}
+
+/**
+ * Whether the page loads the block's counts: the checker city, and only when the bot is
+ * configured (`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`), so no counts are shown without a bot to join.
+ */
+export function canLoadFlatmateCounts(
+  citySlug: string,
+  botUsername: string | undefined = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+): boolean {
+  return pageHasFlatmateBlock(citySlug) && Boolean(botUsername);
+}
 
 /**
  * The counts the server hands to the block: the Warsaw total and the most named districts
@@ -31,13 +52,16 @@ export type FlatmateBlockView = {
 /**
  * What the block shows for `counts`, with district names taken from `districts` (the city's
  * districts the page already passes to the listings filter). A slug missing from that list
- * stands for itself, as in the bot's counts reply.
+ * stands for itself, as in the bot's counts reply. No counts (`undefined`: not loaded, e.g.
+ * without the bot username) and `unavailable` both mean no count sentence and no districts.
  */
 export function flatmateBlockView(
-  counts: FlatmateBlockCounts,
+  counts: FlatmateBlockCounts | undefined,
   districts: readonly NamedDistrict[],
 ): FlatmateBlockView {
-  if (counts.status === 'unavailable') return { countLine: 'none', total: 0, districts: [] };
+  if (!counts || counts.status === 'unavailable') {
+    return { countLine: 'none', total: 0, districts: [] };
+  }
   if (counts.total === 0) return { countLine: 'first', total: 0, districts: [] };
   const names = new Map(districts.map((district) => [district.slug, district.name]));
   return {
