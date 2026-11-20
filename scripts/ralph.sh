@@ -115,7 +115,8 @@ hit_limit() {
 
 # Unfinished work of a task is kept in a stash named "ralph-wip <task> ..." until the task runs again.
 wip_stash() {
-  git stash list --format='%gd %s' | awk -v t="ralph-wip $1 " 'index($0" ", t) { print $1; exit }'
+  # awk reads all input: an early exit would SIGPIPE git and, under pipefail, end the loop silently.
+  git stash list --format='%gd %s' | awk -v t="ralph-wip $1 " '!found && index($0" ", t) { print $1; found = 1 }'
 }
 
 # The local Supabase stack backs integration and e2e tests.
