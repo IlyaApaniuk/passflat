@@ -221,6 +221,33 @@ test.describe('how it works and FAQ on /en', () => {
   });
 });
 
+// PRD 4 FR-19 (D79, spec 08 §Dead-end forms): the city-notify form stays on the home page with
+// the owner's copy. Nothing is submitted here: the API and its rows are unchanged.
+test.describe('city-notify form on /en', () => {
+  test.use({ locale: 'en-US' });
+
+  test('"Live outside Warsaw?" with the Warsaw-only badge, the e-mail promise and the form', async ({
+    page,
+  }) => {
+    await page.goto('/en');
+    const heading = page
+      .locator('main')
+      .getByRole('heading', { level: 2, name: 'Live outside Warsaw?' });
+    await expect(heading).toHaveCount(1);
+    await heading.scrollIntoViewIfNeeded();
+    await expect(heading).toBeVisible();
+
+    const section = heading.locator('xpath=ancestor::section[1]');
+    await expect(section).toContainText('Warsaw only for now.');
+    await expect(section).toContainText("When we open your city, we'll send you an e-mail.");
+    await expect(section).not.toContainText('Expanding soon');
+    await expect(section).not.toContainText('Currently live in Warsaw');
+    await expect(section.locator('input[type="email"][placeholder="Your email"]')).toBeVisible();
+    await expect(section.locator('input[type="text"][placeholder="Which city?"]')).toBeVisible();
+    await expect(section.getByRole('button', { name: 'Notify Me' })).toBeVisible();
+  });
+});
+
 // PRD 4 FR-34 (spec 09 §Contrast, tap targets and the hamburger): on a phone the
 // hamburger is a named 44 px toggle that reports and controls the menu panel, and
 // the mobile pill is 44 px tall. The bar keeps its height (T155 measured 58 px

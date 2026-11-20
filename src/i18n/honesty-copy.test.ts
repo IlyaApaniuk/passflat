@@ -163,6 +163,11 @@ const REWRITTEN_KEYS = [
   // PRD 4 FR-28 (spec 09 §Sitemap, robots, structured data and the submit page's metadata).
   'costs.submit.metaTitle',
   'costs.submit.metaDescription',
+  // PRD 4 FR-19 (D79, spec 08 §Dead-end forms): the home city-notify form.
+  'landing.cityNotify.badge',
+  'landing.cityNotify.title',
+  'landing.cityNotify.subtitle',
+  'landing.cityNotify.success',
 ];
 
 /**

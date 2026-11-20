@@ -248,14 +248,13 @@
       "link": "Dowiedz się więcej o nas"
     },
     "cityNotify": {
-      "badge": "Wkrótce w innych miastach",
-      "title": "Mieszkasz w innym mieście?",
-      "subtitle": "Zaczynamy od Warszawy i rozszerzamy się. Powiedz, w jakim mieście chcesz zobaczyć Passflat — powiadomimy Cię o uruchomieniu.",
-      "currentCity": "Aktualnie działamy w Warszawie, Polska",
+      "badge": "Na razie tylko Warszawa.",
+      "title": "Mieszkasz poza Warszawą?",
+      "subtitle": "Na razie działamy tylko tutaj. Napisz, w jakim mieście mieszkasz — tak widzimy, gdzie na nas czekają. Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem.",
       "emailPlaceholder": "Twój email",
       "cityPlaceholder": "Jakie miasto?",
       "submit": "Powiadom mnie",
-      "success": "Dzięki! Damy znać.",
+      "success": "Dzięki! Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem.",
       "error": "Coś poszło nie tak. Spróbuj ponownie.",
       "consent": "Wyrażam zgodę na przetwarzanie moich danych osobowych",
       "consentRequired": "Musisz wyrazić zgodę na przetwarzanie danych osobowych.",

@@ -36,6 +36,7 @@ agent's own draft. Four locales unless the row says otherwise.
 | T132 | FR-15        | `helpCenter.general.a1`, `about.solution.pillar{1,2,3}{Title,Desc}`, `about.team.description2`, `about.values.principle1Desc`                                                                                                                                                                                        | EN titles, `principle1Desc` §8; `a1` §8 without "free"; agent |
 | T133 | FR-16 (Q-3)  | `helpCenter.general.a2` (free today, D80); deleted `helpCenter.payments.*`, `helpCenter.leaseTakeovers.{q6,a6}`, `landing.howItWorks.{tabReplacement,tabRoommate,tabSublet,replacement,sublet}`, `howItWorksPage.{tabListers,listers}`, `about.stats.listings`, `meta.pricingDescription`                            | EN spec 08; PL/RU/UK agent                                    |
 | T134 | FR-17, FR-18 | pl `listings.roommateRoles.findFlatmate`, pl `listings.findFlatmate.languages` (the PL-only clause), ru/uk `listings.noMatch.title` («ты» / «ти»), `listings.demandCapture.searchCardTitleRoommate` (new); the posting-kit rule "Website links carry the reader's locale"                                            | §8, spec 08; the kit rule agent                               |
+| T135 | FR-19 (Q-2)  | `landing.cityNotify.{badge,title,subtitle,success}` (D79: the home form stays; the badge is the D87 line); deleted `landing.cityNotify.currentCity`                                                                                                                                                                  | title, subtitle RU owner, EN spec 08; badge D87; rest agent   |
 | T138 | FR-21        | `costsSeo.buildingMetaTitle`, `costsSeo.buildingMetaDescription`, `costsSeo.districtMetaTitle`, `costsSeo.cityMetaTitle`, `calculator.metaTitle`, `calculator.metaDescription`, `listings.demandCapture.costCtaTitle`, `listings.detail.buildingCostHint`                                                            | tables B, C, G; `cityMetaTitle`, the last two agent           |
 | T139 | FR-21        | `rentReport.{metaTitle,metaDescription,ogTitle,lead,checkStep1,anatomyTitle,doplatyBody2}`, `meta.{aboutDescription,howItWorksDescription,blogDescription}`, `howItWorksPage.seekers.step1Desc`                                                                                                                      | table F (EN; PL title and OG title); agent                    |
 | T140 | FR-22        | `costsSeo.districtH1`, `costsSeo.buildingsHeading`, `calculator.h1`; pl/ru/uk `costsSeo.cityMetaDescription`, `cityH1`, `districtIntro`; pl `emails.cityNotifyConfirmation.{subject,body}`, `emails.cityLaunch.{subject,heading}`                                                                                    | spec 09 table, tables C, G; agent                             |
@@ -75,6 +76,11 @@ Points the entries raise for a decision (not blockers; each entry has the detail
 lg:text-8xl` it took four (EN, RU) to five (PL) lines on a 1280 px desktop and pushed the hero
   CTAs below the fold, so the desktop sizes are one step smaller (`md:text-6xl lg:text-7xl`, two
   to three lines; phones unchanged). Revert the class in `hero.tsx` if you prefer the bigger type.
+- **The city-notify form** (T135, D79): the RU and UK copy keeps the section's «вы» / «ви»
+  (the owner's RU wording), PL keeps "Ty". The badge became "Warsaw only for now." (the D87
+  line) with a pin icon instead of the globe, and `currentCity` ("Currently live in Warsaw") is
+  gone: the subtitle already says it. The confirmation e-mail on sign-up is unchanged, so a
+  subscriber gets it now and the launch e-mail later.
 - **Event targets changed:** `cta_click {placement: 'header_mobile'}` now counts taps to the
   roommate page and `district_card` taps to the district pages (T120, T121).
 

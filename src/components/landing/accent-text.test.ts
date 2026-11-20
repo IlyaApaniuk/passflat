@@ -48,10 +48,8 @@ const ICON_LINES: Record<string, string[]> = {
   [`${LANDING}/bento-grid.tsx`]: [
     "<item.icon className={`text-accent ${item.featured ? 'h-7 w-7' : 'h-5 w-5'}`} />",
   ],
-  [`${LANDING}/city-notify.tsx`]: [
-    '<MapPin className="h-5 w-5 text-accent" />',
-    '<CheckCircle2 className="h-7 w-7 text-accent" />',
-  ],
+  // The MapPin line went with `currentCity` (T135); the badge's MapPin has no colour class.
+  [`${LANDING}/city-notify.tsx`]: ['<CheckCircle2 className="h-7 w-7 text-accent" />'],
 };
 
 const accentLines = (file: string) =>

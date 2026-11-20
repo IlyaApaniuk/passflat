@@ -174,6 +174,28 @@ describe('home thesis section (FR-9)', () => {
   });
 });
 
+describe('home city-notify form (spec 08 §Dead-end forms, FR-19, D79)', () => {
+  beforeEach(() => {
+    loadFlatmateBlockCounts.mockReset();
+    loadFlatmateBlockCounts.mockResolvedValue(COUNTS);
+    loadWarsawPerPersonSplit.mockReset();
+    loadWarsawPerPersonSplit.mockResolvedValue(null);
+    vi.stubEnv('NEXT_PUBLIC_TELEGRAM_BOT_USERNAME', '');
+  });
+
+  it('stays on the home page once, between ForWhom and the FAQ inside main', async () => {
+    const { ForWhom } = await import('@/components/landing/for-whom');
+    const { CityNotify } = await import('@/components/landing/city-notify');
+    const { FAQ } = await import('@/components/landing/faq');
+
+    const main = findElement(await homeContent(), (element) => element.type === 'main');
+    const order = componentOrder((main?.props as { children: ReactNode }).children);
+    expect(order.filter((type) => type === CityNotify)).toHaveLength(1);
+    const at = order.indexOf(CityNotify);
+    expect(order.slice(at - 1, at + 2)).toEqual([ForWhom, CityNotify, FAQ]);
+  });
+});
+
 describe('home thesis section: the per-person line (spec 08 §Per-person line, FR-13)', () => {
   beforeEach(() => {
     loadFlatmateBlockCounts.mockReset();

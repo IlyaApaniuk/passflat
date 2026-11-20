@@ -385,13 +385,13 @@
       "title": "The city-notify form on the home page (FR-19, owner question Q-2)",
       "spec": "docs/specs/08-site-structure-and-entries.md#dead-end-forms",
       "dependsOn": [],
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "Only after the owner answers Q-2 with (a): CityNotify no longer renders on /; the API, the stored rows and the manual city-launch route (D33) are unchanged; the checker's outside-city copy is rewritten in four locales as answered",
         "With answer (b) nothing changes and the task closes with the answer in the progress entry"
       ],
       "checks": ["npm run verify", "npm run test:e2e"],
-      "attempts": 0,
+      "attempts": 1,
       "notes": "Blocked: owner question Q-2 (PRD 4, decision review row 2). The home 'Live in another city?' form collects e-mails for a launch that is out of focus (D6). (a) remove it from the home page and keep the API and the checker's outside-city form with 'we may e-mail you once if Passflat launches there' (proposal). (b) keep it as is. Removing a form that stores personal data is the owner's call.\nOwner answer: Q-2, D79, not the proposal: the city-notify form stays on the home page as a demand signal with the owner's new copy (title 'Live outside Warsaw?', body: we only work here for now, tell us your city, when we open it we send one e-mail); API and rows unchanged; the e-mail is the city-launch route's (D33, D47); checker.outside unchanged; see spec 08 section Dead-end forms"
     },
     {

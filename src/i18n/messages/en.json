@@ -248,14 +248,13 @@
       "link": "Learn more about us"
     },
     "cityNotify": {
-      "badge": "Expanding soon",
-      "title": "Live in another city?",
-      "subtitle": "We're starting in Warsaw and expanding to other cities. Tell us where you'd like to see Passflat next — we'll notify you when we launch.",
-      "currentCity": "Currently live in Warsaw, Poland",
+      "badge": "Warsaw only for now.",
+      "title": "Live outside Warsaw?",
+      "subtitle": "We only work here for now. Tell us your city — that is how we see where people are waiting for us. When we open your city, we'll send you an e-mail.",
       "emailPlaceholder": "Your email",
       "cityPlaceholder": "Which city?",
       "submit": "Notify Me",
-      "success": "Thanks! We'll keep you posted.",
+      "success": "Thanks! We'll send you an e-mail when we open your city.",
       "error": "Something went wrong. Please try again.",
       "consent": "I agree to the processing of my personal data",
       "consentRequired": "You must agree to the processing of your personal data.",

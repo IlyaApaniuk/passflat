@@ -5587,3 +5587,36 @@ unstable_cache: (fn) => fn }))` and a mocked `@/lib/prisma` (example: `src/lib/l
     - `meta.helpDescription` and `helpCenter.subtitle` still name lease takeovers and listings.
   - No table, migration, event name or Assumption constant.
 - Next: `node scripts/ralph-tasks.mjs next`.
+
+### 2026-11-20 15:25 · T135 · done
+
+- Done (PRD 4 FR-19, spec 08 §Dead-end forms; the owner's answer Q-2, D79, not the proposal: the form stays). The task's acceptance lines were written for answers (a) / (b); the notes and the spec carry D79, which is what was built.
+  - Copy, `landing.cityNotify.*` in four locales (scratchpad script over the parsed JSON, byte round-trip checked first). Drafts for the owner's review (D29); see Owner review.
+    - `title`, `subtitle`: RU the owner's wording verbatim, EN spec 08 verbatim, PL and UK agent drafts ("when", not "if"; an e-mail notification).
+    - `badge`: the D87 line ("Warsaw only for now." and its PL/RU/UK forms), replacing "Expanding soon".
+    - `success`: says the e-mail comes when the city opens (was "We'll keep you posted").
+    - Deleted: `currentCity` ("Currently live in Warsaw, Poland"). The grep found no other reader.
+  - `src/components/landing/city-notify.tsx`: the `currentCity` line (MapPin + text) is gone and the subtitle loses its `mb-8`. The badge icon is a MapPin instead of the Globe (a globe signals expansion). A doc comment names D79, D33, D47 and D6. The form, `fetch('/api/city-notify')`, its body, the API, the stored rows, `city_notify_subscribed` and `/api/cron/city-launch` are untouched. `checker.outside.*` is unchanged (spec 08).
+  - Tests:
+    - New `src/components/landing/city-notify.test.ts`. It renders `CityNotify` with `renderToStaticMarkup` over `createTranslator` (`onError` throwing) in four locales. It checks: the EN and owner RU text; badge before the h2 before the subtitle; one h2; the e-mail and city inputs, consent checkbox, privacy link and submit kept. Per locale: no "if" family, an e-mail word in subtitle and success, no "expanding / soon / Europe" family (with a self-check on the old copy). The key set is exact (no `currentCity`). The POST to `/api/city-notify` keeps its body (static check).
+    - `src/app/[locale]/home-thesis.test.ts`: a new describe proves `CityNotify` is in the home `<main>` once, between `ForWhom` and `FAQ`.
+    - `src/i18n/honesty-copy.test.ts`: `landing.cityNotify.{badge,title,subtitle,success}` join `REWRITTEN_KEYS` (FORBIDDEN in four locales).
+    - `src/components/landing/accent-text.test.ts`: the removed MapPin `text-accent` line leaves `ICON_LINES`.
+    - `e2e/home.spec.ts`: on `/en` the "Live outside Warsaw?" h2 is visible once; its section has the badge and the e-mail sentence, no "Expanding soon" or "Currently live in Warsaw"; the e-mail and city inputs and "Notify Me" are visible. Nothing is submitted.
+  - Docs: `docs/specs/README.md` FR-19 row → Done. `docs/ops/deploy-copy-review.md` §1: a T135 row and a decision bullet.
+- Checks:
+  - Focused Vitest (`src/components/landing`, `src/i18n`, `home-thesis`, the city-notify and city-launch routes): 17 files / 226 passed; the three changed files verbosely: 34 passed.
+  - `npm run verify` exit 0: lint; typecheck; knip 26 unused exports, as before; Vitest 186 files / 3724 tests; build OK (185 pages).
+  - `npm run test:e2e` exit 0: 32 passed (31 before plus the new one). The usual DB-less and fake-PostHog noise. `next-env.d.ts` restored.
+  - Not verified: a real submit (it needs a database and sends the confirmation e-mail; the route tests cover the API, unchanged). Nothing deployed, no migration, no event, no e-mail sent.
+- Did not work: nothing.
+- Owner review:
+  - **Draft copy (D29), `landing.cityNotify`:**
+    - en badge "Warsaw only for now.", title "Live outside Warsaw?", subtitle (spec 08), success "Thanks! We'll send you an e-mail when we open your city."
+    - pl "Na razie tylko Warszawa." / "Mieszkasz poza Warszawą?" / "Na razie działamy tylko tutaj. Napisz, w jakim mieście mieszkasz — tak widzimy, gdzie na nas czekają. Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem." / "Dzięki! Kiedy otworzymy Twoje miasto, wyślemy Ci powiadomienie e-mailem."
+    - ru «Пока только Варшава.» / «Живёте не в Варшаве?» / your subtitle / «Спасибо! Когда откроем ваш город, пришлём уведомление на почту.»
+    - uk «Поки лише Варшава.» / «Живете не у Варшаві?» / «Поки що працюємо лише тут. Напишіть своє місто — так ми бачимо, де на нас чекають. Коли відкриємо ваше місто, надішлемо сповіщення на пошту.» / «Дякуємо! Коли відкриємо ваше місто, надішлемо сповіщення на пошту.»
+  - **Agent's choices (spec 08 "Assumption"; the values live in the four locale files):** the badge is the D87 line; `currentCity` is dropped (the subtitle says the same); `success` names the launch e-mail; the badge icon is a pin. RU and UK keep the section's «вы» / «ви» (your RU wording), PL keeps "Ty".
+  - **Unchanged, worth knowing:** the sign-up still sends the confirmation e-mail (`emails.cityNotifyConfirmation`), so a subscriber gets it now and the launch e-mail later; the copy promises only the latter.
+  - No table, migration, event name or Assumption constant in code.
+- Next: `node scripts/ralph-tasks.mjs next`.
